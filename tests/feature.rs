@@ -671,6 +671,42 @@ sherlock:and xxx clearly, with a label attached.
     eqnice!(expected, cmd.stdout());
 });
 
+// like f1078_max_columns_preview1
+rgtest!(special_limit_col_1, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("sherlock", SHERLOCK);
+    cmd.args(&[
+        "--limit-col",
+        "46",
+        "exhibited|dusted|has to have it",
+    ]);
+
+    let expected = "\
+sherlock:but Doctor Watson has to have it taken out for [... omitted end of long line]
+sherlock:and exhibited clearly, with a label attached.
+";
+    eqnice!(expected, cmd.stdout());
+});
+
+// like f1078_max_columns_preview2
+rgtest!(special_limit_col_2, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("sherlock", SHERLOCK);
+    cmd.args(&[
+        "--limit-col",
+        "43",
+        // Doing a replacement forces ripgrep to show the number of remaining
+        // matches. Normally, this happens by default when printing a tty with
+        // colors.
+        "-rxxx",
+        "exhibited|dusted|has to have it",
+    ]);
+
+    let expected = "\
+sherlock:but Doctor Watson xxx taken out for him and [... 1 more match]
+sherlock:and xxx clearly, with a label attached.
+";
+    eqnice!(expected, cmd.stdout());
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/1138
 rgtest!(f1138_no_ignore_dot, |dir: Dir, mut cmd: TestCommand| {
     dir.create_dir(".git");

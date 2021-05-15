@@ -590,6 +590,7 @@ pub fn all_args_and_flags() -> Vec<RGArg> {
     flag_line_regexp(&mut args);
     flag_max_columns(&mut args);
     flag_max_columns_preview(&mut args);
+    flag_limit_col(&mut args);
     flag_max_count(&mut args);
     flag_max_depth(&mut args);
     flag_max_filesize(&mut args);
@@ -1748,6 +1749,23 @@ This flag can be disabled with '--no-max-columns-preview'.
     let arg = RGArg::switch("no-max-columns-preview")
         .hidden()
         .overrides("max-columns-preview");
+    args.push(arg);
+}
+
+fn flag_limit_col(args: &mut Vec<RGArg>) {
+    const SHORT: &str = "Print preview for lines longer than this limit.";
+    const LONG: &str = long!(
+        "\
+Only print a preview of lines longer than this limit in bytes.
+This is a combination of --max-columns and --max-columns-preview.
+
+When this flag is omitted or is set to 0, then it has no effect.
+"
+    );
+    let arg = RGArg::flag("limit-col", "NUM")
+        .help(SHORT)
+        .long_help(LONG)
+        .number();
     args.push(arg);
 }
 

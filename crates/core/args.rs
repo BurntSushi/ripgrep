@@ -780,6 +780,7 @@ impl ArgMatches {
             .replacement(self.replacement())
             .max_columns(self.max_columns()?)
             .max_columns_preview(self.max_columns_preview())
+            .limit_col(self.limit_col()?)
             .max_matches(self.max_count()?)
             .column(self.column())
             .byte_offset(self.is_present("byte-offset"))
@@ -1178,6 +1179,10 @@ impl ArgMatches {
     /// exceed the maximum column limit.
     fn max_columns_preview(&self) -> bool {
         self.is_present("max-columns-preview")
+    }
+
+    fn limit_col(&self) -> Result<Option<u64>> {
+        Ok(self.usize_of_nonzero("limit-col")?.map(|n| n as u64))
     }
 
     /// The maximum number of matches permitted.

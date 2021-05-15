@@ -33,6 +33,7 @@ struct Config {
     per_match: bool,
     replacement: Arc<Option<Vec<u8>>>,
     max_columns: Option<u64>,
+    limit_col: Option<u64>,
     max_columns_preview: bool,
     max_matches: Option<u64>,
     column: bool,
@@ -57,6 +58,7 @@ impl Default for Config {
             per_match: false,
             replacement: Arc::new(None),
             max_columns: None,
+            limit_col: None,
             max_columns_preview: false,
             max_matches: None,
             column: false,
@@ -271,6 +273,12 @@ impl StandardBuilder {
     /// This is disabled by default.
     pub fn max_columns_preview(&mut self, yes: bool) -> &mut StandardBuilder {
         self.config.max_columns_preview = yes;
+        self
+    }
+
+    /// combination of max_columns and max_columns_preview
+    pub fn limit_col(&mut self, limit: Option<u64>) -> &mut StandardBuilder {
+        self.config.limit_col = limit;
         self
     }
 
@@ -1244,12 +1252,14 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         matches: &[Match],
         match_index: &mut usize,
     ) -> io::Result<()> {
-        if self.config().max_columns_preview {
+        if self.config().max_columns_preview ||
+            self.config().limit_col.is_some(){
             let original = line;
             let end = bytes[line]
                 .grapheme_indices()
                 .map(|(_, end, _)| end)
-                .take(self.config().max_columns.unwrap_or(0) as usize)
+                .take(self.config().max_columns.unwrap_or(
+                    self.config().limit_col.unwrap_or(0)) as usize)
                 .last()
                 .unwrap_or(0)
                 + line.start();
@@ -1515,7 +1525,8 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     /// Returns true if and only if the given line exceeds the maximum number
     /// of columns set. If no maximum is set, then this always returns false.
     fn exceeds_max_columns(&self, line: &[u8]) -> bool {
-        self.config().max_columns.map_or(false, |m| line.len() as u64 > m)
+        self.config().max_columns.map_or(false, |m| line.len() as u64 > m) ||
+            self.config().limit_col.map_or(false, |m| line.len() as u64 > m)
     }
 
     /// Returns true if and only if the searcher may report matches over
