@@ -1228,9 +1228,11 @@ impl WalkParallel {
     /// can be merged together into a single data structure.
     pub fn visit(mut self, builder: &mut dyn ParallelVisitorBuilder<'_>) {
         let threads = self.threads();
-        let stack = Arc::new(Mutex::new(vec![]));
+        let file_stack = Arc::new(Mutex::new(vec![]));
+        let directory_stack = Arc::new(Mutex::new(vec![]));
         {
-            let mut stack = stack.lock().unwrap();
+            let mut file_stack = file_stack.lock().unwrap();
+            let mut directory_stack = directory_stack.lock().unwrap();
             let mut visitor = builder.build();
             let mut paths = Vec::new().into_iter();
             std::mem::swap(&mut paths, &mut self.paths);
@@ -1267,27 +1269,36 @@ impl WalkParallel {
                         }
                     }
                 };
-                stack.push(Message::Work(Work {
+                let is_dir = dent.is_dir();
+                let message = Message::Work(Work {
                     dent: dent,
                     ignore: self.ig_root.clone(),
                     root_device: root_device,
-                }));
+                });
+                if is_dir {
+                    directory_stack.push(message);
+                } else {
+                    file_stack.push(message);
+                }
             }
             // ... but there's no need to start workers if we don't need them.
-            if stack.is_empty() {
+            if file_stack.is_empty() && directory_stack.is_empty() {
                 return;
             }
         }
         // Create the workers and then wait for them to finish.
         let quit_now = Arc::new(AtomicBool::new(false));
-        let num_pending =
-            Arc::new(AtomicUsize::new(stack.lock().unwrap().len()));
+        let num_pending = Arc::new(AtomicUsize::new(
+            file_stack.lock().unwrap().len()
+                + directory_stack.lock().unwrap().len(),
+        ));
         crossbeam_utils::thread::scope(|s| {
             let mut handles = vec![];
             for _ in 0..threads {
                 let worker = Worker {
                     visitor: builder.build(),
-                    stack: stack.clone(),
+                    directory_stack: directory_stack.clone(),
+                    file_stack: file_stack.clone(),
                     quit_now: quit_now.clone(),
                     num_pending: num_pending.clone(),
                     max_depth: self.max_depth,
@@ -1401,7 +1412,11 @@ struct Worker<'s> {
     /// directories in depth first order. This can substantially reduce peak
     /// memory usage by keeping both the number of files path and gitignore
     /// matchers in memory lower.
-    stack: Arc<Mutex<Vec<Message>>>,
+    directory_stack: Arc<Mutex<Vec<Message>>>,
+    /// Separately, we keep a stack of files that need visiting. These will
+    /// be visited before we try to descend into any directories, in order
+    /// to keep our peak memory usage lower.
+    file_stack: Arc<Mutex<Vec<Message>>>,
     /// Whether all workers should terminate at the next opportunity. Note
     /// that we need this because we don't want other `Work` to be done after
     /// we quit. We wouldn't need this if have a priority channel.
@@ -1666,20 +1681,33 @@ impl<'s> Worker<'s> {
     /// Send work.
     fn send(&self, work: Work) {
         self.num_pending.fetch_add(1, Ordering::SeqCst);
-        let mut stack = self.stack.lock().unwrap();
+        let mut stack = if work.dent.is_dir() {
+            self.directory_stack.lock().unwrap()
+        } else {
+            self.file_stack.lock().unwrap()
+        };
         stack.push(Message::Work(work));
     }
 
     /// Send a quit message.
     fn send_quit(&self) {
-        let mut stack = self.stack.lock().unwrap();
+        // Note we send the quit message on the file stack, since this
+        // has priority when threads find work.
+        let mut stack = self.file_stack.lock().unwrap();
         stack.push(Message::Quit);
     }
 
     /// Receive work.
     fn recv(&self) -> Option<Message> {
-        let mut stack = self.stack.lock().unwrap();
-        stack.pop()
+        // We first try to process files we have already found before
+        // trying to find more by exploring directories. This reduces
+        // our memory usage.
+        let mut file_stack = self.file_stack.lock().unwrap();
+        if let Some(work) = file_stack.pop() {
+            return Some(work);
+        }
+        let mut directory_stack = self.directory_stack.lock().unwrap();
+        directory_stack.pop()
     }
 
     /// Signal that work has been received.
