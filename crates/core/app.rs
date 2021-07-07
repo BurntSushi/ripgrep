@@ -632,6 +632,7 @@ pub fn all_args_and_flags() -> Vec<RGArg> {
     flag_sort(&mut args);
     flag_sortr(&mut args);
     flag_stats(&mut args);
+    flag_stop_on_nonmatch(&mut args);
     flag_text(&mut args);
     flag_threads(&mut args);
     flag_trim(&mut args);
@@ -1926,13 +1927,16 @@ Nevertheless, if you only care about matches spanning at most one line, then it
 is always better to disable multiline mode.
 
 This flag can be disabled with --no-multiline.
+
+This overrides the --stop-on-nonmatch flag.
 "
     );
     let arg = RGArg::switch("multiline")
         .short("U")
         .help(SHORT)
         .long_help(LONG)
-        .overrides("no-multiline");
+        .overrides("no-multiline")
+        .overrides("stop-on-nonmatch");
     args.push(arg);
 
     let arg = RGArg::switch("no-multiline").hidden().overrides("multiline");
@@ -2851,6 +2855,25 @@ This flag can be disabled with --no-stats.
     args.push(arg);
 
     let arg = RGArg::switch("no-stats").hidden().overrides("stats");
+    args.push(arg);
+}
+
+fn flag_stop_on_nonmatch(args: &mut Vec<RGArg>) {
+    const SHORT: &str = "Stop searching after a non-match.";
+    const LONG: &str = long!(
+        "\
+Enabling this option will cause ripgrep to stop reading a file once it
+encounters a non-matching line after it has encountered a matching line.
+This is useful if it is expected that all matches in a given file will be on
+sequential lines, for example due to the lines being sorted.
+
+This overrides the -U/--multiline flag.
+"
+    );
+    let arg = RGArg::switch("stop-on-nonmatch")
+        .help(SHORT)
+        .long_help(LONG)
+        .overrides("multiline");
     args.push(arg);
 }
 

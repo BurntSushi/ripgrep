@@ -10,6 +10,12 @@ use crate::sink::{
 };
 use grep_matcher::{LineMatchKind, Matcher};
 
+enum FastMatchResult {
+    Continue,
+    Stop,
+    SwitchToSlow,
+}
+
 #[derive(Debug)]
 pub struct Core<'s, M: 's, S> {
     config: &'s Config,
@@ -25,6 +31,7 @@ pub struct Core<'s, M: 's, S> {
     last_line_visited: usize,
     after_context_left: usize,
     has_sunk: bool,
+    has_matched: bool,
 }
 
 impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
@@ -50,6 +57,7 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
             last_line_visited: 0,
             after_context_left: 0,
             has_sunk: false,
+            has_matched: false,
         };
         if !core.searcher.multi_line_with_matcher(&core.matcher) {
             if core.is_line_by_line_fast() {
@@ -109,7 +117,11 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
 
     pub fn match_by_line(&mut self, buf: &[u8]) -> Result<bool, S::Error> {
         if self.is_line_by_line_fast() {
-            self.match_by_line_fast(buf)
+            match self.match_by_line_fast(buf)? {
+                FastMatchResult::SwitchToSlow => self.match_by_line_slow(buf),
+                FastMatchResult::Continue => Ok(true),
+                FastMatchResult::Stop => Ok(false),
+            }
         } else {
             self.match_by_line_slow(buf)
         }
@@ -270,7 +282,9 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
                 }
             };
             self.set_pos(line.end());
-            if matched != self.config.invert_match {
+            let success = matched != self.config.invert_match;
+            if success {
+                self.has_matched = true;
                 if !self.before_context_by_line(buf, line.start())? {
                     return Ok(false);
                 }
@@ -286,40 +300,51 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
                     return Ok(false);
                 }
             }
+            if self.config.stop_on_nonmatch && !success && self.has_matched {
+                return Ok(false);
+            }
         }
         Ok(true)
     }
 
-    fn match_by_line_fast(&mut self, buf: &[u8]) -> Result<bool, S::Error> {
-        debug_assert!(!self.config.passthru);
+    fn match_by_line_fast(
+        &mut self,
+        buf: &[u8],
+    ) -> Result<FastMatchResult, S::Error> {
+        use FastMatchResult::*;
 
+        debug_assert!(!self.config.passthru);
         while !buf[self.pos()..].is_empty() {
+            if self.config.stop_on_nonmatch && self.has_matched {
+                return Ok(SwitchToSlow);
+            }
             if self.config.invert_match {
                 if !self.match_by_line_fast_invert(buf)? {
-                    return Ok(false);
+                    return Ok(Stop);
                 }
             } else if let Some(line) = self.find_by_line_fast(buf)? {
+                self.has_matched = true;
                 if self.config.max_context() > 0 {
                     if !self.after_context_by_line(buf, line.start())? {
-                        return Ok(false);
+                        return Ok(Stop);
                     }
                     if !self.before_context_by_line(buf, line.start())? {
-                        return Ok(false);
+                        return Ok(Stop);
                     }
                 }
                 self.set_pos(line.end());
                 if !self.sink_matched(buf, &line)? {
-                    return Ok(false);
+                    return Ok(Stop);
                 }
             } else {
                 break;
             }
         }
         if !self.after_context_by_line(buf, buf.len())? {
-            return Ok(false);
+            return Ok(Stop);
         }
         self.set_pos(buf.len());
-        Ok(true)
+        Ok(Continue)
     }
 
     #[inline(always)]
@@ -344,6 +369,7 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
         if invert_match.is_empty() {
             return Ok(true);
         }
+        self.has_matched = true;
         if !self.after_context_by_line(buf, invert_match.start())? {
             return Ok(false);
         }
@@ -575,6 +601,9 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
         debug_assert!(!self.searcher.multi_line_with_matcher(&self.matcher));
 
         if self.config.passthru {
+            return false;
+        }
+        if self.config.stop_on_nonmatch && self.has_matched {
             return false;
         }
         if let Some(line_term) = self.matcher.line_terminator() {
