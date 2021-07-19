@@ -13,7 +13,14 @@ repository = "https://github.com/BurntSushi/ripgrep"
 keywords = ["regex", "grep", "egrep", "search", "pattern"]
 categories = ["command-line-utilities", "text-processing"]
 license = "Unlicense OR MIT"
-exclude = ["HomebrewFormula"]
+exclude = [
+  "HomebrewFormula",
+  "/.github/",
+  "/ci/",
+  "/pkg/",
+  "/benchsuite/",
+  "/scripts/",
+]
 build = "build.rs"
 autotests = false
 edition = "2018"
