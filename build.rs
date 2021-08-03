@@ -106,6 +106,14 @@ fn generate_man_page<P: AsRef<Path>>(outdir: P) -> io::Result<()> {
             format!("'asciidoctor' failed with exit code {:?}", result.code());
         return Err(ioerr(msg));
     }
+
+    if cfg!(unix) {
+        std::os::unix::fs::symlink(
+            outdir.join("rg.1"),
+            outdir.join("ripgrep.1"),
+        )?;
+    }
+
     Ok(())
 }
 
@@ -147,6 +155,14 @@ fn legacy_generate_man_page<P: AsRef<Path>>(outdir: P) -> io::Result<()> {
         let msg = format!("'a2x' failed with exit code {:?}", result.code());
         return Err(ioerr(msg));
     }
+
+    if cfg!(unix) {
+        std::os::unix::fs::symlink(
+            outdir.join("rg.1"),
+            outdir.join("ripgrep.1"),
+        )?;
+    }
+
     Ok(())
 }
 
