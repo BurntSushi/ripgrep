@@ -47,7 +47,7 @@ type Result<T> = ::std::result::Result<T, Box<dyn error::Error>>;
 
 fn main() {
     if let Err(err) = Args::parse().and_then(try_main) {
-        eprintln!("{}", err);
+        eprintln_locked!("{}", err);
         process::exit(2);
     }
 }

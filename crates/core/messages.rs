@@ -4,12 +4,28 @@ static MESSAGES: AtomicBool = AtomicBool::new(false);
 static IGNORE_MESSAGES: AtomicBool = AtomicBool::new(false);
 static ERRORED: AtomicBool = AtomicBool::new(false);
 
+/// Like eprintln, but locks STDOUT to prevent interleaving lines.
+#[macro_export]
+macro_rules! eprintln_locked {
+    ($($tt:tt)*) => {{
+        {
+            // This is a bit of an abstraction violation because we explicitly
+            // lock STDOUT before printing to STDERR. This avoids interleaving
+            // lines within ripgrep because `search_parallel` uses `termcolor`,
+            // which accesses the same STDOUT lock when writing lines.
+            let stdout = std::io::stdout();
+            let _handle = stdout.lock();
+            eprintln!($($tt)*);
+        }
+    }}
+}
+
 /// Emit a non-fatal error message, unless messages were disabled.
 #[macro_export]
 macro_rules! message {
     ($($tt:tt)*) => {
         if crate::messages::messages() {
-            eprintln!($($tt)*);
+            eprintln_locked!($($tt)*);
         }
     }
 }
@@ -30,7 +46,7 @@ macro_rules! err_message {
 macro_rules! ignore_message {
     ($($tt:tt)*) => {
         if crate::messages::messages() && crate::messages::ignore_messages() {
-            eprintln!($($tt)*);
+            eprintln_locked!($($tt)*);
         }
     }
 }
