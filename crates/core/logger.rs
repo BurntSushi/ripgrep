@@ -33,7 +33,7 @@ impl Log for Logger {
     fn log(&self, record: &log::Record<'_>) {
         match (record.file(), record.line()) {
             (Some(file), Some(line)) => {
-                eprintln!(
+                eprintln_locked!(
                     "{}|{}|{}:{}: {}",
                     record.level(),
                     record.target(),
@@ -43,7 +43,7 @@ impl Log for Logger {
                 );
             }
             (Some(file), None) => {
-                eprintln!(
+                eprintln_locked!(
                     "{}|{}|{}: {}",
                     record.level(),
                     record.target(),
@@ -52,7 +52,7 @@ impl Log for Logger {
                 );
             }
             _ => {
-                eprintln!(
+                eprintln_locked!(
                     "{}|{}: {}",
                     record.level(),
                     record.target(),
@@ -63,6 +63,6 @@ impl Log for Logger {
     }
 
     fn flush(&self) {
-        // We use eprintln! which is flushed on every call.
+        // We use eprintln_locked! which is flushed on every call.
     }
 }
