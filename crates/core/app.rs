@@ -2584,7 +2584,7 @@ will stop searching. This is useful when ripgrep is used only for its exit
 code (which will be an error if no matches are found).
 
 When --files is used, then ripgrep will stop finding files after finding the
-first file that matches all ignore rules.
+first file that does not match any ignore rules.
 "
     );
     let arg = RGArg::switch("quiet").short("q").help(SHORT).long_help(LONG);
