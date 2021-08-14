@@ -9,7 +9,7 @@
 cargo_out_dir() {
     # This works by finding the most recent stamp file, which is produced by
     # every ripgrep build.
-    target_dir="$1"
+    target_dir=$1
     find "$target_dir" -name ripgrep-stamp -print0 \
       | xargs -0 ls -t \
       | head -n1 \
@@ -19,10 +19,10 @@ cargo_out_dir() {
 host() {
     case "$TRAVIS_OS_NAME" in
         linux)
-            echo x86_64-unknown-linux-gnu
+            echo "x86_64-unknown-linux-gnu"
             ;;
         osx)
-            echo x86_64-apple-darwin
+            echo "x86_64-apple-darwin"
             ;;
     esac
 }
@@ -30,13 +30,13 @@ host() {
 architecture() {
     case "$TARGET" in
         x86_64-*)
-            echo amd64
+            echo "amd64"
             ;;
         i686-*|i586-*|i386-*)
-            echo i386
+            echo "i386"
             ;;
         arm*-unknown-linux-gnueabihf)
-            echo armhf
+            echo "armhf"
             ;;
         *)
             die "architecture: unexpected target $TARGET"
@@ -47,7 +47,7 @@ architecture() {
 gcc_prefix() {
     case "$(architecture)" in
         armhf)
-            echo arm-linux-gnueabihf-
+            echo "arm-linux-gnueabihf-"
             ;;
         *)
             return
@@ -72,7 +72,7 @@ is_x86() {
 is_x86_64() {
     case "$(architecture)" in
       amd64) return 0 ;;
-      *)          return 1 ;;
+      *)     return 1 ;;
     esac
 }
 
