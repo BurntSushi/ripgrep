@@ -828,6 +828,13 @@ rgtest!(f1404_nothing_searched_ignored, |dir: Dir, mut cmd: TestCommand| {
     eqnice!(expected, stderr);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/1791
+rgtest!(f1791_multiple_smart_case_exprs, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("test", "foo\nfOo\nbar\nbAr\n");
+    cmd.args(&["--smart-case", "-e", "foo", "-e", "bAr"]);
+    eqnice!("test:foo\ntest:fOo\ntest:bAr\n", cmd.stdout());
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/1842
 rgtest!(f1842_field_context_separator, |dir: Dir, _: TestCommand| {
     dir.create("sherlock", SHERLOCK);
