@@ -12,12 +12,12 @@ D="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 #
 # This should be run from the root of the ripgrep repo.
 
-if ! command -V cargo-deb > /dev/null 2>&1; then
+if ! command -v cargo-deb >/dev/null; then
     echo "cargo-deb command missing" >&2
     exit 1
 fi
 
-if ! command -V asciidoctor > /dev/null 2>&1; then
+if ! command -v asciidoctor >/dev/null; then
     echo "asciidoctor command missing" >&2
     exit 1
 fi
