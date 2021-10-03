@@ -10,8 +10,10 @@
 /// columns (inclusive).
 #[rustfmt::skip]
 pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
+    ("ada", &["*.adb", "*.ads"]),
     ("agda", &["*.agda", "*.lagda"]),
     ("aidl", &["*.aidl"]),
+    ("alire", &["alire.toml"]),
     ("amake", &["*.mk", "*.bp"]),
     ("asciidoc", &["*.adoc", "*.asc", "*.asciidoc"]),
     ("asm", &["*.asm", "*.s", "*.S"]),
@@ -85,6 +87,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("gap", &["*.g", "*.gap", "*.gi", "*.gd", "*.tst"]),
     ("gn", &["*.gn", "*.gni"]),
     ("go", &["*.go"]),
+    ("gprbuild", &["*.gpr"]),
     ("gradle", &["*.gradle"]),
     ("graphql", &["*.graphql", "*.graphqls"]),
     ("groovy", &["*.groovy", "*.gradle"]),
