@@ -69,7 +69,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
         "*.f90", "*.F90", "*.f95", "*.F95",
     ]),
     ("fsharp", &["*.fs", "*.fsx", "*.fsi"]),
-    ("fut", &[".fut"]),
+    ("fut", &["*.fut"]),
     ("gap", &["*.g", "*.gap", "*.gi", "*.gd", "*.tst"]),
     ("gn", &["*.gn", "*.gni"]),
     ("go", &["*.go"]),
