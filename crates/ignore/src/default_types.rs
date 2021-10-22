@@ -82,6 +82,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("hbs", &["*.hbs"]),
     ("hs", &["*.hs", "*.lhs"]),
     ("html", &["*.htm", "*.html", "*.ejs"]),
+    ("hy", &["*.hy"]),
     ("idris", &["*.idr", "*.lidr"]),
     ("janet", &["*.janet"]),
     ("java", &["*.java", "*.jsp", "*.jspx", "*.properties"]),
