@@ -1681,7 +1681,7 @@ impl<'s> Worker<'s> {
         stack.pop()
     }
 
-    /// Signal that work has been received.
+    /// Signal that work has been finished.
     fn work_done(&self) {
         self.num_pending.fetch_sub(1, Ordering::SeqCst);
     }
