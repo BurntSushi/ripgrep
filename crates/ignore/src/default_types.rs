@@ -123,6 +123,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
         "MPL-*[0-9]*",
         "OFL-*[0-9]*",
     ]),
+    ("lilypond", &["*.ly", "*.ily"]),
     ("lisp", &["*.el", "*.jl", "*.lisp", "*.lsp", "*.sc", "*.scm"]),
     ("lock", &["*.lock", "package-lock.json"]),
     ("log", &["*.log"]),
