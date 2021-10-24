@@ -259,6 +259,12 @@ $ sudo yum-config-manager --add-repo=https://copr.fedorainfracloud.org/coprs/car
 $ sudo yum install ripgrep
 ```
 
+If you're a **Guix** user, you can install ripgrep to your default [profile](https://guix.gnu.org/cookbook/en/html_node/Guix-Profiles-in-Practice.html) from the official repositories.
+
+```
+$ guix install ripgrep
+```
+
 If you're a **Nix** user, you can install ripgrep from
 [nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/tools/text/ripgrep/default.nix):
 
