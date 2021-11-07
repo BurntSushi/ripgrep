@@ -202,11 +202,12 @@ impl Ignore {
             errs.maybe_push(err);
             igtmp.is_absolute_parent = true;
             igtmp.absolute_base = Some(absolute_base.clone());
-            igtmp.has_git = if self.0.opts.git_ignore {
-                parent.join(".git").exists()
-            } else {
-                false
-            };
+            igtmp.has_git =
+                if self.0.opts.require_git && self.0.opts.git_ignore {
+                    parent.join(".git").exists()
+                } else {
+                    false
+                };
             ig = Ignore(Arc::new(igtmp));
             compiled.insert(parent.as_os_str().to_os_string(), ig.clone());
         }
@@ -231,7 +232,9 @@ impl Ignore {
 
     /// Like add_child, but takes a full path and returns an IgnoreInner.
     fn add_child_path(&self, dir: &Path) -> (IgnoreInner, Option<Error>) {
-        let git_type = if self.0.opts.git_ignore || self.0.opts.git_exclude {
+        let git_type = if self.0.opts.require_git
+            && (self.0.opts.git_ignore || self.0.opts.git_exclude)
+        {
             dir.join(".git").metadata().ok().map(|md| md.file_type())
         } else {
             None
