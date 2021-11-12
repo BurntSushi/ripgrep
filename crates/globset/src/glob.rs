@@ -255,6 +255,13 @@ impl Glob {
     pub fn new(glob: &str) -> Result<Glob, Error> {
         GlobBuilder::new(glob).build()
     }
+    
+    /// Builds a new pattern that matches a literal string.
+    ///
+    /// This is a shorthand for `Glob::new(glob::escape("pattern"))`.
+    pub fn new_escaped(s: &str) -> Self {
+        Self::new(&crate::escape(s)).unwrap()
+    }
 
     /// Returns a matcher for this pattern.
     pub fn compile_matcher(&self) -> GlobMatcher {
