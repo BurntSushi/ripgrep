@@ -639,9 +639,9 @@ impl<'a> GlobBuilder<'a> {
     }
 
     /// Toggle whether an empty pattern in a list of alternates is accepted.
-    /// 
+    ///
     /// For example, if this is set then the glob `foo{,.txt}` will match both `foo` and `foo.txt`.
-    /// 
+    ///
     /// By default this is false.
     pub fn empty_alternates(&mut self, yes: bool) -> &mut GlobBuilder<'a> {
         self.opts.empty_alternates = yes;
@@ -1222,12 +1222,20 @@ mod tests {
         Options { casei: Some(true), litsep: None, bsesc: None, ealtre: None };
     const SLASHLIT: Options =
         Options { casei: None, litsep: Some(true), bsesc: None, ealtre: None };
-    const NOBSESC: Options =
-        Options { casei: None, litsep: None, bsesc: Some(false), ealtre: None };
+    const NOBSESC: Options = Options {
+        casei: None,
+        litsep: None,
+        bsesc: Some(false),
+        ealtre: None,
+    };
     const BSESC: Options =
         Options { casei: None, litsep: None, bsesc: Some(true), ealtre: None };
-    const EALTRE: Options =
-        Options { casei: None, litsep: None, bsesc: Some(true), ealtre: Some(true) };
+    const EALTRE: Options = Options {
+        casei: None,
+        litsep: None,
+        bsesc: Some(true),
+        ealtre: Some(true),
+    };
 
     toregex!(re_casei, "a", "(?i)^a$", &CASEI);
 

@@ -880,6 +880,29 @@ impl RequiredExtensionStrategyBuilder {
     }
 }
 
+/// Escape meta-characters within the given glob pattern.
+///
+/// The escaping works by surrounding meta-characters with brackets. For
+/// example, `*` becomes `[*]`.
+pub fn escape(s: &str) -> String {
+    let mut escaped = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            // note that ! does not need escaping because it is only special
+            // inside brackets
+            '?' | '*' | '[' | ']' => {
+                escaped.push('[');
+                escaped.push(c);
+                escaped.push(']');
+            }
+            c => {
+                escaped.push(c);
+            }
+        }
+    }
+    escaped
+}
+
 #[cfg(test)]
 mod tests {
     use super::{GlobSet, GlobSetBuilder};
@@ -918,5 +941,17 @@ mod tests {
         let set: GlobSet = Default::default();
         assert!(!set.is_match(""));
         assert!(!set.is_match("a"));
+    }
+
+    #[test]
+    fn escape() {
+        use super::escape;
+        assert_eq!("foo", escape("foo"));
+        assert_eq!("foo[*]", escape("foo*"));
+        assert_eq!("[[][]]", escape("[]"));
+        assert_eq!("[*][?]", escape("*?"));
+        assert_eq!("src/[*][*]/[*].rs", escape("src/**/*.rs"));
+        assert_eq!("bar[[]ab[]]baz", escape("bar[ab]baz"));
+        assert_eq!("bar[[]!![]]!baz", escape("bar[!!]!baz"));
     }
 }
