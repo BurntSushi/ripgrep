@@ -1,7 +1,3 @@
-extern crate grep;
-extern crate termcolor;
-extern crate walkdir;
-
 use std::env;
 use std::error::Error;
 use std::ffi::OsString;

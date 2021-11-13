@@ -1,7 +1,3 @@
-extern crate crossbeam_channel as channel;
-extern crate ignore;
-extern crate walkdir;
-
 use std::env;
 use std::io::{self, Write};
 use std::path::Path;
@@ -14,7 +10,7 @@ fn main() {
     let mut path = env::args().nth(1).unwrap();
     let mut parallel = false;
     let mut simple = false;
-    let (tx, rx) = channel::bounded::<DirEntry>(100);
+    let (tx, rx) = crossbeam_channel::bounded::<DirEntry>(100);
     if path == "parallel" {
         path = env::args().nth(2).unwrap();
         parallel = true;

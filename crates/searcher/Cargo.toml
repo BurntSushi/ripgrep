@@ -1,6 +1,6 @@
 [package]
 name = "grep-searcher"
-version = "0.1.7"  #:version
+version = "0.1.8"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 Fast line oriented regex searching as a library.
@@ -11,18 +11,19 @@ repository = "https://github.com/BurntSushi/ripgrep/tree/master/crates/searcher"
 readme = "README.md"
 keywords = ["regex", "grep", "egrep", "search", "pattern"]
 license = "Unlicense/MIT"
+edition = "2018"
 
 [dependencies]
 bstr = { version = "0.2.0", default-features = false, features = ["std"] }
 bytecount = "0.6"
 encoding_rs = "0.8.14"
 encoding_rs_io = "0.1.6"
-grep-matcher = { version = "0.1.2", path = "../matcher" }
+grep-matcher = { version = "0.1.5", path = "../matcher" }
 log = "0.4.5"
-memmap = { package = "memmap2", version = "0.2.0" }
+memmap = { package = "memmap2", version = "0.3.0" }
 
 [dev-dependencies]
-grep-regex = { version = "0.1.3", path = "../regex" }
+grep-regex = { version = "0.1.9", path = "../regex" }
 regex = "1.1"
 
 [features]

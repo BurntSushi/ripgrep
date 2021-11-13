@@ -4,7 +4,7 @@
 /// types to each invocation of ripgrep with the '--type-add' flag.
 ///
 /// If you would like to add or improve this list, please file a PR:
-/// https://github.com/BurntSushi/ripgrep
+/// <https://github.com/BurntSushi/ripgrep>.
 ///
 /// Please try to keep this list sorted lexicographically and wrapped to 79
 /// columns (inclusive).
@@ -16,12 +16,14 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("asciidoc", &["*.adoc", "*.asc", "*.asciidoc"]),
     ("asm", &["*.asm", "*.s", "*.S"]),
     ("asp", &[
-        "*.aspx", "*.aspx.cs", "*.aspx.cs", "*.ascx", "*.ascx.cs", "*.ascx.vb",
+        "*.aspx", "*.aspx.cs", "*.aspx.vb", "*.ascx", "*.ascx.cs", "*.ascx.vb",
     ]),
     ("ats", &["*.ats", "*.dats", "*.sats", "*.hats"]),
     ("avro", &["*.avdl", "*.avpr", "*.avsc"]),
     ("awk", &["*.awk"]),
-    ("bazel", &["*.bazel", "*.bzl", "*.BUILD", "*.bazelrc", "BUILD", "WORKSPACE"]),
+    ("bazel", &[
+        "*.bazel", "*.bzl", "*.BUILD", "*.bazelrc", "BUILD", "WORKSPACE",
+    ]),
     ("bitbake", &["*.bb", "*.bbappend", "*.bbclass", "*.conf", "*.inc"]),
     ("brotli", &["*.br"]),
     ("buildstream", &["*.bst"]),
@@ -40,12 +42,13 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
         "*.[ChH].in", "*.cc.in", "*.[ch]pp.in", "*.[ch]xx.in", "*.hh.in",
     ]),
     ("creole", &["*.creole"]),
-    ("crystal", &["Projectfile", "*.cr"]),
+    ("crystal", &["Projectfile", "*.cr", "*.ecr", "shard.yml"]),
     ("cs", &["*.cs"]),
     ("csharp", &["*.cs"]),
     ("cshtml", &["*.cshtml"]),
     ("css", &["*.css", "*.scss"]),
     ("csv", &["*.csv"]),
+    ("cuda", &["*.cu", "*.cuh"]),
     ("cython", &["*.pyx", "*.pxi", "*.pxd"]),
     ("d", &["*.d"]),
     ("dart", &["*.dart"]),
@@ -68,7 +71,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
         "*.f90", "*.F90", "*.f95", "*.F95",
     ]),
     ("fsharp", &["*.fs", "*.fsx", "*.fsi"]),
-    ("fut", &[".fut"]),
+    ("fut", &["*.fut"]),
     ("gap", &["*.g", "*.gap", "*.gi", "*.gd", "*.tst"]),
     ("gn", &["*.gn", "*.gni"]),
     ("go", &["*.go"]),
@@ -81,7 +84,9 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("hbs", &["*.hbs"]),
     ("hs", &["*.hs", "*.lhs"]),
     ("html", &["*.htm", "*.html", "*.ejs"]),
+    ("hy", &["*.hy"]),
     ("idris", &["*.idr", "*.lidr"]),
+    ("janet", &["*.janet"]),
     ("java", &["*.java", "*.jsp", "*.jspx", "*.properties"]),
     ("jinja", &["*.j2", "*.jinja", "*.jinja2"]),
     ("jl", &["*.jl"]),
@@ -120,6 +125,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
         "MPL-*[0-9]*",
         "OFL-*[0-9]*",
     ]),
+    ("lilypond", &["*.ly", "*.ily"]),
     ("lisp", &["*.el", "*.jl", "*.lisp", "*.lsp", "*.sc", "*.scm"]),
     ("lock", &["*.lock", "package-lock.json"]),
     ("log", &["*.log"]),
@@ -156,6 +162,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("pdf", &["*.pdf"]),
     ("perl", &["*.perl", "*.pl", "*.PL", "*.plh", "*.plx", "*.pm", "*.t"]),
     ("php", &["*.php", "*.php3", "*.php4", "*.php5", "*.phtml"]),
+    ("po", &["*.po"]),
     ("pod", &["*.pod"]),
     ("postscript", &["*.eps", "*.ps"]),
     ("protobuf", &["*.proto"]),
@@ -169,9 +176,15 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("racket", &["*.rkt"]),
     ("rdoc", &["*.rdoc"]),
     ("readme", &["README*", "*README"]),
+    ("red", &["*.r", "*.red", "*.reds"]),
     ("robot", &["*.robot"]),
     ("rst", &["*.rst"]),
-    ("ruby", &["Gemfile", "*.gemspec", ".irbrc", "Rakefile", "*.rb"]),
+    ("ruby", &[
+        // Idiomatic files
+        "config.ru", "Gemfile", ".irbrc", "Rakefile",
+        // Extensions
+        "*.gemspec", "*.rb", "*.rbw"
+    ]),
     ("rust", &["*.rs"]),
     ("sass", &["*.sass", "*.scss"]),
     ("scala", &["*.scala", "*.sbt"]),
@@ -218,6 +231,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("taskpaper", &["*.taskpaper"]),
     ("tcl", &["*.tcl"]),
     ("tex", &["*.tex", "*.ltx", "*.cls", "*.sty", "*.bib", "*.dtx", "*.ins"]),
+    ("texinfo", &["*.texi"]),
     ("textile", &["*.textile"]),
     ("tf", &["*.tf"]),
     ("thrift", &["*.thrift"]),
@@ -231,8 +245,12 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("vcl", &["*.vcl"]),
     ("verilog", &["*.v", "*.vh", "*.sv", "*.svh"]),
     ("vhdl", &["*.vhd", "*.vhdl"]),
-    ("vim", &["*.vim"]),
-    ("vimscript", &["*.vim"]),
+    ("vim", &[
+        "*.vim", ".vimrc", ".gvimrc", "vimrc", "gvimrc", "_vimrc", "_gvimrc",
+    ]),
+    ("vimscript", &[
+        "*.vim", ".vimrc", ".gvimrc", "vimrc", "gvimrc", "_vimrc", "_gvimrc",
+    ]),
     ("webidl", &["*.idl", "*.webidl", "*.widl"]),
     ("wiki", &["*.mediawiki", "*.wiki"]),
     ("xml", &[

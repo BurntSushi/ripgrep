@@ -44,8 +44,8 @@ main() {
     # Occasionally we may have to handle some manually, however
     help_args=( ${(f)"$(
         $rg --help |
-        $rg -i -- '^\s+--?[a-z0-9]|--[a-z]' |
-        $rg -ior '$1' -- $'[\t /\"\'`.,](-[a-z0-9]|--[a-z0-9-]+)\\b' |
+        $rg -i -- '^\s+--?[a-z0-9.]|--[a-z]' |
+        $rg -ior '$1' -- $'[\t /\"\'`.,](-[a-z0-9.]|--[a-z0-9-]+)(,|\\b)' |
         $rg -v -- --print0 | # False positives
         sort -u
     )"} )

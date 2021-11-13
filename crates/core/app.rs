@@ -13,8 +13,8 @@ use clap::{self, crate_authors, crate_version, App, AppSettings};
 use lazy_static::lazy_static;
 
 const ABOUT: &str = "
-ripgrep (rg) recursively searches your current directory for a regex pattern.
-By default, ripgrep will respect your .gitignore and automatically skip hidden
+ripgrep (rg) recursively searches the current directory for a regex pattern.
+By default, ripgrep will respect gitignore rules and automatically skip hidden
 files/directories and binary files.
 
 Use -h for short descriptions and --help for more details.
@@ -568,6 +568,8 @@ pub fn all_args_and_flags() -> Vec<RGArg> {
     flag_dfa_size_limit(&mut args);
     flag_encoding(&mut args);
     flag_engine(&mut args);
+    flag_field_context_separator(&mut args);
+    flag_field_match_separator(&mut args);
     flag_file(&mut args);
     flag_files(&mut args);
     flag_files_with_matches(&mut args);
@@ -697,7 +699,7 @@ fn flag_after_context(args: &mut Vec<RGArg>) {
         "\
 Show NUM lines after each match.
 
-This overrides the --context flag.
+This overrides the --context and --passthru flags.
 "
     );
     let arg = RGArg::flag("after-context", "NUM")
@@ -705,6 +707,7 @@ This overrides the --context flag.
         .help(SHORT)
         .long_help(LONG)
         .number()
+        .overrides("passthru")
         .overrides("context");
     args.push(arg);
 }
@@ -766,7 +769,7 @@ fn flag_before_context(args: &mut Vec<RGArg>) {
         "\
 Show NUM lines before each match.
 
-This overrides the --context flag.
+This overrides the --context and --passthru flags.
 "
     );
     let arg = RGArg::flag("before-context", "NUM")
@@ -774,6 +777,7 @@ This overrides the --context flag.
         .help(SHORT)
         .long_help(LONG)
         .number()
+        .overrides("passthru")
         .overrides("context");
     args.push(arg);
 }
@@ -1006,7 +1010,8 @@ fn flag_context(args: &mut Vec<RGArg>) {
 Show NUM lines before and after each match. This is equivalent to providing
 both the -B/--before-context and -A/--after-context flags with the same value.
 
-This overrides both the -B/--before-context and -A/--after-context flags.
+This overrides both the -B/--before-context and -A/--after-context flags,
+in addition to the --passthru flag.
 "
     );
     let arg = RGArg::flag("context", "NUM")
@@ -1014,6 +1019,7 @@ This overrides both the -B/--before-context and -A/--after-context flags.
         .help(SHORT)
         .long_help(LONG)
         .number()
+        .overrides("passthru")
         .overrides("before-context")
         .overrides("after-context");
     args.push(arg);
@@ -1052,11 +1058,13 @@ fn flag_count(args: &mut Vec<RGArg>) {
 This flag suppresses normal output and shows the number of lines that match
 the given patterns for each file searched. Each file containing a match has its
 path and count printed on each line. Note that this reports the number of lines
-that match and not the total number of matches.
+that match and not the total number of matches, unless -U/--multiline is
+enabled. In multiline mode, --count is equivalent to --count-matches.
 
 If only one file is given to ripgrep, then only the count is printed if there
 is a match. The --with-filename flag can be used to force printing the file
-path in this case.
+path in this case. If you need a count to be printed regardless of whether
+there is a match, then use --include-zero.
 
 This overrides the --count-matches flag. Note that when --count is combined
 with --only-matching, then ripgrep behaves as if --count-matches was given.
@@ -1228,6 +1236,38 @@ This overrides previous uses of --pcre2 and --auto-hybrid-regex flags.
     args.push(arg);
 }
 
+fn flag_field_context_separator(args: &mut Vec<RGArg>) {
+    const SHORT: &str = "Set the field context separator.";
+    const LONG: &str = long!(
+        "\
+Set the field context separator, which is used to delimit file paths, line
+numbers, columns and the context itself, when printing contextual lines. The
+separator may be any number of bytes, including zero. Escape sequences like
+\\x7F or \\t may be used. The '-' character is the default value.
+"
+    );
+    let arg = RGArg::flag("field-context-separator", "SEPARATOR")
+        .help(SHORT)
+        .long_help(LONG);
+    args.push(arg);
+}
+
+fn flag_field_match_separator(args: &mut Vec<RGArg>) {
+    const SHORT: &str = "Set the match separator.";
+    const LONG: &str = long!(
+        "\
+Set the field match separator, which is used to delimit file paths, line
+numbers, columns and the match itself. The separator may be any number of
+bytes, including zero. Escape sequences like \\x7F or \\t may be used. The ':'
+character is the default value.
+"
+    );
+    let arg = RGArg::flag("field-match-separator", "SEPARATOR")
+        .help(SHORT)
+        .long_help(LONG);
+    args.push(arg);
+}
+
 fn flag_file(args: &mut Vec<RGArg>) {
     const SHORT: &str = "Search for patterns from the given file.";
     const LONG: &str = long!(
@@ -1267,10 +1307,10 @@ This is useful to determine whether a particular file is being searched or not.
 }
 
 fn flag_files_with_matches(args: &mut Vec<RGArg>) {
-    const SHORT: &str = "Only print the paths with at least one match.";
+    const SHORT: &str = "Print the paths with at least one match.";
     const LONG: &str = long!(
         "\
-Only print the paths with at least one match.
+Print the paths with at least one match and suppress match contents.
 
 This overrides --files-without-match.
 "
@@ -1284,11 +1324,11 @@ This overrides --files-without-match.
 }
 
 fn flag_files_without_match(args: &mut Vec<RGArg>) {
-    const SHORT: &str = "Only print the paths that contain zero matches.";
+    const SHORT: &str = "Print the paths that contain zero matches.";
     const LONG: &str = long!(
         "\
-Only print the paths that contain zero matches. This inverts/negates the
---files-with-matches flag.
+Print the paths that contain zero matches and suppress match contents. This
+inverts/negates the --files-with-matches flag.
 
 This overrides --files-with-matches.
 "
@@ -1354,6 +1394,13 @@ glob. This always overrides any other ignore logic. Multiple glob flags may be
 used. Globbing rules match .gitignore globs. Precede a glob with a ! to exclude
 it. If multiple globs match a file or directory, the glob given later in the
 command line takes precedence.
+
+As an extension, globs support specifying alternatives: *-g ab{c,d}* is
+equivalent to *-g abc -g abd*. Empty alternatives like *-g ab{,c}* are not
+currently supported. Note that this syntax extension is also currently enabled
+in gitignore files, even though this syntax isn't supported by git itself.
+ripgrep may disable this syntax extension in gitignore files, but it will
+always remain available via the -g/--glob flag.
 
 When this flag is set, every file and directory is applied to it to test for
 a match. So for example, if you only want to search in a particular directory
@@ -1442,6 +1489,7 @@ This flag can be disabled with --no-hidden.
 "
     );
     let arg = RGArg::switch("hidden")
+        .short(".")
         .help(SHORT)
         .long_help(LONG)
         .overrides("no-hidden");
@@ -1501,7 +1549,7 @@ When specifying multiple ignore files, earlier files have lower precedence
 than later files.
 
 If you are looking for a way to include or exclude files and directories
-directly on the command line, then used -g instead.
+directly on the command line, then use -g instead.
 "
     );
     let arg = RGArg::flag("ignore-file", "PATH")
@@ -1994,7 +2042,7 @@ fn flag_no_ignore_dot(args: &mut Vec<RGArg>) {
 Don't respect .ignore files.
 
 This does *not* affect whether ripgrep will ignore files and directories
-whose names begin with a dot. For that, see --hidden.
+whose names begin with a dot. For that, see the -./--hidden flag.
 
 This flag can be disabled with the --ignore-dot flag.
 "
@@ -2366,12 +2414,17 @@ the empty string. For example, if you are searching using 'rg foo' then using
 'rg \"^|foo\"' instead will emit every line in every file searched, but only
 occurrences of 'foo' will be highlighted. This flag enables the same behavior
 without needing to modify the pattern.
+
+This overrides the --context, --after-context and --before-context flags.
 "
     );
     let arg = RGArg::switch("passthru")
         .help(SHORT)
         .long_help(LONG)
-        .alias("passthrough");
+        .alias("passthrough")
+        .overrides("after-context")
+        .overrides("before-context")
+        .overrides("context");
     args.push(arg);
 }
 
@@ -2992,8 +3045,8 @@ fn flag_unrestricted(args: &mut Vec<RGArg>) {
         "\
 Reduce the level of \"smart\" searching. A single -u won't respect .gitignore
 (etc.) files (--no-ignore). Two -u flags will additionally search hidden files
-and directories (--hidden). Three -u flags will additionally search binary files
-(--binary).
+and directories (-./--hidden). Three -u flags will additionally search binary
+files (--binary).
 
 'rg -uuu' is roughly equivalent to 'grep -r'.
 "

@@ -177,15 +177,19 @@ After recursive search, ripgrep's most important feature is what it *doesn't*
 search. By default, when you search a directory, ripgrep will ignore all of
 the following:
 
-1. Files and directories that match the rules in your `.gitignore` glob
-   pattern.
+1. Files and directories that match glob patterns in these three categories:
+      1. gitignore globs (including global and repo-specific globs).
+      2. `.ignore` globs, which take precedence over all gitignore globs
+         when there's a conflict.
+      3. `.rgignore` globs, which take precedence over all `.ignore` globs
+         when there's a conflict.
 2. Hidden files and directories.
 3. Binary files. (ripgrep considers any file with a `NUL` byte to be binary.)
 4. Symbolic links aren't followed.
 
 All of these things can be toggled using various flags provided by ripgrep:
 
-1. You can disable `.gitignore` handling with the `--no-ignore` flag.
+1. You can disable all ignore-related filtering with the `--no-ignore` flag.
 2. Hidden files and directories can be searched with the `--hidden` flag.
 3. Binary files can be searched via the `--text` (`-a` for short) flag.
    Be careful with this flag! Binary files may emit control characters to your
@@ -988,6 +992,8 @@ used options that will likely impact how you use ripgrep on a regular basis.
 * `-S/--smart-case`: This is similar to `--ignore-case`, but disables itself
   if the pattern contains any uppercase letters. Usually this flag is put into
   alias or a config file.
+* `-F/--fixed-strings`: Disable regular expression matching and treat the pattern
+   as a literal string. 
 * `-w/--word-regexp`: Require that all matches of the pattern be surrounded
   by word boundaries. That is, given `pattern`, the `--word-regexp` flag will
   cause ripgrep to behave as if `pattern` were actually `\b(?:pattern)\b`.

@@ -1,7 +1,7 @@
 use std::error;
 use std::fmt;
 
-use util;
+use crate::util;
 
 /// An error that can occur in this crate.
 ///
@@ -72,7 +72,7 @@ impl error::Error for Error {
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.kind {
             ErrorKind::Regex(ref s) => write!(f, "{}", s),
             ErrorKind::NotAllowed(ref lit) => {

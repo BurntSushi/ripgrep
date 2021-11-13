@@ -5,15 +5,15 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
 
-use encoding_rs;
-use encoding_rs_io::DecodeReaderBytesBuilder;
-use grep_matcher::{LineTerminator, Match, Matcher};
-use line_buffer::{
+use crate::line_buffer::{
     self, alloc_error, BufferAllocation, LineBuffer, LineBufferBuilder,
     LineBufferReader, DEFAULT_BUFFER_CAPACITY,
 };
-use searcher::glue::{MultiLine, ReadByLine, SliceByLine};
-use sink::{Sink, SinkError};
+use crate::searcher::glue::{MultiLine, ReadByLine, SliceByLine};
+use crate::sink::{Sink, SinkError};
+use encoding_rs;
+use encoding_rs_io::DecodeReaderBytesBuilder;
+use grep_matcher::{LineTerminator, Match, Matcher};
 
 pub use self::mmap::MmapChoice;
 
@@ -263,7 +263,7 @@ impl ::std::error::Error for ConfigError {
 }
 
 impl fmt::Display for ConfigError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             ConfigError::SearchUnavailable => {
                 write!(f, "grep config error: no available searchers")
@@ -659,16 +659,19 @@ impl Searcher {
         S: Sink,
     {
         if let Some(mmap) = self.config.mmap.open(file, path) {
-            trace!("{:?}: searching via memory map", path);
+            log::trace!("{:?}: searching via memory map", path);
             return self.search_slice(matcher, &mmap, write_to);
         }
         // Fast path for multi-line searches of files when memory maps are
         // not enabled. This pre-allocates a buffer roughly the size of the
         // file, which isn't possible when searching an arbitrary io::Read.
         if self.multi_line_with_matcher(&matcher) {
-            trace!("{:?}: reading entire file on to heap for mulitline", path);
+            log::trace!(
+                "{:?}: reading entire file on to heap for mulitline",
+                path
+            );
             self.fill_multi_line_buffer_from_file::<S>(file)?;
-            trace!("{:?}: searching via multiline strategy", path);
+            log::trace!("{:?}: searching via multiline strategy", path);
             MultiLine::new(
                 self,
                 matcher,
@@ -677,7 +680,7 @@ impl Searcher {
             )
             .run()
         } else {
-            trace!("{:?}: searching using generic reader", path);
+            log::trace!("{:?}: searching using generic reader", path);
             self.search_reader(matcher, file, write_to)
         }
     }
@@ -707,15 +710,17 @@ impl Searcher {
         self.check_config(&matcher).map_err(S::Error::error_config)?;
 
         let mut decode_buffer = self.decode_buffer.borrow_mut();
-        let read_from = self
+        let decoder = self
             .decode_builder
             .build_with_buffer(read_from, &mut *decode_buffer)
             .map_err(S::Error::error_io)?;
 
         if self.multi_line_with_matcher(&matcher) {
-            trace!("generic reader: reading everything to heap for multiline");
-            self.fill_multi_line_buffer_from_reader::<_, S>(read_from)?;
-            trace!("generic reader: searching via multiline strategy");
+            log::trace!(
+                "generic reader: reading everything to heap for multiline"
+            );
+            self.fill_multi_line_buffer_from_reader::<_, S>(decoder)?;
+            log::trace!("generic reader: searching via multiline strategy");
             MultiLine::new(
                 self,
                 matcher,
@@ -725,8 +730,8 @@ impl Searcher {
             .run()
         } else {
             let mut line_buffer = self.line_buffer.borrow_mut();
-            let rdr = LineBufferReader::new(read_from, &mut *line_buffer);
-            trace!("generic reader: searching via roll buffer strategy");
+            let rdr = LineBufferReader::new(decoder, &mut *line_buffer);
+            log::trace!("generic reader: searching via roll buffer strategy");
             ReadByLine::new(self, matcher, rdr, write_to).run()
         }
     }
@@ -747,14 +752,16 @@ impl Searcher {
 
         // We can search the slice directly, unless we need to do transcoding.
         if self.slice_needs_transcoding(slice) {
-            trace!("slice reader: needs transcoding, using generic reader");
+            log::trace!(
+                "slice reader: needs transcoding, using generic reader"
+            );
             return self.search_reader(matcher, slice, write_to);
         }
         if self.multi_line_with_matcher(&matcher) {
-            trace!("slice reader: searching via multiline strategy");
+            log::trace!("slice reader: searching via multiline strategy");
             MultiLine::new(self, matcher, slice, write_to).run()
         } else {
-            trace!("slice reader: searching via slice-by-line strategy");
+            log::trace!("slice reader: searching via slice-by-line strategy");
             SliceByLine::new(self, matcher, slice, write_to).run()
         }
     }
@@ -788,7 +795,7 @@ impl Searcher {
     /// Returns true if and only if the given slice needs to be transcoded.
     fn slice_needs_transcoding(&self, slice: &[u8]) -> bool {
         self.config.encoding.is_some()
-            || (self.config.bom_sniffing && slice_has_utf16_bom(slice))
+            || (self.config.bom_sniffing && slice_has_bom(slice))
     }
 }
 
@@ -973,22 +980,24 @@ impl Searcher {
     }
 }
 
-/// Returns true if and only if the given slice begins with a UTF-16 BOM.
+/// Returns true if and only if the given slice begins with a UTF-8 or UTF-16
+/// BOM.
 ///
 /// This is used by the searcher to determine if a transcoder is necessary.
 /// Otherwise, it is advantageous to search the slice directly.
-fn slice_has_utf16_bom(slice: &[u8]) -> bool {
+fn slice_has_bom(slice: &[u8]) -> bool {
     let enc = match encoding_rs::Encoding::for_bom(slice) {
         None => return false,
         Some((enc, _)) => enc,
     };
-    [encoding_rs::UTF_16LE, encoding_rs::UTF_16BE].contains(&enc)
+    [encoding_rs::UTF_16LE, encoding_rs::UTF_16BE, encoding_rs::UTF_8]
+        .contains(&enc)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use testutil::{KitchenSink, RegexMatcher};
+    use crate::testutil::{KitchenSink, RegexMatcher};
 
     #[test]
     fn config_error_heap_limit() {
@@ -1008,5 +1017,22 @@ mod tests {
         let mut searcher = Searcher::new();
         let res = searcher.search_slice(matcher, &[], sink);
         assert!(res.is_err());
+    }
+
+    #[test]
+    fn uft8_bom_sniffing() {
+        // See: https://github.com/BurntSushi/ripgrep/issues/1638
+        // ripgrep must sniff utf-8 BOM, just like it does with utf-16
+        let matcher = RegexMatcher::new("foo");
+        let haystack: &[u8] = &[0xef, 0xbb, 0xbf, 0x66, 0x6f, 0x6f];
+
+        let mut sink = KitchenSink::new();
+        let mut searcher = SearcherBuilder::new().build();
+
+        let res = searcher.search_slice(matcher, haystack, &mut sink);
+        assert!(res.is_ok());
+
+        let sink_output = String::from_utf8(sink.as_bytes().to_vec()).unwrap();
+        assert_eq!(sink_output, "1:0:foo\nbyte count:3\n");
     }
 }

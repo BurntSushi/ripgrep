@@ -24,13 +24,13 @@ impl Logger {
 }
 
 impl Log for Logger {
-    fn enabled(&self, _: &log::Metadata) -> bool {
+    fn enabled(&self, _: &log::Metadata<'_>) -> bool {
         // We set the log level via log::set_max_level, so we don't need to
         // implement filtering here.
         true
     }
 
-    fn log(&self, record: &log::Record) {
+    fn log(&self, record: &log::Record<'_>) {
         match (record.file(), record.line()) {
             (Some(file), Some(line)) => {
                 eprintln!(

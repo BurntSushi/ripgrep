@@ -186,7 +186,7 @@ impl Args {
     /// Returns true if and only if `paths` had to be populated with a default
     /// path, which occurs only when no paths were given as command line
     /// arguments.
-    fn using_default_path(&self) -> bool {
+    pub fn using_default_path(&self) -> bool {
         self.0.using_default_path
     }
 
@@ -290,7 +290,7 @@ impl Args {
         let mut builder = SearchWorkerBuilder::new();
         builder
             .json_stats(matches.is_present("json"))
-            .preprocessor(matches.preprocessor())
+            .preprocessor(matches.preprocessor())?
             .preprocessor_globs(matches.preprocessor_globs()?)
             .search_zip(matches.is_present("search-zip"))
             .binary_detection_implicit(matches.binary_detection_implicit())
@@ -777,6 +777,7 @@ impl ArgMatches {
             .path(self.with_filename(paths))
             .only_matching(self.is_present("only-matching"))
             .per_match(self.is_present("vimgrep"))
+            .per_match_one_line(true)
             .replacement(self.replacement())
             .max_columns(self.max_columns()?)
             .max_columns_preview(self.max_columns_preview())
@@ -787,8 +788,8 @@ impl ArgMatches {
             .trim_ascii(self.is_present("trim"))
             .separator_search(None)
             .separator_context(self.context_separator())
-            .separator_field_match(b":".to_vec())
-            .separator_field_context(b"-".to_vec())
+            .separator_field_match(self.field_match_separator())
+            .separator_field_context(self.field_context_separator())
             .separator_path(self.path_separator()?)
             .path_terminator(self.path_terminator());
         if separator_search {
@@ -1382,6 +1383,24 @@ impl ArgMatches {
         }
     }
 
+    /// Returns the unescaped field context separator. If one wasn't specified,
+    /// then '-' is used as the default.
+    fn field_context_separator(&self) -> Vec<u8> {
+        match self.value_of_os("field-context-separator") {
+            None => b"-".to_vec(),
+            Some(sep) => cli::unescape_os(&sep),
+        }
+    }
+
+    /// Returns the unescaped field match separator. If one wasn't specified,
+    /// then ':' is used as the default.
+    fn field_match_separator(&self) -> Vec<u8> {
+        match self.value_of_os("field-match-separator") {
+            None => b":".to_vec(),
+            Some(sep) => cli::unescape_os(&sep),
+        }
+    }
+
     /// Get a sequence of all available patterns from the command line.
     /// This includes reading the -e/--regexp and -f/--file flags.
     ///
@@ -1706,7 +1725,7 @@ impl ArgMatches {
         self.0.value_of_os(name)
     }
 
-    fn values_of_os(&self, name: &str) -> Option<clap::OsValues> {
+    fn values_of_os(&self, name: &str) -> Option<clap::OsValues<'_>> {
         self.0.values_of_os(name)
     }
 }

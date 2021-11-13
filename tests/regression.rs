@@ -392,7 +392,9 @@ rgtest!(r428_color_context_path, |dir: Dir, mut cmd: TestCommand| {
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/428
-rgtest!(r428_unrecognized_style, |_: Dir, mut cmd: TestCommand| {
+rgtest!(r428_unrecognized_style, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("file.txt", "Sherlock");
+
     cmd.arg("--colors=match:style:").arg("Sherlock");
     cmd.assert_err();
 
@@ -742,6 +744,15 @@ rgtest!(r1259_drop_last_byte_nonl, |dir: Dir, mut cmd: TestCommand| {
     eqnice!("fz\n", cmd.arg("-f").arg("patterns-nl").arg("test").stdout());
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/1311
+rgtest!(r1311_multi_line_term_replace, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("input", "hello\nworld\n");
+    eqnice!(
+        "1:hello?world?\n",
+        cmd.args(&["-U", "-r?", "-n", "\n", "input"]).stdout()
+    );
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/1319
 rgtest!(r1319, |dir: Dir, mut cmd: TestCommand| {
     dir.create("input", "CCAGCTACTCGGGAGGCTGAGGCTGGAGGATCGCTTGAGTCCAGGAGTTC");
@@ -761,6 +772,28 @@ rgtest!(r1334_crazy_literals, |dir: Dir, mut cmd: TestCommand| {
     );
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/1380
+rgtest!(r1380, |dir: Dir, mut cmd: TestCommand| {
+    dir.create(
+        "foo",
+        "\
+a
+b
+c
+d
+e
+d
+e
+d
+e
+d
+e
+",
+    );
+
+    eqnice!("d\ne\nd\n", cmd.args(&["-A2", "-m1", "d", "foo"]).stdout());
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/1389
 rgtest!(r1389_bad_symlinks_no_biscuit, |dir: Dir, mut cmd: TestCommand| {
     dir.create_dir("mydir");
@@ -771,6 +804,44 @@ rgtest!(r1389_bad_symlinks_no_biscuit, |dir: Dir, mut cmd: TestCommand| {
         .args(&["test", "--no-ignore", "--sort", "path", "mylink"])
         .stdout();
     eqnice!("mylink/file.txt:test\n", stdout);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/1401
+rgtest!(r1401_look_ahead_only_matching_1, |dir: Dir, mut cmd: TestCommand| {
+    // Only PCRE2 supports look-around.
+    if !dir.is_pcre2() {
+        return;
+    }
+    dir.create("ip.txt", "foo 42\nxoyz\ncat\tdog\n");
+    cmd.args(&["-No", r".*o(?!.*\s)", "ip.txt"]);
+    eqnice!("xo\ncat\tdo\n", cmd.stdout());
+
+    let mut cmd = dir.command();
+    cmd.args(&["-No", r".*o(?!.*[ \t])", "ip.txt"]);
+    eqnice!("xo\ncat\tdo\n", cmd.stdout());
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/1401
+rgtest!(r1401_look_ahead_only_matching_2, |dir: Dir, mut cmd: TestCommand| {
+    // Only PCRE2 supports look-around.
+    if !dir.is_pcre2() {
+        return;
+    }
+    dir.create("ip.txt", "foo 42\nxoyz\ncat\tdog\nfoo");
+    cmd.args(&["-No", r".*o(?!.*\s)", "ip.txt"]);
+    eqnice!("xo\ncat\tdo\nfoo\n", cmd.stdout());
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/1412
+rgtest!(r1412_look_behind_no_replacement, |dir: Dir, mut cmd: TestCommand| {
+    // Only PCRE2 supports look-around.
+    if !dir.is_pcre2() {
+        return;
+    }
+
+    dir.create("test", "foo\nbar\n");
+    cmd.args(&["-nU", "-rquux", r"(?<=foo\n)bar", "test"]);
+    eqnice!("2:quux\n", cmd.stdout());
 });
 
 // See: https://github.com/BurntSushi/ripgrep/pull/1446
@@ -863,4 +934,113 @@ use B;
         "foo",
     ]);
     eqnice!("2\n", cmd.stdout());
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/1638
+//
+// Tests if UTF-8 BOM is sniffed, then the column index is correct.
+rgtest!(r1638, |dir: Dir, mut cmd: TestCommand| {
+    dir.create_bytes("foo", b"\xef\xbb\xbfx");
+
+    eqnice!("foo:1:1:x\n", cmd.arg("--column").arg("x").stdout());
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/1739
+rgtest!(r1739_replacement_lineterm_match, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("test", "a\n");
+    cmd.args(&[r"-r${0}f", r".*", "test"]);
+    eqnice!("af\n", cmd.stdout());
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/1765
+rgtest!(r1765, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("test", "\n");
+    // We need to add --color=always here to force the failure, since the bad
+    // code path is only triggered when colors are enabled.
+    cmd.args(&[r"x?", "--crlf", "--color", "always"]);
+
+    assert!(!cmd.stdout().is_empty());
+});
+
+rgtest!(r1866, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("test", "foobar\nfoobar\nfoo quux");
+    cmd.args(&[
+        "--multiline",
+        "--vimgrep",
+        r"foobar\nfoobar\nfoo|quux",
+        "test",
+    ]);
+
+    // vimgrep only wants the first line of each match, even when a match
+    // spans multiple lines.
+    //
+    // See: https://github.com/BurntSushi/ripgrep/issues/1866
+    let expected = "\
+test:1:1:foobar
+test:3:5:foo quux
+";
+    eqnice!(expected, cmd.stdout());
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/1868
+rgtest!(r1868_context_passthru_override, |dir: Dir, _: TestCommand| {
+    dir.create("test", "foo\nbar\nbaz\nquux\n");
+
+    let args = &["-C1", "bar", "test"];
+    eqnice!("foo\nbar\nbaz\n", dir.command().args(args).stdout());
+    let args = &["--passthru", "bar", "test"];
+    eqnice!("foo\nbar\nbaz\nquux\n", dir.command().args(args).stdout());
+
+    let args = &["--passthru", "-C1", "bar", "test"];
+    eqnice!("foo\nbar\nbaz\n", dir.command().args(args).stdout());
+    let args = &["-C1", "--passthru", "bar", "test"];
+    eqnice!("foo\nbar\nbaz\nquux\n", dir.command().args(args).stdout());
+
+    let args = &["--passthru", "-B1", "bar", "test"];
+    eqnice!("foo\nbar\n", dir.command().args(args).stdout());
+    let args = &["-B1", "--passthru", "bar", "test"];
+    eqnice!("foo\nbar\nbaz\nquux\n", dir.command().args(args).stdout());
+
+    let args = &["--passthru", "-A1", "bar", "test"];
+    eqnice!("bar\nbaz\n", dir.command().args(args).stdout());
+    let args = &["-A1", "--passthru", "bar", "test"];
+    eqnice!("foo\nbar\nbaz\nquux\n", dir.command().args(args).stdout());
+});
+
+rgtest!(r1878, |dir: Dir, _: TestCommand| {
+    dir.create("test", "a\nbaz\nabc\n");
+
+    // Since ripgrep enables (?m) by default, '^' will match at the beginning
+    // of a line, even when -U/--multiline is used.
+    let args = &["-U", "--no-mmap", r"^baz", "test"];
+    eqnice!("baz\n", dir.command().args(args).stdout());
+    let args = &["-U", "--mmap", r"^baz", "test"];
+    eqnice!("baz\n", dir.command().args(args).stdout());
+
+    // But when (?-m) is disabled, or when \A is used, then there should be no
+    // matches that aren't anchored to the beginning of the file.
+    let args = &["-U", "--no-mmap", r"(?-m)^baz", "test"];
+    dir.command().args(args).assert_err();
+    let args = &["-U", "--mmap", r"(?-m)^baz", "test"];
+    dir.command().args(args).assert_err();
+
+    let args = &["-U", "--no-mmap", r"\Abaz", "test"];
+    dir.command().args(args).assert_err();
+    let args = &["-U", "--mmap", r"\Abaz", "test"];
+    dir.command().args(args).assert_err();
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/1891
+rgtest!(r1891, |dir: Dir, mut cmd: TestCommand| {
+    // TODO: Sadly, PCRE2 has different behavior here. Not clear why. We should
+    // look into this and see if there's a fix needed at the regex engine
+    // level.
+    if dir.is_pcre2() {
+        return;
+    }
+
+    dir.create("test", "\n##\n");
+    // N.B. We use -o here to force the issue to occur, which seems to only
+    // happen when each match needs to be detected.
+    eqnice!("1:\n2:\n2:\n", cmd.args(&["-won", "", "test"]).stdout());
 });

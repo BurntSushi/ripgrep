@@ -22,12 +22,6 @@ Add this to your `Cargo.toml`:
 ignore = "0.4"
 ```
 
-and this to your crate root:
-
-```rust
-extern crate ignore;
-```
-
 ### Example
 
 This example shows the most basic usage of this crate. This code will

@@ -43,7 +43,7 @@ jobs:
         include:
         - build: pinned
           os: ubuntu-18.04
-          rust: 1.41.0
+          rust: 1.52.1
         - build: stable
           os: ubuntu-18.04
           rust: stable
@@ -118,10 +118,10 @@ jobs:
         echo "target flag is: ${{ env.TARGET_FLAGS }}"
 
     - name: Build ripgrep and all crates
-      run: ${{ env.CARGO }} build --verbose --all ${{ env.TARGET_FLAGS }}
+      run: ${{ env.CARGO }} build --verbose --workspace ${{ env.TARGET_FLAGS }}
 
     - name: Build ripgrep with PCRE2
-      run: ${{ env.CARGO }} build --verbose --all --features pcre2 ${{ env.TARGET_FLAGS }}
+      run: ${{ env.CARGO }} build --verbose --workspace --features pcre2 ${{ env.TARGET_FLAGS }}
 
     # This is useful for debugging problems when the expected build artifacts
     # (like shell completions and man pages) aren't generated.
@@ -139,7 +139,7 @@ jobs:
 
     - name: Run tests with PCRE2 (sans cross)
       if: matrix.target == ''
-      run: ${{ env.CARGO }} test --verbose --all --features pcre2 ${{ env.TARGET_FLAGS }}
+      run: ${{ env.CARGO }} test --verbose --workspace --features pcre2 ${{ env.TARGET_FLAGS }}
 
     - name: Run tests without PCRE2 (with cross)
       # These tests should actually work, but they almost double the runtime.
@@ -147,7 +147,7 @@ jobs:
       # enabled, every integration test is run twice: one with the default
       # regex engine and once with PCRE2.
       if: matrix.target != ''
-      run: ${{ env.CARGO }} test --verbose --all ${{ env.TARGET_FLAGS }}
+      run: ${{ env.CARGO }} test --verbose --workspace ${{ env.TARGET_FLAGS }}
 
     - name: Test for existence of build artifacts (Windows)
       if: matrix.os == 'windows-2019'
@@ -194,3 +194,20 @@ jobs:
     - name: Check formatting
       run: |
         cargo fmt --all -- --check
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - name: Check documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --no-deps --document-private-items --workspace

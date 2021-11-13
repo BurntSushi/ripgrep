@@ -5,11 +5,11 @@ use grep_matcher::{
 };
 use regex::bytes::{CaptureLocations, Regex};
 
-use config::{Config, ConfiguredHIR};
-use crlf::CRLFMatcher;
-use error::Error;
-use multi::MultiLiteralMatcher;
-use word::WordMatcher;
+use crate::config::{Config, ConfiguredHIR};
+use crate::crlf::CRLFMatcher;
+use crate::error::Error;
+use crate::multi::MultiLiteralMatcher;
+use crate::word::WordMatcher;
 
 /// A builder for constructing a `Matcher` using regular expressions.
 ///
@@ -19,7 +19,7 @@ use word::WordMatcher;
 /// types of optimizations.
 ///
 /// The syntax supported is documented as part of the regex crate:
-/// https://docs.rs/regex/*/regex/#syntax
+/// <https://docs.rs/regex/#syntax>.
 #[derive(Clone, Debug)]
 pub struct RegexMatcherBuilder {
     config: Config,
@@ -41,17 +41,17 @@ impl RegexMatcherBuilder {
     /// pattern.
     ///
     /// The syntax supported is documented as part of the regex crate:
-    /// https://docs.rs/regex/*/regex/#syntax
+    /// <https://docs.rs/regex/#syntax>.
     pub fn build(&self, pattern: &str) -> Result<RegexMatcher, Error> {
         let chir = self.config.hir(pattern)?;
         let fast_line_regex = chir.fast_line_regex()?;
         let non_matching_bytes = chir.non_matching_bytes();
         if let Some(ref re) = fast_line_regex {
-            debug!("extracted fast line regex: {:?}", re);
+            log::debug!("extracted fast line regex: {:?}", re);
         }
 
         let matcher = RegexMatcherImpl::new(&chir)?;
-        trace!("final regex: {:?}", matcher.regex());
+        log::trace!("final regex: {:?}", matcher.regex());
         Ok(RegexMatcher {
             config: self.config.clone(),
             matcher,

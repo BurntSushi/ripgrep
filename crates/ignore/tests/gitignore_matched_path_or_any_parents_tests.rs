@@ -1,5 +1,3 @@
-extern crate ignore;
-
 use std::path::Path;
 
 use ignore::gitignore::{Gitignore, GitignoreBuilder};

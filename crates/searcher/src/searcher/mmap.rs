@@ -71,6 +71,16 @@ impl MmapChoice {
         if !self.is_enabled() {
             return None;
         }
+        if !cfg!(target_pointer_width = "64") {
+            // For 32-bit systems, it looks like mmap will succeed even if it
+            // can't address the entire file. This seems to happen at least on
+            // Windows, even though it uses to work prior to ripgrep 13. The
+            // only Windows-related change in ripgrep 13, AFAIK, was statically
+            // linking vcruntime. So maybe that's related? But I'm not sure.
+            //
+            // See: https://github.com/BurntSushi/ripgrep/issues/1911
+            return None;
+        }
         if cfg!(target_os = "macos") {
             // I guess memory maps on macOS aren't great. Should re-evaluate.
             return None;
@@ -83,13 +93,13 @@ impl MmapChoice {
             Ok(mmap) => Some(mmap),
             Err(err) => {
                 if let Some(path) = path {
-                    debug!(
+                    log::debug!(
                         "{}: failed to open memory map: {}",
                         path.display(),
                         err
                     );
                 } else {
-                    debug!("failed to open memory map: {}", err);
+                    log::debug!("failed to open memory map: {}", err);
                 }
                 None
             }

@@ -1,12 +1,12 @@
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
 
-use process::{CommandError, CommandReader, CommandReaderBuilder};
+use crate::process::{CommandError, CommandReader, CommandReaderBuilder};
 
 /// A builder for a matcher that determines which files get decompressed.
 #[derive(Clone, Debug)]
@@ -24,7 +24,7 @@ struct DecompressionCommand {
     /// The glob that matches this command.
     glob: String,
     /// The command or binary name.
-    bin: OsString,
+    bin: PathBuf,
     /// The arguments to invoke with the command.
     args: Vec<OsString>,
 }
@@ -83,6 +83,14 @@ impl DecompressionMatcherBuilder {
     ///
     /// The syntax for the glob is documented in the
     /// [`globset` crate](https://docs.rs/globset/#syntax).
+    ///
+    /// The `program` given is resolved with respect to `PATH` and turned
+    /// into an absolute path internally before being executed by the current
+    /// platform. Notably, on Windows, this avoids a security problem where
+    /// passing a relative path to `CreateProcess` will automatically search
+    /// the current directory for a matching program. If the program could
+    /// not be resolved, then it is silently ignored and the association is
+    /// dropped. For this reason, callers should prefer `try_associate`.
     pub fn associate<P, I, A>(
         &mut self,
         glob: &str,
@@ -94,12 +102,41 @@ impl DecompressionMatcherBuilder {
         I: IntoIterator<Item = A>,
         A: AsRef<OsStr>,
     {
+        let _ = self.try_associate(glob, program, args);
+        self
+    }
+
+    /// Associates a glob with a command to decompress files matching the glob.
+    ///
+    /// If multiple globs match the same file, then the most recently added
+    /// glob takes precedence.
+    ///
+    /// The syntax for the glob is documented in the
+    /// [`globset` crate](https://docs.rs/globset/#syntax).
+    ///
+    /// The `program` given is resolved with respect to `PATH` and turned
+    /// into an absolute path internally before being executed by the current
+    /// platform. Notably, on Windows, this avoids a security problem where
+    /// passing a relative path to `CreateProcess` will automatically search
+    /// the current directory for a matching program. If the program could not
+    /// be resolved, then an error is returned.
+    pub fn try_associate<P, I, A>(
+        &mut self,
+        glob: &str,
+        program: P,
+        args: I,
+    ) -> Result<&mut DecompressionMatcherBuilder, CommandError>
+    where
+        P: AsRef<OsStr>,
+        I: IntoIterator<Item = A>,
+        A: AsRef<OsStr>,
+    {
         let glob = glob.to_string();
-        let bin = program.as_ref().to_os_string();
+        let bin = resolve_binary(Path::new(program.as_ref()))?;
         let args =
             args.into_iter().map(|a| a.as_ref().to_os_string()).collect();
         self.commands.push(DecompressionCommand { glob, bin, args });
-        self
+        Ok(self)
     }
 }
 
@@ -193,7 +230,7 @@ impl DecompressionReaderBuilder {
         match self.command_builder.build(&mut cmd) {
             Ok(cmd_reader) => Ok(DecompressionReader { rdr: Ok(cmd_reader) }),
             Err(err) => {
-                debug!(
+                log::debug!(
                     "{}: error spawning command '{:?}': {} \
                      (falling back to uncompressed reader)",
                     path.display(),
@@ -329,6 +366,30 @@ impl DecompressionReader {
         let file = File::open(path)?;
         Ok(DecompressionReader { rdr: Err(file) })
     }
+
+    /// Closes this reader, freeing any resources used by its underlying child
+    /// process, if one was used. If the child process exits with a nonzero
+    /// exit code, the returned Err value will include its stderr.
+    ///
+    /// `close` is idempotent, meaning it can be safely called multiple times.
+    /// The first call closes the CommandReader and any subsequent calls do
+    /// nothing.
+    ///
+    /// This method should be called after partially reading a file to prevent
+    /// resource leakage. However there is no need to call `close` explicitly
+    /// if your code always calls `read` to EOF, as `read` takes care of
+    /// calling `close` in this case.
+    ///
+    /// `close` is also called in `drop` as a last line of defense against
+    /// resource leakage. Any error from the child process is then printed as a
+    /// warning to stderr. This can be avoided by explictly calling `close`
+    /// before the CommandReader is dropped.
+    pub fn close(&mut self) -> io::Result<()> {
+        match self.rdr {
+            Ok(ref mut rdr) => rdr.close(),
+            Err(_) => Ok(()),
+        }
+    }
 }
 
 impl io::Read for DecompressionReader {
@@ -338,6 +399,70 @@ impl io::Read for DecompressionReader {
             Err(ref mut rdr) => rdr.read(buf),
         }
     }
+}
+
+/// Resolves a path to a program to a path by searching for the program in
+/// `PATH`.
+///
+/// If the program could not be resolved, then an error is returned.
+///
+/// The purpose of doing this instead of passing the path to the program
+/// directly to Command::new is that Command::new will hand relative paths
+/// to CreateProcess on Windows, which will implicitly search the current
+/// working directory for the executable. This could be undesirable for
+/// security reasons. e.g., running ripgrep with the -z/--search-zip flag on an
+/// untrusted directory tree could result in arbitrary programs executing on
+/// Windows.
+///
+/// Note that this could still return a relative path if PATH contains a
+/// relative path. We permit this since it is assumed that the user has set
+/// this explicitly, and thus, desires this behavior.
+///
+/// On non-Windows, this is a no-op.
+pub fn resolve_binary<P: AsRef<Path>>(
+    prog: P,
+) -> Result<PathBuf, CommandError> {
+    use std::env;
+
+    fn is_exe(path: &Path) -> bool {
+        let md = match path.metadata() {
+            Err(_) => return false,
+            Ok(md) => md,
+        };
+        !md.is_dir()
+    }
+
+    let prog = prog.as_ref();
+    if !cfg!(windows) || prog.is_absolute() {
+        return Ok(prog.to_path_buf());
+    }
+    let syspaths = match env::var_os("PATH") {
+        Some(syspaths) => syspaths,
+        None => {
+            let msg = "system PATH environment variable not found";
+            return Err(CommandError::io(io::Error::new(
+                io::ErrorKind::Other,
+                msg,
+            )));
+        }
+    };
+    for syspath in env::split_paths(&syspaths) {
+        if syspath.as_os_str().is_empty() {
+            continue;
+        }
+        let abs_prog = syspath.join(prog);
+        if is_exe(&abs_prog) {
+            return Ok(abs_prog.to_path_buf());
+        }
+        if abs_prog.extension().is_none() {
+            let abs_prog = abs_prog.with_extension("exe");
+            if is_exe(&abs_prog) {
+                return Ok(abs_prog.to_path_buf());
+            }
+        }
+    }
+    let msg = format!("{}: could not find executable in PATH", prog.display());
+    return Err(CommandError::io(io::Error::new(io::ErrorKind::Other, msg)));
 }
 
 fn default_decompression_commands() -> Vec<DecompressionCommand> {
@@ -350,29 +475,36 @@ fn default_decompression_commands() -> Vec<DecompressionCommand> {
     const ARGS_ZSTD: &[&str] = &["zstd", "-q", "-d", "-c"];
     const ARGS_UNCOMPRESS: &[&str] = &["uncompress", "-c"];
 
-    fn cmd(glob: &str, args: &[&str]) -> DecompressionCommand {
-        DecompressionCommand {
+    fn add(glob: &str, args: &[&str], cmds: &mut Vec<DecompressionCommand>) {
+        let bin = match resolve_binary(Path::new(args[0])) {
+            Ok(bin) => bin,
+            Err(err) => {
+                log::debug!("{}", err);
+                return;
+            }
+        };
+        cmds.push(DecompressionCommand {
             glob: glob.to_string(),
-            bin: OsStr::new(&args[0]).to_os_string(),
+            bin,
             args: args
                 .iter()
                 .skip(1)
                 .map(|s| OsStr::new(s).to_os_string())
                 .collect(),
-        }
+        });
     }
-    vec![
-        cmd("*.gz", ARGS_GZIP),
-        cmd("*.tgz", ARGS_GZIP),
-        cmd("*.bz2", ARGS_BZIP),
-        cmd("*.tbz2", ARGS_BZIP),
-        cmd("*.xz", ARGS_XZ),
-        cmd("*.txz", ARGS_XZ),
-        cmd("*.lz4", ARGS_LZ4),
-        cmd("*.lzma", ARGS_LZMA),
-        cmd("*.br", ARGS_BROTLI),
-        cmd("*.zst", ARGS_ZSTD),
-        cmd("*.zstd", ARGS_ZSTD),
-        cmd("*.Z", ARGS_UNCOMPRESS),
-    ]
+    let mut cmds = vec![];
+    add("*.gz", ARGS_GZIP, &mut cmds);
+    add("*.tgz", ARGS_GZIP, &mut cmds);
+    add("*.bz2", ARGS_BZIP, &mut cmds);
+    add("*.tbz2", ARGS_BZIP, &mut cmds);
+    add("*.xz", ARGS_XZ, &mut cmds);
+    add("*.txz", ARGS_XZ, &mut cmds);
+    add("*.lz4", ARGS_LZ4, &mut cmds);
+    add("*.lzma", ARGS_LZMA, &mut cmds);
+    add("*.br", ARGS_BROTLI, &mut cmds);
+    add("*.zst", ARGS_ZSTD, &mut cmds);
+    add("*.zstd", ARGS_ZSTD, &mut cmds);
+    add("*.Z", ARGS_UNCOMPRESS, &mut cmds);
+    cmds
 }

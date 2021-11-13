@@ -2,8 +2,8 @@ use aho_corasick::{AhoCorasick, AhoCorasickBuilder, MatchKind};
 use grep_matcher::{Match, Matcher, NoError};
 use regex_syntax::hir::Hir;
 
-use error::Error;
-use matcher::RegexCaptures;
+use crate::error::Error;
+use crate::matcher::RegexCaptures;
 
 /// A matcher for an alternation of literals.
 ///

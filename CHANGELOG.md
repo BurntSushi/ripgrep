@@ -1,6 +1,40 @@
-TBD
-===
+13.0.1
+======
 Unreleased changes. Release notes have not yet been written.
+
+Bug fixes:
+
+* [BUG #1891](https://github.com/BurntSushi/ripgrep/issues/1891):
+  Fix bug when using `-w` with a regex that can match the empty string.
+* [BUG #1911](https://github.com/BurntSushi/ripgrep/issues/1911):
+  Disable mmap searching in all non-64-bit environments.
+
+
+13.0.0 (2021-06-12)
+===================
+ripgrep 13 is a new major version release of ripgrep that primarily contains
+bug fixes, some performance improvements and a few minor breaking changes.
+There is also a fix for a security vulnerability on Windows
+([CVE-2021-3013](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-3013)).
+
+Some highlights:
+
+A new short flag, `-.`, has been added. It is an alias for the `--hidden` flag,
+which instructs ripgrep to search hidden files and directories.
+
+ripgrep is now using a new
+[vectorized implementation of `memmem`](https://github.com/BurntSushi/memchr/pull/82),
+which accelerates many common searches. If you notice any performance
+regressions (or major improvements), I'd love to hear about them through an
+issue report!
+
+Also, for Windows users targeting MSVC, Cargo will now build fully static
+executables of ripgrep. The release binaries for ripgrep 13 have been compiled
+using this configuration.
+
+**BREAKING CHANGES**:
+
+**Binary detection output has changed slightly.**
 
 In this release, a small tweak has been made to the output format when a binary
 file is detected. Previously, it looked like this:
@@ -15,12 +49,100 @@ Now it looks like this:
 FOO: binary file matches (found "\0" byte around offset XXX)
 ```
 
+**vimgrep output in multi-line now only prints the first line for each match.**
+
+See [issue 1866](https://github.com/BurntSushi/ripgrep/issues/1866) for more
+discussion on this. Previously, every line in a match was duplicated, even
+when it spanned multiple lines. There are no changes to vimgrep output when
+multi-line mode is disabled.
+
+**In multi-line mode, --count is now equivalent to --count-matches.**
+
+This appears to match how `pcre2grep` implements `--count`. Previously, ripgrep
+would produce outright incorrect counts. Another alternative would be to simply
+count the number of lines---even if it's more than the number of matches---but
+that seems highly unintuitive.
+
+**FULL LIST OF FIXES AND IMPROVEMENTS:**
+
+Security fixes:
+
+* [CVE-2021-3013](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-3013):
+  Fixes a security hole on Windows where running ripgrep with either the
+  `-z/--search-zip` or `--pre` flags can result in running arbitrary
+  executables from the current directory.
+* [VULN #1773](https://github.com/BurntSushi/ripgrep/issues/1773):
+  This is the public facing issue tracking CVE-2021-3013. ripgrep's README
+  now contains a section describing how to report a vulnerability.
+
+Performance improvements:
+
+* [PERF #1657](https://github.com/BurntSushi/ripgrep/discussions/1657):
+  Check if a file should be ignored first before issuing stat calls.
+* [PERF memchr#82](https://github.com/BurntSushi/memchr/pull/82):
+  ripgrep now uses a new vectorized implementation of `memmem`.
+
+Feature enhancements:
+
+* Added or improved file type filtering for ASP, Bazel, dvc, FlatBuffers,
+  Futhark, minified files, Mint, pofiles (from GNU gettext) Racket, Red, Ruby,
+  VCL, Yang.
+* [FEATURE #1404](https://github.com/BurntSushi/ripgrep/pull/1404):
+  ripgrep now prints a warning if nothing is searched.
+* [FEATURE #1613](https://github.com/BurntSushi/ripgrep/pull/1613):
+  Cargo will now produce static executables on Windows when using MSVC.
+* [FEATURE #1680](https://github.com/BurntSushi/ripgrep/pull/1680):
+  Add `-.` as a short flag alias for `--hidden`.
+* [FEATURE #1842](https://github.com/BurntSushi/ripgrep/issues/1842):
+  Add `--field-{context,match}-separator` for customizing field delimiters.
+* [FEATURE #1856](https://github.com/BurntSushi/ripgrep/pull/1856):
+  The README now links to a
+  [Spanish translation](https://github.com/UltiRequiem/traducciones/tree/master/ripgrep).
+
 Bug fixes:
 
 * [BUG #1277](https://github.com/BurntSushi/ripgrep/issues/1277):
   Document cygwin path translation behavior in the FAQ.
+* [BUG #1739](https://github.com/BurntSushi/ripgrep/issues/1739):
+  Fix bug where replacements were buggy if the regex matched a line terminator.
+* [BUG #1311](https://github.com/BurntSushi/ripgrep/issues/1311):
+  Fix multi-line bug where a search & replace for `\n` didn't work as expected.
+* [BUG #1401](https://github.com/BurntSushi/ripgrep/issues/1401):
+  Fix buggy interaction between PCRE2 look-around and `-o/--only-matching`.
+* [BUG #1412](https://github.com/BurntSushi/ripgrep/issues/1412):
+  Fix multi-line bug with searches using look-around past matching lines.
+* [BUG #1577](https://github.com/BurntSushi/ripgrep/issues/1577):
+  Fish shell completions will continue to be auto-generated.
+* [BUG #1642](https://github.com/BurntSushi/ripgrep/issues/1642):
+  Fixes a bug where using `-m` and `-A` printed more matches than the limit.
+* [BUG #1703](https://github.com/BurntSushi/ripgrep/issues/1703):
+  Clarify the function of `-u/--unrestricted`.
+* [BUG #1708](https://github.com/BurntSushi/ripgrep/issues/1708):
+  Clarify how `-S/--smart-case` works.
+* [BUG #1730](https://github.com/BurntSushi/ripgrep/issues/1730):
+  Clarify that CLI invocation must always be valid, regardless of config file.
 * [BUG #1741](https://github.com/BurntSushi/ripgrep/issues/1741):
   Fix stdin detection when using PowerShell in UNIX environments.
+* [BUG #1756](https://github.com/BurntSushi/ripgrep/pull/1756):
+  Fix bug where `foo/**` would match `foo`, but it shouldn't.
+* [BUG #1765](https://github.com/BurntSushi/ripgrep/issues/1765):
+  Fix panic when `--crlf` is used in some cases.
+* [BUG #1638](https://github.com/BurntSushi/ripgrep/issues/1638):
+  Correctly sniff UTF-8 and do transcoding, like we do for UTF-16.
+* [BUG #1816](https://github.com/BurntSushi/ripgrep/issues/1816):
+  Add documentation for glob alternate syntax, e.g., `{a,b,..}`.
+* [BUG #1847](https://github.com/BurntSushi/ripgrep/issues/1847):
+  Clarify how the `--hidden` flag works.
+* [BUG #1866](https://github.com/BurntSushi/ripgrep/issues/1866#issuecomment-841635553):
+  Fix bug when computing column numbers in `--vimgrep` mode.
+* [BUG #1868](https://github.com/BurntSushi/ripgrep/issues/1868):
+  Fix bug where `--passthru` and `-A/-B/-C` did not override each other.
+* [BUG #1869](https://github.com/BurntSushi/ripgrep/pull/1869):
+  Clarify docs for `--files-with-matches` and `--files-without-match`.
+* [BUG #1878](https://github.com/BurntSushi/ripgrep/issues/1878):
+  Fix bug where `\A` could produce unanchored matches in multiline search.
+* [BUG 94e4b8e3](https://github.com/BurntSushi/ripgrep/commit/94e4b8e3):
+  Fix column numbers with `--vimgrep` is used with `-U/--multiline`.
 
 
 12.1.1 (2020-05-29)

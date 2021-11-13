@@ -48,10 +48,6 @@ using the
 implementation of `Sink`.
 
 ```
-extern crate grep_matcher;
-extern crate grep_regex;
-extern crate grep_searcher;
-
 use std::error::Error;
 
 use grep_matcher::Matcher;
@@ -99,24 +95,13 @@ searches stdin.
 
 #![deny(missing_docs)]
 
-extern crate bstr;
-extern crate bytecount;
-extern crate encoding_rs;
-extern crate encoding_rs_io;
-extern crate grep_matcher;
-#[macro_use]
-extern crate log;
-extern crate memmap;
-#[cfg(test)]
-extern crate regex;
-
-pub use lines::{LineIter, LineStep};
-pub use searcher::{
+pub use crate::lines::{LineIter, LineStep};
+pub use crate::searcher::{
     BinaryDetection, ConfigError, Encoding, MmapChoice, Searcher,
     SearcherBuilder,
 };
-pub use sink::sinks;
-pub use sink::{
+pub use crate::sink::sinks;
+pub use crate::sink::{
     Sink, SinkContext, SinkContextKind, SinkError, SinkFinish, SinkMatch,
 };
 

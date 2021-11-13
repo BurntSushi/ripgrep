@@ -20,12 +20,12 @@ use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 
-use gitignore::{self, Gitignore, GitignoreBuilder};
-use overrides::{self, Override};
-use pathutil::{is_hidden, strip_prefix};
-use types::{self, Types};
-use walk::DirEntry;
-use {Error, Match, PartialErrorBuilder};
+use crate::gitignore::{self, Gitignore, GitignoreBuilder};
+use crate::overrides::{self, Override};
+use crate::pathutil::{is_hidden, strip_prefix};
+use crate::types::{self, Types};
+use crate::walk::DirEntry;
+use crate::{Error, Match, PartialErrorBuilder};
 
 /// IgnoreMatch represents information about where a match came from when using
 /// the `Ignore` matcher.
@@ -202,11 +202,12 @@ impl Ignore {
             errs.maybe_push(err);
             igtmp.is_absolute_parent = true;
             igtmp.absolute_base = Some(absolute_base.clone());
-            igtmp.has_git = if self.0.opts.git_ignore {
-                parent.join(".git").exists()
-            } else {
-                false
-            };
+            igtmp.has_git =
+                if self.0.opts.require_git && self.0.opts.git_ignore {
+                    parent.join(".git").exists()
+                } else {
+                    false
+                };
             ig = Ignore(Arc::new(igtmp));
             compiled.insert(parent.as_os_str().to_os_string(), ig.clone());
         }
@@ -231,7 +232,9 @@ impl Ignore {
 
     /// Like add_child, but takes a full path and returns an IgnoreInner.
     fn add_child_path(&self, dir: &Path) -> (IgnoreInner, Option<Error>) {
-        let git_type = if self.0.opts.git_ignore || self.0.opts.git_exclude {
+        let git_type = if self.0.opts.require_git
+            && (self.0.opts.git_ignore || self.0.opts.git_exclude)
+        {
             dir.join(".git").metadata().ok().map(|md| md.file_type())
         } else {
             None
@@ -495,7 +498,7 @@ impl Ignore {
     }
 
     /// Returns an iterator over parent ignore matchers, including this one.
-    pub fn parents(&self) -> Parents {
+    pub fn parents(&self) -> Parents<'_> {
         Parents(Some(self))
     }
 
@@ -581,7 +584,7 @@ impl IgnoreBuilder {
                 .unwrap();
             let (gi, err) = builder.build_global();
             if let Some(err) = err {
-                debug!("{}", err);
+                log::debug!("{}", err);
             }
             gi
         };
@@ -840,10 +843,10 @@ mod tests {
     use std::io::Write;
     use std::path::Path;
 
-    use dir::IgnoreBuilder;
-    use gitignore::Gitignore;
-    use tests::TempDir;
-    use Error;
+    use crate::dir::IgnoreBuilder;
+    use crate::gitignore::Gitignore;
+    use crate::tests::TempDir;
+    use crate::Error;
 
     fn wfile<P: AsRef<Path>>(path: P, contents: &str) {
         let mut file = File::create(path).unwrap();

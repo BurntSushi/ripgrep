@@ -9,7 +9,7 @@ use bstr::ByteSlice;
 use regex_syntax::hir::literal::{Literal, Literals};
 use regex_syntax::hir::{self, Hir, HirKind};
 
-use util;
+use crate::util;
 
 /// Represents prefix, suffix and inner "required" literals for a regular
 /// expression.
@@ -55,7 +55,7 @@ impl LiteralSets {
 
         if !word {
             if self.prefixes.all_complete() && !self.prefixes.is_empty() {
-                debug!("literal prefixes detected: {:?}", self.prefixes);
+                log::debug!("literal prefixes detected: {:?}", self.prefixes);
                 // When this is true, the regex engine will do a literal scan,
                 // so we don't need to return anything. But we only do this
                 // if we aren't doing a word regex, since a word regex adds
@@ -106,7 +106,7 @@ impl LiteralSets {
             && !any_empty
             && !any_white
         {
-            debug!("required literals found: {:?}", req_lits);
+            log::debug!("required literals found: {:?}", req_lits);
             let alts: Vec<String> = req_lits
                 .into_iter()
                 .map(|x| util::bytes_to_regex(x))
@@ -149,27 +149,27 @@ impl LiteralSets {
             let lits = match (p_min_len, s_min_len) {
                 (None, None) => return None,
                 (Some(_), None) => {
-                    debug!("prefix literals found");
+                    log::debug!("prefix literals found");
                     self.prefixes.literals()
                 }
                 (None, Some(_)) => {
-                    debug!("suffix literals found");
+                    log::debug!("suffix literals found");
                     self.suffixes.literals()
                 }
                 (Some(p), Some(s)) => {
                     if p >= s {
-                        debug!("prefix literals found");
+                        log::debug!("prefix literals found");
                         self.prefixes.literals()
                     } else {
-                        debug!("suffix literals found");
+                        log::debug!("suffix literals found");
                         self.suffixes.literals()
                     }
                 }
             };
 
-            debug!("prefix/suffix literals found: {:?}", lits);
+            log::debug!("prefix/suffix literals found: {:?}", lits);
             if has_only_whitespace(lits) {
-                debug!("dropping literals because one was whitespace");
+                log::debug!("dropping literals because one was whitespace");
                 return None;
             }
             let alts: Vec<String> =
@@ -177,9 +177,9 @@ impl LiteralSets {
             // We're matching raw bytes, so disable Unicode mode.
             Some(format!("(?-u:{})", alts.join("|")))
         } else {
-            debug!("required literal found: {:?}", util::show_bytes(lit));
+            log::debug!("required literal found: {:?}", util::show_bytes(lit));
             if lit.chars().all(|c| c.is_whitespace()) {
-                debug!("dropping literal because one was whitespace");
+                log::debug!("dropping literal because one was whitespace");
                 return None;
             }
             Some(format!("(?-u:{})", util::bytes_to_regex(&lit)))

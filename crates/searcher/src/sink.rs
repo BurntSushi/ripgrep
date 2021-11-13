@@ -4,8 +4,8 @@ use std::io;
 
 use grep_matcher::LineTerminator;
 
-use lines::LineIter;
-use searcher::{ConfigError, Searcher};
+use crate::lines::LineIter;
+use crate::searcher::{ConfigError, Searcher};
 
 /// A trait that describes errors that can be reported by searchers and
 /// implementations of `Sink`.
@@ -121,7 +121,7 @@ pub trait Sink {
     fn matched(
         &mut self,
         _searcher: &Searcher,
-        _mat: &SinkMatch,
+        _mat: &SinkMatch<'_>,
     ) -> Result<bool, Self::Error>;
 
     /// This method is called whenever a context line is found, and is optional
@@ -140,7 +140,7 @@ pub trait Sink {
     fn context(
         &mut self,
         _searcher: &Searcher,
-        _context: &SinkContext,
+        _context: &SinkContext<'_>,
     ) -> Result<bool, Self::Error> {
         Ok(true)
     }
@@ -226,7 +226,7 @@ impl<'a, S: Sink> Sink for &'a mut S {
     fn matched(
         &mut self,
         searcher: &Searcher,
-        mat: &SinkMatch,
+        mat: &SinkMatch<'_>,
     ) -> Result<bool, S::Error> {
         (**self).matched(searcher, mat)
     }
@@ -235,7 +235,7 @@ impl<'a, S: Sink> Sink for &'a mut S {
     fn context(
         &mut self,
         searcher: &Searcher,
-        context: &SinkContext,
+        context: &SinkContext<'_>,
     ) -> Result<bool, S::Error> {
         (**self).context(searcher, context)
     }
@@ -279,7 +279,7 @@ impl<S: Sink + ?Sized> Sink for Box<S> {
     fn matched(
         &mut self,
         searcher: &Searcher,
-        mat: &SinkMatch,
+        mat: &SinkMatch<'_>,
     ) -> Result<bool, S::Error> {
         (**self).matched(searcher, mat)
     }
@@ -288,7 +288,7 @@ impl<S: Sink + ?Sized> Sink for Box<S> {
     fn context(
         &mut self,
         searcher: &Searcher,
-        context: &SinkContext,
+        context: &SinkContext<'_>,
     ) -> Result<bool, S::Error> {
         (**self).context(searcher, context)
     }
@@ -365,6 +365,8 @@ pub struct SinkMatch<'b> {
     pub(crate) bytes: &'b [u8],
     pub(crate) absolute_byte_offset: u64,
     pub(crate) line_number: Option<u64>,
+    pub(crate) buffer: &'b [u8],
+    pub(crate) bytes_range_in_buffer: std::ops::Range<usize>,
 }
 
 impl<'b> SinkMatch<'b> {
@@ -404,6 +406,18 @@ impl<'b> SinkMatch<'b> {
     #[inline]
     pub fn line_number(&self) -> Option<u64> {
         self.line_number
+    }
+
+    /// TODO
+    #[inline]
+    pub fn buffer(&self) -> &'b [u8] {
+        self.buffer
+    }
+
+    /// TODO
+    #[inline]
+    pub fn bytes_range_in_buffer(&self) -> std::ops::Range<usize> {
+        self.bytes_range_in_buffer.clone()
     }
 }
 
@@ -500,7 +514,7 @@ pub mod sinks {
     use std::str;
 
     use super::{Sink, SinkError, SinkMatch};
-    use searcher::Searcher;
+    use crate::searcher::Searcher;
 
     /// A sink that provides line numbers and matches as strings while ignoring
     /// everything else.
@@ -531,7 +545,7 @@ pub mod sinks {
         fn matched(
             &mut self,
             _searcher: &Searcher,
-            mat: &SinkMatch,
+            mat: &SinkMatch<'_>,
         ) -> Result<bool, io::Error> {
             let matched = match str::from_utf8(mat.bytes()) {
                 Ok(matched) => matched,
@@ -579,7 +593,7 @@ pub mod sinks {
         fn matched(
             &mut self,
             _searcher: &Searcher,
-            mat: &SinkMatch,
+            mat: &SinkMatch<'_>,
         ) -> Result<bool, io::Error> {
             use std::borrow::Cow;
 
@@ -629,7 +643,7 @@ pub mod sinks {
         fn matched(
             &mut self,
             _searcher: &Searcher,
-            mat: &SinkMatch,
+            mat: &SinkMatch<'_>,
         ) -> Result<bool, io::Error> {
             let line_number = match mat.line_number() {
                 Some(line_number) => line_number,

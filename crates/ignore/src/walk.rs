@@ -13,11 +13,11 @@ use std::vec;
 use same_file::Handle;
 use walkdir::{self, WalkDir};
 
-use dir::{Ignore, IgnoreBuilder};
-use gitignore::GitignoreBuilder;
-use overrides::Override;
-use types::Types;
-use {Error, PartialErrorBuilder};
+use crate::dir::{Ignore, IgnoreBuilder};
+use crate::gitignore::GitignoreBuilder;
+use crate::overrides::Override;
+use crate::types::Types;
+use crate::{Error, PartialErrorBuilder};
 
 /// A directory entry with a possible error attached.
 ///
@@ -252,7 +252,7 @@ struct DirEntryRaw {
 }
 
 impl fmt::Debug for DirEntryRaw {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Leaving out FileType because it doesn't have a debug impl
         // in Rust 1.9. We could add it if we really wanted to by manually
         // querying each possibly file type. Meh. ---AG
@@ -504,7 +504,7 @@ enum Sorter {
 struct Filter(Arc<dyn Fn(&DirEntry) -> bool + Send + Sync + 'static>);
 
 impl fmt::Debug for WalkBuilder {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("WalkBuilder")
             .field("paths", &self.paths)
             .field("ig_builder", &self.ig_builder)
@@ -934,14 +934,22 @@ impl Walk {
         if ent.depth() == 0 {
             return Ok(false);
         }
-
+        // We ensure that trivial skipping is done before any other potentially
+        // expensive operations (stat, filesystem other) are done. This seems
+        // like an obvious optimization but becomes critical when filesystem
+        // operations even as simple as stat can result in significant
+        // overheads; an example of this was a bespoke filesystem layer in
+        // Windows that hosted files remotely and would download them on-demand
+        // when particular filesystem operations occurred. Users of this system
+        // who ensured correct file-type fileters were being used could still
+        // get unnecessary file access resulting in large downloads.
+        if should_skip_entry(&self.ig, ent) {
+            return Ok(true);
+        }
         if let Some(ref stdout) = self.skip {
             if path_equals(ent, stdout)? {
                 return Ok(true);
             }
-        }
-        if should_skip_entry(&self.ig, ent) {
-            return Ok(true);
         }
         if self.max_filesize.is_some() && !ent.is_dir() {
             return Ok(skip_filesize(
@@ -1218,7 +1226,7 @@ impl WalkParallel {
     /// visitor runs on only one thread, this build-up can be done without
     /// synchronization. Then, once traversal is complete, all of the results
     /// can be merged together into a single data structure.
-    pub fn visit(mut self, builder: &mut dyn ParallelVisitorBuilder) {
+    pub fn visit(mut self, builder: &mut dyn ParallelVisitorBuilder<'_>) {
         let threads = self.threads();
         let stack = Arc::new(Mutex::new(vec![]));
         {
@@ -1549,6 +1557,11 @@ impl<'s> Worker<'s> {
                 }
             }
         }
+        // N.B. See analogous call in the single-threaded implementation about
+        // why it's important for this to come before the checks below.
+        if should_skip_entry(ig, &dent) {
+            return WalkState::Continue;
+        }
         if let Some(ref stdout) = self.skip {
             let is_stdout = match path_equals(&dent, stdout) {
                 Ok(is_stdout) => is_stdout,
@@ -1558,7 +1571,6 @@ impl<'s> Worker<'s> {
                 return WalkState::Continue;
             }
         }
-        let should_skip_path = should_skip_entry(ig, &dent);
         let should_skip_filesize =
             if self.max_filesize.is_some() && !dent.is_dir() {
                 skip_filesize(
@@ -1575,8 +1587,7 @@ impl<'s> Worker<'s> {
             } else {
                 false
             };
-        if !should_skip_path && !should_skip_filesize && !should_skip_filtered
-        {
+        if !should_skip_filesize && !should_skip_filtered {
             self.send(Work { dent, ignore: ig.clone(), root_device });
         }
         WalkState::Continue
@@ -1714,7 +1725,7 @@ fn skip_filesize(
 
     if let Some(fs) = filesize {
         if fs > max_filesize {
-            debug!("ignoring {}: {} bytes", path.display(), fs);
+            log::debug!("ignoring {}: {} bytes", path.display(), fs);
             true
         } else {
             false
@@ -1727,10 +1738,10 @@ fn skip_filesize(
 fn should_skip_entry(ig: &Ignore, dent: &DirEntry) -> bool {
     let m = ig.matched_dir_entry(dent);
     if m.is_ignore() {
-        debug!("ignoring {}: {:?}", dent.path().display(), m);
+        log::debug!("ignoring {}: {:?}", dent.path().display(), m);
         true
     } else if m.is_whitelist() {
-        debug!("whitelisting {}: {:?}", dent.path().display(), m);
+        log::debug!("whitelisting {}: {:?}", dent.path().display(), m);
         false
     } else {
         false
@@ -1841,7 +1852,7 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use super::{DirEntry, WalkBuilder, WalkState};
-    use tests::TempDir;
+    use crate::tests::TempDir;
 
     fn wfile<P: AsRef<Path>>(path: P, contents: &str) {
         let mut file = File::create(path).unwrap();

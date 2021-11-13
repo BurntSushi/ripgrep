@@ -4,9 +4,6 @@ tool itself, see the benchsuite directory.
 */
 #![feature(test)]
 
-extern crate glob;
-extern crate globset;
-extern crate regex;
 extern crate test;
 
 use globset::{Candidate, Glob, GlobMatcher, GlobSet, GlobSetBuilder};

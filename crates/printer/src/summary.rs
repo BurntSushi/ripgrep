@@ -8,10 +8,10 @@ use grep_matcher::Matcher;
 use grep_searcher::{Searcher, Sink, SinkError, SinkFinish, SinkMatch};
 use termcolor::{ColorSpec, NoColor, WriteColor};
 
-use color::ColorSpecs;
-use counter::CounterWriter;
-use stats::Stats;
-use util::PrinterPath;
+use crate::color::ColorSpecs;
+use crate::counter::CounterWriter;
+use crate::stats::Stats;
+use crate::util::{find_iter_at_in_context, PrinterPath};
 
 /// The configuration for the summary printer.
 ///
@@ -457,7 +457,7 @@ impl<W> Summary<W> {
 /// * `W` refers to the underlying writer that this printer is writing its
 ///   output to.
 #[derive(Debug)]
-pub struct SummarySink<'p, 's, M: Matcher, W: 's> {
+pub struct SummarySink<'p, 's, M: Matcher, W> {
     matcher: M,
     summary: &'s mut Summary<W>,
     path: Option<PrinterPath<'p>>,
@@ -502,6 +502,17 @@ impl<'p, 's, M: Matcher, W: WriteColor> SummarySink<'p, 's, M, W> {
     /// configuration.
     pub fn stats(&self) -> Option<&Stats> {
         self.stats.as_ref()
+    }
+
+    /// Returns true if and only if the searcher may report matches over
+    /// multiple lines.
+    ///
+    /// Note that this doesn't just return whether the searcher is in multi
+    /// line mode, but also checks if the mater can match over multiple lines.
+    /// If it can't, then we don't need multi line handling, even if the
+    /// searcher has multi line mode enabled.
+    fn multi_line(&self, searcher: &Searcher) -> bool {
+        searcher.multi_line_with_matcher(&self.matcher)
     }
 
     /// Returns true if this printer should quit.
@@ -579,32 +590,39 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for SummarySink<'p, 's, M, W> {
 
     fn matched(
         &mut self,
-        _searcher: &Searcher,
-        mat: &SinkMatch,
+        searcher: &Searcher,
+        mat: &SinkMatch<'_>,
     ) -> Result<bool, io::Error> {
-        self.match_count += 1;
-        if let Some(ref mut stats) = self.stats {
-            let mut match_count = 0;
-            self.matcher
-                .find_iter(mat.bytes(), |_| {
-                    match_count += 1;
+        let is_multi_line = self.multi_line(searcher);
+        let sink_match_count = if self.stats.is_none() && !is_multi_line {
+            1
+        } else {
+            // This gives us as many bytes as the searcher can offer. This
+            // isn't guaranteed to hold the necessary context to get match
+            // detection correct (because of look-around), but it does in
+            // practice.
+            let buf = mat.buffer();
+            let range = mat.bytes_range_in_buffer();
+            let mut count = 0;
+            find_iter_at_in_context(
+                searcher,
+                &self.matcher,
+                buf,
+                range,
+                |_| {
+                    count += 1;
                     true
-                })
-                .map_err(io::Error::error_message)?;
-            if match_count == 0 {
-                // It is possible for the match count to be zero when
-                // look-around is used. Since `SinkMatch` won't necessarily
-                // contain the look-around in its match span, the search here
-                // could fail to find anything.
-                //
-                // It seems likely that setting match_count=1 here is probably
-                // wrong in some cases, but I don't think we can do any
-                // better. (Because this printer cannot assume that subsequent
-                // contents have been loaded into memory, so we have no way of
-                // increasing the search span here.)
-                match_count = 1;
-            }
-            stats.add_matches(match_count);
+                },
+            )?;
+            count
+        };
+        if is_multi_line {
+            self.match_count += sink_match_count;
+        } else {
+            self.match_count += 1;
+        }
+        if let Some(ref mut stats) = self.stats {
+            stats.add_matches(sink_match_count);
             stats.add_matched_lines(mat.lines().count() as u64);
         } else if self.summary.config.kind.quit_early() {
             return Ok(false);

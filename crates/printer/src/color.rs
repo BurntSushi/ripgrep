@@ -60,7 +60,7 @@ impl ColorError {
 }
 
 impl fmt::Display for ColorError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             ColorError::UnrecognizedOutType(ref name) => write!(
                 f,
@@ -147,9 +147,6 @@ pub struct ColorSpecs {
 /// A `UserColorSpec` can also be converted to a `termcolor::ColorSpec`:
 ///
 /// ```rust
-/// extern crate grep_printer;
-/// extern crate termcolor;
-///
 /// # fn main() {
 /// use termcolor::{Color, ColorSpec};
 /// use grep_printer::UserColorSpec;

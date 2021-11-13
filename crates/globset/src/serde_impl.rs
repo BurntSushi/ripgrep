@@ -1,7 +1,7 @@
 use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use Glob;
+use crate::Glob;
 
 impl Serialize for Glob {
     fn serialize<S: Serializer>(

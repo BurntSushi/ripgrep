@@ -1,16 +1,16 @@
 use std::cmp;
 use std::io;
 
+use crate::line_buffer::{LineBufferReader, DEFAULT_BUFFER_CAPACITY};
+use crate::lines::{self, LineStep};
+use crate::sink::{Sink, SinkError};
 use grep_matcher::Matcher;
-use line_buffer::{LineBufferReader, DEFAULT_BUFFER_CAPACITY};
-use lines::{self, LineStep};
-use sink::{Sink, SinkError};
 
-use searcher::core::Core;
-use searcher::{Config, Range, Searcher};
+use crate::searcher::core::Core;
+use crate::searcher::{Config, Range, Searcher};
 
 #[derive(Debug)]
-pub struct ReadByLine<'s, M: 's, R, S> {
+pub struct ReadByLine<'s, M, R, S> {
     config: &'s Config,
     core: Core<'s, M, S>,
     rdr: LineBufferReader<'s, R>,
@@ -87,7 +87,7 @@ where
 }
 
 #[derive(Debug)]
-pub struct SliceByLine<'s, M: 's, S> {
+pub struct SliceByLine<'s, M, S> {
     config: &'s Config,
     core: Core<'s, M, S>,
     slice: &'s [u8],
@@ -134,7 +134,7 @@ impl<'s, M: Matcher, S: Sink> SliceByLine<'s, M, S> {
 }
 
 #[derive(Debug)]
-pub struct MultiLine<'s, M: 's, S> {
+pub struct MultiLine<'s, M, S> {
     config: &'s Config,
     core: Core<'s, M, S>,
     slice: &'s [u8],
@@ -226,10 +226,19 @@ impl<'s, M: Matcher, S: Sink> MultiLine<'s, M, S> {
             }
             Some(last_match) => {
                 // If the lines in the previous match overlap with the lines
-                // in this match, then simply grow the match and move on.
-                // This happens when the next match begins on the same line
-                // that the last match ends on.
-                if last_match.end() > line.start() {
+                // in this match, then simply grow the match and move on. This
+                // happens when the next match begins on the same line that the
+                // last match ends on.
+                //
+                // Note that we do not technically require strict overlap here.
+                // Instead, we only require that the lines are adjacent. This
+                // provides larger blocks of lines to the printer, and results
+                // in overall better behavior with respect to how replacements
+                // are handled.
+                //
+                // See: https://github.com/BurntSushi/ripgrep/issues/1311
+                // And also the associated commit fixing #1311.
+                if last_match.end() >= line.start() {
                     self.last_match = Some(last_match.with_end(line.end()));
                     Ok(true)
                 } else {
@@ -340,8 +349,8 @@ impl<'s, M: Matcher, S: Sink> MultiLine<'s, M, S> {
 
 #[cfg(test)]
 mod tests {
-    use searcher::{BinaryDetection, SearcherBuilder};
-    use testutil::{KitchenSink, RegexMatcher, SearcherTester};
+    use crate::searcher::{BinaryDetection, SearcherBuilder};
+    use crate::testutil::{KitchenSink, RegexMatcher, SearcherTester};
 
     use super::*;
 
@@ -714,21 +723,23 @@ d
             haystack.push_str("zzz\n");
         }
         haystack.push_str("a\n");
+        haystack.push_str("zzz\n");
         haystack.push_str("a\x00a\n");
+        haystack.push_str("zzz\n");
         haystack.push_str("a\n");
 
         // The line buffered searcher has slightly different semantics here.
         // Namely, it will *always* detect binary data in the current buffer
         // before searching it. Thus, the total number of bytes searched is
         // smaller than below.
-        let exp = "0:a\n\nbyte count:262146\nbinary offset:262149\n";
+        let exp = "0:a\n\nbyte count:262146\nbinary offset:262153\n";
         // In contrast, the slice readers (for multi line as well) will only
         // look for binary data in the initial chunk of bytes. After that
         // point, it only looks for binary data in matches. Note though that
         // the binary offset remains the same. (See the binary4 test for a case
         // where the offset is explicitly different.)
         let exp_slice =
-            "0:a\n262146:a\n\nbyte count:262149\nbinary offset:262149\n";
+            "0:a\n262146:a\n\nbyte count:262153\nbinary offset:262153\n";
 
         SearcherTester::new(&haystack, "a")
             .binary_detection(BinaryDetection::quit(0))
@@ -1477,8 +1488,8 @@ byte count:307
 
     #[test]
     fn scratch() {
-        use sinks;
-        use testutil::RegexMatcher;
+        use crate::sinks;
+        use crate::testutil::RegexMatcher;
 
         const SHERLOCK: &'static [u8] = b"\
 For the Doctor Wat\xFFsons of this world, as opposed to the Sherlock

@@ -30,9 +30,3 @@ Add this to your `Cargo.toml`:
 [dependencies]
 grep-pcre2 = "0.1"
 ```
-
-and this to your crate root:
-
-```rust
-extern crate grep_pcre2;
-```

@@ -323,24 +323,38 @@ rgtest!(r1095_crlf_empty_match, |dir: Dir, mut cmd: TestCommand| {
 
     // Check without --crlf flag.
     let msgs = json_decode(&cmd.arg("-U").arg("--json").arg("\n").stdout());
-    assert_eq!(msgs.len(), 5);
+    assert_eq!(msgs.len(), 4);
 
     let m = msgs[1].unwrap_match();
-    assert_eq!(m.lines, Data::text("test\r\n"));
+    assert_eq!(m.lines, Data::text("test\r\n\n"));
     assert_eq!(m.submatches[0].m, Data::text("\n"));
-
-    let m = msgs[2].unwrap_match();
-    assert_eq!(m.lines, Data::text("\n"));
-    assert_eq!(m.submatches[0].m, Data::text("\n"));
+    assert_eq!(m.submatches[1].m, Data::text("\n"));
 
     // Now check with --crlf flag.
     let msgs = json_decode(&cmd.arg("--crlf").stdout());
+    assert_eq!(msgs.len(), 4);
 
     let m = msgs[1].unwrap_match();
-    assert_eq!(m.lines, Data::text("test\r\n"));
+    assert_eq!(m.lines, Data::text("test\r\n\n"));
     assert_eq!(m.submatches[0].m, Data::text("\n"));
+    assert_eq!(m.submatches[1].m, Data::text("\n"));
+});
 
-    let m = msgs[2].unwrap_match();
-    assert_eq!(m.lines, Data::text("\n"));
-    assert_eq!(m.submatches[0].m, Data::text("\n"));
+// See: https://github.com/BurntSushi/ripgrep/issues/1412
+rgtest!(r1412_look_behind_match_missing, |dir: Dir, mut cmd: TestCommand| {
+    // Only PCRE2 supports look-around.
+    if !dir.is_pcre2() {
+        return;
+    }
+
+    dir.create("test", "foo\nbar\n");
+
+    let msgs = json_decode(
+        &cmd.arg("-U").arg("--json").arg(r"(?<=foo\n)bar").stdout(),
+    );
+    assert_eq!(msgs.len(), 4);
+
+    let m = msgs[1].unwrap_match();
+    assert_eq!(m.lines, Data::text("bar\n"));
+    assert_eq!(m.submatches.len(), 1);
 });

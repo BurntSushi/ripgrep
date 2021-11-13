@@ -92,7 +92,7 @@ impl From<usize> for Ref<'static> {
 /// starting at the beginning of `replacement`.
 ///
 /// If no such valid reference could be found, None is returned.
-fn find_cap_ref(replacement: &[u8]) -> Option<CaptureRef> {
+fn find_cap_ref(replacement: &[u8]) -> Option<CaptureRef<'_>> {
     let mut i = 0;
     if replacement.len() <= 1 || replacement[0] != b'$' {
         return None;

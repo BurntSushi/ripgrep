@@ -15,3 +15,6 @@ examples of how ripgrep would be used if your feature request were added.
 If you're not sure what to write here, then try imagining what the ideal
 documentation of your new feature would look like in ripgrep's man page. Then
 try to write it.
+
+If you're requesting the addition or change of default file types, please open
+a PR. We can discuss it there if necessary.

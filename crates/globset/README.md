@@ -22,12 +22,6 @@ Add this to your `Cargo.toml`:
 globset = "0.3"
 ```
 
-and this to your crate root:
-
-```rust
-extern crate globset;
-```
-
 ### Features
 
 * `serde1`: Enables implementing Serde traits on the `Glob` type.

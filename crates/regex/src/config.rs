@@ -3,13 +3,13 @@ use regex::bytes::{Regex, RegexBuilder};
 use regex_syntax::ast::{self, Ast};
 use regex_syntax::hir::{self, Hir};
 
-use ast::AstAnalysis;
-use crlf::crlfify;
-use error::Error;
-use literal::LiteralSets;
-use multi::alternation_literals;
-use non_matching::non_matching_bytes;
-use strip::strip_from_match;
+use crate::ast::AstAnalysis;
+use crate::crlf::crlfify;
+use crate::error::Error;
+use crate::literal::LiteralSets;
+use crate::multi::alternation_literals;
+use crate::non_matching::non_matching_bytes;
+use crate::strip::strip_from_match;
 
 /// Config represents the configuration of a regex matcher in this crate.
 /// The configuration is itself a rough combination of the knobs found in

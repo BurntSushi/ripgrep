@@ -1,6 +1,3 @@
-extern crate grep_regex;
-extern crate grep_searcher;
-
 use std::env;
 use std::error::Error;
 use std::io;

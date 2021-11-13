@@ -27,9 +27,3 @@ Add this to your `Cargo.toml`:
 [dependencies]
 grep-matcher = "0.1"
 ```
-
-and this to your crate root:
-
-```rust
-extern crate grep_matcher;
-```

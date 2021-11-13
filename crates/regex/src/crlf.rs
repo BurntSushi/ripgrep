@@ -4,9 +4,9 @@ use grep_matcher::{Match, Matcher, NoError};
 use regex::bytes::Regex;
 use regex_syntax::hir::{self, Hir, HirKind};
 
-use config::ConfiguredHIR;
-use error::Error;
-use matcher::RegexCaptures;
+use crate::config::ConfiguredHIR;
+use crate::error::Error;
+use crate::matcher::RegexCaptures;
 
 /// A matcher for implementing "word match" semantics.
 #[derive(Clone, Debug)]

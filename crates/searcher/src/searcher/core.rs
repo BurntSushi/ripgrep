@@ -2,13 +2,13 @@ use std::cmp;
 
 use bstr::ByteSlice;
 
-use grep_matcher::{LineMatchKind, Matcher};
-use line_buffer::BinaryDetection;
-use lines::{self, LineStep};
-use searcher::{Config, Range, Searcher};
-use sink::{
+use crate::line_buffer::BinaryDetection;
+use crate::lines::{self, LineStep};
+use crate::searcher::{Config, Range, Searcher};
+use crate::sink::{
     Sink, SinkContext, SinkContextKind, SinkError, SinkFinish, SinkMatch,
 };
+use grep_matcher::{LineMatchKind, Matcher};
 
 #[derive(Debug)]
 pub struct Core<'s, M: 's, S> {
@@ -53,9 +53,9 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
         };
         if !core.searcher.multi_line_with_matcher(&core.matcher) {
             if core.is_line_by_line_fast() {
-                trace!("searcher core: will use fast line searcher");
+                log::trace!("searcher core: will use fast line searcher");
             } else {
-                trace!("searcher core: will use slow line searcher");
+                log::trace!("searcher core: will use slow line searcher");
             }
         }
         core
@@ -441,6 +441,8 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
                 bytes: linebuf,
                 absolute_byte_offset: offset,
                 line_number: self.line_number,
+                buffer: buf,
+                bytes_range_in_buffer: range.start()..range.end(),
             },
         )?;
         if !keepgoing {

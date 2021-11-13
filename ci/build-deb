@@ -39,4 +39,4 @@ cp complete/_rg "$DEPLOY_DIR/"
 
 # Since we're distributing the dpkg, we don't know whether the user will have
 # PCRE2 installed, so just do a static build.
-PCRE2_SYS_STATIC=1 cargo deb
+PCRE2_SYS_STATIC=1 cargo deb --target x86_64-unknown-linux-musl

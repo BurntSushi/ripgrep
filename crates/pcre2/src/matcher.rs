@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use grep_matcher::{Captures, Match, Matcher};
 use pcre2::bytes::{CaptureLocations, Regex, RegexBuilder};
 
-use error::Error;
+use crate::error::Error;
 
 /// A builder for configuring the compilation of a PCRE2 regex.
 #[derive(Clone, Debug)]

@@ -1,6 +1,6 @@
 [package]
 name = "grep-matcher"
-version = "0.1.4"  #:version
+version = "0.1.5"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 A trait for regular expressions, with a focus on line oriented search.
@@ -12,6 +12,7 @@ readme = "README.md"
 keywords = ["regex", "pattern", "trait"]
 license = "Unlicense/MIT"
 autotests = false
+edition = "2018"
 
 [dependencies]
 memchr = "2.1"

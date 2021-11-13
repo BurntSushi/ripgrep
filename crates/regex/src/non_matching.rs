@@ -13,7 +13,10 @@ pub fn non_matching_bytes(expr: &Hir) -> ByteSet {
 /// the given expression.
 fn remove_matching_bytes(expr: &Hir, set: &mut ByteSet) {
     match *expr.kind() {
-        HirKind::Empty | HirKind::Anchor(_) | HirKind::WordBoundary(_) => {}
+        HirKind::Empty | HirKind::WordBoundary(_) => {}
+        HirKind::Anchor(_) => {
+            set.remove(b'\n');
+        }
         HirKind::Literal(hir::Literal::Unicode(c)) => {
             for &b in c.encode_utf8(&mut [0; 4]).as_bytes() {
                 set.remove(b);
@@ -124,5 +127,13 @@ mod tests {
         assert_eq!(sparse(&extract("☃")), sparse_except(&[0xE2, 0x98, 0x83]));
         assert_eq!(sparse(&extract(r"\xFF")), sparse_except(&[0xC3, 0xBF]));
         assert_eq!(sparse(&extract(r"(?-u)\xFF")), sparse_except(&[0xFF]));
+    }
+
+    #[test]
+    fn anchor() {
+        assert_eq!(sparse(&extract(r"^")), sparse_except(&[b'\n']));
+        assert_eq!(sparse(&extract(r"$")), sparse_except(&[b'\n']));
+        assert_eq!(sparse(&extract(r"\A")), sparse_except(&[b'\n']));
+        assert_eq!(sparse(&extract(r"\z")), sparse_except(&[b'\n']));
     }
 }

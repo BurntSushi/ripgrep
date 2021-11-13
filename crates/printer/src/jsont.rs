@@ -13,7 +13,7 @@ use std::str;
 use base64;
 use serde::{Serialize, Serializer};
 
-use stats::Stats;
+use crate::stats::Stats;
 
 #[derive(Serialize)]
 #[serde(tag = "type", content = "data")]
@@ -90,7 +90,7 @@ enum Data<'a> {
 }
 
 impl<'a> Data<'a> {
-    fn from_bytes(bytes: &[u8]) -> Data {
+    fn from_bytes(bytes: &[u8]) -> Data<'_> {
         match str::from_utf8(bytes) {
             Ok(text) => Data::Text { text: Cow::Borrowed(text) },
             Err(_) => Data::Bytes { bytes },
@@ -98,7 +98,7 @@ impl<'a> Data<'a> {
     }
 
     #[cfg(unix)]
-    fn from_path(path: &Path) -> Data {
+    fn from_path(path: &Path) -> Data<'_> {
         use std::os::unix::ffi::OsStrExt;
 
         match path.to_str() {

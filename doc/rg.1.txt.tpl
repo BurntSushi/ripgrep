@@ -3,7 +3,7 @@ rg(1)
 
 Name
 ----
-rg - recursively search current directory for lines matching a pattern
+rg - recursively search the current directory for lines matching a pattern
 
 
 Synopsis
@@ -27,7 +27,7 @@ Synopsis
 
 DESCRIPTION
 -----------
-ripgrep (rg) recursively searches your current directory for a regex pattern.
+ripgrep (rg) recursively searches the current directory for a regex pattern.
 By default, ripgrep will respect your .gitignore and automatically skip hidden
 files/directories and binary files.
 
@@ -82,10 +82,10 @@ _PATH_::
 
 OPTIONS
 -------
-Note that for many options, there exist flags to disable them. In some cases,
-those flags are not listed in a first class way below. For example, the
-*--column* flag (listed below) enables column numbers in ripgrep's output, but
-the *--no-column* flag (not listed below) disables them. The reverse can also
+Note that many options can be disabled via flags. In some cases, those flags
+are not listed in a first class way below. For example, the *--column*
+flag (listed below) enables column numbers in ripgrep's output, but the
+*--no-column* flag (not listed below) disables them. The reverse can also
 exist. For example, the *--no-ignore* flag (listed below) disables ripgrep's
 *gitignore* logic, but the *--ignore* flag (not listed below) enables it. These
 flags are useful for overriding a ripgrep configuration file on the command
@@ -166,7 +166,7 @@ Each of the types of filtering can be configured via command line flags:
     * There are several flags starting with '--no-ignore' that toggle which,
       if any, ignore rules are respected. '--no-ignore' by itself will disable
       all of them.
-    * '--hidden' will force ripgrep to search hidden files and directories.
+    * '-./--hidden' will force ripgrep to search hidden files and directories.
     * '--binary' will force ripgrep to search binary files.
     * '-L/--follow' will force ripgrep to follow symlinks.
 

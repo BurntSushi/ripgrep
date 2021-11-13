@@ -19,8 +19,8 @@ use globset::{Candidate, GlobBuilder, GlobSet, GlobSetBuilder};
 use regex::bytes::Regex;
 use thread_local::ThreadLocal;
 
-use pathutil::{is_file_name, strip_prefix};
-use {Error, Match, PartialErrorBuilder};
+use crate::pathutil::{is_file_name, strip_prefix};
+use crate::{Error, Match, PartialErrorBuilder};
 
 /// Glob represents a single glob in a gitignore file.
 ///
@@ -592,7 +592,7 @@ fn parse_excludes_file(data: &[u8]) -> Option<PathBuf> {
     // N.B. This is the lazy approach, and isn't technically correct, but
     // probably works in more circumstances. I guess we would ideally have
     // a full INI parser. Yuck.
-    lazy_static! {
+    lazy_static::lazy_static! {
         static ref RE: Regex =
             Regex::new(r"(?im)^\s*excludesfile\s*=\s*(.+)\s*$").unwrap();
     };

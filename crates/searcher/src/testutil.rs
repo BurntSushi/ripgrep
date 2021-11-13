@@ -7,8 +7,8 @@ use grep_matcher::{
 };
 use regex::bytes::{Regex, RegexBuilder};
 
-use searcher::{BinaryDetection, Searcher, SearcherBuilder};
-use sink::{Sink, SinkContext, SinkFinish, SinkMatch};
+use crate::searcher::{BinaryDetection, Searcher, SearcherBuilder};
+use crate::sink::{Sink, SinkContext, SinkFinish, SinkMatch};
 
 /// A simple regex matcher.
 ///
@@ -129,7 +129,7 @@ impl Sink for KitchenSink {
     fn matched(
         &mut self,
         _searcher: &Searcher,
-        mat: &SinkMatch,
+        mat: &SinkMatch<'_>,
     ) -> Result<bool, io::Error> {
         assert!(!mat.bytes().is_empty());
         assert!(mat.lines().count() >= 1);
@@ -152,7 +152,7 @@ impl Sink for KitchenSink {
     fn context(
         &mut self,
         _searcher: &Searcher,
-        context: &SinkContext,
+        context: &SinkContext<'_>,
     ) -> Result<bool, io::Error> {
         assert!(!context.bytes().is_empty());
         assert!(context.lines().count() == 1);

@@ -30,6 +30,14 @@ impl CommandError {
     pub(crate) fn stderr(bytes: Vec<u8>) -> CommandError {
         CommandError { kind: CommandErrorKind::Stderr(bytes) }
     }
+
+    /// Returns true if and only if this error has empty data from stderr.
+    pub(crate) fn is_empty(&self) -> bool {
+        match self.kind {
+            CommandErrorKind::Stderr(ref bytes) => bytes.is_empty(),
+            _ => false,
+        }
+    }
 }
 
 impl error::Error for CommandError {
@@ -39,7 +47,7 @@ impl error::Error for CommandError {
 }
 
 impl fmt::Display for CommandError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.kind {
             CommandErrorKind::Io(ref e) => e.fmt(f),
             CommandErrorKind::Stderr(ref bytes) => {
@@ -107,18 +115,12 @@ impl CommandReaderBuilder {
             .stdout(process::Stdio::piped())
             .stderr(process::Stdio::piped())
             .spawn()?;
-        let stdout = child.stdout.take().unwrap();
         let stderr = if self.async_stderr {
-            StderrReader::async(child.stderr.take().unwrap())
+            StderrReader::r#async(child.stderr.take().unwrap())
         } else {
             StderrReader::sync(child.stderr.take().unwrap())
         };
-        Ok(CommandReader {
-            child: child,
-            stdout: stdout,
-            stderr: stderr,
-            done: false,
-        })
+        Ok(CommandReader { child, stderr, eof: false })
     }
 
     /// When enabled, the reader will asynchronously read the contents of the
@@ -175,9 +177,11 @@ impl CommandReaderBuilder {
 #[derive(Debug)]
 pub struct CommandReader {
     child: process::Child,
-    stdout: process::ChildStdout,
     stderr: StderrReader,
-    done: bool,
+    /// This is set to true once 'read' returns zero bytes. When this isn't
+    /// set and we close the reader, then we anticipate a pipe error when
+    /// reaping the child process and silence it.
+    eof: bool,
 }
 
 impl CommandReader {
@@ -201,23 +205,73 @@ impl CommandReader {
     ) -> Result<CommandReader, CommandError> {
         CommandReaderBuilder::new().build(cmd)
     }
+
+    /// Closes the CommandReader, freeing any resources used by its underlying
+    /// child process. If the child process exits with a nonzero exit code, the
+    /// returned Err value will include its stderr.
+    ///
+    /// `close` is idempotent, meaning it can be safely called multiple times.
+    /// The first call closes the CommandReader and any subsequent calls do
+    /// nothing.
+    ///
+    /// This method should be called after partially reading a file to prevent
+    /// resource leakage. However there is no need to call `close` explicitly
+    /// if your code always calls `read` to EOF, as `read` takes care of
+    /// calling `close` in this case.
+    ///
+    /// `close` is also called in `drop` as a last line of defense against
+    /// resource leakage. Any error from the child process is then printed as a
+    /// warning to stderr. This can be avoided by explictly calling `close`
+    /// before the CommandReader is dropped.
+    pub fn close(&mut self) -> io::Result<()> {
+        // Dropping stdout closes the underlying file descriptor, which should
+        // cause a well-behaved child process to exit. If child.stdout is None
+        // we assume that close() has already been called and do nothing.
+        let stdout = match self.child.stdout.take() {
+            None => return Ok(()),
+            Some(stdout) => stdout,
+        };
+        drop(stdout);
+        if self.child.wait()?.success() {
+            Ok(())
+        } else {
+            let err = self.stderr.read_to_end();
+            // In the specific case where we haven't consumed the full data
+            // from the child process, then closing stdout above results in
+            // a pipe signal being thrown in most cases. But I don't think
+            // there is any reliable and portable way of detecting it. Instead,
+            // if we know we haven't hit EOF (so we anticipate a broken pipe
+            // error) and if stderr otherwise doesn't have anything on it, then
+            // we assume total success.
+            if !self.eof && err.is_empty() {
+                return Ok(());
+            }
+            Err(io::Error::from(err))
+        }
+    }
+}
+
+impl Drop for CommandReader {
+    fn drop(&mut self) {
+        if let Err(error) = self.close() {
+            log::warn!("{}", error);
+        }
+    }
 }
 
 impl io::Read for CommandReader {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        if self.done {
-            return Ok(0);
-        }
-        let nread = self.stdout.read(buf)?;
+        let stdout = match self.child.stdout {
+            None => return Ok(0),
+            Some(ref mut stdout) => stdout,
+        };
+        let nread = stdout.read(buf)?;
         if nread == 0 {
-            self.done = true;
-            // Reap the child now that we're done reading. If the command
-            // failed, report stderr as an error.
-            if !self.child.wait()?.success() {
-                return Err(io::Error::from(self.stderr.read_to_end()));
-            }
+            self.eof = true;
+            self.close().map(|_| 0)
+        } else {
+            Ok(nread)
         }
-        Ok(nread)
     }
 }
 
@@ -231,7 +285,7 @@ enum StderrReader {
 
 impl StderrReader {
     /// Create a reader for stderr that reads contents asynchronously.
-    fn async(mut stderr: process::ChildStderr) -> StderrReader {
+    fn r#async(mut stderr: process::ChildStderr) -> StderrReader {
         let handle =
             thread::spawn(move || stderr_to_command_error(&mut stderr));
         StderrReader::Async(Some(handle))

@@ -8,15 +8,18 @@ use std::time::Instant;
 use bstr::ByteSlice;
 use grep_matcher::{Match, Matcher};
 use grep_searcher::{
-    LineStep, Searcher, Sink, SinkContext, SinkContextKind, SinkError,
-    SinkFinish, SinkMatch,
+    LineStep, Searcher, Sink, SinkContext, SinkContextKind, SinkFinish,
+    SinkMatch,
 };
 use termcolor::{ColorSpec, NoColor, WriteColor};
 
-use color::ColorSpecs;
-use counter::CounterWriter;
-use stats::Stats;
-use util::{trim_ascii_prefix, PrinterPath, Replacer, Sunk};
+use crate::color::ColorSpecs;
+use crate::counter::CounterWriter;
+use crate::stats::Stats;
+use crate::util::{
+    find_iter_at_in_context, trim_ascii_prefix, trim_line_terminator,
+    PrinterPath, Replacer, Sunk,
+};
 
 /// The configuration for the standard printer.
 ///
@@ -31,6 +34,7 @@ struct Config {
     path: bool,
     only_matching: bool,
     per_match: bool,
+    per_match_one_line: bool,
     replacement: Arc<Option<Vec<u8>>>,
     max_columns: Option<u64>,
     limit_col: Option<u64>,
@@ -56,6 +60,7 @@ impl Default for Config {
             path: true,
             only_matching: false,
             per_match: false,
+            per_match_one_line: false,
             replacement: Arc::new(None),
             max_columns: None,
             limit_col: None,
@@ -221,12 +226,33 @@ impl StandardBuilder {
     /// the `column` option, which will show the starting column number for
     /// every match on every line.
     ///
-    /// When multi-line mode is enabled, each match and its accompanying lines
-    /// are printed. As with single line matches, if a line contains multiple
-    /// matches (even if only partially), then that line is printed once for
-    /// each match it participates in.
+    /// When multi-line mode is enabled, each match is printed, including every
+    /// line in the match. As with single line matches, if a line contains
+    /// multiple matches (even if only partially), then that line is printed
+    /// once for each match it participates in, assuming it's the first line in
+    /// that match. In multi-line mode, column numbers only indicate the start
+    /// of a match. Subsequent lines in a multi-line match always have a column
+    /// number of `1`.
+    ///
+    /// When a match contains multiple lines, enabling `per_match_one_line`
+    /// will cause only the first line each in match to be printed.
     pub fn per_match(&mut self, yes: bool) -> &mut StandardBuilder {
         self.config.per_match = yes;
+        self
+    }
+
+    /// Print at most one line per match when `per_match` is enabled.
+    ///
+    /// By default, every line in each match found is printed when `per_match`
+    /// is enabled. However, this is sometimes undesirable, e.g., when you
+    /// only ever want one line per match.
+    ///
+    /// This is only applicable when multi-line matching is enabled, since
+    /// otherwise, matches are guaranteed to span one line.
+    ///
+    /// This is disabled by default.
+    pub fn per_match_one_line(&mut self, yes: bool) -> &mut StandardBuilder {
+        self.config.per_match_one_line = yes;
         self
     }
 
@@ -299,9 +325,6 @@ impl StandardBuilder {
     ///
     /// Column numbers are computed in terms of bytes from the start of the
     /// line being printed.
-    ///
-    /// For matches that span multiple lines, the column number for each
-    /// matching line is in terms of the first matching line.
     ///
     /// This is disabled by default.
     pub fn column(&mut self, yes: bool) -> &mut StandardBuilder {
@@ -610,7 +633,7 @@ impl<W> Standard<W> {
 /// * `W` refers to the underlying writer that this printer is writing its
 ///   output to.
 #[derive(Debug)]
-pub struct StandardSink<'p, 's, M: Matcher, W: 's> {
+pub struct StandardSink<'p, 's, M: Matcher, W> {
     matcher: M,
     standard: &'s mut Standard<W>,
     replacer: Replacer<M>,
@@ -670,7 +693,12 @@ impl<'p, 's, M: Matcher, W: WriteColor> StandardSink<'p, 's, M, W> {
 
     /// Execute the matcher over the given bytes and record the match
     /// locations if the current configuration demands match granularity.
-    fn record_matches(&mut self, bytes: &[u8]) -> io::Result<()> {
+    fn record_matches(
+        &mut self,
+        searcher: &Searcher,
+        bytes: &[u8],
+        range: std::ops::Range<usize>,
+    ) -> io::Result<()> {
         self.standard.matches.clear();
         if !self.needs_match_granularity {
             return Ok(());
@@ -683,16 +711,21 @@ impl<'p, 's, M: Matcher, W: WriteColor> StandardSink<'p, 's, M, W> {
         // one search to find the matches (well, for replacements, we do one
         // additional search to perform the actual replacement).
         let matches = &mut self.standard.matches;
-        self.matcher
-            .find_iter(bytes, |m| {
-                matches.push(m);
+        find_iter_at_in_context(
+            searcher,
+            &self.matcher,
+            bytes,
+            range.clone(),
+            |m| {
+                let (s, e) = (m.start() - range.start, m.end() - range.start);
+                matches.push(Match::new(s, e));
                 true
-            })
-            .map_err(io::Error::error_message)?;
+            },
+        )?;
         // Don't report empty matches appearing at the end of the bytes.
         if !matches.is_empty()
             && matches.last().unwrap().is_empty()
-            && matches.last().unwrap().start() >= bytes.len()
+            && matches.last().unwrap().start() >= range.end
         {
             matches.pop().unwrap();
         }
@@ -703,14 +736,25 @@ impl<'p, 's, M: Matcher, W: WriteColor> StandardSink<'p, 's, M, W> {
     /// replacement, lazily allocating memory if necessary.
     ///
     /// To access the result of a replacement, use `replacer.replacement()`.
-    fn replace(&mut self, bytes: &[u8]) -> io::Result<()> {
+    fn replace(
+        &mut self,
+        searcher: &Searcher,
+        bytes: &[u8],
+        range: std::ops::Range<usize>,
+    ) -> io::Result<()> {
         self.replacer.clear();
         if self.standard.config.replacement.is_some() {
             let replacement = (*self.standard.config.replacement)
                 .as_ref()
                 .map(|r| &*r)
                 .unwrap();
-            self.replacer.replace_all(&self.matcher, bytes, replacement)?;
+            self.replacer.replace_all(
+                searcher,
+                &self.matcher,
+                bytes,
+                range,
+                replacement,
+            )?;
         }
         Ok(())
     }
@@ -730,6 +774,16 @@ impl<'p, 's, M: Matcher, W: WriteColor> StandardSink<'p, 's, M, W> {
         }
         self.after_context_remaining == 0
     }
+
+    /// Returns whether the current match count exceeds the configured limit.
+    /// If there is no limit, then this always returns false.
+    fn match_more_than_limit(&self) -> bool {
+        let limit = match self.standard.config.max_matches {
+            None => return false,
+            Some(limit) => limit,
+        };
+        self.match_count > limit
+    }
 }
 
 impl<'p, 's, M: Matcher, W: WriteColor> Sink for StandardSink<'p, 's, M, W> {
@@ -738,13 +792,29 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for StandardSink<'p, 's, M, W> {
     fn matched(
         &mut self,
         searcher: &Searcher,
-        mat: &SinkMatch,
+        mat: &SinkMatch<'_>,
     ) -> Result<bool, io::Error> {
         self.match_count += 1;
-        self.after_context_remaining = searcher.after_context() as u64;
+        // When we've exceeded our match count, then the remaining context
+        // lines should not be reset, but instead, decremented. This avoids a
+        // bug where we display more matches than a configured limit. The main
+        // idea here is that 'matched' might be called again while printing
+        // an after-context line. In that case, we should treat this as a
+        // contextual line rather than a matching line for the purposes of
+        // termination.
+        if self.match_more_than_limit() {
+            self.after_context_remaining =
+                self.after_context_remaining.saturating_sub(1);
+        } else {
+            self.after_context_remaining = searcher.after_context() as u64;
+        }
 
-        self.record_matches(mat.bytes())?;
-        self.replace(mat.bytes())?;
+        self.record_matches(
+            searcher,
+            mat.buffer(),
+            mat.bytes_range_in_buffer(),
+        )?;
+        self.replace(searcher, mat.buffer(), mat.bytes_range_in_buffer())?;
 
         if let Some(ref mut stats) = self.stats {
             stats.add_matches(self.standard.matches.len() as u64);
@@ -763,7 +833,7 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for StandardSink<'p, 's, M, W> {
     fn context(
         &mut self,
         searcher: &Searcher,
-        ctx: &SinkContext,
+        ctx: &SinkContext<'_>,
     ) -> Result<bool, io::Error> {
         self.standard.matches.clear();
         self.replacer.clear();
@@ -773,8 +843,8 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for StandardSink<'p, 's, M, W> {
                 self.after_context_remaining.saturating_sub(1);
         }
         if searcher.invert_match() {
-            self.record_matches(ctx.bytes())?;
-            self.replace(ctx.bytes())?;
+            self.record_matches(searcher, ctx.bytes(), 0..ctx.bytes().len())?;
+            self.replace(searcher, ctx.bytes(), 0..ctx.bytes().len())?;
         }
         if searcher.binary_detection().convert_byte().is_some() {
             if self.binary_byte_offset.is_some() {
@@ -842,7 +912,7 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for StandardSink<'p, 's, M, W> {
 /// A StandardImpl is initialized every time a match or a contextual line is
 /// reported.
 #[derive(Debug)]
-struct StandardImpl<'a, M: 'a + Matcher, W: 'a> {
+struct StandardImpl<'a, M: Matcher, W> {
     searcher: &'a Searcher,
     sink: &'a StandardSink<'a, 'a, M, W>,
     sunk: Sunk<'a>,
@@ -854,7 +924,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     /// Bundle self with a searcher and return the core implementation of Sink.
     fn new(
         searcher: &'a Searcher,
-        sink: &'a StandardSink<M, W>,
+        sink: &'a StandardSink<'_, '_, M, W>,
     ) -> StandardImpl<'a, M, W> {
         StandardImpl {
             searcher: searcher,
@@ -868,7 +938,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     /// for use with handling matching lines.
     fn from_match(
         searcher: &'a Searcher,
-        sink: &'a StandardSink<M, W>,
+        sink: &'a StandardSink<'_, '_, M, W>,
         mat: &'a SinkMatch<'a>,
     ) -> StandardImpl<'a, M, W> {
         let sunk = Sunk::from_sink_match(
@@ -883,7 +953,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     /// for use with handling contextual lines.
     fn from_context(
         searcher: &'a Searcher,
-        sink: &'a StandardSink<M, W>,
+        sink: &'a StandardSink<'_, '_, M, W>,
         ctx: &'a SinkContext<'a>,
     ) -> StandardImpl<'a, M, W> {
         let sunk = Sunk::from_sink_context(
@@ -1098,7 +1168,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                 self.write_prelude(
                     self.sunk.absolute_byte_offset() + line.start() as u64,
                     self.sunk.line_number().map(|n| n + count),
-                    Some(m.start() as u64 + 1),
+                    Some(m.start().saturating_sub(line.start()) as u64 + 1),
                 )?;
                 count += 1;
                 if self.exceeds_max_columns(&bytes[line]) {
@@ -1123,6 +1193,15 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                     }
                 }
                 self.write_line_term()?;
+                // It turns out that vimgrep really only wants one line per
+                // match, even when a match spans multiple lines. So when
+                // that option is enabled, we just quit after printing the
+                // first line.
+                //
+                // See: https://github.com/BurntSushi/ripgrep/issues/1866
+                if self.config().per_match_one_line {
+                    break;
+                }
             }
         }
         Ok(())
@@ -1479,14 +1558,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     }
 
     fn trim_line_terminator(&self, buf: &[u8], line: &mut Match) {
-        let lineterm = self.searcher.line_terminator();
-        if lineterm.is_suffix(&buf[*line]) {
-            let mut end = line.end() - 1;
-            if lineterm.is_crlf() && buf[end - 1] == b'\r' {
-                end -= 1;
-            }
-            *line = line.with_end(end);
-        }
+        trim_line_terminator(&self.searcher, buf, line);
     }
 
     fn has_line_terminator(&self, buf: &[u8]) -> bool {
@@ -1556,11 +1628,12 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
 
 #[cfg(test)]
 mod tests {
-    use grep_regex::RegexMatcher;
+    use grep_matcher::LineTerminator;
+    use grep_regex::{RegexMatcher, RegexMatcherBuilder};
     use grep_searcher::SearcherBuilder;
-    use termcolor::NoColor;
+    use termcolor::{Ansi, NoColor};
 
-    use super::{Standard, StandardBuilder};
+    use super::{ColorSpecs, Standard, StandardBuilder};
 
     const SHERLOCK: &'static str = "\
 For the Doctor Watsons of this world, as opposed to the Sherlock
@@ -1582,6 +1655,10 @@ and exhibited clearly, with a label attached.\
 ";
 
     fn printer_contents(printer: &mut Standard<NoColor<Vec<u8>>>) -> String {
+        String::from_utf8(printer.get_mut().get_ref().to_owned()).unwrap()
+    }
+
+    fn printer_contents_ansi(printer: &mut Standard<Ansi<Vec<u8>>>) -> String {
         String::from_utf8(printer.get_mut().get_ref().to_owned()).unwrap()
     }
 
@@ -3001,9 +3078,9 @@ Holmeses, success in the province of detective work must always
         let got = printer_contents(&mut printer);
         let expected = "\
 1:16:For the Doctor Watsons of this world, as opposed to the Sherlock
-2:16:Holmeses, success in the province of detective work must always
+2:1:Holmeses, success in the province of detective work must always
 5:12:but Doctor Watson has to have it taken out for him and dusted,
-6:12:and exhibited clearly, with a label attached.
+6:1:and exhibited clearly, with a label attached.
 ";
         assert_eq_printed!(expected, got);
     }
@@ -3030,9 +3107,94 @@ Holmeses, success in the province of detective work must always
         let got = printer_contents(&mut printer);
         let expected = "\
 1:16:For the Doctor Watsons of this world, as opposed to the Sherlock
-2:16:Holmeses, success in the province of detective work must always
-2:123:Holmeses, success in the province of detective work must always
-3:123:be, to a very large extent, the result of luck. Sherlock Holmes
+2:1:Holmeses, success in the province of detective work must always
+2:58:Holmeses, success in the province of detective work must always
+3:1:be, to a very large extent, the result of luck. Sherlock Holmes
+";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn per_match_multi_line1_only_first_line() {
+        let matcher =
+            RegexMatcher::new(r"(?s:.{0})(Doctor Watsons|Sherlock)").unwrap();
+        let mut printer = StandardBuilder::new()
+            .per_match(true)
+            .per_match_one_line(true)
+            .column(true)
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .multi_line(true)
+            .line_number(true)
+            .build()
+            .search_reader(
+                &matcher,
+                SHERLOCK.as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "\
+1:9:For the Doctor Watsons of this world, as opposed to the Sherlock
+1:57:For the Doctor Watsons of this world, as opposed to the Sherlock
+3:49:be, to a very large extent, the result of luck. Sherlock Holmes
+";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn per_match_multi_line2_only_first_line() {
+        let matcher =
+            RegexMatcher::new(r"(?s)Watson.+?(Holmeses|clearly)").unwrap();
+        let mut printer = StandardBuilder::new()
+            .per_match(true)
+            .per_match_one_line(true)
+            .column(true)
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .multi_line(true)
+            .line_number(true)
+            .build()
+            .search_reader(
+                &matcher,
+                SHERLOCK.as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "\
+1:16:For the Doctor Watsons of this world, as opposed to the Sherlock
+5:12:but Doctor Watson has to have it taken out for him and dusted,
+";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn per_match_multi_line3_only_first_line() {
+        let matcher =
+            RegexMatcher::new(r"(?s)Watson.+?Holmeses|always.+?be").unwrap();
+        let mut printer = StandardBuilder::new()
+            .per_match(true)
+            .per_match_one_line(true)
+            .column(true)
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .multi_line(true)
+            .line_number(true)
+            .build()
+            .search_reader(
+                &matcher,
+                SHERLOCK.as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "\
+1:16:For the Doctor Watsons of this world, as opposed to the Sherlock
+2:58:Holmeses, success in the province of detective work must always
 ";
         assert_eq_printed!(expected, got);
     }
@@ -3088,6 +3250,80 @@ Holmeses, success in the province of detective work must always
 3:be, to a very large extent, the result of luck. doctah  MD Holmes
 5:but doctah Watson MD has to have it taken out for him and dusted,
 ";
+        assert_eq_printed!(expected, got);
+    }
+
+    // This is a somewhat weird test that checks the behavior of attempting
+    // to replace a line terminator with something else.
+    //
+    // See: https://github.com/BurntSushi/ripgrep/issues/1311
+    #[test]
+    fn replacement_multi_line() {
+        let matcher = RegexMatcher::new(r"\n").unwrap();
+        let mut printer = StandardBuilder::new()
+            .replacement(Some(b"?".to_vec()))
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(true)
+            .multi_line(true)
+            .build()
+            .search_reader(
+                &matcher,
+                "hello\nworld\n".as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "1:hello?world?\n";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn replacement_multi_line_diff_line_term() {
+        let matcher = RegexMatcherBuilder::new()
+            .line_terminator(Some(b'\x00'))
+            .build(r"\n")
+            .unwrap();
+        let mut printer = StandardBuilder::new()
+            .replacement(Some(b"?".to_vec()))
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_terminator(LineTerminator::byte(b'\x00'))
+            .line_number(true)
+            .multi_line(true)
+            .build()
+            .search_reader(
+                &matcher,
+                "hello\nworld\n".as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "1:hello?world?\x00";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn replacement_multi_line_combine_lines() {
+        let matcher = RegexMatcher::new(r"\n(.)?").unwrap();
+        let mut printer = StandardBuilder::new()
+            .replacement(Some(b"?$1".to_vec()))
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(true)
+            .multi_line(true)
+            .build()
+            .search_reader(
+                &matcher,
+                "hello\nworld\n".as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "1:hello?world?\n";
         assert_eq_printed!(expected, got);
     }
 
@@ -3395,6 +3631,59 @@ and xxx clearly, with a label attached.
 5:but Doctor Watson has to have it taken out for him and dusted,
 6:and exhibited clearly, with a label attached.
 ";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn regression_search_empty_with_crlf() {
+        let matcher =
+            RegexMatcherBuilder::new().crlf(true).build(r"x?").unwrap();
+        let mut printer = StandardBuilder::new()
+            .color_specs(ColorSpecs::default_with_color())
+            .build(Ansi::new(vec![]));
+        SearcherBuilder::new()
+            .line_terminator(LineTerminator::crlf())
+            .build()
+            .search_reader(&matcher, &b"\n"[..], printer.sink(&matcher))
+            .unwrap();
+
+        let got = printer_contents_ansi(&mut printer);
+        assert!(!got.is_empty());
+    }
+
+    #[test]
+    fn regression_after_context_with_match() {
+        let haystack = "\
+a
+b
+c
+d
+e
+d
+e
+d
+e
+d
+e
+";
+
+        let matcher = RegexMatcherBuilder::new().build(r"d").unwrap();
+        let mut printer = StandardBuilder::new()
+            .max_matches(Some(1))
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(true)
+            .after_context(2)
+            .build()
+            .search_reader(
+                &matcher,
+                haystack.as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "4:d\n5-e\n6:d\n";
         assert_eq_printed!(expected, got);
     }
 }

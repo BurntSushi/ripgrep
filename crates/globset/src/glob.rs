@@ -8,7 +8,7 @@ use std::str;
 use regex;
 use regex::bytes::Regex;
 
-use {new_regex, Candidate, Error, ErrorKind};
+use crate::{new_regex, Candidate, Error, ErrorKind};
 
 /// Describes a matching strategy for a particular pattern.
 ///
@@ -98,7 +98,7 @@ impl hash::Hash for Glob {
 }
 
 impl fmt::Display for Glob {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.glob.fmt(f)
     }
 }
@@ -127,7 +127,7 @@ impl GlobMatcher {
     }
 
     /// Tests whether the given path matches this pattern or not.
-    pub fn is_match_candidate(&self, path: &Candidate) -> bool {
+    pub fn is_match_candidate(&self, path: &Candidate<'_>) -> bool {
         self.re.is_match(&path.path)
     }
 
@@ -157,7 +157,7 @@ impl GlobStrategic {
     }
 
     /// Tests whether the given path matches this pattern or not.
-    fn is_match_candidate(&self, candidate: &Candidate) -> bool {
+    fn is_match_candidate(&self, candidate: &Candidate<'_>) -> bool {
         let byte_path = &*candidate.path;
 
         match self.strategy {
@@ -403,7 +403,7 @@ impl Glob {
         if self.opts.case_insensitive {
             return None;
         }
-        let end = match self.tokens.last() {
+        let (end, need_sep) = match self.tokens.last() {
             Some(&Token::ZeroOrMore) => {
                 if self.opts.literal_separator {
                     // If a trailing `*` can't match a `/`, then we can't
@@ -414,9 +414,10 @@ impl Glob {
                     // literal prefix.
                     return None;
                 }
-                self.tokens.len() - 1
+                (self.tokens.len() - 1, false)
             }
-            _ => self.tokens.len(),
+            Some(&Token::RecursiveSuffix) => (self.tokens.len() - 1, true),
+            _ => (self.tokens.len(), false),
         };
         let mut lit = String::new();
         for t in &self.tokens[0..end] {
@@ -424,6 +425,9 @@ impl Glob {
                 Token::Literal(c) => lit.push(c),
                 _ => return None,
             }
+        }
+        if need_sep {
+            lit.push('/');
         }
         if lit.is_empty() {
             None
@@ -612,6 +616,8 @@ impl<'a> GlobBuilder<'a> {
     }
 
     /// Toggle whether a literal `/` is required to match a path separator.
+    ///
+    /// By default this is false: `*` and `?` will match `/`.
     pub fn literal_separator(&mut self, yes: bool) -> &mut GlobBuilder<'a> {
         self.opts.literal_separator = yes;
         self
@@ -683,7 +689,7 @@ impl Tokens {
                     re.push_str("(?:/?|.*/)");
                 }
                 Token::RecursiveSuffix => {
-                    re.push_str("(?:/?|/.*)");
+                    re.push_str("/.*");
                 }
                 Token::RecursiveZeroOrMore => {
                     re.push_str("(?:/|/.*/)");
@@ -1009,7 +1015,7 @@ fn ends_with(needle: &[u8], haystack: &[u8]) -> bool {
 mod tests {
     use super::Token::*;
     use super::{Glob, GlobBuilder, Token};
-    use {ErrorKind, GlobSetBuilder};
+    use crate::{ErrorKind, GlobSetBuilder};
 
     #[derive(Clone, Copy, Debug, Default)]
     struct Options {
@@ -1222,9 +1228,9 @@ mod tests {
     toregex!(re16, "**/**/*", r"^(?:/?|.*/).*$");
     toregex!(re17, "**/**/**", r"^.*$");
     toregex!(re18, "**/**/**/*", r"^(?:/?|.*/).*$");
-    toregex!(re19, "a/**", r"^a(?:/?|/.*)$");
-    toregex!(re20, "a/**/**", r"^a(?:/?|/.*)$");
-    toregex!(re21, "a/**/**/**", r"^a(?:/?|/.*)$");
+    toregex!(re19, "a/**", r"^a/.*$");
+    toregex!(re20, "a/**/**", r"^a/.*$");
+    toregex!(re21, "a/**/**/**", r"^a/.*$");
     toregex!(re22, "a/**/b", r"^a(?:/|/.*/)b$");
     toregex!(re23, "a/**/**/b", r"^a(?:/|/.*/)b$");
     toregex!(re24, "a/**/**/**/b", r"^a(?:/|/.*/)b$");
@@ -1270,11 +1276,12 @@ mod tests {
     matches!(matchrec18, "/**/test", "/test");
     matches!(matchrec19, "**/.*", ".abc");
     matches!(matchrec20, "**/.*", "abc/.abc");
-    matches!(matchrec21, ".*/**", ".abc");
+    matches!(matchrec21, "**/foo/bar", "foo/bar");
     matches!(matchrec22, ".*/**", ".abc/abc");
-    matches!(matchrec23, "foo/**", "foo");
-    matches!(matchrec24, "**/foo/bar", "foo/bar");
-    matches!(matchrec25, "some/*/needle.txt", "some/one/needle.txt");
+    matches!(matchrec23, "test/**", "test/");
+    matches!(matchrec24, "test/**", "test/one");
+    matches!(matchrec25, "test/**", "test/one/two");
+    matches!(matchrec26, "some/*/needle.txt", "some/one/needle.txt");
 
     matches!(matchrange1, "a[0-9]b", "a0b");
     matches!(matchrange2, "a[0-9]b", "a9b");
@@ -1400,6 +1407,8 @@ mod tests {
         "some/one/two/three/needle.txt",
         SLASHLIT
     );
+    nmatches!(matchrec33, ".*/**", ".abc");
+    nmatches!(matchrec34, "foo/**", "foo");
 
     macro_rules! extract {
         ($which:ident, $name:ident, $pat:expr, $expect:expr) => {
@@ -1504,7 +1513,7 @@ mod tests {
     prefix!(extract_prefix1, "/foo", Some(s("/foo")));
     prefix!(extract_prefix2, "/foo/*", Some(s("/foo/")));
     prefix!(extract_prefix3, "**/foo", None);
-    prefix!(extract_prefix4, "foo/**", None);
+    prefix!(extract_prefix4, "foo/**", Some(s("foo/")));
 
     suffix!(extract_suffix1, "**/foo/bar", Some((s("/foo/bar"), true)));
     suffix!(extract_suffix2, "*/foo/bar", Some((s("/foo/bar"), false)));

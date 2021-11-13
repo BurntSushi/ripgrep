@@ -158,19 +158,6 @@ error message is crafted that typically tells the user how to fix the problem.
 
 #![deny(missing_docs)]
 
-extern crate atty;
-extern crate bstr;
-extern crate globset;
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate log;
-extern crate regex;
-extern crate same_file;
-extern crate termcolor;
-#[cfg(windows)]
-extern crate winapi_util;
-
 mod decompress;
 mod escape;
 mod human;
@@ -178,18 +165,18 @@ mod pattern;
 mod process;
 mod wtr;
 
-pub use decompress::{
-    DecompressionMatcher, DecompressionMatcherBuilder, DecompressionReader,
-    DecompressionReaderBuilder,
+pub use crate::decompress::{
+    resolve_binary, DecompressionMatcher, DecompressionMatcherBuilder,
+    DecompressionReader, DecompressionReaderBuilder,
 };
-pub use escape::{escape, escape_os, unescape, unescape_os};
-pub use human::{parse_human_readable_size, ParseSizeError};
-pub use pattern::{
+pub use crate::escape::{escape, escape_os, unescape, unescape_os};
+pub use crate::human::{parse_human_readable_size, ParseSizeError};
+pub use crate::pattern::{
     pattern_from_bytes, pattern_from_os, patterns_from_path,
     patterns_from_reader, patterns_from_stdin, InvalidPatternError,
 };
-pub use process::{CommandError, CommandReader, CommandReaderBuilder};
-pub use wtr::{
+pub use crate::process::{CommandError, CommandReader, CommandReaderBuilder};
+pub use crate::wtr::{
     stdout, stdout_buffered_block, stdout_buffered_line, StandardStream,
 };
 

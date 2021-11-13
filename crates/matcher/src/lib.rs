@@ -38,14 +38,12 @@ implementations.
 
 #![deny(missing_docs)]
 
-extern crate memchr;
-
 use std::fmt;
 use std::io;
 use std::ops;
 use std::u64;
 
-use interpolate::interpolate;
+use crate::interpolate::interpolate;
 
 mod interpolate;
 
@@ -118,7 +116,7 @@ impl Match {
     /// This method panics if `start > self.end`.
     #[inline]
     pub fn with_start(&self, start: usize) -> Match {
-        assert!(start <= self.end);
+        assert!(start <= self.end, "{} is not <= {}", start, self.end);
         Match { start, ..*self }
     }
 
@@ -130,7 +128,7 @@ impl Match {
     /// This method panics if `self.start > end`.
     #[inline]
     pub fn with_end(&self, end: usize) -> Match {
-        assert!(self.start <= end);
+        assert!(self.start <= end, "{} is not <= {}", self.start, end);
         Match { end, ..*self }
     }
 
@@ -304,7 +302,7 @@ pub struct ByteSet(BitSet);
 struct BitSet([u64; 4]);
 
 impl fmt::Debug for BitSet {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut fmtd = f.debug_set();
         for b in (0..256).map(|b| b as u8) {
             if ByteSet(*self).contains(b) {
@@ -494,7 +492,7 @@ impl ::std::error::Error for NoError {
 }
 
 impl fmt::Display for NoError {
-    fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, _: &mut fmt::Formatter<'_>) -> fmt::Result {
         panic!("BUG for NoError: an impossible error occurred")
     }
 }
@@ -618,12 +616,31 @@ pub trait Matcher {
     fn find_iter<F>(
         &self,
         haystack: &[u8],
+        matched: F,
+    ) -> Result<(), Self::Error>
+    where
+        F: FnMut(Match) -> bool,
+    {
+        self.find_iter_at(haystack, 0, matched)
+    }
+
+    /// Executes the given function over successive non-overlapping matches
+    /// in `haystack`. If no match exists, then the given function is never
+    /// called. If the function returns `false`, then iteration stops.
+    ///
+    /// The significance of the starting point is that it takes the surrounding
+    /// context into consideration. For example, the `\A` anchor can only
+    /// match when `at == 0`.
+    fn find_iter_at<F>(
+        &self,
+        haystack: &[u8],
+        at: usize,
         mut matched: F,
     ) -> Result<(), Self::Error>
     where
         F: FnMut(Match) -> bool,
     {
-        self.try_find_iter(haystack, |m| Ok(matched(m)))
+        self.try_find_iter_at(haystack, at, |m| Ok(matched(m)))
             .map(|r: Result<(), ()>| r.unwrap())
     }
 
@@ -637,12 +654,35 @@ pub trait Matcher {
     fn try_find_iter<F, E>(
         &self,
         haystack: &[u8],
+        matched: F,
+    ) -> Result<Result<(), E>, Self::Error>
+    where
+        F: FnMut(Match) -> Result<bool, E>,
+    {
+        self.try_find_iter_at(haystack, 0, matched)
+    }
+
+    /// Executes the given function over successive non-overlapping matches
+    /// in `haystack`. If no match exists, then the given function is never
+    /// called. If the function returns `false`, then iteration stops.
+    /// Similarly, if the function returns an error then iteration stops and
+    /// the error is yielded. If an error occurs while executing the search,
+    /// then it is converted to
+    /// `E`.
+    ///
+    /// The significance of the starting point is that it takes the surrounding
+    /// context into consideration. For example, the `\A` anchor can only
+    /// match when `at == 0`.
+    fn try_find_iter_at<F, E>(
+        &self,
+        haystack: &[u8],
+        at: usize,
         mut matched: F,
     ) -> Result<Result<(), E>, Self::Error>
     where
         F: FnMut(Match) -> Result<bool, E>,
     {
-        let mut last_end = 0;
+        let mut last_end = at;
         let mut last_match = None;
 
         loop {
@@ -696,12 +736,33 @@ pub trait Matcher {
         &self,
         haystack: &[u8],
         caps: &mut Self::Captures,
+        matched: F,
+    ) -> Result<(), Self::Error>
+    where
+        F: FnMut(&Self::Captures) -> bool,
+    {
+        self.captures_iter_at(haystack, 0, caps, matched)
+    }
+
+    /// Executes the given function over successive non-overlapping matches
+    /// in `haystack` with capture groups extracted from each match. If no
+    /// match exists, then the given function is never called. If the function
+    /// returns `false`, then iteration stops.
+    ///
+    /// The significance of the starting point is that it takes the surrounding
+    /// context into consideration. For example, the `\A` anchor can only
+    /// match when `at == 0`.
+    fn captures_iter_at<F>(
+        &self,
+        haystack: &[u8],
+        at: usize,
+        caps: &mut Self::Captures,
         mut matched: F,
     ) -> Result<(), Self::Error>
     where
         F: FnMut(&Self::Captures) -> bool,
     {
-        self.try_captures_iter(haystack, caps, |caps| Ok(matched(caps)))
+        self.try_captures_iter_at(haystack, at, caps, |caps| Ok(matched(caps)))
             .map(|r: Result<(), ()>| r.unwrap())
     }
 
@@ -716,12 +777,36 @@ pub trait Matcher {
         &self,
         haystack: &[u8],
         caps: &mut Self::Captures,
+        matched: F,
+    ) -> Result<Result<(), E>, Self::Error>
+    where
+        F: FnMut(&Self::Captures) -> Result<bool, E>,
+    {
+        self.try_captures_iter_at(haystack, 0, caps, matched)
+    }
+
+    /// Executes the given function over successive non-overlapping matches
+    /// in `haystack` with capture groups extracted from each match. If no
+    /// match exists, then the given function is never called. If the function
+    /// returns `false`, then iteration stops. Similarly, if the function
+    /// returns an error then iteration stops and the error is yielded. If
+    /// an error occurs while executing the search, then it is converted to
+    /// `E`.
+    ///
+    /// The significance of the starting point is that it takes the surrounding
+    /// context into consideration. For example, the `\A` anchor can only
+    /// match when `at == 0`.
+    fn try_captures_iter_at<F, E>(
+        &self,
+        haystack: &[u8],
+        at: usize,
+        caps: &mut Self::Captures,
         mut matched: F,
     ) -> Result<Result<(), E>, Self::Error>
     where
         F: FnMut(&Self::Captures) -> Result<bool, E>,
     {
-        let mut last_end = 0;
+        let mut last_end = at;
         let mut last_match = None;
 
         loop {
@@ -819,13 +904,35 @@ pub trait Matcher {
         haystack: &[u8],
         caps: &mut Self::Captures,
         dst: &mut Vec<u8>,
+        append: F,
+    ) -> Result<(), Self::Error>
+    where
+        F: FnMut(&Self::Captures, &mut Vec<u8>) -> bool,
+    {
+        self.replace_with_captures_at(haystack, 0, caps, dst, append)
+    }
+
+    /// Replaces every match in the given haystack with the result of calling
+    /// `append` with the matching capture groups.
+    ///
+    /// If the given `append` function returns `false`, then replacement stops.
+    ///
+    /// The significance of the starting point is that it takes the surrounding
+    /// context into consideration. For example, the `\A` anchor can only
+    /// match when `at == 0`.
+    fn replace_with_captures_at<F>(
+        &self,
+        haystack: &[u8],
+        at: usize,
+        caps: &mut Self::Captures,
+        dst: &mut Vec<u8>,
         mut append: F,
     ) -> Result<(), Self::Error>
     where
         F: FnMut(&Self::Captures, &mut Vec<u8>) -> bool,
     {
-        let mut last_match = 0;
-        self.captures_iter(haystack, caps, |caps| {
+        let mut last_match = at;
+        self.captures_iter_at(haystack, at, caps, |caps| {
             let m = caps.get(0).unwrap();
             dst.extend(&haystack[last_match..m.start]);
             last_match = m.end;
@@ -1039,6 +1146,18 @@ impl<'a, M: Matcher> Matcher for &'a M {
         (*self).find_iter(haystack, matched)
     }
 
+    fn find_iter_at<F>(
+        &self,
+        haystack: &[u8],
+        at: usize,
+        matched: F,
+    ) -> Result<(), Self::Error>
+    where
+        F: FnMut(Match) -> bool,
+    {
+        (*self).find_iter_at(haystack, at, matched)
+    }
+
     fn try_find_iter<F, E>(
         &self,
         haystack: &[u8],
@@ -1048,6 +1167,18 @@ impl<'a, M: Matcher> Matcher for &'a M {
         F: FnMut(Match) -> Result<bool, E>,
     {
         (*self).try_find_iter(haystack, matched)
+    }
+
+    fn try_find_iter_at<F, E>(
+        &self,
+        haystack: &[u8],
+        at: usize,
+        matched: F,
+    ) -> Result<Result<(), E>, Self::Error>
+    where
+        F: FnMut(Match) -> Result<bool, E>,
+    {
+        (*self).try_find_iter_at(haystack, at, matched)
     }
 
     fn captures(
@@ -1070,6 +1201,19 @@ impl<'a, M: Matcher> Matcher for &'a M {
         (*self).captures_iter(haystack, caps, matched)
     }
 
+    fn captures_iter_at<F>(
+        &self,
+        haystack: &[u8],
+        at: usize,
+        caps: &mut Self::Captures,
+        matched: F,
+    ) -> Result<(), Self::Error>
+    where
+        F: FnMut(&Self::Captures) -> bool,
+    {
+        (*self).captures_iter_at(haystack, at, caps, matched)
+    }
+
     fn try_captures_iter<F, E>(
         &self,
         haystack: &[u8],
@@ -1080,6 +1224,19 @@ impl<'a, M: Matcher> Matcher for &'a M {
         F: FnMut(&Self::Captures) -> Result<bool, E>,
     {
         (*self).try_captures_iter(haystack, caps, matched)
+    }
+
+    fn try_captures_iter_at<F, E>(
+        &self,
+        haystack: &[u8],
+        at: usize,
+        caps: &mut Self::Captures,
+        matched: F,
+    ) -> Result<Result<(), E>, Self::Error>
+    where
+        F: FnMut(&Self::Captures) -> Result<bool, E>,
+    {
+        (*self).try_captures_iter_at(haystack, at, caps, matched)
     }
 
     fn replace<F>(
@@ -1105,6 +1262,20 @@ impl<'a, M: Matcher> Matcher for &'a M {
         F: FnMut(&Self::Captures, &mut Vec<u8>) -> bool,
     {
         (*self).replace_with_captures(haystack, caps, dst, append)
+    }
+
+    fn replace_with_captures_at<F>(
+        &self,
+        haystack: &[u8],
+        at: usize,
+        caps: &mut Self::Captures,
+        dst: &mut Vec<u8>,
+        append: F,
+    ) -> Result<(), Self::Error>
+    where
+        F: FnMut(&Self::Captures, &mut Vec<u8>) -> bool,
+    {
+        (*self).replace_with_captures_at(haystack, at, caps, dst, append)
     }
 
     fn is_match(&self, haystack: &[u8]) -> Result<bool, Self::Error> {

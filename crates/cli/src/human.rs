@@ -52,7 +52,7 @@ impl error::Error for ParseSizeError {
 }
 
 impl fmt::Display for ParseSizeError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::ParseSizeErrorKind::*;
 
         match self.kind {
@@ -88,7 +88,7 @@ impl From<ParseSizeError> for io::Error {
 ///
 /// Additional suffixes may be added over time.
 pub fn parse_human_readable_size(size: &str) -> Result<u64, ParseSizeError> {
-    lazy_static! {
+    lazy_static::lazy_static! {
         // Normally I'd just parse something this simple by hand to avoid the
         // regex dep, but we bring regex in any way for glob matching, so might
         // as well use it.

@@ -1,6 +1,6 @@
 [package]
 name = "grep-pcre2"
-version = "0.1.4"  #:version
+version = "0.1.5"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 Use PCRE2 with the 'grep' crate.
@@ -11,7 +11,8 @@ repository = "https://github.com/BurntSushi/ripgrep/tree/master/crates/pcre2"
 readme = "README.md"
 keywords = ["regex", "grep", "pcre", "backreference", "look"]
 license = "Unlicense/MIT"
+edition = "2018"
 
 [dependencies]
-grep-matcher = { version = "0.1.2", path = "../matcher" }
-pcre2 = "0.2.0"
+grep-matcher = { version = "0.1.5", path = "../matcher" }
+pcre2 = "0.2.3"

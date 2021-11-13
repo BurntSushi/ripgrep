@@ -6,9 +6,9 @@ use grep_matcher::{Match, Matcher, NoError};
 use regex::bytes::{CaptureLocations, Regex};
 use thread_local::ThreadLocal;
 
-use config::ConfiguredHIR;
-use error::Error;
-use matcher::RegexCaptures;
+use crate::config::ConfiguredHIR;
+use crate::error::Error;
+use crate::matcher::RegexCaptures;
 
 /// A matcher for implementing "word match" semantics.
 #[derive(Debug)]
@@ -48,8 +48,8 @@ impl WordMatcher {
         let original =
             expr.with_pattern(|pat| format!("^(?:{})$", pat))?.regex()?;
         let word_expr = expr.with_pattern(|pat| {
-            let pat = format!(r"(?:(?-m:^)|\W)({})(?:(?-m:$)|\W)", pat);
-            debug!("word regex: {:?}", pat);
+            let pat = format!(r"(?:(?m:^)|\W)({})(?:\W|(?m:$))", pat);
+            log::debug!("word regex: {:?}", pat);
             pat
         })?;
         let regex = word_expr.regex()?;
@@ -111,8 +111,15 @@ impl WordMatcher {
         }
         let (_, slen) = bstr::decode_utf8(&haystack[cand]);
         let (_, elen) = bstr::decode_last_utf8(&haystack[cand]);
-        cand =
-            cand.with_start(cand.start() + slen).with_end(cand.end() - elen);
+        let new_start = cand.start() + slen;
+        let new_end = cand.end() - elen;
+        // This occurs the original regex can match the empty string. In this
+        // case, just bail instead of trying to get it right here since it's
+        // likely a pathological case.
+        if new_start > new_end {
+            return Err(());
+        }
+        cand = cand.with_start(new_start).with_end(new_end);
         if self.original.is_match(&haystack[cand]) {
             Ok(Some(cand))
         } else {
@@ -184,7 +191,7 @@ impl Matcher for WordMatcher {
 #[cfg(test)]
 mod tests {
     use super::WordMatcher;
-    use config::Config;
+    use crate::config::Config;
     use grep_matcher::{Captures, Match, Matcher};
 
     fn matcher(pattern: &str) -> WordMatcher {
@@ -237,6 +244,8 @@ mod tests {
         assert_eq!(Some((2, 5)), find(r"!?foo!?", "a!foo!a"));
 
         assert_eq!(Some((2, 7)), find(r"!?foo!?", "##!foo!\n"));
+        assert_eq!(Some((3, 8)), find(r"!?foo!?", "##\n!foo!##"));
+        assert_eq!(Some((3, 8)), find(r"!?foo!?", "##\n!foo!\n##"));
         assert_eq!(Some((3, 7)), find(r"f?oo!?", "##\nfoo!##"));
         assert_eq!(Some((2, 5)), find(r"(?-u)foo[^a]*", "#!foo☃aaa"));
     }

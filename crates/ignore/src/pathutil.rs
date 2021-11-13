@@ -1,7 +1,7 @@
 use std::ffi::OsStr;
 use std::path::Path;
 
-use walk::DirEntry;
+use crate::walk::DirEntry;
 
 /// Returns true if and only if this entry is considered to be hidden.
 ///

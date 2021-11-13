@@ -26,12 +26,6 @@ Add this to your `Cargo.toml`:
 grep = "0.2"
 ```
 
-and this to your crate root:
-
-```rust
-extern crate grep;
-```
-
 
 ### Features
 

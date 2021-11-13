@@ -1,6 +1,6 @@
 [package]
 name = "globset"
-version = "0.4.6"  #:version
+version = "0.4.8"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 Cross platform single glob and glob set matching. Glob set matching is the
@@ -13,6 +13,7 @@ repository = "https://github.com/BurntSushi/ripgrep/tree/master/crates/globset"
 readme = "README.md"
 keywords = ["regex", "glob", "multiple", "set", "pattern"]
 license = "Unlicense/MIT"
+edition = "2018"
 
 [lib]
 name = "globset"

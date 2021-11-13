@@ -1,7 +1,7 @@
 ripgrep (rg)
 ------------
-ripgrep is a line-oriented search tool that recursively searches your current
-directory for a regex pattern. By default, ripgrep will respect your .gitignore
+ripgrep is a line-oriented search tool that recursively searches the current
+directory for a regex pattern. By default, ripgrep will respect gitignore rules
 and automatically skip hidden files/directories and binary files. ripgrep
 has first class support on Windows, macOS and Linux, with binary downloads
 available for [every release](https://github.com/BurntSushi/ripgrep/releases).
@@ -192,15 +192,9 @@ multiline search and opt-in fancy regex support via PCRE2.
 The binary name for ripgrep is `rg`.
 
 **[Archives of precompiled binaries for ripgrep are available for Windows,
-macOS and Linux.](https://github.com/BurntSushi/ripgrep/releases)** Users of
-platforms not explicitly mentioned below are advised to download one of these
-archives.
-
-Linux binaries are static executables. Windows binaries are available either as
-built with MinGW (GNU) or with Microsoft Visual C++ (MSVC). When possible,
-prefer MSVC over GNU, but you'll need to have the [Microsoft VC++ 2015
-redistributable](https://www.microsoft.com/en-us/download/details.aspx?id=48145)
-installed.
+macOS and Linux.](https://github.com/BurntSushi/ripgrep/releases)** Linux and
+Windows binaries are static executables. Users of platforms not explicitly
+mentioned below are advised to download one of these archives.
 
 If you're a **macOS Homebrew** or a **Linuxbrew** user, then you can install
 ripgrep from homebrew-core:
@@ -278,8 +272,8 @@ then ripgrep can be installed using a binary `.deb` file provided in each
 [ripgrep release](https://github.com/BurntSushi/ripgrep/releases).
 
 ```
-$ curl -LO https://github.com/BurntSushi/ripgrep/releases/download/12.1.1/ripgrep_12.1.1_amd64.deb
-$ sudo dpkg -i ripgrep_12.1.1_amd64.deb
+$ curl -LO https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgrep_13.0.0_amd64.deb
+$ sudo dpkg -i ripgrep_13.0.0_amd64.deb
 ```
 
 If you run Debian Buster (currently Debian stable) or Debian sid, ripgrep is
@@ -423,6 +417,14 @@ $ cargo test --all
 ```
 
 from the repository root.
+
+
+### Vulnerability reporting
+
+For reporting a security vulnerability, please
+[contact Andrew Gallant](https://blog.burntsushi.net/about/),
+which has my email address and PGP public key if you wish to send an encrypted
+message.
 
 
 ### Translations

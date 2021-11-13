@@ -2,7 +2,7 @@ use std::io;
 
 use termcolor;
 
-use is_tty_stdout;
+use crate::is_tty_stdout;
 
 /// A writer that supports coloring with either line or block buffering.
 pub struct StandardStream(StandardStreamKind);

@@ -1,23 +1,26 @@
-# The way this works is a little weird. But basically, the create-release job
-# runs purely to initialize the GitHub release itself. Once done, the upload
-# URL of the release is saved as an artifact.
+# The way this works is the following:
 #
-# The build-release job runs only once create-release is finished. It gets
-# the release upload URL by downloading the corresponding artifact (which was
-# uploaded by create-release). It then builds the release executables for each
-# supported platform and attaches them as release assets to the previously
-# created release.
+# The create-release job runs purely to initialize the GitHub release itself
+# and to output upload_url for the following job.
+#
+# The build-release job runs only once create-release is finished. It gets the
+# release upload URL from create-release job outputs, then builds the release
+# executables for each supported platform and attaches them as release assets
+# to the previously created release.
 #
 # The key here is that we create the release only once.
+#
+# Reference:
+# https://eugene-babichenko.github.io/blog/2020/05/09/github-actions-cross-platform-auto-releases/
 
 name: release
 on:
   push:
     # Enable when testing release infrastructure on a branch.
     # branches:
-    # - ag/release
+    # - ag/work
     tags:
-    - '[0-9]+.[0-9]+.[0-9]+'
+    - "[0-9]+.[0-9]+.[0-9]+"
 jobs:
   create-release:
     name: create-release
@@ -25,11 +28,12 @@ jobs:
     # env:
       # Set to force version number, e.g., when no tag exists.
       # RG_VERSION: TEST-0.0.0
+    outputs:
+      upload_url: ${{ steps.release.outputs.upload_url }}
+      rg_version: ${{ env.RG_VERSION }}
     steps:
-      - name: Create artifacts directory
-        run: mkdir artifacts
-
       - name: Get the release version from the tag
+        shell: bash
         if: env.RG_VERSION == ''
         run: |
           # Apparently, this is the right way to get a tag name. Really?
@@ -37,7 +41,6 @@ jobs:
           # See: https://github.community/t5/GitHub-Actions/How-to-get-just-the-tag-name/m-p/32167/highlight/true#M1027
           echo "RG_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
           echo "version is: ${{ env.RG_VERSION }}"
-
       - name: Create GitHub release
         id: release
         uses: actions/create-release@v1
@@ -46,18 +49,6 @@ jobs:
         with:
           tag_name: ${{ env.RG_VERSION }}
           release_name: ${{ env.RG_VERSION }}
-
-      - name: Save release upload URL to artifact
-        run: echo "${{ steps.release.outputs.upload_url }}" > artifacts/release-upload-url
-
-      - name: Save version number to artifact
-        run: echo "${{ env.RG_VERSION }}" > artifacts/release-version
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v1
-        with:
-          name: artifacts
-          path: artifacts
 
   build-release:
     name: build-release
@@ -68,7 +59,7 @@ jobs:
       # systems.
       CARGO: cargo
       # When CARGO is set to CROSS, this is set to `--target matrix.target`.
-      TARGET_FLAGS:
+      TARGET_FLAGS: ""
       # When CARGO is set to CROSS, TARGET_DIR includes matrix.target.
       TARGET_DIR: ./target
       # Emit backtraces on panics.
@@ -129,7 +120,7 @@ jobs:
         target: ${{ matrix.target }}
 
     - name: Use Cross
-      # if: matrix.os != 'windows-2019'
+      shell: bash
       run: |
         cargo install cross
         echo "CARGO=cross" >> $GITHUB_ENV
@@ -141,22 +132,6 @@ jobs:
         echo "cargo command is: ${{ env.CARGO }}"
         echo "target flag is: ${{ env.TARGET_FLAGS }}"
         echo "target dir is: ${{ env.TARGET_DIR }}"
-
-    - name: Get release download URL
-      uses: actions/download-artifact@v1
-      with:
-        name: artifacts
-        path: artifacts
-
-    - name: Set release upload URL and release version
-      shell: bash
-      run: |
-        release_upload_url="$(cat artifacts/release-upload-url)"
-        echo "RELEASE_UPLOAD_URL=$release_upload_url" >> $GITHUB_ENV
-        echo "release upload url: $RELEASE_UPLOAD_URL"
-        release_version="$(cat artifacts/release-version)"
-        echo "RELEASE_VERSION=$release_version" >> $GITHUB_ENV
-        echo "release version: $RELEASE_VERSION"
 
     - name: Build release binary
       run: ${{ env.CARGO }} build --verbose --release --features pcre2 ${{ env.TARGET_FLAGS }}
@@ -178,7 +153,7 @@ jobs:
       shell: bash
       run: |
         outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
-        staging="ripgrep-${{ env.RELEASE_VERSION }}-${{ matrix.target }}"
+        staging="ripgrep-${{ needs.create-release.outputs.rg_version }}-${{ matrix.target }}"
         mkdir -p "$staging"/{complete,doc}
 
         cp {README.md,COPYING,UNLICENSE,LICENSE-MIT} "$staging/"
@@ -203,7 +178,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ env.RELEASE_UPLOAD_URL }}
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
         asset_path: ${{ env.ASSET }}
         asset_name: ${{ env.ASSET }}
         asset_content_type: application/octet-stream

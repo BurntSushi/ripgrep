@@ -64,6 +64,11 @@ rgtest!(only_matching, |dir: Dir, mut cmd: TestCommand| {
 });
 
 // Tests that --vimgrep works in multiline mode.
+//
+// In particular, we test that only the first line of each match is printed,
+// even when a match spans multiple lines.
+//
+// See: https://github.com/BurntSushi/ripgrep/issues/1866
 rgtest!(vimgrep, |dir: Dir, mut cmd: TestCommand| {
     dir.create("sherlock", SHERLOCK);
     cmd.args(&[
@@ -77,7 +82,6 @@ rgtest!(vimgrep, |dir: Dir, mut cmd: TestCommand| {
     let expected = "\
 sherlock:1:16:For the Doctor Watsons of this world, as opposed to the Sherlock
 sherlock:1:57:For the Doctor Watsons of this world, as opposed to the Sherlock
-sherlock:2:57:Holmeses, success in the province of detective work must always
 sherlock:3:49:be, to a very large extent, the result of luck. Sherlock Holmes
 sherlock:5:12:but Doctor Watson has to have it taken out for him and dusted,
 ";

@@ -27,10 +27,6 @@ contain matches.
 This example shows how to create a "standard" printer and execute a search.
 
 ```
-extern crate grep_regex;
-extern crate grep_printer;
-extern crate grep_searcher;
-
 use std::error::Error;
 
 use grep_regex::RegexMatcher;
@@ -68,29 +64,26 @@ fn example() -> Result<(), Box<Error>> {
 
 #![deny(missing_docs)]
 
+pub use crate::color::{
+    default_color_specs, ColorError, ColorSpecs, UserColorSpec,
+};
 #[cfg(feature = "serde1")]
-extern crate base64;
-extern crate bstr;
-extern crate grep_matcher;
-#[cfg(test)]
-extern crate grep_regex;
-extern crate grep_searcher;
-#[cfg(feature = "serde1")]
-extern crate serde;
-#[cfg(feature = "serde1")]
-#[macro_use]
-extern crate serde_derive;
-#[cfg(feature = "serde1")]
-extern crate serde_json;
-extern crate termcolor;
+pub use crate::json::{JSONBuilder, JSONSink, JSON};
+pub use crate::standard::{Standard, StandardBuilder, StandardSink};
+pub use crate::stats::Stats;
+pub use crate::summary::{Summary, SummaryBuilder, SummaryKind, SummarySink};
+pub use crate::util::PrinterPath;
 
-pub use color::{default_color_specs, ColorError, ColorSpecs, UserColorSpec};
-#[cfg(feature = "serde1")]
-pub use json::{JSONBuilder, JSONSink, JSON};
-pub use standard::{Standard, StandardBuilder, StandardSink};
-pub use stats::Stats;
-pub use summary::{Summary, SummaryBuilder, SummaryKind, SummarySink};
-pub use util::PrinterPath;
+// The maximum number of bytes to execute a search to account for look-ahead.
+//
+// This is an unfortunate kludge since PCRE2 doesn't provide a way to search
+// a substring of some input while accounting for look-ahead. In theory, we
+// could refactor the various 'grep' interfaces to account for it, but it would
+// be a large change. So for now, we just let PCRE2 go looking a bit for a
+// match without searching the entire rest of the contents.
+//
+// Note that this kludge is only active in multi-line mode.
+const MAX_LOOK_AHEAD: usize = 128;
 
 #[macro_use]
 mod macros;

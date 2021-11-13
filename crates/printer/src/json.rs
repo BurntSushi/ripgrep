@@ -4,14 +4,14 @@ use std::time::Instant;
 
 use grep_matcher::{Match, Matcher};
 use grep_searcher::{
-    Searcher, Sink, SinkContext, SinkContextKind, SinkError, SinkFinish,
-    SinkMatch,
+    Searcher, Sink, SinkContext, SinkContextKind, SinkFinish, SinkMatch,
 };
 use serde_json as json;
 
-use counter::CounterWriter;
-use jsont;
-use stats::Stats;
+use crate::counter::CounterWriter;
+use crate::jsont;
+use crate::stats::Stats;
+use crate::util::find_iter_at_in_context;
 
 /// The configuration for the JSON printer.
 ///
@@ -507,7 +507,10 @@ impl<W: io::Write> JSON<W> {
 
     /// Write the given message followed by a new line. The new line is
     /// determined from the configuration of the given searcher.
-    fn write_message(&mut self, message: &jsont::Message) -> io::Result<()> {
+    fn write_message(
+        &mut self,
+        message: &jsont::Message<'_>,
+    ) -> io::Result<()> {
         if self.config.pretty {
             json::to_writer_pretty(&mut self.wtr, message)?;
         } else {
@@ -552,7 +555,7 @@ impl<W> JSON<W> {
 /// * `W` refers to the underlying writer that this printer is writing its
 ///   output to.
 #[derive(Debug)]
-pub struct JSONSink<'p, 's, M: Matcher, W: 's> {
+pub struct JSONSink<'p, 's, M: Matcher, W> {
     matcher: M,
     json: &'s mut JSON<W>,
     path: Option<&'p Path>,
@@ -603,7 +606,12 @@ impl<'p, 's, M: Matcher, W: io::Write> JSONSink<'p, 's, M, W> {
 
     /// Execute the matcher over the given bytes and record the match
     /// locations if the current configuration demands match granularity.
-    fn record_matches(&mut self, bytes: &[u8]) -> io::Result<()> {
+    fn record_matches(
+        &mut self,
+        searcher: &Searcher,
+        bytes: &[u8],
+        range: std::ops::Range<usize>,
+    ) -> io::Result<()> {
         self.json.matches.clear();
         // If printing requires knowing the location of each individual match,
         // then compute and stored those right now for use later. While this
@@ -612,12 +620,17 @@ impl<'p, 's, M: Matcher, W: io::Write> JSONSink<'p, 's, M, W> {
         // the extent that it's easy to ensure that we never do more than
         // one search to find the matches.
         let matches = &mut self.json.matches;
-        self.matcher
-            .find_iter(bytes, |m| {
-                matches.push(m);
+        find_iter_at_in_context(
+            searcher,
+            &self.matcher,
+            bytes,
+            range.clone(),
+            |m| {
+                let (s, e) = (m.start() - range.start, m.end() - range.start);
+                matches.push(Match::new(s, e));
                 true
-            })
-            .map_err(io::Error::error_message)?;
+            },
+        )?;
         // Don't report empty matches appearing at the end of the bytes.
         if !matches.is_empty()
             && matches.last().unwrap().is_empty()
@@ -644,6 +657,16 @@ impl<'p, 's, M: Matcher, W: io::Write> JSONSink<'p, 's, M, W> {
         self.after_context_remaining == 0
     }
 
+    /// Returns whether the current match count exceeds the configured limit.
+    /// If there is no limit, then this always returns false.
+    fn match_more_than_limit(&self) -> bool {
+        let limit = match self.json.config.max_matches {
+            None => return false,
+            Some(limit) => limit,
+        };
+        self.match_count > limit
+    }
+
     /// Write the "begin" message.
     fn write_begin_message(&mut self) -> io::Result<()> {
         if self.begin_printed {
@@ -662,13 +685,30 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
     fn matched(
         &mut self,
         searcher: &Searcher,
-        mat: &SinkMatch,
+        mat: &SinkMatch<'_>,
     ) -> Result<bool, io::Error> {
         self.write_begin_message()?;
 
         self.match_count += 1;
-        self.after_context_remaining = searcher.after_context() as u64;
-        self.record_matches(mat.bytes())?;
+        // When we've exceeded our match count, then the remaining context
+        // lines should not be reset, but instead, decremented. This avoids a
+        // bug where we display more matches than a configured limit. The main
+        // idea here is that 'matched' might be called again while printing
+        // an after-context line. In that case, we should treat this as a
+        // contextual line rather than a matching line for the purposes of
+        // termination.
+        if self.match_more_than_limit() {
+            self.after_context_remaining =
+                self.after_context_remaining.saturating_sub(1);
+        } else {
+            self.after_context_remaining = searcher.after_context() as u64;
+        }
+
+        self.record_matches(
+            searcher,
+            mat.buffer(),
+            mat.bytes_range_in_buffer(),
+        )?;
         self.stats.add_matches(self.json.matches.len() as u64);
         self.stats.add_matched_lines(mat.lines().count() as u64);
 
@@ -687,7 +727,7 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
     fn context(
         &mut self,
         searcher: &Searcher,
-        ctx: &SinkContext,
+        ctx: &SinkContext<'_>,
     ) -> Result<bool, io::Error> {
         self.write_begin_message()?;
         self.json.matches.clear();
@@ -697,7 +737,7 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
                 self.after_context_remaining.saturating_sub(1);
         }
         let submatches = if searcher.invert_match() {
-            self.record_matches(ctx.bytes())?;
+            self.record_matches(searcher, ctx.bytes(), 0..ctx.bytes().len())?;
             SubMatches::new(ctx.bytes(), &self.json.matches)
         } else {
             SubMatches::empty()
@@ -799,7 +839,7 @@ impl<'a> SubMatches<'a> {
     }
 
     /// Return this set of match ranges as a slice.
-    fn as_slice(&self) -> &[jsont::SubMatch] {
+    fn as_slice(&self) -> &[jsont::SubMatch<'_>] {
         match *self {
             SubMatches::Empty => &[],
             SubMatches::Small(ref x) => x,
@@ -869,6 +909,38 @@ and exhibited clearly, with a label attached.\
         let got = printer_contents(&mut printer);
 
         assert_eq!(got.lines().count(), 3);
+    }
+
+    #[test]
+    fn max_matches_after_context() {
+        let haystack = "\
+a
+b
+c
+d
+e
+d
+e
+d
+e
+d
+e
+";
+        let matcher = RegexMatcher::new(r"d").unwrap();
+        let mut printer =
+            JSONBuilder::new().max_matches(Some(1)).build(vec![]);
+        SearcherBuilder::new()
+            .after_context(2)
+            .build()
+            .search_reader(
+                &matcher,
+                haystack.as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+        let got = printer_contents(&mut printer);
+
+        assert_eq!(got.lines().count(), 5);
     }
 
     #[test]

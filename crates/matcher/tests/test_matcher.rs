@@ -1,7 +1,7 @@
 use grep_matcher::{Captures, Match, Matcher};
 use regex::bytes::Regex;
 
-use util::{RegexMatcher, RegexMatcherNoCaps};
+use crate::util::{RegexMatcher, RegexMatcherNoCaps};
 
 fn matcher(pattern: &str) -> RegexMatcher {
     RegexMatcher::new(Regex::new(pattern).unwrap())

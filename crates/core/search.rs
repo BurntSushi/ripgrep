@@ -115,9 +115,14 @@ impl SearchWorkerBuilder {
     pub fn preprocessor(
         &mut self,
         cmd: Option<PathBuf>,
-    ) -> &mut SearchWorkerBuilder {
-        self.config.preprocessor = cmd;
-        self
+    ) -> crate::Result<&mut SearchWorkerBuilder> {
+        if let Some(ref prog) = cmd {
+            let bin = cli::resolve_binary(prog)?;
+            self.config.preprocessor = Some(bin);
+        } else {
+            self.config.preprocessor = None;
+        }
+        Ok(self)
     }
 
     /// Set the globs for determining which files should be run through the
@@ -330,7 +335,7 @@ impl<W: WriteColor> SearchWorker<W> {
 
         self.searcher.set_binary_detection(bin);
         if subject.is_stdin() {
-            self.search_reader(path, io::stdin().lock())
+            self.search_reader(path, &mut io::stdin().lock())
         } else if self.should_preprocess(path) {
             self.search_preprocessor(path)
         } else if self.should_decompress(path) {
@@ -394,7 +399,7 @@ impl<W: WriteColor> SearchWorker<W> {
         let mut cmd = Command::new(bin);
         cmd.arg(path).stdin(Stdio::from(File::open(path)?));
 
-        let rdr = self.command_builder.build(&mut cmd).map_err(|err| {
+        let mut rdr = self.command_builder.build(&mut cmd).map_err(|err| {
             io::Error::new(
                 io::ErrorKind::Other,
                 format!(
@@ -403,20 +408,28 @@ impl<W: WriteColor> SearchWorker<W> {
                 ),
             )
         })?;
-        self.search_reader(path, rdr).map_err(|err| {
+        let result = self.search_reader(path, &mut rdr).map_err(|err| {
             io::Error::new(
                 io::ErrorKind::Other,
                 format!("preprocessor command failed: '{:?}': {}", cmd, err),
             )
-        })
+        });
+        let close_result = rdr.close();
+        let search_result = result?;
+        close_result?;
+        Ok(search_result)
     }
 
     /// Attempt to decompress the data at the given file path and search the
     /// result. If the given file path isn't recognized as a compressed file,
     /// then search it without doing any decompression.
     fn search_decompress(&mut self, path: &Path) -> io::Result<SearchResult> {
-        let rdr = self.decomp_builder.build(path)?;
-        self.search_reader(path, rdr)
+        let mut rdr = self.decomp_builder.build(path)?;
+        let result = self.search_reader(path, &mut rdr);
+        let close_result = rdr.close();
+        let search_result = result?;
+        close_result?;
+        Ok(search_result)
     }
 
     /// Search the contents of the given file path.
@@ -443,7 +456,7 @@ impl<W: WriteColor> SearchWorker<W> {
     fn search_reader<R: io::Read>(
         &mut self,
         path: &Path,
-        rdr: R,
+        rdr: &mut R,
     ) -> io::Result<SearchResult> {
         use self::PatternMatcher::*;
 
@@ -499,12 +512,12 @@ fn search_reader<M: Matcher, R: io::Read, W: WriteColor>(
     searcher: &mut Searcher,
     printer: &mut Printer<W>,
     path: &Path,
-    rdr: R,
+    mut rdr: R,
 ) -> io::Result<SearchResult> {
     match *printer {
         Printer::Standard(ref mut p) => {
             let mut sink = p.sink_with_path(&matcher, path);
-            searcher.search_reader(&matcher, rdr, &mut sink)?;
+            searcher.search_reader(&matcher, &mut rdr, &mut sink)?;
             Ok(SearchResult {
                 has_match: sink.has_match(),
                 stats: sink.stats().map(|s| s.clone()),
@@ -512,7 +525,7 @@ fn search_reader<M: Matcher, R: io::Read, W: WriteColor>(
         }
         Printer::Summary(ref mut p) => {
             let mut sink = p.sink_with_path(&matcher, path);
-            searcher.search_reader(&matcher, rdr, &mut sink)?;
+            searcher.search_reader(&matcher, &mut rdr, &mut sink)?;
             Ok(SearchResult {
                 has_match: sink.has_match(),
                 stats: sink.stats().map(|s| s.clone()),
@@ -520,7 +533,7 @@ fn search_reader<M: Matcher, R: io::Read, W: WriteColor>(
         }
         Printer::JSON(ref mut p) => {
             let mut sink = p.sink_with_path(&matcher, path);
-            searcher.search_reader(&matcher, rdr, &mut sink)?;
+            searcher.search_reader(&matcher, &mut rdr, &mut sink)?;
             Ok(SearchResult {
                 has_match: sink.has_match(),
                 stats: Some(sink.stats().clone()),
