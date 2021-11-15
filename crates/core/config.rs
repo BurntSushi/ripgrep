@@ -28,7 +28,10 @@ pub fn args() -> Vec<OsString> {
     let (args, errs) = match parse(&config_path) {
         Ok((args, errs)) => (args, errs),
         Err(err) => {
-            message!("{}", err);
+            message!(
+                "failed to read the file specified in RIPGREP_CONFIG_PATH: {}",
+                err
+            );
             return vec![];
         }
     };
