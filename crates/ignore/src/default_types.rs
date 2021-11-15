@@ -63,6 +63,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("elm", &["*.elm"]),
     ("erb", &["*.erb"]),
     ("erlang", &["*.erl", "*.hrl"]),
+    ("fennel", &["*.fnl"]),
     ("fidl", &["*.fidl"]),
     ("fish", &["*.fish"]),
     ("flatbuffers", &["*.fbs"]),
