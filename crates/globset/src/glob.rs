@@ -137,6 +137,27 @@ impl GlobMatcher {
     }
 }
 
+impl PartialEq for GlobMatcher {
+    fn eq(&self, other: &GlobMatcher) -> bool {
+        self.pat == other.pat
+    }
+}
+
+impl Eq for GlobMatcher {
+}
+
+impl hash::Hash for GlobMatcher {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self.pat.hash(state);
+    }
+}
+
+impl fmt::Display for GlobMatcher {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.pat.fmt(f)
+    }
+}
+
 /// A strategic matcher for a single pattern.
 #[cfg(test)]
 #[derive(Clone, Debug)]
