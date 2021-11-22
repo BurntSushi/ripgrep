@@ -648,9 +648,9 @@ given, which is the default:
   they correspond to a UTF-16 BOM, then ripgrep will transcode the contents of
   the file from UTF-16 to UTF-8, and then execute the search on the transcoded
   version of the file. (This incurs a performance penalty since transcoding
-  is needed in addition to regex searching.) If the file contains invalid UTF-16, then
-  the Unicode replacement codepoint is substituted in place of invalid code
-  units.
+  is needed in addition to regex searching.) If the file contains invalid
+  UTF-16, then the Unicode replacement codepoint is substituted in place of
+  invalid code units.
 * To handle other cases, ripgrep provides a `-E/--encoding` flag, which permits
   you to specify an encoding from the
   [Encoding Standard](https://encoding.spec.whatwg.org/#concept-encoding-get).
