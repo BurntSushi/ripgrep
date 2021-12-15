@@ -68,7 +68,7 @@ jobs:
       PCRE2_SYS_STATIC: 1
     strategy:
       matrix:
-        build: [linux, linux-arm, macos, win-msvc, win-gnu, win32-msvc]
+        build: [linux, linux-arm, macos, macos-arm, win-msvc, win-gnu, win32-msvc]
         include:
         - build: linux
           os: ubuntu-22.04
@@ -82,6 +82,10 @@ jobs:
           os: macos-12
           rust: nightly
           target: x86_64-apple-darwin
+        - build: macos-arm
+          os: macos-12
+          rust: nightly
+          target: aarch64-apple-darwin
         - build: win-msvc
           os: windows-2022
           rust: nightly
@@ -132,8 +136,8 @@ jobs:
     - name: Build release binary
       run: ${{ env.CARGO }} build --verbose --release --features pcre2 ${{ env.TARGET_FLAGS }}
 
-    - name: Strip release binary (linux and macos)
-      if: matrix.build == 'linux' || matrix.build == 'macos'
+    - name: Strip release binary (linux, macos and macos-arm)
+      if: matrix.build == 'linux' || matrix.build == 'macos' || matrix.build == 'macos-arm'
       run: strip "target/${{ matrix.target }}/release/rg"
 
     - name: Strip release binary (arm)

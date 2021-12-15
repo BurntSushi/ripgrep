@@ -38,6 +38,7 @@ jobs:
         - nightly-mips
         - nightly-arm
         - macos
+        - macos-arm
         - win-msvc
         - win-gnu
         include:
@@ -77,6 +78,10 @@ jobs:
         - build: macos
           os: macos-12
           rust: nightly
+        - build: macos-arm
+          os: macos-12
+          rust: nightly
+          target: aarch64-apple-darwin
         - build: win-msvc
           os: windows-2022
           rust: nightly
