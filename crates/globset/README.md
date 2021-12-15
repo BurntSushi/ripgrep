@@ -19,7 +19,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-globset = "0.3"
+globset = "0.4"
 ```
 
 ### Features
