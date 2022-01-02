@@ -29,7 +29,7 @@ Please see the [CHANGELOG](CHANGELOG.md) for a release history.
 * [Shell completions](FAQ.md#complete)
 * [Building](#building)
 * [Translations](#translations)
-* [3rd-Party Wrappers]
+* [3rd-Party Wrappers](#3rd-party-wrappers)
 
 
 ### Screenshot of search results
