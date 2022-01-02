@@ -29,6 +29,7 @@ Please see the [CHANGELOG](CHANGELOG.md) for a release history.
 * [Shell completions](FAQ.md#complete)
 * [Building](#building)
 * [Translations](#translations)
+* [3rd-Party Wrappers]
 
 
 ### Screenshot of search results
@@ -434,3 +435,8 @@ are unofficially maintained and may not be up to date.
 
 * [Chinese](https://github.com/chinanf-boy/ripgrep-zh#%E6%9B%B4%E6%96%B0-)
 * [Spanish](https://github.com/UltiRequiem/traducciones/tree/master/ripgrep)
+
+
+### 3rd-Party Wrappers
+
+* [`rgf` RipGrep Fuzzyfinder](https://github.com/ElectricRCAircraftGuy/eRCaGuy_dotfiles/blob/master/useful_scripts/rgf.sh): this lightweight wrapper uses `rg` and [`fzf`](https://github.com/junegunn/fzf) to allow a live, interactive, fuzzy-finder search of all text within all files or a specified subset of files. See the top of the file for installation instructions. Run `rgf -h` for help and example usage.
