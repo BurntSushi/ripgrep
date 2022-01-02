@@ -210,6 +210,10 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("qml", &["*.qml"]),
     ("r", &["*.R", "*.r", "*.Rmd", "*.Rnw"]),
     ("racket", &["*.rkt"]),
+    ("raku", &[
+        "*.raku", "*.rakumod", "*.rakudoc", "*.rakutest",
+        "*.p6", "*.pl6", "*.pm6"
+    ]),
     ("rdoc", &["*.rdoc"]),
     ("readme", &["README*", "*README"]),
     ("reasonml", &["*.re", "*.rei"]),
