@@ -87,6 +87,16 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
+    - uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ matrix.build }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
     - name: Install packages (Ubuntu)
       if: matrix.os == 'ubuntu-18.04'
       run: |
@@ -107,7 +117,7 @@ jobs:
     - name: Use Cross
       if: matrix.target != ''
       run: |
-        cargo install cross
+        cargo install cross --force
         echo "CARGO=cross" >> $GITHUB_ENV
         echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
         echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
