@@ -2646,6 +2646,17 @@ replacement string. Capture group indices are numbered based on the position of
 the opening parenthesis of the group, where the leftmost such group is $1. The
 special $0 group corresponds to the entire match.
 
+The name of a group is formed by taking the longest string of letters, numbers
+and underscores (i.e. [_0-9A-Za-z]) after the $. For example, $1a will be
+replaced with the group named '1a', not the group at index 1. If the group's
+name contains characters that aren't letters, numbers or underscores, or you
+want to immediately follow the group with another string, the name should be
+put inside braces. For example, ${1}a will take the content of the group at
+index 1 and append 'a' to the end of it.
+
+If an index or name does not refer to a valid capture group, it will be
+replaced with an empty string.
+
 In shells such as Bash and zsh, you should wrap the pattern in single quotes
 instead of double quotes. Otherwise, capture group indices will be replaced by
 expanded shell variables which will most likely be empty.
