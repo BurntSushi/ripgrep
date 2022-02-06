@@ -168,7 +168,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("postscript", &["*.eps", "*.ps"]),
     ("protobuf", &["*.proto"]),
     ("ps", &["*.cdxml", "*.ps1", "*.ps1xml", "*.psd1", "*.psm1"]),
-    ("puppet", &["*.erb", "*.pp", "*.rb"]),
+    ("puppet", &["*.epp", "*.erb", "*.pp", "*.rb"]),
     ("purs", &["*.purs"]),
     ("py", &["*.py"]),
     ("qmake", &["*.pro", "*.pri", "*.prf"]),
