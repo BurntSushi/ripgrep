@@ -1,9 +1,11 @@
 use std::env;
+use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::Path;
 use std::process;
 
+use clap::Command;
 use clap_complete::{generate_to, Shell};
 
 use app::{RGArg, RGArgKind};
@@ -38,15 +40,21 @@ fn main() {
 
     // Use clap to build completion files.
     let mut app = app::app();
-    let _ = generate_to(Shell::Bash, &mut app, "rg", &outdir);
-    let _ = generate_to(Shell::Fish, &mut app, "rg", &outdir);
-    let _ = generate_to(Shell::PowerShell, &mut app, "rg", &outdir);
+    generate_completion(Shell::Bash, &mut app, &outdir);
+    generate_completion(Shell::Fish, &mut app, &outdir);
+    generate_completion(Shell::PowerShell, &mut app, &outdir);
     // Note that we do not use clap's support for zsh. Instead, zsh completions
     // are manually maintained in `complete/_rg`.
 
     // Make the current git hash available to the build.
     if let Some(rev) = git_revision_hash() {
         println!("cargo:rustc-env=RIPGREP_BUILD_GIT_HASH={}", rev);
+    }
+}
+
+fn generate_completion(shell: Shell, cmd: &mut Command, outdir: &OsString) {
+    if let Err(err) = generate_to(shell, cmd, "rg", outdir) {
+        eprintln!("failed to generate completion for {}: {}", shell, err);
     }
 }
 
