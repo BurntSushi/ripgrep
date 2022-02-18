@@ -4,7 +4,7 @@ use std::io::{self, Read, Write};
 use std::path::Path;
 use std::process;
 
-use clap::Shell;
+use clap_complete::{generate_to, Shell};
 
 use app::{RGArg, RGArgKind};
 
@@ -38,9 +38,9 @@ fn main() {
 
     // Use clap to build completion files.
     let mut app = app::app();
-    app.gen_completions("rg", Shell::Bash, &outdir);
-    app.gen_completions("rg", Shell::Fish, &outdir);
-    app.gen_completions("rg", Shell::PowerShell, &outdir);
+    let _ = generate_to(Shell::Bash, &mut app, "rg", &outdir);
+    let _ = generate_to(Shell::Fish, &mut app, "rg", &outdir);
+    let _ = generate_to(Shell::PowerShell, &mut app, "rg", &outdir);
     // Note that we do not use clap's support for zsh. Instead, zsh completions
     // are manually maintained in `complete/_rg`.
 

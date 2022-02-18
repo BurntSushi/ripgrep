@@ -2,9 +2,8 @@ use std::cmp;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
-use std::io::{self, Write};
+use std::io;
 use std::path::{Path, PathBuf};
-use std::process;
 use std::sync::Arc;
 use std::time::SystemTime;
 
@@ -129,7 +128,7 @@ impl Args {
         // trying to parse config files. If a config file exists and has
         // arguments, then we re-parse argv, otherwise we just use the matches
         // we have here.
-        let early_matches = ArgMatches::new(clap_matches(env::args_os())?);
+        let early_matches = ArgMatches::new(clap_matches(env::args_os()));
         set_messages(!early_matches.is_present("no-messages"));
         set_ignore_messages(!early_matches.is_present("no-ignore-messages"));
 
@@ -541,7 +540,7 @@ impl ArgMatches {
         }
         args.extend(cliargs);
         log::debug!("final argv: {:?}", args);
-        Ok(ArgMatches(clap_matches(args)?))
+        Ok(ArgMatches(clap_matches(args)))
     }
 
     /// Convert the result of parsing CLI arguments into ripgrep's higher level
@@ -1822,31 +1821,12 @@ where
 }
 
 /// Returns a clap matches object if the given arguments parse successfully.
-///
-/// Otherwise, if an error occurred, then it is returned unless the error
-/// corresponds to a `--help` or `--version` request. In which case, the
-/// corresponding output is printed and the current process is exited
-/// successfully.
-fn clap_matches<I, T>(args: I) -> Result<clap::ArgMatches>
+fn clap_matches<I, T>(args: I) -> clap::ArgMatches
 where
     I: IntoIterator<Item = T>,
     T: Into<OsString> + Clone,
 {
-    let err = match app::app().get_matches_from_safe(args) {
-        Ok(matches) => return Ok(matches),
-        Err(err) => err,
-    };
-    if err.use_stderr() {
-        return Err(err.into());
-    }
-    // Explicitly ignore any error returned by write!. The most likely error
-    // at this point is a broken pipe error, in which case, we want to ignore
-    // it and exit quietly.
-    //
-    // (This is the point of this helper function. clap's functionality for
-    // doing this will panic on a broken pipe error.)
-    let _ = write!(io::stdout(), "{}", err);
-    process::exit(0);
+    app::app().get_matches_from(args)
 }
 
 /// Attempts to discover the current working directory. This mostly just defers

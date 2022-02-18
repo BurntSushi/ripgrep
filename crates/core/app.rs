@@ -9,7 +9,7 @@
 // is where we read clap's configuration from the end user's arguments and turn
 // it into a ripgrep-specific configuration type that is not coupled with clap.
 
-use clap::{self, crate_authors, crate_version, App, AppSettings};
+use clap::{self, crate_authors, crate_version, Command};
 use lazy_static::lazy_static;
 
 const ABOUT: &str = "
@@ -43,10 +43,10 @@ ARGS:
 {positionals}
 
 OPTIONS:
-{unified}";
+{options}";
 
 /// Build a clap application parameterized by usage strings.
-pub fn app() -> App<'static> {
+pub fn app() -> Command<'static> {
     // We need to specify our version in a static because we've painted clap
     // into a corner. We've told it that every string we give it will be
     // 'static, but we need to build the version string dynamically. We can
@@ -55,17 +55,18 @@ pub fn app() -> App<'static> {
         static ref LONG_VERSION: String = long_version(None, true);
     }
 
-    let mut app = App::new("ripgrep")
+    let mut app = Command::new("ripgrep")
         .author(crate_authors!())
         .version(crate_version!())
         .long_version(LONG_VERSION.as_str())
         .about(ABOUT)
         .max_term_width(100)
-        .setting(AppSettings::UnifiedHelpMessage)
-        .setting(AppSettings::AllArgsOverrideSelf)
-        .usage(USAGE)
-        .template(TEMPLATE)
-        .help_message("Prints help information. Use --help for more details.");
+        .override_usage(USAGE)
+        .help_template(TEMPLATE)
+        .mut_arg("help", |a| {
+            a.help("Prints help information. Use --help for more details.")
+        })
+        .args_override_self(true);
     for arg in all_args_and_flags() {
         app = app.arg(arg.claparg);
     }
@@ -293,7 +294,9 @@ impl RGArg {
     /// PATTERN.
     fn positional(name: &'static str, value_name: &'static str) -> RGArg {
         RGArg {
-            claparg: Arg::with_name(name).value_name(value_name),
+            claparg: Arg::new(name)
+                .value_name(value_name)
+                .allow_invalid_utf8(true),
             name,
             doc_short: "",
             doc_long: "",
@@ -311,7 +314,7 @@ impl RGArg {
     /// check whether the flag is present or not. Otherwise, consumers may
     /// inspect the number of times the switch is used.
     fn switch(long_name: &'static str) -> RGArg {
-        let claparg = Arg::with_name(long_name).long(long_name);
+        let claparg = Arg::new(long_name).long(long_name);
         RGArg {
             claparg,
             name: long_name,
@@ -337,11 +340,12 @@ impl RGArg {
     /// only one logical value, that consumers of clap's configuration should
     /// only use the last value.
     fn flag(long_name: &'static str, value_name: &'static str) -> RGArg {
-        let claparg = Arg::with_name(long_name)
+        let claparg = Arg::new(long_name)
             .long(long_name)
             .value_name(value_name)
             .takes_value(true)
-            .number_of_values(1);
+            .number_of_values(1)
+            .allow_invalid_utf8(true);
         RGArg {
             claparg,
             name: long_name,
@@ -421,14 +425,14 @@ impl RGArg {
                 *multiple = true;
             }
         }
-        self.claparg = self.claparg.multiple(true);
+        self.claparg = self.claparg.multiple_occurrences(true);
         self
     }
 
     /// Hide this flag from all documentation.
     fn hidden(mut self) -> RGArg {
         self.hidden = true;
-        self.claparg = self.claparg.hidden(true);
+        self.claparg = self.claparg.hide(true);
         self
     }
 
@@ -481,7 +485,7 @@ impl RGArg {
     /// Sets this argument to a required argument, unless one of the given
     /// arguments is provided.
     fn required_unless(mut self, names: &[&'static str]) -> RGArg {
-        self.claparg = self.claparg.required_unless_one(names);
+        self.claparg = self.claparg.required_unless_present_any(names);
         self
     }
 
