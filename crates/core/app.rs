@@ -46,7 +46,7 @@ OPTIONS:
 {unified}";
 
 /// Build a clap application parameterized by usage strings.
-pub fn app() -> App<'static, 'static> {
+pub fn app() -> App<'static> {
     // We need to specify our version in a static because we've painted clap
     // into a corner. We've told it that every string we give it will be
     // 'static, but we need to build the version string dynamically. We can
@@ -154,7 +154,7 @@ fn runtime_cpu_features() -> Vec<&'static str> {
 
 /// Arg is a light alias for a clap::Arg that is specialized to compile time
 /// string literals.
-type Arg = clap::Arg<'static, 'static>;
+type Arg = clap::Arg<'static>;
 
 /// RGArg is a light wrapper around a clap::Arg and also contains some metadata
 /// about the underlying Arg so that it can be inspected for other purposes
@@ -236,7 +236,7 @@ pub enum RGArgKind {
         long: &'static str,
         /// The short name of a flag. This is empty if a flag only has a long
         /// name.
-        short: Option<&'static str>,
+        short: Option<char>,
         /// Whether this switch can be provided multiple times where meaning
         /// is attached to the number of times this flag is given.
         ///
@@ -258,7 +258,7 @@ pub enum RGArgKind {
         long: &'static str,
         /// The short name of a flag. This is empty if a flag only has a long
         /// name.
-        short: Option<&'static str>,
+        short: Option<char>,
         /// The name of the value used in the `-h/--help` output. By
         /// convention, this is an all-uppercase string. e.g., `PATH` or
         /// `PATTERN`.
@@ -361,7 +361,7 @@ impl RGArg {
     /// Set the short flag name.
     ///
     /// This panics if this arg isn't a switch or a flag.
-    fn short(mut self, name: &'static str) -> RGArg {
+    fn short(mut self, name: char) -> RGArg {
         match self.kind {
             RGArgKind::Positional { .. } => panic!("expected switch or flag"),
             RGArgKind::Switch { ref mut short, .. } => {
@@ -441,7 +441,7 @@ impl RGArg {
     /// Note that this will suppress clap's automatic output of possible values
     /// when using -h/--help, so users of this method should provide
     /// appropriate documentation for the choices in the "long" help text.
-    fn possible_values(mut self, values: &[&'static str]) -> RGArg {
+    fn possible_values(mut self, values: &'static [&'static str]) -> RGArg {
         match self.kind {
             RGArgKind::Positional { .. } => panic!("expected flag"),
             RGArgKind::Switch { .. } => panic!("expected flag"),
@@ -516,7 +516,8 @@ impl RGArg {
         value: &'static str,
         arg_name: &'static str,
     ) -> RGArg {
-        self.claparg = self.claparg.default_value_if(arg_name, None, value);
+        self.claparg =
+            self.claparg.default_value_if(arg_name, None, Some(value));
         self
     }
 
@@ -702,7 +703,7 @@ This overrides the --context and --passthru flags.
 "
     );
     let arg = RGArg::flag("after-context", "NUM")
-        .short("A")
+        .short('A')
         .help(SHORT)
         .long_help(LONG)
         .number()
@@ -772,7 +773,7 @@ This overrides the --context and --passthru flags.
 "
     );
     let arg = RGArg::flag("before-context", "NUM")
-        .short("B")
+        .short('B')
         .help(SHORT)
         .long_help(LONG)
         .number()
@@ -883,7 +884,7 @@ default.
 "
     );
     let arg =
-        RGArg::switch("byte-offset").short("b").help(SHORT).long_help(LONG);
+        RGArg::switch("byte-offset").short('b').help(SHORT).long_help(LONG);
     args.push(arg);
 }
 
@@ -897,7 +898,7 @@ This overrides the -i/--ignore-case and -S/--smart-case flags.
 "
     );
     let arg = RGArg::switch("case-sensitive")
-        .short("s")
+        .short('s')
         .help(SHORT)
         .long_help(LONG)
         .overrides("ignore-case")
@@ -1014,7 +1015,7 @@ in addition to the --passthru flag.
 "
     );
     let arg = RGArg::flag("context", "NUM")
-        .short("C")
+        .short('C')
         .help(SHORT)
         .long_help(LONG)
         .number()
@@ -1070,7 +1071,7 @@ with --only-matching, then ripgrep behaves as if --count-matches was given.
 "
     );
     let arg = RGArg::switch("count")
-        .short("c")
+        .short('c')
         .help(SHORT)
         .long_help(LONG)
         .overrides("count-matches");
@@ -1191,7 +1192,7 @@ This flag can be disabled with --no-encoding.
 "
     );
     let arg = RGArg::flag("encoding", "ENCODING")
-        .short("E")
+        .short('E')
         .help(SHORT)
         .long_help(LONG);
     args.push(arg);
@@ -1280,7 +1281,7 @@ A line is printed if and only if it matches at least one of the patterns.
 "
     );
     let arg = RGArg::flag("file", "PATTERNFILE")
-        .short("f")
+        .short('f')
         .help(SHORT)
         .long_help(LONG)
         .multiple()
@@ -1315,7 +1316,7 @@ This overrides --files-without-match.
 "
     );
     let arg = RGArg::switch("files-with-matches")
-        .short("l")
+        .short('l')
         .help(SHORT)
         .long_help(LONG)
         .overrides("files-without-match");
@@ -1351,7 +1352,7 @@ This flag can be disabled with --no-fixed-strings.
 "
     );
     let arg = RGArg::switch("fixed-strings")
-        .short("F")
+        .short('F')
         .help(SHORT)
         .long_help(LONG)
         .overrides("no-fixed-strings");
@@ -1374,7 +1375,7 @@ This flag can be disabled with --no-follow.
 "
     );
     let arg = RGArg::switch("follow")
-        .short("L")
+        .short('L')
         .help(SHORT)
         .long_help(LONG)
         .overrides("no-follow");
@@ -1408,7 +1409,7 @@ a match. So for example, if you only want to search in a particular directory
 "
     );
     let arg = RGArg::flag("glob", "GLOB")
-        .short("g")
+        .short('g')
         .help(SHORT)
         .long_help(LONG)
         .multiple()
@@ -1488,7 +1489,7 @@ This flag can be disabled with --no-hidden.
 "
     );
     let arg = RGArg::switch("hidden")
-        .short(".")
+        .short('.')
         .help(SHORT)
         .long_help(LONG)
         .overrides("no-hidden");
@@ -1528,7 +1529,7 @@ This flag overrides -s/--case-sensitive and -S/--smart-case.
 "
     );
     let arg = RGArg::switch("ignore-case")
-        .short("i")
+        .short('i')
         .help(SHORT)
         .long_help(LONG)
         .overrides("case-sensitive")
@@ -1603,7 +1604,7 @@ Invert matching. Show lines that do not match the given patterns.
 "
     );
     let arg =
-        RGArg::switch("invert-match").short("v").help(SHORT).long_help(LONG);
+        RGArg::switch("invert-match").short('v').help(SHORT).long_help(LONG);
     args.push(arg);
 }
 
@@ -1714,7 +1715,7 @@ terminal.
 "
     );
     let arg = RGArg::switch("line-number")
-        .short("n")
+        .short('n')
         .help(SHORT)
         .long_help(LONG)
         .overrides("no-line-number");
@@ -1728,7 +1729,7 @@ terminal.
 "
     );
     let arg = RGArg::switch("no-line-number")
-        .short("N")
+        .short('N')
         .help(NO_SHORT)
         .long_help(NO_LONG)
         .overrides("line-number");
@@ -1747,7 +1748,7 @@ This overrides the --word-regexp flag.
 "
     );
     let arg = RGArg::switch("line-regexp")
-        .short("x")
+        .short('x')
         .help(SHORT)
         .long_help(LONG)
         .overrides("word-regexp");
@@ -1765,7 +1766,7 @@ When this flag is omitted or is set to 0, then it has no effect.
 "
     );
     let arg = RGArg::flag("max-columns", "NUM")
-        .short("M")
+        .short('M')
         .help(SHORT)
         .long_help(LONG)
         .number();
@@ -1807,7 +1808,7 @@ Limit the number of matching lines per file searched to NUM.
 "
     );
     let arg = RGArg::flag("max-count", "NUM")
-        .short("m")
+        .short('m')
         .help(SHORT)
         .long_help(LONG)
         .number();
@@ -1930,7 +1931,7 @@ This flag can be disabled with --no-multiline.
 "
     );
     let arg = RGArg::switch("multiline")
-        .short("U")
+        .short('U')
         .help(SHORT)
         .long_help(LONG)
         .overrides("no-multiline");
@@ -2297,7 +2298,7 @@ such as with --count, --files-with-matches and --files. This option is useful
 for use with xargs.
 "
     );
-    let arg = RGArg::switch("null").short("0").help(SHORT).long_help(LONG);
+    let arg = RGArg::switch("null").short('0').help(SHORT).long_help(LONG);
     args.push(arg);
 }
 
@@ -2366,7 +2367,7 @@ part on a separate output line.
 "
     );
     let arg =
-        RGArg::switch("only-matching").short("o").help(SHORT).long_help(LONG);
+        RGArg::switch("only-matching").short('o').help(SHORT).long_help(LONG);
     args.push(arg);
 }
 
@@ -2435,7 +2436,7 @@ This flag can be disabled with --no-pcre2.
 "
     );
     let arg = RGArg::switch("pcre2")
-        .short("P")
+        .short('P')
         .help(SHORT)
         .long_help(LONG)
         .overrides("no-pcre2")
@@ -2571,7 +2572,7 @@ flag is useful when you still want pretty output even if you're piping ripgrep
 to another program or file. For example: 'rg -p foo | less -R'.
 "
     );
-    let arg = RGArg::switch("pretty").short("p").help(SHORT).long_help(LONG);
+    let arg = RGArg::switch("pretty").short('p').help(SHORT).long_help(LONG);
     args.push(arg);
 }
 
@@ -2587,7 +2588,7 @@ When --files is used, then ripgrep will stop finding files after finding the
 first file that matches all ignore rules.
 "
     );
-    let arg = RGArg::switch("quiet").short("q").help(SHORT).long_help(LONG);
+    let arg = RGArg::switch("quiet").short('q').help(SHORT).long_help(LONG);
     args.push(arg);
 }
 
@@ -2627,7 +2628,7 @@ will be provided. Namely, the following is equivalent to the above:
 "
     );
     let arg = RGArg::flag("regexp", "PATTERN")
-        .short("e")
+        .short('e')
         .help(SHORT)
         .long_help(LONG)
         .multiple()
@@ -2660,7 +2661,7 @@ This flag can be used with the -o/--only-matching flag.
 "
     );
     let arg = RGArg::flag("replace", "REPLACEMENT_TEXT")
-        .short("r")
+        .short('r')
         .help(SHORT)
         .long_help(LONG)
         .allow_leading_hyphen();
@@ -2679,7 +2680,7 @@ This flag can be disabled with --no-search-zip.
 "
     );
     let arg = RGArg::switch("search-zip")
-        .short("z")
+        .short('z')
         .help(SHORT)
         .long_help(LONG)
         .overrides("no-search-zip")
@@ -2710,7 +2711,7 @@ This overrides the -s/--case-sensitive and -i/--ignore-case flags.
 "
     );
     let arg = RGArg::switch("smart-case")
-        .short("S")
+        .short('S')
         .help(SHORT)
         .long_help(LONG)
         .overrides("case-sensitive")
@@ -2863,7 +2864,7 @@ This flag can be disabled with '--no-text'. It overrides the '--binary' flag.
 "
     );
     let arg = RGArg::switch("text")
-        .short("a")
+        .short('a')
         .help(SHORT)
         .long_help(LONG)
         .overrides("no-text")
@@ -2888,7 +2889,7 @@ causes ripgrep to choose the thread count using heuristics.
 "
     );
     let arg =
-        RGArg::flag("threads", "NUM").short("j").help(SHORT).long_help(LONG);
+        RGArg::flag("threads", "NUM").short('j').help(SHORT).long_help(LONG);
     args.push(arg);
 }
 
@@ -2925,7 +2926,7 @@ definitions.
 "
     );
     let arg = RGArg::flag("type", "TYPE")
-        .short("t")
+        .short('t')
         .help(SHORT)
         .long_help(LONG)
         .multiple();
@@ -2998,7 +2999,7 @@ the --type-list flag to list all available types.
 "
     );
     let arg = RGArg::flag("type-not", "TYPE")
-        .short("T")
+        .short('T')
         .help(SHORT)
         .long_help(LONG)
         .multiple();
@@ -3034,7 +3035,7 @@ files (--binary).
 "
     );
     let arg = RGArg::switch("unrestricted")
-        .short("u")
+        .short('u')
         .help(SHORT)
         .long_help(LONG)
         .multiple();
@@ -3067,7 +3068,7 @@ This flag overrides --no-filename.
 "
     );
     let arg = RGArg::switch("with-filename")
-        .short("H")
+        .short('H')
         .help(SHORT)
         .long_help(LONG)
         .overrides("no-filename");
@@ -3083,7 +3084,7 @@ This flag overrides --with-filename.
 "
     );
     let arg = RGArg::switch("no-filename")
-        .short("I")
+        .short('I')
         .help(NO_SHORT)
         .long_help(NO_LONG)
         .overrides("with-filename");
@@ -3101,7 +3102,7 @@ This overrides the --line-regexp flag.
 "
     );
     let arg = RGArg::switch("word-regexp")
-        .short("w")
+        .short('w')
         .help(SHORT)
         .long_help(LONG)
         .overrides("line-regexp");

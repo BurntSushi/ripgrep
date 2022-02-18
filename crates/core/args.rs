@@ -355,7 +355,7 @@ impl Args {
 /// `ArgMatches` wraps `clap::ArgMatches` and provides semantic meaning to
 /// the parsed arguments.
 #[derive(Clone, Debug)]
-struct ArgMatches(clap::ArgMatches<'static>);
+struct ArgMatches(clap::ArgMatches);
 
 /// The output format. Generally, this corresponds to the printer that ripgrep
 /// uses to show search results.
@@ -510,7 +510,7 @@ impl EncodingMode {
 
 impl ArgMatches {
     /// Create an ArgMatches from clap's parse result.
-    fn new(clap_matches: clap::ArgMatches<'static>) -> ArgMatches {
+    fn new(clap_matches: clap::ArgMatches) -> ArgMatches {
         ArgMatches(clap_matches)
     }
 
@@ -1827,7 +1827,7 @@ where
 /// corresponds to a `--help` or `--version` request. In which case, the
 /// corresponding output is printed and the current process is exited
 /// successfully.
-fn clap_matches<I, T>(args: I) -> Result<clap::ArgMatches<'static>>
+fn clap_matches<I, T>(args: I) -> Result<clap::ArgMatches>
 where
     I: IntoIterator<Item = T>,
     T: Into<OsString> + Clone,
