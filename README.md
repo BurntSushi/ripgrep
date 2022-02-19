@@ -383,6 +383,10 @@ $ cargo build --release --features 'pcre2'
 (Tip: use `--features 'pcre2 simd-accel'` to also include compile time SIMD
 optimizations, which will only work with a nightly compiler.)
 
+To optimize even further, consider enabling link time optimizations (lto)
+by specifying corresponding build profile: `--profile release-with-lto`.
+The feature is disabled by default as significantly increasing the compilation time.
+
 Enabling the PCRE2 feature works with a stable Rust compiler and will
 attempt to automatically find and link with your system's PCRE2 library via
 `pkg-config`. If one doesn't exist, then ripgrep will build PCRE2 from source
