@@ -114,6 +114,7 @@ use crate::{Error, Match};
 #[derive(Clone, Debug)]
 pub struct Glob<'a>(GlobInner<'a>);
 
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 enum GlobInner<'a> {
     /// No glob matched, but the file path should still be ignored.
@@ -122,7 +123,7 @@ enum GlobInner<'a> {
     Matched {
         /// The file type definition which provided the glob.
         def: &'a FileTypeDef,
-        /// The index of the glob that matched inside the file type definition.
+
         which: usize,
         /// Whether the selection was negated or not.
         negated: bool,

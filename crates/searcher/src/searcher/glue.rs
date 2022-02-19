@@ -87,6 +87,7 @@ where
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct SliceByLine<'s, M, S> {
     config: &'s Config,
     core: Core<'s, M, S>,
