@@ -79,6 +79,17 @@ pcre2 = ["grep/pcre2"]
 [profile.release]
 debug = 1
 
+[profile.release-no-debug-info]
+inherits = "release"
+debug = 0
+
+# lto is nice to have, but enabling it significantly
+# increases compilation time and probably
+# should not be done by default, hence this profile
+[profile.release-with-lto]
+inherits = "release-no-debug-info"
+lto = true
+
 [package.metadata.deb]
 features = ["pcre2"]
 section = "utils"
