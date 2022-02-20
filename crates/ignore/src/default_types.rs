@@ -60,6 +60,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("devicetree", &["*.dts", "*.dtsi"]),
     ("dhall", &["*.dhall"]),
     ("diff", &["*.patch", "*.diff"]),
+    ("dita", &["*.dita", "*.ditamap", "*.ditaval"]),
     ("docker", &["*Dockerfile*"]),
     ("dockercompose", &["docker-compose.yml", "docker-compose.*.yml"]),
     ("dts", &["*.dts", "*.dtsi"]),
