@@ -63,9 +63,13 @@ impl<M: Matcher> Replacer<M> {
         // See the giant comment in 'find_iter_at_in_context' below for why we
         // do this dance.
         let is_multi_line = searcher.multi_line_with_matcher(&matcher);
+        let mut extension_len = 0;
         if is_multi_line {
             if subject[range.end..].len() >= MAX_LOOK_AHEAD {
+                extension_len = MAX_LOOK_AHEAD;
                 subject = &subject[..range.end + MAX_LOOK_AHEAD];
+            } else {
+                extension_len = subject.len() - range.end;
             }
         } else {
             // When searching a single line, we should remove the line
@@ -102,6 +106,18 @@ impl<M: Matcher> Replacer<M> {
                     },
                 )
                 .map_err(io::Error::error_message)?;
+
+            if is_multi_line {
+                // Remove the subject buffer beyond the range.end.
+                // NOTE: could this be a bug with the current replace functionality?
+                // As an example, running `rg -U '\.\nA' --replace 'BB' -C 2` in this repo produces
+                // spurious extra lines of output in the replacement, as the extra bytes where
+                // not removed. This seems to fix that, but it's not pretty and might be wrong.
+                dst.truncate(dst.len() - extension_len);
+            } else {
+                // Restore the line terminator.
+                dst.extend(searcher.line_terminator().as_bytes());
+            }
         }
         Ok(())
     }

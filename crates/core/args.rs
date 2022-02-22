@@ -17,8 +17,8 @@ use grep::pcre2::{
     RegexMatcherBuilder as PCRE2RegexMatcherBuilder,
 };
 use grep::printer::{
-    default_color_specs, ColorSpecs, JSONBuilder, Standard, StandardBuilder,
-    Stats, Summary, SummaryBuilder, SummaryKind, JSON,
+    default_color_specs, ColorSpecs, Diff, DiffBuilder, JSONBuilder, Standard,
+    StandardBuilder, Stats, Summary, SummaryBuilder, SummaryKind, JSON,
 };
 use grep::regex::{
     RegexMatcher as RustRegexMatcher,
@@ -209,6 +209,9 @@ impl Args {
             OutputKind::JSON => {
                 self.matches().printer_json(wtr).map(Printer::JSON)
             }
+            OutputKind::Diff => {
+                self.matches().printer_diff(wtr).map(Printer::Diff)
+            }
         }
     }
 }
@@ -367,6 +370,8 @@ enum OutputKind {
     Summary,
     /// Emit match information in the JSON Lines format.
     JSON,
+    /// Emit search & replace information in unified diff format.
+    Diff,
 }
 
 /// The sort criteria, if present.
@@ -748,6 +753,14 @@ impl ArgMatches {
             .pretty(false)
             .max_matches(self.max_count()?)
             .always_begin_end(false);
+        Ok(builder.build(wtr))
+    }
+
+    /// Build a Diff printer that writes results to the given writer.
+    fn printer_diff<W: io::Write>(&self, wtr: W) -> Result<Diff<W>> {
+        let mut builder = DiffBuilder::new();
+        //FIXME: `--diff` requires the `--replace` option.
+        builder.replacement(self.replacement().unwrap());
         Ok(builder.build(wtr))
     }
 
@@ -1156,6 +1169,9 @@ impl ArgMatches {
         if self.output_kind() == OutputKind::JSON {
             return true;
         }
+        if self.output_kind() == OutputKind::Diff {
+            return true;
+        }
 
         // A few things can imply counting line numbers. In particular, we
         // generally want to show line numbers by default when printing to a
@@ -1263,6 +1279,8 @@ impl ArgMatches {
             return OutputKind::Summary;
         } else if self.is_present("json") {
             return OutputKind::JSON;
+        } else if self.is_present("diff") {
+            return OutputKind::Diff;
         }
 
         let (count, count_matches) = self.counts();

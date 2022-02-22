@@ -67,6 +67,7 @@ fn example() -> Result<(), Box<Error>> {
 pub use crate::color::{
     default_color_specs, ColorError, ColorSpecs, UserColorSpec,
 };
+pub use crate::diff::{Diff, DiffBuilder, DiffSink};
 #[cfg(feature = "serde1")]
 pub use crate::json::{JSONBuilder, JSONSink, JSON};
 pub use crate::standard::{Standard, StandardBuilder, StandardSink};
@@ -90,6 +91,7 @@ mod macros;
 
 mod color;
 mod counter;
+mod diff;
 #[cfg(feature = "serde1")]
 mod json;
 #[cfg(feature = "serde1")]

@@ -566,6 +566,7 @@ pub fn all_args_and_flags() -> Vec<RGArg> {
     flag_crlf(&mut args);
     flag_debug(&mut args);
     flag_dfa_size_limit(&mut args);
+    flag_diff(&mut args);
     flag_encoding(&mut args);
     flag_engine(&mut args);
     flag_field_context_separator(&mut args);
@@ -1167,6 +1168,49 @@ The argument accepts the same size suffixes as allowed in with the
     let arg = RGArg::flag("dfa-size-limit", "NUM+SUFFIX?")
         .help(SHORT)
         .long_help(LONG);
+    args.push(arg);
+}
+
+fn flag_diff(args: &mut Vec<RGArg>) {
+    const SHORT: &str = "Output search & replace results in unidiff format.";
+    const LONG: &str = long!(
+        "\
+Enable printing search & replace results in unified diff (unidiff) format.
+There doesn't seem to be a particular standard for this format other than:
+https://www.gnu.org/software/diffutils/manual/html_node/Detailed-Unified.html
+This implemenation is based on the output of the diff utility when run on
+multiple files, i.e. with an extra line of information between each file
+about what command produce the diff.
+
+When this flag is provided together with the --replace flag, ripgrep will
+emit unidiff format representing the matches as removed lines in a file
+and the replacements as added lines in the same file.
+
+The output can be viewed with a variety of diff pagers, or applied to files
+with e.g. `git apply -p0 --unidiff-zero` or `patch -u -p0'.
+
+The diff output currently does not support additional context,
+so the --context flag will have no effect either.
+
+The unidiff format is only supported for showing search results. It cannot
+be used with other flags that emit other types of output, such as --files,
+--files-with-matches, --files-without-match, --count or --count-matches.
+ripgrep will report an error if any of the aforementioned flags are used in
+concert with --diff.
+
+Other flags that control aspects of the standard output such as
+--only-matching, --heading, --max-columns, etc., have no effect
+when --diff is set.
+
+"
+    );
+    let arg = RGArg::switch("diff").help(SHORT).long_help(LONG).conflicts(&[
+        "count",
+        "count-matches",
+        "files",
+        "files-with-matches",
+        "files-without-match",
+    ]);
     args.push(arg);
 }
 

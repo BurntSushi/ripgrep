@@ -8,7 +8,7 @@ use grep::cli;
 use grep::matcher::Matcher;
 #[cfg(feature = "pcre2")]
 use grep::pcre2::RegexMatcher as PCRE2RegexMatcher;
-use grep::printer::{Standard, Stats, Summary, JSON};
+use grep::printer::{Diff, Standard, Stats, Summary, JSON};
 use grep::regex::RegexMatcher as RustRegexMatcher;
 use grep::searcher::{BinaryDetection, Searcher};
 use ignore::overrides::Override;
@@ -227,6 +227,8 @@ pub enum Printer<W> {
     Summary(Summary<W>),
     /// A JSON printer, which emits results in the JSON Lines format.
     JSON(JSON<W>),
+    /// A Diff printer, which represents search & replace in the unified diff format.
+    Diff(Diff<W>),
 }
 
 impl<W: WriteColor> Printer<W> {
@@ -237,7 +239,7 @@ impl<W: WriteColor> Printer<W> {
     ) -> io::Result<()> {
         match *self {
             Printer::JSON(_) => self.print_stats_json(total_duration, stats),
-            Printer::Standard(_) | Printer::Summary(_) => {
+            Printer::Standard(_) | Printer::Summary(_) | Printer::Diff(_) => {
                 self.print_stats_human(total_duration, stats)
             }
         }
@@ -303,6 +305,7 @@ impl<W: WriteColor> Printer<W> {
             Printer::Standard(ref mut p) => p.get_mut(),
             Printer::Summary(ref mut p) => p.get_mut(),
             Printer::JSON(ref mut p) => p.get_mut(),
+            Printer::Diff(ref mut p) => p.get_mut(),
         }
     }
 }
@@ -502,6 +505,14 @@ fn search_path<M: Matcher, W: WriteColor>(
                 stats: Some(sink.stats().clone()),
             })
         }
+        Printer::Diff(ref mut p) => {
+            let mut sink = p.sink_with_path(&matcher, path);
+            searcher.search_path(&matcher, path, &mut sink)?;
+            Ok(SearchResult {
+                has_match: sink.has_match(),
+                stats: Some(sink.stats().clone()),
+            })
+        }
     }
 }
 
@@ -532,6 +543,14 @@ fn search_reader<M: Matcher, R: io::Read, W: WriteColor>(
             })
         }
         Printer::JSON(ref mut p) => {
+            let mut sink = p.sink_with_path(&matcher, path);
+            searcher.search_reader(&matcher, &mut rdr, &mut sink)?;
+            Ok(SearchResult {
+                has_match: sink.has_match(),
+                stats: Some(sink.stats().clone()),
+            })
+        }
+        Printer::Diff(ref mut p) => {
             let mut sink = p.sink_with_path(&matcher, path);
             searcher.search_reader(&matcher, &mut rdr, &mut sink)?;
             Ok(SearchResult {
