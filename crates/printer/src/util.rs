@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::cmp::max;
 use std::fmt;
 use std::io;
 use std::path::Path;
@@ -83,9 +84,9 @@ impl<M: Matcher> Replacer<M> {
             matches.clear();
 
             matcher
-                .replace_with_captures_at(
+                .replace_with_captures_in_range(
                     subject,
-                    range.start,
+                    &range,
                     caps,
                     dst,
                     |caps, dst| {

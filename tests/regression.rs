@@ -1044,3 +1044,15 @@ rgtest!(r1891, |dir: Dir, mut cmd: TestCommand| {
     // happen when each match needs to be detected.
     eqnice!("1:\n2:\n2:\n", cmd.args(&["-won", "", "test"]).stdout());
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/2095
+rgtest!(r2095, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("test", "foo\nbar\n\nbaz\n");
+    // When replacing a multiline match, there should be no extra
+    // content beyond the original match.
+    cmd.args(&["-U", "o\nb", "-r", "OB"]);
+    let expected = "\
+test:foOBar
+";
+    eqnice!(expected, cmd.stdout());
+});
