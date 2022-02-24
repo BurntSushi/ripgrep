@@ -38,9 +38,11 @@ implementations.
 
 #![deny(missing_docs)]
 
+use std::cmp::min;
 use std::fmt;
 use std::io;
 use std::ops;
+use std::ops::Range;
 use std::u64;
 
 use crate::interpolate::interpolate;
@@ -939,6 +941,34 @@ pub trait Matcher {
             append(caps, dst)
         })?;
         dst.extend(&haystack[last_match..]);
+        Ok(())
+    }
+
+    /// Same as replace_with_captures_at, but limits the replacements to the
+    /// given range. Matches beyond the end of the range are skipped.
+    fn replace_with_captures_in_range<F>(
+        &self,
+        haystack: &[u8],
+        range: &Range<usize>,
+        caps: &mut Self::Captures,
+        dst: &mut Vec<u8>,
+        mut append: F,
+    ) -> Result<(), Self::Error>
+    where
+        F: FnMut(&Self::Captures, &mut Vec<u8>) -> bool,
+    {
+        let mut last_match = range.start;
+        self.captures_iter_at(haystack, range.start, caps, |caps| {
+            let m = caps.get(0).unwrap();
+            if m.start >= range.end {
+                return false;
+            }
+            dst.extend(&haystack[last_match..m.start]);
+            last_match = m.end;
+            append(caps, dst)
+        })?;
+        let end = min(haystack.len(), range.end);
+        dst.extend(&haystack[last_match..end]);
         Ok(())
     }
 
