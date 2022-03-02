@@ -91,7 +91,7 @@ impl InnerLiterals {
         InnerLiterals { seq: Seq::infinite() }
     }
 
-    /// If it is deemed advantageuous to do so (via various suspicious
+    /// If it is deemed advantageous to do so (via various suspicious
     /// heuristics), this will return a single regular expression pattern that
     /// matches a subset of the language matched by the regular expression that
     /// generated these literal sets. The idea here is that the pattern
