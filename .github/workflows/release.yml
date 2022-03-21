@@ -164,7 +164,7 @@ jobs:
         if [ "${{ matrix.os }}" = "windows-2019" ]; then
           cp "target/${{ matrix.target }}/release/rg.exe" "$staging/"
           7z a "$staging.zip" "$staging"
-          sha256sum "$staging.zip" > "$staging.zip.sha256"
+          shasum -a 256 "$staging.zip" > "$staging.zip.sha256"
           echo "ASSET=$staging.zip" >> $GITHUB_ENV
           echo "ASSET_SUM=$staging.tar.gz.sha256" >> $GITHUB_ENV
         else
@@ -172,7 +172,7 @@ jobs:
           cp "$outdir"/rg.1 "$staging/doc/"
           cp "target/${{ matrix.target }}/release/rg" "$staging/"
           tar czf "$staging.tar.gz" "$staging"
-          sha256sum "$staging.tar.gz" > "$staging.tar.gz.sha256"
+          shasum -a 256 "$staging.tar.gz" > "$staging.tar.gz.sha256"
           echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
           echo "ASSET_SUM=$staging.tar.gz.sha256" >> $GITHUB_ENV
         fi
