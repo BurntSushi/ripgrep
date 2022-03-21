@@ -182,7 +182,6 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
         files: |
           ${{ env.ASSET }}
           ${{ env.ASSET_SUM }}
