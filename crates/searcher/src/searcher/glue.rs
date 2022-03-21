@@ -88,7 +88,6 @@ where
 
 #[derive(Debug)]
 pub struct SliceByLine<'s, M, S> {
-    config: &'s Config,
     core: Core<'s, M, S>,
     slice: &'s [u8],
 }
@@ -103,7 +102,6 @@ impl<'s, M: Matcher, S: Sink> SliceByLine<'s, M, S> {
         debug_assert!(!searcher.multi_line_with_matcher(&matcher));
 
         SliceByLine {
-            config: &searcher.config,
             core: Core::new(searcher, matcher, write_to, true),
             slice: slice,
         }

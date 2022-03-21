@@ -143,8 +143,6 @@ impl GlobMatcher {
 struct GlobStrategic {
     /// The match strategy to use.
     strategy: MatchStrategy,
-    /// The underlying pattern.
-    pat: Glob,
     /// The pattern, as a compiled regex.
     re: Regex,
 }
@@ -273,7 +271,7 @@ impl Glob {
         let strategy = MatchStrategy::new(self);
         let re =
             new_regex(&self.re).expect("regex compilation shouldn't fail");
-        GlobStrategic { strategy: strategy, pat: self.clone(), re: re }
+        GlobStrategic { strategy: strategy, re: re }
     }
 
     /// Returns the original glob pattern used to build this pattern.

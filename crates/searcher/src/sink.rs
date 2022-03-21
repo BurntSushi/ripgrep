@@ -436,6 +436,7 @@ pub enum SinkContextKind {
 /// A type that describes a contextual line reported by a searcher.
 #[derive(Clone, Debug)]
 pub struct SinkContext<'b> {
+    #[cfg(test)]
     pub(crate) line_term: LineTerminator,
     pub(crate) bytes: &'b [u8],
     pub(crate) kind: SinkContextKind,
