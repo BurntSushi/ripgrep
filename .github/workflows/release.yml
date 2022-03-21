@@ -153,16 +153,20 @@ jobs:
         if [ "${{ matrix.os }}" = "windows-2022" ]; then
           cp "target/${{ matrix.target }}/release/rg.exe" "$staging/"
           7z a "$staging.zip" "$staging"
+          certutil -hashfile "$staging.zip" SHA256 > "$staging.zip.sha256"
           echo "ASSET=$staging.zip" >> $GITHUB_ENV
+          echo "ASSET_SUM=$staging.zip.sha256" >> $GITHUB_ENV
         else
           # The man page is only generated on Unix systems. ¯\_(ツ)_/¯
           cp "$outdir"/rg.1 "$staging/doc/"
           cp "target/${{ matrix.target }}/release/rg" "$staging/"
           tar czf "$staging.tar.gz" "$staging"
+          shasum -a 256 "$staging.tar.gz" > "$staging.tar.gz.sha256"
           echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
+          echo "ASSET_SUM=$staging.tar.gz.sha256" >> $GITHUB_ENV
         fi
 
     - name: Upload release archive
       env:
         GH_TOKEN: ${{ github.token }}
-      run: gh release upload ${{ needs.create-release.outputs.rg_version }} ${{ env.ASSET }}
+      run: gh release upload ${{ needs.create-release.outputs.rg_version }} ${{ env.ASSET }} ${{ env.ASSET_SUM }}
