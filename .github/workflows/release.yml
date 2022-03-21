@@ -164,7 +164,7 @@ jobs:
         if [ "${{ matrix.os }}" = "windows-2019" ]; then
           cp "target/${{ matrix.target }}/release/rg.exe" "$staging/"
           7z a "$staging.zip" "$staging"
-          Get-FileHash "$staging.zip" | Format-List > "$staging.zip.sha256"
+          certutil -hashfile "$staging.zip" SHA256 > "$staging.zip.sha256"
           echo "ASSET=$staging.zip" >> $GITHUB_ENV
           echo "ASSET_SUM=$staging.zip.sha256" >> $GITHUB_ENV
         else
