@@ -20,7 +20,7 @@ encoding_rs = "0.8.14"
 encoding_rs_io = "0.1.6"
 grep-matcher = { version = "0.1.5", path = "../matcher" }
 log = "0.4.5"
-memmap = { package = "memmap2", version = "0.3.0" }
+memmap = { package = "memmap2", version = "0.5.3" }
 
 [dev-dependencies]
 grep-regex = { version = "0.1.9", path = "../regex" }
