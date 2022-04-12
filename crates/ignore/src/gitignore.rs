@@ -15,6 +15,7 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
 
+use encoding_rs_io::DecodeReaderBytesBuilder;
 use globset::{Candidate, GlobBuilder, GlobSet, GlobSetBuilder};
 use regex::bytes::Regex;
 use thread_local::ThreadLocal;
@@ -389,7 +390,12 @@ impl GitignoreBuilder {
             Err(err) => return Some(Error::Io(err).with_path(path)),
             Ok(file) => file,
         };
-        let rdr = io::BufReader::new(file);
+        let rdr = io::BufReader::new(
+            DecodeReaderBytesBuilder::new()
+                .bom_sniffing(false)
+                .strip_bom(true)
+                .build(file),
+        );
         let mut errs = PartialErrorBuilder::default();
         for (i, line) in rdr.lines().enumerate() {
             let lineno = (i + 1) as u64;
