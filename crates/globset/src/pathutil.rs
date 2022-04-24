@@ -27,7 +27,7 @@ pub fn file_name<'a>(path: &Cow<'a, [u8]>) -> Option<Cow<'a, [u8]>> {
 ///
 /// Note that this does NOT match the semantics of std::path::Path::extension.
 /// Namely, the extension includes the `.` and matching is otherwise more
-/// liberal. Specifically, the extenion is:
+/// liberal. Specifically, the extension is:
 ///
 /// * None, if the file name given is empty;
 /// * None, if there is no embedded `.`;

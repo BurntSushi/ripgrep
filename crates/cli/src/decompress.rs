@@ -18,7 +18,7 @@ pub struct DecompressionMatcherBuilder {
 }
 
 /// A representation of a single command for decompressing data
-/// out-of-proccess.
+/// out-of-process.
 #[derive(Clone, Debug)]
 struct DecompressionCommand {
     /// The glob that matches this command.
