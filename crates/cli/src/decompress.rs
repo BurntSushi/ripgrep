@@ -18,7 +18,7 @@ pub struct DecompressionMatcherBuilder {
 }
 
 /// A representation of a single command for decompressing data
-/// out-of-proccess.
+/// out-of-process.
 #[derive(Clone, Debug)]
 struct DecompressionCommand {
     /// The glob that matches this command.
@@ -382,7 +382,7 @@ impl DecompressionReader {
     ///
     /// `close` is also called in `drop` as a last line of defense against
     /// resource leakage. Any error from the child process is then printed as a
-    /// warning to stderr. This can be avoided by explictly calling `close`
+    /// warning to stderr. This can be avoided by explicitly calling `close`
     /// before the CommandReader is dropped.
     pub fn close(&mut self) -> io::Result<()> {
         match self.rdr {
