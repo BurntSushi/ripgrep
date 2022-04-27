@@ -30,7 +30,7 @@ _rg() {
     [[ $_RG_COMPLETE_LIST_ARGS == (1|t*|y*) ]] ||
     # (--[imnp]* => --ignore*, --messages, --no-*, --pcre2-unicode)
     [[ $PREFIX$SUFFIX == --[imnp]* ]] ||
-    zstyle -t ":complete:$curcontext:*" complete-all
+    zstyle -t ":completion:${curcontext}:" complete-all
   then
     no=
   fi
@@ -432,9 +432,13 @@ _rg_types() {
   local -a expl
   local -aU _types
 
-  _types=( ${(@)${(f)"$( _call_program types rg --type-list )"}%%:*} )
+  _types=( ${(@)${(f)"$( _call_program types $words[1] --type-list )"}//:[[:space:]]##/:} )
 
-  _wanted types expl 'file type' compadd -a "$@" - _types
+  if zstyle -t ":completion:${curcontext}:types" extra-verbose; then
+    _describe -t types 'file type' _types
+  else
+    _wanted types expl 'file type' compadd "$@" - ${(@)_types%%:*}
+  fi
 }
 
 _rg "$@"
