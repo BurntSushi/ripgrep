@@ -8,7 +8,8 @@ Bug fixes:
   Fix bug when using `-w` with a regex that can match the empty string.
 * [BUG #1911](https://github.com/BurntSushi/ripgrep/issues/1911):
   Disable mmap searching in all non-64-bit environments.
-
+* [BUG #2198](https://github.com/BurntSushi/ripgrep/issues/2198):
+  Fix bug where `--no-ignore-dot` would not ignore `.rgignore`.
 
 13.0.0 (2021-06-12)
 ===================

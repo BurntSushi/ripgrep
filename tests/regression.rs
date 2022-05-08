@@ -1044,3 +1044,16 @@ rgtest!(r1891, |dir: Dir, mut cmd: TestCommand| {
     // happen when each match needs to be detected.
     eqnice!("1:\n2:\n2:\n", cmd.args(&["-won", "", "test"]).stdout());
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/2198
+rgtest!(r2198, |dir: Dir, mut cmd: TestCommand| {
+  dir.create(".ignore", "a");
+  dir.create(".rgignore", "b");
+  dir.create("a", "");
+  dir.create("b", "");
+  dir.create("c", "");
+
+  cmd.arg("--files");
+  eqnice!("c\n", cmd.stdout());
+  eqnice!("b\nc\na\n", cmd.arg("--no-ignore-dot").stdout());
+});
