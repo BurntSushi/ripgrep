@@ -1090,6 +1090,19 @@ b=one
     eqnice!(expected, cmd.stdout());
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/2198
+rgtest!(r2198, |dir: Dir, mut cmd: TestCommand| {
+    dir.create(".ignore", "a");
+    dir.create(".rgignore", "b");
+    dir.create("a", "");
+    dir.create("b", "");
+    dir.create("c", "");
+
+    cmd.arg("--files").arg("--sort").arg("path");
+    eqnice!("c\n", cmd.stdout());
+    eqnice!("a\nb\nc\n", cmd.arg("--no-ignore-dot").stdout());
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/2208
 rgtest!(r2208, |dir: Dir, mut cmd: TestCommand| {
     dir.create("test", "# Compile requirements.txt files from all found or specified requirements.in files (compile).

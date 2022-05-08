@@ -872,7 +872,7 @@ impl ArgMatches {
             .git_exclude(!self.no_ignore_vcs() && !self.no_ignore_exclude())
             .require_git(!self.is_present("no-require-git"))
             .ignore_case_insensitive(self.ignore_file_case_insensitive());
-        if !self.no_ignore() {
+        if !self.no_ignore() && !self.no_ignore_dot() {
             builder.add_custom_ignore_filename(".rgignore");
         }
         let sortby = self.sort_by()?;
