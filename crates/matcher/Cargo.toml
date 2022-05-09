@@ -10,7 +10,7 @@ homepage = "https://github.com/BurntSushi/ripgrep/tree/master/crates/matcher"
 repository = "https://github.com/BurntSushi/ripgrep/tree/master/crates/matcher"
 readme = "README.md"
 keywords = ["regex", "pattern", "trait"]
-license = "Unlicense/MIT"
+license = "Unlicense OR MIT"
 autotests = false
 edition = "2018"
 
