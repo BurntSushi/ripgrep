@@ -295,6 +295,14 @@ seem to work right and generate a number of very strange bug reports that I
 don't know how to fix and don't have the time to fix. Therefore, it is no
 longer a recommended installation option.)
 
+If you're a **makedeb** user, you can install makedeb from the [makedeb Package Repository](https://mpr.makedeb.org/packages/ripgrep):
+
+```
+$ git clone 'https://mpr.makedeb.org/ripgrep'
+$ cd ripgrep/
+$ makedeb -si
+```
+
 If you're a **FreeBSD** user, then you can install ripgrep from the
 [official ports](https://www.freshports.org/textproc/ripgrep/):
 
