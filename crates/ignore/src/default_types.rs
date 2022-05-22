@@ -83,6 +83,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("gzip", &["*.gz", "*.tgz"]),
     ("h", &["*.h", "*.hh", "*.hpp"]),
     ("haml", &["*.haml"]),
+    ("hare", &["*.ha"]),
     ("haskell", &["*.hs", "*.lhs", "*.cpphs", "*.c2hs", "*.hsc"]),
     ("hbs", &["*.hbs"]),
     ("hs", &["*.hs", "*.lhs"]),
