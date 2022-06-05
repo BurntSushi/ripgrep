@@ -125,6 +125,16 @@ mod pathutil;
 #[cfg(feature = "serde1")]
 mod serde_impl;
 
+#[cfg(feature = "log")]
+macro_rules! debug {
+    ($($token:tt)*) => (::log::debug!($($token)*);)
+}
+
+#[cfg(not(feature = "log"))]
+macro_rules! debug {
+    ($($token:tt)*) => {};
+}
+
 /// Represents an error that can occur when parsing a glob pattern.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Error {
@@ -413,12 +423,12 @@ impl GlobSet {
                     required_exts.add(i, ext, p.regex().to_owned());
                 }
                 MatchStrategy::Regex => {
-                    log::debug!("glob converted to regex: {:?}", p);
+                    debug!("glob converted to regex: {:?}", p);
                     regexes.add(i, p.regex().to_owned());
                 }
             }
         }
-        log::debug!(
+        debug!(
             "built glob set; {} literals, {} basenames, {} extensions, \
                 {} prefixes, {} suffixes, {} required extensions, {} regexes",
             lits.0.len(),
