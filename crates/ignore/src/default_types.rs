@@ -162,6 +162,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("objcpp", &["*.h", "*.mm"]),
     ("ocaml", &["*.ml", "*.mli", "*.mll", "*.mly"]),
     ("org", &["*.org", "*.org_archive"]),
+    ("pants", &["BUILD"]),
     ("pascal", &["*.pas", "*.dpr", "*.lpr", "*.pp", "*.inc"]),
     ("pdf", &["*.pdf"]),
     ("perl", &["*.perl", "*.pl", "*.PL", "*.plh", "*.plx", "*.pm", "*.t"]),
