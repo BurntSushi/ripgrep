@@ -212,13 +212,13 @@ pub fn is_readable_stdin() -> bool {
     !is_tty_stdin() && imp()
 }
 
-/// Returns true if and only if stdin is believed to be connectted to a tty
+/// Returns true if and only if stdin is believed to be connected to a tty
 /// or a console.
 pub fn is_tty_stdin() -> bool {
     atty::is(atty::Stream::Stdin)
 }
 
-/// Returns true if and only if stdout is believed to be connectted to a tty
+/// Returns true if and only if stdout is believed to be connected to a tty
 /// or a console.
 ///
 /// This is useful for when you want your command line program to produce
@@ -230,7 +230,7 @@ pub fn is_tty_stdout() -> bool {
     atty::is(atty::Stream::Stdout)
 }
 
-/// Returns true if and only if stderr is believed to be connectted to a tty
+/// Returns true if and only if stderr is believed to be connected to a tty
 /// or a console.
 pub fn is_tty_stderr() -> bool {
     atty::is(atty::Stream::Stderr)

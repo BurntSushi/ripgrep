@@ -104,7 +104,7 @@ struct ArgsImp {
     ///
     /// It's important that this is only built once, since building this goes
     /// through regex compilation and various types of analyses. That is, if
-    /// you need many of theses (one per thread, for example), it is better to
+    /// you need many of these (one per thread, for example), it is better to
     /// build it once and then clone it.
     matcher: PatternMatcher,
     /// The paths provided at the command line. This is guaranteed to be

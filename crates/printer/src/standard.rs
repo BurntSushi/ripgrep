@@ -1594,7 +1594,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     /// multiple lines.
     ///
     /// Note that this doesn't just return whether the searcher is in multi
-    /// line mode, but also checks if the mater can match over multiple lines.
+    /// line mode, but also checks if the matter can match over multiple lines.
     /// If it can't, then we don't need multi line handling, even if the
     /// searcher has multi line mode enabled.
     fn multi_line(&self) -> bool {

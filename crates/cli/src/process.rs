@@ -221,7 +221,7 @@ impl CommandReader {
     ///
     /// `close` is also called in `drop` as a last line of defense against
     /// resource leakage. Any error from the child process is then printed as a
-    /// warning to stderr. This can be avoided by explictly calling `close`
+    /// warning to stderr. This can be avoided by explicitly calling `close`
     /// before the CommandReader is dropped.
     pub fn close(&mut self) -> io::Result<()> {
         // Dropping stdout closes the underlying file descriptor, which should

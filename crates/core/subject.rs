@@ -67,7 +67,7 @@ impl SubjectBuilder {
         if subj.is_file() {
             return Some(subj);
         }
-        // We got nothin. Emit a debug message, but only if this isn't a
+        // We got nothing. Emit a debug message, but only if this isn't a
         // directory. Otherwise, emitting messages for directories is just
         // noisy.
         if !subj.is_dir() {

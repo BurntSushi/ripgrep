@@ -147,7 +147,7 @@ impl JSONBuilder {
 /// is not limited to UTF-8 exclusively, which in turn implies that matches
 /// may be reported that contain invalid UTF-8. Moreover, this printer may
 /// also print file paths, and the encoding of file paths is itself not
-/// guarnateed to be valid UTF-8. Therefore, this printer must deal with the
+/// guaranteed to be valid UTF-8. Therefore, this printer must deal with the
 /// presence of invalid UTF-8 somehow. The printer could silently ignore such
 /// things completely, or even lossily transcode invalid UTF-8 to valid UTF-8
 /// by replacing all invalid sequences with the Unicode replacement character.
