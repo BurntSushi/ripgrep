@@ -8,7 +8,7 @@ use regex::Regex;
 /// An error that occurs when parsing a human readable size description.
 ///
 /// This error provides an end user friendly message describing why the
-/// description coudln't be parsed and what the expected format is.
+/// description couldn't be parsed and what the expected format is.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParseSizeError {
     original: String,
