@@ -98,11 +98,9 @@ jobs:
         ci/macos-install-packages
 
     - name: Install Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@v1
       with:
         toolchain: ${{ matrix.rust }}
-        profile: minimal
-        override: true
 
     - name: Use Cross
       if: matrix.target != ''
@@ -185,11 +183,9 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
     - name: Install Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@v1
       with:
         toolchain: stable
-        override: true
-        profile: minimal
         components: rustfmt
     - name: Check formatting
       run: |
@@ -202,11 +198,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
-          profile: minimal
-          override: true
       - name: Check documentation
         env:
           RUSTDOCFLAGS: -D warnings
