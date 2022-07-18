@@ -169,6 +169,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("perl", &["*.perl", "*.pl", "*.PL", "*.plh", "*.plx", "*.pm", "*.t"]),
     ("php", &[
         // note that PHP 6 doesn't exist
+        // See: https://wiki.php.net/rfc/php6
         "*.php", "*.php3", "*.php4", "*.php5", "*.php7", "*.php8",
         "*.pht", "*.phtml"
     ]),
