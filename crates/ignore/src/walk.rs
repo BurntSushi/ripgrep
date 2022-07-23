@@ -1294,10 +1294,18 @@ impl WalkParallel {
         ));
         crossbeam_utils::thread::scope(|s| {
             let mut handles = vec![];
-            for _ in 0..threads {
+            for i in 0..threads {
                 let worker = Worker {
                     visitor: builder.build(),
-                    directory_stack: directory_stack.clone(),
+                    // To avoid deadlock due to file stack size limit
+                    // some workers should be launched in consumer-only mode.
+                    // Testing shows that single producer has the best
+                    // performance but it can be tweaked if needed.
+                    directory_stack: if i == 0 {
+                        Some(directory_stack.clone())
+                    } else {
+                        None
+                    },
                     file_stack: file_stack.clone(),
                     quit_now: quit_now.clone(),
                     num_pending: num_pending.clone(),
@@ -1411,8 +1419,10 @@ struct Worker<'s> {
     /// We use a stack instead of a channel because a stack lets us visit
     /// directories in depth first order. This can substantially reduce peak
     /// memory usage by keeping both the number of files path and gitignore
-    /// matchers in memory lower.
-    directory_stack: Arc<Mutex<Vec<Message>>>,
+    /// matchers in memory lower. We wrap directory stack into an option
+    /// because when we limit file stack size we want to keep some workers in
+    /// consumer-only mode to prevent deadlocks.
+    directory_stack: Option<Arc<Mutex<Vec<Message>>>>,
     /// Separately, we keep a stack of files that need visiting. These will
     /// be visited before we try to descend into any directories, in order
     /// to keep our peak memory usage lower.
@@ -1681,12 +1691,31 @@ impl<'s> Worker<'s> {
     /// Send work.
     fn send(&self, work: Work) {
         self.num_pending.fetch_add(1, Ordering::SeqCst);
-        let mut stack = if work.dent.is_dir() {
-            self.directory_stack.lock().unwrap()
+        if work.dent.is_dir() {
+            // only workers with access to directory stack can get here
+            let mut stack =
+                self.directory_stack.as_ref().unwrap().lock().unwrap();
+            stack.push(Message::Work(work));
         } else {
-            self.file_stack.lock().unwrap()
+            loop {
+                {
+                    let mut stack = self.file_stack.lock().unwrap();
+                    // Limit file stack size to reduce memory usage.
+                    // Note: this can lead to a deadlock if all of the threads
+                    // are handling big directories simultaneously. The easiest
+                    // fix is to limit the amount of threads that can work with
+                    // directories.
+                    const FILE_STACK_LIMIT: usize = 1024;
+                    if stack.len() < FILE_STACK_LIMIT {
+                        stack.push(Message::Work(work));
+                        return;
+                    }
+                }
+                // Our stack isn't blocking. Instead of burning the
+                // CPU waiting, we let the thread sleep for a bit.
+                thread::sleep(Duration::from_millis(1));
+            }
         };
-        stack.push(Message::Work(work));
     }
 
     /// Send a quit message.
@@ -1706,8 +1735,12 @@ impl<'s> Worker<'s> {
         if let Some(work) = file_stack.pop() {
             return Some(work);
         }
-        let mut directory_stack = self.directory_stack.lock().unwrap();
-        directory_stack.pop()
+        if let Some(ref directory_stack) = self.directory_stack {
+            let mut directory_stack = directory_stack.lock().unwrap();
+            directory_stack.pop()
+        } else {
+            None
+        }
     }
 
     /// Signal that work has been received.
