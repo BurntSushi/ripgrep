@@ -8,9 +8,9 @@ use grep::cli;
 use grep::matcher::Matcher;
 #[cfg(feature = "pcre2")]
 use grep::pcre2::RegexMatcher as PCRE2RegexMatcher;
-use grep::printer::{Standard, Stats, Summary, JSON};
+use grep::printer::{Standard, Stats, Summary, JSON, Patch};
 use grep::regex::RegexMatcher as RustRegexMatcher;
-use grep::searcher::{BinaryDetection, Searcher};
+use grep::searcher::{BinaryDetection, Searcher, Sink};
 use ignore::overrides::Override;
 use serde_json as json;
 use serde_json::json;
@@ -227,6 +227,9 @@ pub enum Printer<W> {
     Summary(Summary<W>),
     /// A JSON printer, which emits results in the JSON Lines format.
     JSON(JSON<W>),
+    /// A Patch printer, which emits results in a format compatible with the
+    /// POSIX 'patch' tool.
+    Patch(Patch<W>),
 }
 
 impl<W: WriteColor> Printer<W> {
@@ -237,6 +240,8 @@ impl<W: WriteColor> Printer<W> {
     ) -> io::Result<()> {
         match *self {
             Printer::JSON(_) => self.print_stats_json(total_duration, stats),
+            // XXX is 'patch' incompatible w/ 'stats'? Maybe not; check what git-patch does
+            Printer::Patch(_) => unimplemented!(),
             Printer::Standard(_) | Printer::Summary(_) => {
                 self.print_stats_human(total_duration, stats)
             }
@@ -303,6 +308,7 @@ impl<W: WriteColor> Printer<W> {
             Printer::Standard(ref mut p) => p.get_mut(),
             Printer::Summary(ref mut p) => p.get_mut(),
             Printer::JSON(ref mut p) => p.get_mut(),
+            Printer::Patch(ref mut p) => p.get_mut(),
         }
     }
 }
@@ -477,32 +483,21 @@ fn search_path<M: Matcher, W: WriteColor>(
     printer: &mut Printer<W>,
     path: &Path,
 ) -> io::Result<SearchResult> {
-    match *printer {
-        Printer::Standard(ref mut p) => {
-            let mut sink = p.sink_with_path(&matcher, path);
-            searcher.search_path(&matcher, path, &mut sink)?;
-            Ok(SearchResult {
-                has_match: sink.has_match(),
-                stats: sink.stats().map(|s| s.clone()),
-            })
-        }
-        Printer::Summary(ref mut p) => {
-            let mut sink = p.sink_with_path(&matcher, path);
-            searcher.search_path(&matcher, path, &mut sink)?;
-            Ok(SearchResult {
-                has_match: sink.has_match(),
-                stats: sink.stats().map(|s| s.clone()),
-            })
-        }
-        Printer::JSON(ref mut p) => {
-            let mut sink = p.sink_with_path(&matcher, path);
-            searcher.search_path(&matcher, path, &mut sink)?;
-            Ok(SearchResult {
-                has_match: sink.has_match(),
-                stats: Some(sink.stats().clone()),
-            })
-        }
-    }
+    let sink: &mut dyn Sink<Error = _> = match *printer {
+        Printer::Standard(ref mut p) =>
+            &mut p.sink_with_path(&matcher, path),
+        Printer::Summary(ref mut p) =>
+            &mut p.sink_with_path(&matcher, path),
+        Printer::JSON(ref mut p) =>
+            &mut p.sink_with_path(&matcher, path),
+        Printer::Patch(ref mut p) =>
+            &mut p.sink_with_path(&matcher, path),
+    };
+    searcher.search_path(&matcher, path, sink)?;
+    Ok(SearchResult {
+        has_match: sink.has_match(),
+        stats: sink.stats().map(|s| s.clone()),
+    })
 }
 
 /// Search the contents of the given reader using the given matcher, searcher
@@ -532,6 +527,14 @@ fn search_reader<M: Matcher, R: io::Read, W: WriteColor>(
             })
         }
         Printer::JSON(ref mut p) => {
+            let mut sink = p.sink_with_path(&matcher, path);
+            searcher.search_reader(&matcher, &mut rdr, &mut sink)?;
+            Ok(SearchResult {
+                has_match: sink.has_match(),
+                stats: Some(sink.stats().clone()),
+            })
+        }
+        Printer::Patch(ref mut p) => {
             let mut sink = p.sink_with_path(&matcher, path);
             searcher.search_reader(&matcher, &mut rdr, &mut sink)?;
             Ok(SearchResult {
