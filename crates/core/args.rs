@@ -19,6 +19,7 @@ use grep::pcre2::{
 use grep::printer::{
     default_color_specs, ColorSpecs, JSONBuilder, Standard, StandardBuilder,
     Stats, Summary, SummaryBuilder, SummaryKind, JSON,
+    PatchBuilder, Patch,
 };
 use grep::regex::{
     RegexMatcher as RustRegexMatcher,
@@ -209,6 +210,9 @@ impl Args {
             OutputKind::JSON => {
                 self.matches().printer_json(wtr).map(Printer::JSON)
             }
+            OutputKind::Patch => {
+                self.matches().printer_patch(wtr).map(Printer::Patch)
+            }
         }
     }
 }
@@ -367,6 +371,8 @@ enum OutputKind {
     Summary,
     /// Emit match information in the JSON Lines format.
     JSON,
+    /// Generate a patch file, usable with the `patch` utility.
+    Patch,
 }
 
 /// The sort criteria, if present.
@@ -748,6 +754,14 @@ impl ArgMatches {
             .pretty(false)
             .max_matches(self.max_count()?)
             .always_begin_end(false);
+        Ok(builder.build(wtr))
+    }
+
+    /// Build a Patch printer that writes results to the given writer.
+    fn printer_patch<W: io::Write>(&self, wtr: W) -> Result<Patch<W>> {
+        let mut builder = PatchBuilder::new();
+        builder.replacement(self.replacement().ok_or(
+            io::Error::new(io::ErrorKind::Other, "replacement text not set"))?);
         Ok(builder.build(wtr))
     }
 
@@ -1153,7 +1167,7 @@ impl ArgMatches {
         if self.is_present("no-line-number") {
             return false;
         }
-        if self.output_kind() == OutputKind::JSON {
+        if self.output_kind() == OutputKind::JSON || self.output_kind() == OutputKind::Patch {
             return true;
         }
 
@@ -1263,6 +1277,8 @@ impl ArgMatches {
             return OutputKind::Summary;
         } else if self.is_present("json") {
             return OutputKind::JSON;
+        } else /* XXX figure out how to add option if self.is_present("patch") */ {
+            return OutputKind::Patch;
         }
 
         let (count, count_matches) = self.counts();

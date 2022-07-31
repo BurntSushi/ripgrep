@@ -1,4 +1,4 @@
-use std::io::{self, Write};
+use std::io;
 use std::os::unix::prelude::OsStrExt;
 use std::path::Path;
 use std::time::Instant;
@@ -27,28 +27,24 @@ impl Default for Config {
 }
 
 /// Configuration for the patch-output printer
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PatchBuilder {
     config: Config,
-    replacement_set: bool,
 }
 
 impl PatchBuilder {
     /// Return a new builder for configuring the patch printer.
     pub fn new() -> PatchBuilder {
-        PatchBuilder { config: Config::default(), replacement_set: false, }
+        PatchBuilder::default()
     }
 
     /// Create a Patch printer that writes results to the given writer.
-    pub fn build<W: io::Write>(&self, wtr: W) -> Result<Patch<W>, io::Error> {
-        if !self.replacement_set {
-            return Err(io::Error::new(io::ErrorKind::Other, "replacement text not set"))
-        }
-        Ok(Patch {
+    pub fn build<W: io::Write>(&self, wtr: W) -> Patch<W> {
+        Patch {
             config: self.config.clone(),
             wtr: CounterWriter::new(wtr),
             matches: vec![],
-        })
+        }
     }
 
     /// Set the bytes that will be used to replace each occurrence of a match
@@ -65,7 +61,6 @@ impl PatchBuilder {
         &mut self,
         replacement: Vec<u8>,
     ) -> &mut PatchBuilder {
-        self.replacement_set = true;
         self.config.replacement = replacement;
         self
     }
@@ -130,15 +125,6 @@ impl<'p, 's, M: Matcher, W: io::Write> PatchSink<'p, 's, M, W> {
     /// search on this sink.
     pub fn has_match(&self) -> bool {
         return self.match_count > 0;
-    }
-
-    /// Returns true if this printer should quit.
-    ///
-    /// This implements the logic for handling quitting after seeing a certain
-    /// amount of matches. In most cases, the logic is simple, but we must
-    /// permit all "after" contextual lines to print after reaching the limit.
-    fn should_quit(&self) -> bool {
-        false
     }
 
     /// Execute the matcher over the given bytes and record the match
@@ -289,7 +275,7 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for PatchSink<'p, 's, M, W> {
         _: &Searcher,
     ) -> Result<bool, io::Error> {
         if let Some(previous) = &mut self.current_hunk {
-            previous.write(&mut self.patch.wtr, self.patch.config.style);
+            previous.write(&mut self.patch.wtr, self.patch.config.style)?;
         }
         self.current_hunk = Some(PatchHunk::default());
         Ok(true)
@@ -325,7 +311,7 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for PatchSink<'p, 's, M, W> {
         }
 
         if let Some(previous) = &mut self.current_hunk {
-            previous.write(&mut self.patch.wtr, self.patch.config.style);
+            previous.write(&mut self.patch.wtr, self.patch.config.style)?;
         }
 
         self.binary_byte_offset = finish.binary_byte_offset();

@@ -10,7 +10,7 @@ use grep::matcher::Matcher;
 use grep::pcre2::RegexMatcher as PCRE2RegexMatcher;
 use grep::printer::{Standard, Stats, Summary, JSON, Patch};
 use grep::regex::RegexMatcher as RustRegexMatcher;
-use grep::searcher::{BinaryDetection, Searcher, Sink};
+use grep::searcher::{BinaryDetection, Searcher};
 use ignore::overrides::Override;
 use serde_json as json;
 use serde_json::json;
@@ -241,7 +241,7 @@ impl<W: WriteColor> Printer<W> {
         match *self {
             Printer::JSON(_) => self.print_stats_json(total_duration, stats),
             // XXX is 'patch' incompatible w/ 'stats'? Maybe not; check what git-patch does
-            Printer::Patch(_) => unimplemented!(),
+            Printer::Patch(_) => unimplemented!("not sure what 'stats' would mean for Patch printer"),
             Printer::Standard(_) | Printer::Summary(_) => {
                 self.print_stats_human(total_duration, stats)
             }
@@ -553,7 +553,7 @@ fn search_reader<M: Matcher, R: io::Read, W: WriteColor>(
                 stats: Some(sink.stats().clone()),
             })
         }
-        Printer::Patch(ref mut p) => {
+        Printer::Patch(ref mut _p) => {
             unimplemented!("need to decide how to handle stream 'patching'")
         }
     }
