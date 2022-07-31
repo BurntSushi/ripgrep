@@ -1279,6 +1279,7 @@ impl ArgMatches {
             return OutputKind::JSON;
         } else /* XXX figure out how to add option if self.is_present("patch") */ {
             return OutputKind::Patch;
+            // XXX also set context to 3
         }
 
         let (count, count_matches) = self.counts();
