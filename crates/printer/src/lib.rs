@@ -96,6 +96,7 @@ mod json;
 #[cfg(feature = "serde1")]
 mod jsont;
 mod patch;
+mod patcht;
 mod standard;
 mod stats;
 mod summary;

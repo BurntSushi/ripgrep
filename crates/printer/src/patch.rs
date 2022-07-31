@@ -1,4 +1,3 @@
-use std::fs;
 use std::io::{self, Write};
 use std::os::unix::prelude::OsStrExt;
 use std::path::Path;
@@ -8,21 +7,11 @@ use grep_matcher::{Matcher, Match};
 use grep_searcher::{Searcher, Sink, SinkContextKind, SinkMatch, SinkContext, SinkFinish};
 
 use crate::counter::CounterWriter;
+use crate::patcht::{PatchHunk, PatchStyle};
 use crate::util::{find_iter_at_in_context, Replacer};
 
 const ORIG_PREFIX: &[u8] = b"--- ";
 const MOD_PREFIX: &[u8] = b"+++ ";
-
-#[derive(Debug, Clone)]
-enum PatchStyle {
-    // The Unified format (originally GNU-only)
-    Unified,
-    /* TODO: determine if it's useful to support these formats
-    Posix, // <- what should this be named? the 'classic' patch format
-    Context,
-    Ed,
-    */
-}
 
 #[derive(Debug, Clone)]
 struct Config {
@@ -124,6 +113,7 @@ pub struct PatchSink<'p, 's, M: Matcher, W> {
     matcher: M,
     patch: &'s mut Patch<W>,
     replacer: Replacer<M>,
+    current_hunk: Option<PatchHunk>,
     path: &'p Path,
     start_time: Instant,
     match_count: u64,
@@ -208,30 +198,32 @@ impl<'p, 's, M: Matcher, W: io::Write> PatchSink<'p, 's, M, W> {
         if self.begin_printed {
             return Ok(());
         }
-        // XXX need to select this based on config style
+        // XXX need to select header type based on config style
         write_header(&mut self.patch.wtr, self.path)?;
         self.begin_printed = true;
         Ok(())
     }
 }
 
-fn write_header<W: io::Write>(mut wtr: W, path: &Path) -> io::Result<()> {
+fn write_header<W: io::Write>(wtr: &mut W, path: &Path) -> io::Result<()> {
     // XXX for this, should the 'file2' path be different from 'file1'?
     let path_bytes = path.as_os_str().as_bytes();
     wtr.write(ORIG_PREFIX)?;
     wtr.write(path_bytes)?;
-    wtr.write(b", ")?;
-    // XXX need to get file modification date; Posix specifies it must be a
-    // timestamp with this format, but... does that actually matter?
+    // The GNU and POSIX documentation both state that diffs include file
+    // timestamps, but git doesn't include one with either `diff` or
+    // `format-patch`.
+    // XXX figure out if this actually matters
     // fs::metadata(self.path)?.modified()?
-    wtr.write(b"2002-02-21 23:30:39.942229878 -0800")?;
-    // XXX also: should the line-endings for patch files match the native line-endings?
+    // wtr.write(b", 2002-02-21 23:30:39.942229878 -0800")?;
+
+    // XXX should the line-endings for patch files match the native line-endings?
+    // Will this be done automatically? (See comment in `json.rs`)
     wtr.write(&[b'\n'])?;
     wtr.write(MOD_PREFIX)?;
     wtr.write(path_bytes)?;
-    wtr.write(b", ")?;
-    // XXX ...does the 'file2' timestamp matter?
-    wtr.write(b"2002-02-21 23:30:39.942229878 -0800")?;
+    // XXX see comment above about the timestamps
+    // wtr.write(b", 2002-02-21 23:30:39.942229878 -0800")?;
     wtr.write(&[b'\n'])?;
     Ok(())
 }
@@ -261,7 +253,11 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for PatchSink<'p, 's, M, W> {
             }
         }
 
-        unimplemented!();
+        let hunk = self.current_hunk.get_or_insert(PatchHunk::default());
+        hunk.add_match(
+            mat, self.replacer.replacement().expect("no replacement occurred").0);
+
+        Ok(true)
     }
 
     fn context(
@@ -276,24 +272,26 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for PatchSink<'p, 's, M, W> {
             self.after_context_remaining =
                 self.after_context_remaining.saturating_sub(1);
         }
-        if searcher.invert_match() {
-            self.record_matches(searcher, ctx.bytes(), 0..ctx.bytes().len())?;
-            self.replace(searcher, ctx.bytes(), 0..ctx.bytes().len())?;
-        }
         if searcher.binary_detection().convert_byte().is_some() {
             if self.binary_byte_offset.is_some() {
                 return Ok(false);
             }
         }
 
-        unimplemented!();
+        let hunk = self.current_hunk.get_or_insert(PatchHunk::default());
+        hunk.add_context(ctx);
+
+        return Ok(true)
     }
 
     fn context_break(
         &mut self,
-        searcher: &Searcher,
+        _: &Searcher,
     ) -> Result<bool, io::Error> {
-        // StandardImpl::new(searcher, self).write_context_separator()?;
+        if let Some(previous) = &mut self.current_hunk {
+            previous.write(&mut self.patch.wtr, self.patch.config.style);
+        }
+        self.current_hunk = Some(PatchHunk::default());
         Ok(true)
     }
 
@@ -326,9 +324,13 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for PatchSink<'p, 's, M, W> {
             return Ok(());
         }
 
+        if let Some(previous) = &mut self.current_hunk {
+            previous.write(&mut self.patch.wtr, self.patch.config.style);
+        }
+
         self.binary_byte_offset = finish.binary_byte_offset();
 
-        unimplemented!()
+        Ok(())
     }
 }
 
@@ -350,6 +352,7 @@ impl<W: io::Write> Patch<W> {
             matcher: matcher,
             patch: self,
             replacer: Replacer::new(),
+            current_hunk: None,
             path: path.as_ref(),
             start_time: Instant::now(),
             match_count: 0,
