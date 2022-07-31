@@ -615,6 +615,7 @@ pub fn all_args_and_flags() -> Vec<RGArg> {
     flag_null_data(&mut args);
     flag_one_file_system(&mut args);
     flag_only_matching(&mut args);
+    flag_patch(&mut args);
     flag_path_separator(&mut args);
     flag_passthru(&mut args);
     flag_pcre2(&mut args);
@@ -2367,6 +2368,32 @@ part on a separate output line.
     );
     let arg =
         RGArg::switch("only-matching").short("o").help(SHORT).long_help(LONG);
+    args.push(arg);
+}
+
+fn flag_patch(args: &mut Vec<RGArg>) {
+    const SHORT: &str = "Generate a patch file to perform a text substitution.";
+    const LONG: &str = long!(
+        "\
+Generate a patch file to perform a text substitution.
+
+XXX would need full docs here
+"
+    );
+    let arg = RGArg::switch("patch")
+        .help(SHORT)
+        .long_help(LONG)
+        .conflicts(&[
+            "count",
+            "count-matches",
+            "files",
+            "files-with-matches",
+            "files-without-match",
+            "multiline",
+            "stats",
+            "color",
+            // XXX probably others
+        ]);
     args.push(arg);
 }
 

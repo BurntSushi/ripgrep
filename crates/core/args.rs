@@ -1277,7 +1277,7 @@ impl ArgMatches {
             return OutputKind::Summary;
         } else if self.is_present("json") {
             return OutputKind::JSON;
-        } else /* XXX figure out how to add option if self.is_present("patch") */ {
+        } else if self.is_present("patch") {
             return OutputKind::Patch;
             // XXX also set context to 3
         }
