@@ -297,7 +297,6 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for PatchSink<'p, 's, M, W> {
         self.match_count = 0;
         self.after_context_remaining = 0;
         self.binary_byte_offset = None;
-        self.write_patch_header()?;
         Ok(true)
     }
 
