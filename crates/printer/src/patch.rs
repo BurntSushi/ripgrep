@@ -1,5 +1,6 @@
-use std::{cell::RefCell};
-use std::io;
+use std::fs;
+use std::io::{self, Write};
+use std::os::unix::prelude::OsStrExt;
 use std::path::Path;
 use std::time::Instant;
 
@@ -8,6 +9,9 @@ use grep_searcher::{Searcher, Sink, SinkContextKind, SinkMatch, SinkContext, Sin
 
 use crate::counter::CounterWriter;
 use crate::util::{find_iter_at_in_context, Replacer};
+
+const ORIG_PREFIX: &[u8] = b"*** ";
+const MOD_PREFIX: &[u8] = b"--- ";
 
 #[derive(Debug, Clone)]
 enum PatchStyle {
@@ -118,7 +122,7 @@ pub struct PatchSink<'p, 's, M: Matcher, W> {
     matcher: M,
     patch: &'s mut Patch<W>,
     replacer: Replacer<M>,
-    path: Option<&'p Path>,
+    path: &'p Path,
     start_time: Instant,
     match_count: u64,
     after_context_remaining: u64,
@@ -126,7 +130,7 @@ pub struct PatchSink<'p, 's, M: Matcher, W> {
     begin_printed: bool,
 }
 
-impl<'p, 's, M: Matcher, W> PatchSink<'p, 's, M, W> {
+impl<'p, 's, M: Matcher, W: io::Write> PatchSink<'p, 's, M, W> {
     /// Returns true if and only if this printer received a match in the
     /// previous search.
     ///
@@ -200,18 +204,40 @@ impl<'p, 's, M: Matcher, W> PatchSink<'p, 's, M, W> {
         )
     }
 
-    /// Write the "begin" message.
-    fn write_begin_message(&mut self) -> io::Result<()> {
+    /// Write the patch header, which includes the name and timestamp of the
+    /// current file
+    fn write_patch_header(&mut self) -> io::Result<()> {
         if self.begin_printed {
             return Ok(());
         }
-        unimplemented!();
+        write_header(&mut self.patch.wtr, self.path)?;
         self.begin_printed = true;
         Ok(())
     }
 }
 
-impl<'p, 's, M: Matcher, W> Sink for PatchSink<'p, 's, M, W> {
+fn write_header<W: io::Write>(mut wtr: W, path: &Path) -> io::Result<()> {
+    // XXX for this, should the 'file2' path be different from 'file1'?
+    let path_bytes = path.as_os_str().as_bytes();
+    wtr.write(ORIG_PREFIX)?;
+    wtr.write(path_bytes)?;
+    wtr.write(b", ")?;
+    // XXX need to get file modification date; Posix specifies it must be a
+    // timestamp with this format, but... does that actually matter?
+    // fs::metadata(self.path)?.modified()?
+    wtr.write(b"Sun Jul 31 00:01:01 2022")?;
+    // XXX also: should the line-endings for patch files match the native line-endings?
+    wtr.write(&[b'\n'])?;
+    wtr.write(MOD_PREFIX)?;
+    wtr.write(path_bytes)?;
+    wtr.write(b", ")?;
+    // XXX ...does the 'file2' timestamp matter?
+    wtr.write(b"Sun Jul 31 00:01:01 2022")?;
+    wtr.write(&[b'\n'])?;
+    Ok(())
+}
+
+impl<'p, 's, M: Matcher, W: io::Write> Sink for PatchSink<'p, 's, M, W> {
     type Error = io::Error;
 
     fn matched(
@@ -219,7 +245,7 @@ impl<'p, 's, M: Matcher, W> Sink for PatchSink<'p, 's, M, W> {
         searcher: &Searcher,
         mat: &SinkMatch<'_>,
     ) -> Result<bool, io::Error> {
-        self.write_begin_message()?;
+        self.write_patch_header()?;
 
         self.match_count += 1;
 
@@ -288,7 +314,7 @@ impl<'p, 's, M: Matcher, W> Sink for PatchSink<'p, 's, M, W> {
         self.match_count = 0;
         self.after_context_remaining = 0;
         self.binary_byte_offset = None;
-        self.write_begin_message()?;
+        self.write_patch_header()?;
         Ok(true)
     }
 
@@ -325,7 +351,7 @@ impl<W: io::Write> Patch<W> {
             matcher: matcher,
             patch: self,
             replacer: Replacer::new(),
-            path: Some(path.as_ref()),
+            path: path.as_ref(),
             start_time: Instant::now(),
             match_count: 0,
             after_context_remaining: 0,

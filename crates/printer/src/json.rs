@@ -507,6 +507,7 @@ impl<W: io::Write> JSON<W> {
 
     /// Write the given message followed by a new line. The new line is
     /// determined from the configuration of the given searcher.
+    // XXX how does that work, since it looks like it's literally writing b'\n'?
     fn write_message(
         &mut self,
         message: &jsont::Message<'_>,
