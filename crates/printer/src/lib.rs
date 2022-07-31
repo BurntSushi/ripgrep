@@ -72,7 +72,7 @@ pub use crate::json::{JSONBuilder, JSONSink, JSON};
 pub use crate::standard::{Standard, StandardBuilder, StandardSink};
 pub use crate::stats::Stats;
 pub use crate::summary::{Summary, SummaryBuilder, SummaryKind, SummarySink};
-pub use crate::util::PrinterPath;
+pub use crate::util::{PrinterPath, Replacer};
 
 // The maximum number of bytes to execute a search to account for look-ahead.
 //
