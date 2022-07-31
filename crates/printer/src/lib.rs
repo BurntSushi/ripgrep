@@ -69,6 +69,7 @@ pub use crate::color::{
 };
 #[cfg(feature = "serde1")]
 pub use crate::json::{JSONBuilder, JSONSink, JSON};
+pub use crate::patch::{PatchBuilder, PatchSink, Patch};
 pub use crate::standard::{Standard, StandardBuilder, StandardSink};
 pub use crate::stats::Stats;
 pub use crate::summary::{Summary, SummaryBuilder, SummaryKind, SummarySink};
@@ -94,6 +95,7 @@ mod counter;
 mod json;
 #[cfg(feature = "serde1")]
 mod jsont;
+mod patch;
 mod standard;
 mod stats;
 mod summary;

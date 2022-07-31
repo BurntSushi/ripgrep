@@ -483,21 +483,40 @@ fn search_path<M: Matcher, W: WriteColor>(
     printer: &mut Printer<W>,
     path: &Path,
 ) -> io::Result<SearchResult> {
-    let sink: &mut dyn Sink<Error = _> = match *printer {
-        Printer::Standard(ref mut p) =>
-            &mut p.sink_with_path(&matcher, path),
-        Printer::Summary(ref mut p) =>
-            &mut p.sink_with_path(&matcher, path),
-        Printer::JSON(ref mut p) =>
-            &mut p.sink_with_path(&matcher, path),
-        Printer::Patch(ref mut p) =>
-            &mut p.sink_with_path(&matcher, path),
-    };
-    searcher.search_path(&matcher, path, sink)?;
-    Ok(SearchResult {
-        has_match: sink.has_match(),
-        stats: sink.stats().map(|s| s.clone()),
-    })
+    match *printer {
+        Printer::Standard(ref mut p) => {
+            let mut sink = p.sink_with_path(&matcher, path);
+            searcher.search_path(&matcher, path, &mut sink)?;
+            Ok(SearchResult {
+                has_match: sink.has_match(),
+                stats: sink.stats().map(|s| s.clone()),
+            })
+        }
+        Printer::Summary(ref mut p) => {
+            let mut sink = p.sink_with_path(&matcher, path);
+            searcher.search_path(&matcher, path, &mut sink)?;
+            Ok(SearchResult {
+                has_match: sink.has_match(),
+                stats: sink.stats().map(|s| s.clone()),
+            })
+        }
+        Printer::JSON(ref mut p) => {
+            let mut sink = p.sink_with_path(&matcher, path);
+            searcher.search_path(&matcher, path, &mut sink)?;
+            Ok(SearchResult {
+                has_match: sink.has_match(),
+                stats: Some(sink.stats().clone()),
+            })
+        }
+        Printer::Patch(ref mut p) => {
+            let mut sink = p.sink_with_path(&matcher, path);
+            searcher.search_path(&matcher, path, &mut sink)?;
+            Ok(SearchResult {
+                has_match: sink.has_match(),
+                stats: sink.stats().map(|s| s.clone()),
+            })
+        }
+    }
 }
 
 /// Search the contents of the given reader using the given matcher, searcher
