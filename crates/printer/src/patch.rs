@@ -10,13 +10,15 @@ use grep_searcher::{Searcher, Sink, SinkContextKind, SinkMatch, SinkContext, Sin
 use crate::counter::CounterWriter;
 use crate::util::{find_iter_at_in_context, Replacer};
 
-const ORIG_PREFIX: &[u8] = b"*** ";
-const MOD_PREFIX: &[u8] = b"--- ";
+const ORIG_PREFIX: &[u8] = b"--- ";
+const MOD_PREFIX: &[u8] = b"+++ ";
 
 #[derive(Debug, Clone)]
 enum PatchStyle {
-    Normal,
+    // The Unified format (originally GNU-only)
+    Unified,
     /* TODO: determine if it's useful to support these formats
+    Posix, // <- what should this be named? the 'classic' patch format
     Context,
     Ed,
     */
@@ -31,7 +33,7 @@ struct Config {
 
 impl Default for Config {
     fn default() -> Config {
-        Config { style: PatchStyle::Normal, replacement: Vec::default(), }
+        Config { style: PatchStyle::Unified, replacement: Vec::default(), }
     }
 }
 
@@ -183,10 +185,7 @@ impl<'p, 's, M: Matcher, W: io::Write> PatchSink<'p, 's, M, W> {
         Ok(())
     }
 
-    /// If the configuration specifies a replacement, then this executes the
-    /// replacement, lazily allocating memory if necessary.
-    ///
-    /// To access the result of a replacement, use `replacer.replacement()`.
+    /// The Patch printer performs replacement unconditionally.
     fn replace(
         &mut self,
         searcher: &Searcher,
@@ -194,7 +193,6 @@ impl<'p, 's, M: Matcher, W: io::Write> PatchSink<'p, 's, M, W> {
         range: std::ops::Range<usize>,
     ) -> io::Result<()> {
         self.replacer.clear();
-        // The Patch printer performs replacement unconditionally.
         self.replacer.replace_all(
             searcher,
             &self.matcher,
@@ -210,6 +208,7 @@ impl<'p, 's, M: Matcher, W: io::Write> PatchSink<'p, 's, M, W> {
         if self.begin_printed {
             return Ok(());
         }
+        // XXX need to select this based on config style
         write_header(&mut self.patch.wtr, self.path)?;
         self.begin_printed = true;
         Ok(())
@@ -225,14 +224,14 @@ fn write_header<W: io::Write>(mut wtr: W, path: &Path) -> io::Result<()> {
     // XXX need to get file modification date; Posix specifies it must be a
     // timestamp with this format, but... does that actually matter?
     // fs::metadata(self.path)?.modified()?
-    wtr.write(b"Sun Jul 31 00:01:01 2022")?;
+    wtr.write(b"2002-02-21 23:30:39.942229878 -0800")?;
     // XXX also: should the line-endings for patch files match the native line-endings?
     wtr.write(&[b'\n'])?;
     wtr.write(MOD_PREFIX)?;
     wtr.write(path_bytes)?;
     wtr.write(b", ")?;
     // XXX ...does the 'file2' timestamp matter?
-    wtr.write(b"Sun Jul 31 00:01:01 2022")?;
+    wtr.write(b"2002-02-21 23:30:39.942229878 -0800")?;
     wtr.write(&[b'\n'])?;
     Ok(())
 }
