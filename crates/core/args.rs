@@ -1168,10 +1168,14 @@ impl ArgMatches {
         if self.output_kind() == OutputKind::Summary {
             return false;
         }
+        // Patch output always requires line numbers
+        if self.output_kind() == OutputKind::Patch {
+        return true
+        }
         if self.is_present("no-line-number") {
             return false;
         }
-        if self.output_kind() == OutputKind::JSON || self.output_kind() == OutputKind::Patch {
+        if self.output_kind() == OutputKind::JSON {
             return true;
         }
 

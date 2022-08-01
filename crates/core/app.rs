@@ -2386,6 +2386,8 @@ will not modify your files.)
 
 Note that using this option when reading from stdin will likely not result in a
 usable patch file.
+
+This overrides '--no-line-number'.
 "
     );
     let arg = RGArg::switch("patch")
