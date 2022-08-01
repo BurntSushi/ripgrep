@@ -2408,6 +2408,8 @@ XXX would need full docs here
             "invert-match",
             "json",
             "line-number",
+            "max-columns",
+            "max-columns-preview",
             "max-count",
             "multiline",
             "multiline-dotall",
