@@ -2381,6 +2381,9 @@ Generate a patch file to perform a text substitution.
 XXX would need full docs here
 "
     );
+    // XXX is there a way to make this incompatible with streaming from stdin?
+    // Or at least show a warning in that case? The patch file will probably not
+    // be usable.
     let arg = RGArg::switch("patch")
         .help(SHORT)
         .long_help(LONG)

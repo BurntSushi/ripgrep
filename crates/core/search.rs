@@ -554,7 +554,6 @@ fn search_reader<M: Matcher, R: io::Read, W: WriteColor>(
             })
         }
         Printer::Patch(ref mut p) => {
-            // XXX we still need to make sure that we actually have a filename here...
             let mut sink = p.sink_with_path(&matcher, path);
             searcher.search_reader(&matcher, &mut rdr, &mut sink)?;
             Ok(SearchResult {
