@@ -2392,7 +2392,7 @@ XXX would need full docs here
             "color",
             "colors",
             "column",
-            // "context", // for now, user must specify this explicitly
+            "context",
             "count",
             "count-matches",
             "field-context-separator",
