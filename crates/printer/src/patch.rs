@@ -184,7 +184,6 @@ impl<'p, 's, M: Matcher, W: io::Write> PatchSink<'p, 's, M, W> {
         if self.begin_printed {
             return Ok(());
         }
-        // XXX need to select header type based on config style
         write_header(&mut self.patch.wtr, self.path)?;
         self.begin_printed = true;
         Ok(())
@@ -192,24 +191,20 @@ impl<'p, 's, M: Matcher, W: io::Write> PatchSink<'p, 's, M, W> {
 }
 
 fn write_header<W: io::Write>(wtr: &mut W, path: &Path) -> io::Result<()> {
-    // XXX for this, should the 'file2' path be different from 'file1'?
     let path_bytes = path.as_os_str().as_bytes();
     wtr.write(ORIG_PREFIX)?;
     wtr.write(path_bytes)?;
     // The GNU and POSIX documentation both state that diffs include file
     // timestamps, but git doesn't include one with either `diff` or
-    // `format-patch`.
-    // XXX figure out if this actually matters
-    // fs::metadata(self.path)?.modified()?
-    // wtr.write(b", 2002-02-21 23:30:39.942229878 -0800")?;
+    // `format-patch`, and indeed GNU `patch` doesn't seem to need timestamps.
+    // (Haven't checked BSD but I'd be surprised if it's different in this
+    // regard.)
 
     // XXX should the line-endings for patch files match the native line-endings?
-    // Will this be done automatically? (See comment in `json.rs`)
+    // Will this be done automatically by the `BufferWriter`?
     wtr.write(&[b'\n'])?;
     wtr.write(MOD_PREFIX)?;
     wtr.write(path_bytes)?;
-    // XXX see comment above about the timestamps
-    // wtr.write(b", 2002-02-21 23:30:39.942229878 -0800")?;
     wtr.write(&[b'\n'])?;
     Ok(())
 }

@@ -78,8 +78,6 @@ impl PatchLine {
         match self {
             Unchanged(line) => {
                 wtr.write(b" ")?;
-                // XXX figure out if lines will have newlines included
-                // XXX figure out if 'write' is still safe here, with potentially long lines
                 wtr.write(&line)?;
             }
             Changed(old, new) => {

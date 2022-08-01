@@ -2383,11 +2383,11 @@ A patch file in the unified diff format (used by 'diff -u') will be generated;
 applying this patch file will replace every match with the replacement text
 specified by '--replace'. (Note that ripgrep will only generate the patch; it
 will not modify your files.)
+
+Note that using this option when reading from stdin will likely not result in a
+usable patch file.
 "
     );
-    // XXX is there a way to make this incompatible with streaming from stdin?
-    // Or at least show a warning in that case? The patch file will probably not
-    // be usable.
     let arg = RGArg::switch("patch")
         .help(SHORT)
         .long_help(LONG)

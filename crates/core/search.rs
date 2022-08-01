@@ -240,8 +240,7 @@ impl<W: WriteColor> Printer<W> {
     ) -> io::Result<()> {
         match *self {
             Printer::JSON(_) => self.print_stats_json(total_duration, stats),
-            // XXX is 'patch' incompatible w/ 'stats'? Maybe not; check what git-patch does
-            Printer::Patch(_) => unimplemented!("not sure what 'stats' would mean for Patch printer"),
+            Printer::Patch(_) => unimplemented!("these options are incompatible"),
             Printer::Standard(_) | Printer::Summary(_) => {
                 self.print_stats_human(total_duration, stats)
             }
