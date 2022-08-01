@@ -1021,6 +1021,10 @@ impl ArgMatches {
     /// If there was a problem parsing the values from the user as an integer,
     /// then an error is returned.
     fn contexts(&self) -> Result<(usize, usize)> {
+        if self.output_kind() == OutputKind::Patch {
+            // Standard context for patch-files
+            return Ok((3, 3));
+        }
         let after = self.usize_of("after-context")?.unwrap_or(0);
         let before = self.usize_of("before-context")?.unwrap_or(0);
         let both = self.usize_of("context")?.unwrap_or(0);
@@ -1279,7 +1283,6 @@ impl ArgMatches {
             return OutputKind::JSON;
         } else if self.is_present("patch") {
             return OutputKind::Patch;
-            // XXX also set context to 3
         }
 
         let (count, count_matches) = self.counts();
