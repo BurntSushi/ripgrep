@@ -41,14 +41,20 @@ impl PatchHunk {
         if style != PatchStyle::Unified {
             unimplemented!("only unified patch style supported for now");
         }
-        match self.starting_line_number {
-            Some(number) => 
-                write!(
-                    wtr, "@@ -{line},{count} +{line},{count} @@\n",
-                    line=number, count=self.lines.len())?,
-            // XXX change error type
-            None => return Err(io::Error::new(io::ErrorKind::Other, "no line numbers")),
+        let number = self
+            .starting_line_number
+            .expect("logic error: line numbers are not tracked");
+        match self.lines.len() {
+            0 => panic!("logic error: should not write patch hunk with no matches"),
+            1 => write!(wtr, "@@ -{line} +{line} @@\n", line = number)?,
+            _ => write!(
+                wtr,
+                "@@ -{line},{count} +{line},{count} @@\n",
+                line = number,
+                count = self.lines.len()
+            )?,
         }
+
         for line in &self.lines {
             line.write(&mut *wtr)?;
         }
