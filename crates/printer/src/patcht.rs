@@ -71,7 +71,6 @@ impl PatchHunk {
         let orig = mat.bytes().to_vec();
         let mut modified = replacement.to_vec();
         // Unlike the match, the replacement does not include the line ending.
-        // XXX find out if line-endings need to be consolidated
         modified.push_char('\n');
         self.lines.push(PatchLine::Changed(orig, modified));
     }

@@ -199,9 +199,6 @@ fn write_header<W: io::Write>(wtr: &mut W, path: &Path) -> io::Result<()> {
     // `format-patch`, and indeed GNU `patch` doesn't seem to need timestamps.
     // (Haven't checked BSD but I'd be surprised if it's different in this
     // regard.)
-
-    // XXX should the line-endings for patch files match the native line-endings?
-    // Will this be done automatically by the `BufferWriter`?
     wtr.write(&[b'\n'])?;
     wtr.write(MOD_PREFIX)?;
     wtr.write(&ppath)?;
