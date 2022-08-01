@@ -553,8 +553,13 @@ fn search_reader<M: Matcher, R: io::Read, W: WriteColor>(
                 stats: Some(sink.stats().clone()),
             })
         }
-        Printer::Patch(ref mut _p) => {
-            unimplemented!("need to decide how to handle stream 'patching'")
+        Printer::Patch(ref mut p) => {
+            let mut sink = p.sink_with_path(&matcher, path);
+            searcher.search_reader(&matcher, &mut rdr, &mut sink)?;
+            Ok(SearchResult {
+                has_match: sink.has_match(),
+                stats: Some(sink.stats().clone()),
+            })
         }
     }
 }
