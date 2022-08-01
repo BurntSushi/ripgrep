@@ -2376,9 +2376,13 @@ fn flag_patch(args: &mut Vec<RGArg>) {
     const SHORT: &str = "Generate a patch file to perform a text substitution.";
     const LONG: &str = long!(
         "\
-Generate a patch file to perform a text substitution.
+Generate a patch file to perform a text substitution. This must be used in
+conjuction with '--replace'.
 
-XXX would need full docs here
+A patch file in the unified diff format (used by 'diff -u') will be generated;
+applying this patch file will replace every match with the replacement text
+specified by '--replace'. (Note that ripgrep will only generate the patch; it
+will not modify your files.)
 "
     );
     // XXX is there a way to make this incompatible with streaming from stdin?
@@ -2421,6 +2425,8 @@ XXX would need full docs here
             "pcre2-version",
             "pretty",
             "quiet",
+            "sort",
+            "sortr",
             "sort-files",
             "stats",
             "trim,",
@@ -2701,7 +2707,9 @@ fn flag_replace(args: &mut Vec<RGArg>) {
     const LONG: &str = long!(
         "\
 Replace every match with the text given when printing results. Neither this
-flag nor any other ripgrep flag will modify your files.
+flag nor any other ripgrep flag will modify your files; however, the '--patch'
+option will generate a file that can be used by the 'patch' utility to perform
+the specified replacement in the actual files.
 
 Capture group indices (e.g., $5) and names (e.g., $foo) are supported in the
 replacement string. Capture group indices are numbered based on the position of
