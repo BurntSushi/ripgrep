@@ -1665,6 +1665,7 @@ The JSON Lines format can be disabled with --no-json.
             "files",
             "files-with-matches",
             "files-without-match",
+            "patch",
         ]);
     args.push(arg);
 
@@ -2384,15 +2385,43 @@ XXX would need full docs here
         .help(SHORT)
         .long_help(LONG)
         .conflicts(&[
+            "after-context",
+            "auto-hybrid-regex",
+            "before-context",
+            "byte-offset",
+            "color",
+            "colors",
+            "column",
+            // "context", // for now, user must specify this explicitly
             "count",
             "count-matches",
+            "field-context-separator",
+            "field-match-separator",
             "files",
             "files-with-matches",
             "files-without-match",
+            "heading",
+            "include-zero",
+            "invert-match",
+            "json",
+            "line-number",
+            "max-count",
             "multiline",
+            "multiline-dotall",
+            "no-pcre2-unicode",
+            "null",
+            "null-data",
+            "path-separator",
+            "passthru",
+            "pcre2-version",
+            "pretty",
+            "quiet",
+            "sort-files",
             "stats",
-            "color",
-            // XXX probably others
+            "trim,",
+            "type-list",
+            "vimgrep",
+            "with-filename",
         ]);
     args.push(arg);
 }
