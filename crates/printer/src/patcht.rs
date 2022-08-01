@@ -66,8 +66,7 @@ impl PatchHunk {
     }
 
     pub fn add_match(&mut self, mat: &SinkMatch<'_>, replacement: &[u8]) {
-        // XXX validate `unwrap` here - when would a match not have a line
-        // number? (Presumably this case would not be supported by this printer)
+        // Line numbers are always tracked in patch-printing mode
         let _ = self.starting_line_number.get_or_insert_with(|| mat.line_number().unwrap());
         let orig = mat.bytes().to_vec();
         let mut modified = replacement.to_vec();
