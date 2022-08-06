@@ -875,8 +875,8 @@ Print the 0-based byte offset within the input file before each line of output.
 If -o (--only-matching) is specified, print the offset of the matching part
 itself.
 
-If ripgrep does transcoding, then the byte offset is in terms of the the result
-of transcoding and not the original data. This applies similarly to another
+If ripgrep does transcoding, then the byte offset is in terms of the result of
+transcoding and not the original data. This applies similarly to another
 transformation on the source, such as decompression or a --pre filter. Note
 that when the PCRE2 regex engine is used, then UTF-8 transcoding is done by
 default.
@@ -970,7 +970,7 @@ or, equivalently,
 
     rg --colors 'match:bg:0x0,0x80,0xFF'
 
-Note that the the intense and nointense style flags will have no effect when
+Note that the intense and nointense style flags will have no effect when
 used alongside these extended color codes.
 "
     );
