@@ -190,7 +190,8 @@ the following:
 All of these things can be toggled using various flags provided by ripgrep:
 
 1. You can disable all ignore-related filtering with the `--no-ignore` flag.
-2. Hidden files and directories can be searched with the `--hidden` (`-.` for short) flag.
+2. Hidden files and directories can be searched with the `--hidden` (`-.` for 
+short) flag.
 3. Binary files can be searched via the `--text` (`-a` for short) flag.
    Be careful with this flag! Binary files may emit control characters to your
    terminal, which might cause strange behavior.
