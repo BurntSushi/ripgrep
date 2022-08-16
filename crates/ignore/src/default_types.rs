@@ -225,6 +225,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("slim", &["*.skim", "*.slim", "*.slime"]),
     ("smarty", &["*.tpl"]),
     ("sml", &["*.sml", "*.sig"]),
+    ("solidity", &["*.sol"]),
     ("soy", &["*.soy"]),
     ("spark", &["*.spark"]),
     ("spec", &["*.spec"]),
