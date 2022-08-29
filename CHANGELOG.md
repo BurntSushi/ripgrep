@@ -21,6 +21,8 @@ Feature enhancements:
 
 Bug fixes:
 
+* [BUG #1757](https://github.com/BurntSushi/ripgrep/issues/1757):
+  Fix bug when searching a sub-directory didn't have ignores applied correctly.
 * [BUG #1891](https://github.com/BurntSushi/ripgrep/issues/1891):
   Fix bug when using `-w` with a regex that can match the empty string.
 * [BUG #1911](https://github.com/BurntSushi/ripgrep/issues/1911):

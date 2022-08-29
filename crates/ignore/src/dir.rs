@@ -442,7 +442,29 @@ impl Ignore {
         }
         if self.0.opts.parents {
             if let Some(abs_parent_path) = self.absolute_base() {
-                let path = abs_parent_path.join(path);
+                // What we want to do here is take the absolute base path of
+                // this directory and join it with the path we're searching.
+                // The main issue we want to avoid is accidentally duplicating
+                // directory components, so we try to strip any common prefix
+                // off of `path`. Overall, this seems a little ham-fisted, but
+                // it does fix a nasty bug. It should do fine until we overhaul
+                // this crate.
+                let dirpath = self.0.dir.as_path();
+                let path_prefix = match strip_prefix("./", dirpath) {
+                    None => dirpath,
+                    Some(stripped_dot_slash) => stripped_dot_slash,
+                };
+                let path = match strip_prefix(path_prefix, path) {
+                    None => abs_parent_path.join(path),
+                    Some(p) => {
+                        let p = match strip_prefix("/", p) {
+                            None => p,
+                            Some(p) => p,
+                        };
+                        abs_parent_path.join(p)
+                    }
+                };
+
                 for ig in
                     self.parents().skip_while(|ig| !ig.0.is_absolute_parent)
                 {

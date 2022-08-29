@@ -952,6 +952,19 @@ rgtest!(r1739_replacement_lineterm_match, |dir: Dir, mut cmd: TestCommand| {
     eqnice!("af\n", cmd.stdout());
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/1757
+rgtest!(f1757, |dir: Dir, _: TestCommand| {
+    dir.create_dir("rust/target");
+    dir.create(".ignore", "rust/target");
+    dir.create("rust/source.rs", "needle");
+    dir.create("rust/target/rustdoc-output.html", "needle");
+
+    let args = &["--files-with-matches", "needle", "rust"];
+    eqnice!("rust/source.rs\n", dir.command().args(args).stdout());
+    let args = &["--files-with-matches", "needle", "./rust"];
+    eqnice!("./rust/source.rs\n", dir.command().args(args).stdout());
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/1765
 rgtest!(r1765, |dir: Dir, mut cmd: TestCommand| {
     dir.create("test", "\n");
