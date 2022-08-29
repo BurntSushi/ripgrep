@@ -440,9 +440,25 @@ impl Ignore {
             }
             saw_git = saw_git || ig.0.has_git;
         }
-        if self.0.opts.parents {
+        if self.0.opts.parents
+            && m_custom_ignore.is_none()
+            && m_ignore.is_none()
+            && m_gi.is_none()
+            && m_gi_exclude.is_none()
+        {
             if let Some(abs_parent_path) = self.absolute_base() {
-                let path = abs_parent_path.join(path);
+                let path_prefix = match self.0.dir.as_path().strip_prefix("./")
+                {
+                    Ok(stripped_dot_slash) => stripped_dot_slash,
+                    Err(_) => self.0.dir.as_path(),
+                };
+                let path = match path.strip_prefix(path_prefix) {
+                    Ok(stripped_path_prefix) => {
+                        abs_parent_path.join(stripped_path_prefix)
+                    }
+                    Err(_) => abs_parent_path.join(path),
+                };
+
                 for ig in
                     self.parents().skip_while(|ig| !ig.0.is_absolute_parent)
                 {
