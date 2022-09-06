@@ -4,15 +4,9 @@ use ignore::{self, DirEntry};
 use log;
 
 /// A configuration for describing how subjects should be built.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 struct Config {
     strip_dot_prefix: bool,
-}
-
-impl Default for Config {
-    fn default() -> Config {
-        Config { strip_dot_prefix: false }
-    }
 }
 
 /// A builder for constructing things to search over.
