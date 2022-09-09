@@ -267,6 +267,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("txt", &["*.txt"]),
     ("typoscript", &["*.typoscript", "*.ts"]),
     ("usd", &["*.usd", "*.usda", "*.usdc"]),
+    ("v", &["*.v"]),
     ("vala", &["*.vala"]),
     ("vb", &["*.vb"]),
     ("vcl", &["*.vcl"]),
