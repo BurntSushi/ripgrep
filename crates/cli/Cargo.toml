@@ -12,10 +12,11 @@ readme = "README.md"
 keywords = ["regex", "grep", "cli", "utility", "util"]
 license = "Unlicense OR MIT"
 edition = "2018"
+rust-version = "1.60"
 
 [dependencies]
 atty = "0.2.11"
-bstr = "0.2.0"
+bstr = "1.0"
 globset = { version = "0.4.9", path = "../globset" }
 lazy_static = "1.1.0"
 log = "0.4.5"

@@ -13,6 +13,7 @@ readme = "README.md"
 keywords = ["grep", "pattern", "print", "printer", "sink"]
 license = "Unlicense OR MIT"
 edition = "2018"
+rust-version = "1.60"
 
 [features]
 default = ["serde1"]
@@ -20,7 +21,7 @@ serde1 = ["base64", "serde", "serde_json"]
 
 [dependencies]
 base64 = { version = "0.13.0", optional = true }
-bstr = "0.2.0"
+bstr = "1.0"
 grep-matcher = { version = "0.1.5", path = "../matcher" }
 grep-searcher = { version = "0.1.8", path = "../searcher" }
 termcolor = "1.0.4"

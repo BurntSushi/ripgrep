@@ -17,6 +17,7 @@ exclude = ["HomebrewFormula"]
 build = "build.rs"
 autotests = false
 edition = "2018"
+rust-version = "1.60"
 
 [[bin]]
 bench = false
@@ -41,7 +42,7 @@ members = [
 ]
 
 [dependencies]
-bstr = "0.2.12"
+bstr = "1.0"
 grep = { version = "0.2.8", path = "crates/grep" }
 ignore = { version = "0.4.18", path = "crates/ignore" }
 lazy_static = "1.1.0"

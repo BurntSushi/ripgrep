@@ -14,6 +14,7 @@ readme = "README.md"
 keywords = ["regex", "glob", "multiple", "set", "pattern"]
 license = "Unlicense OR MIT"
 edition = "2018"
+rust-version = "1.60"
 
 [lib]
 name = "globset"
@@ -21,7 +22,7 @@ bench = false
 
 [dependencies]
 aho-corasick = "0.7.3"
-bstr = { version = "0.2.0", default-features = false, features = ["std"] }
+bstr = { version = "1.0", default-features = false, features = ["std"] }
 fnv = "1.0.6"
 log = { version = "0.4.5", optional = true }
 regex = { version = "1.1.5", default-features = false, features = ["perf", "std"] }

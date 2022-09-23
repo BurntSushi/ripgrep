@@ -12,6 +12,7 @@ readme = "README.md"
 keywords = ["regex", "grep", "egrep", "search", "pattern"]
 license = "Unlicense OR MIT"
 edition = "2018"
+rust-version = "1.60"
 
 [dependencies]
 grep-cli = { version = "0.1.6", path = "../cli" }
