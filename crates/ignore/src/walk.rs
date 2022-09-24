@@ -941,7 +941,7 @@ impl Walk {
         // overheads; an example of this was a bespoke filesystem layer in
         // Windows that hosted files remotely and would download them on-demand
         // when particular filesystem operations occurred. Users of this system
-        // who ensured correct file-type fileters were being used could still
+        // who ensured correct file-type filters were being used could still
         // get unnecessary file access resulting in large downloads.
         if should_skip_entry(&self.ig, ent) {
             return Ok(true);
