@@ -98,8 +98,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
-      with:
-        fetch-depth: 1
 
     - name: Install packages (Ubuntu)
       if: matrix.os == 'ubuntu-22.04'
