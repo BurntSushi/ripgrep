@@ -85,7 +85,7 @@ jobs:
           rust: nightly-x86_64-gnu
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Install packages (Ubuntu)
       if: matrix.os == 'ubuntu-22.04'
@@ -181,7 +181,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
       with:
@@ -195,7 +195,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
