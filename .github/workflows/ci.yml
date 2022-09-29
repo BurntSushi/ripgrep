@@ -42,31 +42,31 @@ jobs:
         - win-gnu
         include:
         - build: pinned
-          os: ubuntu-18.04
+          os: ubuntu-22.04
           rust: 1.52.1
         - build: stable
-          os: ubuntu-18.04
+          os: ubuntu-22.04
           rust: stable
         - build: beta
-          os: ubuntu-18.04
+          os: ubuntu-22.04
           rust: beta
         - build: nightly
-          os: ubuntu-18.04
+          os: ubuntu-22.04
           rust: nightly
         - build: nightly-musl
-          os: ubuntu-18.04
+          os: ubuntu-22.04
           rust: nightly
           target: x86_64-unknown-linux-musl
         - build: nightly-32
-          os: ubuntu-18.04
+          os: ubuntu-22.04
           rust: nightly
           target: i686-unknown-linux-gnu
         - build: nightly-mips
-          os: ubuntu-18.04
+          os: ubuntu-22.04
           rust: nightly
           target: mips64-unknown-linux-gnuabi64
         - build: nightly-arm
-          os: ubuntu-18.04
+          os: ubuntu-22.04
           rust: nightly
           # For stripping release binaries:
           # docker run --rm -v $PWD/target:/target:Z \
@@ -75,25 +75,25 @@ jobs:
           #   /target/arm-unknown-linux-gnueabihf/debug/rg
           target: arm-unknown-linux-gnueabihf
         - build: macos
-          os: macos-latest
+          os: macos-12
           rust: nightly
         - build: win-msvc
-          os: windows-2019
+          os: windows-2022
           rust: nightly
         - build: win-gnu
-          os: windows-2019
+          os: windows-2022
           rust: nightly-x86_64-gnu
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
 
     - name: Install packages (Ubuntu)
-      if: matrix.os == 'ubuntu-18.04'
+      if: matrix.os == 'ubuntu-22.04'
       run: |
         ci/ubuntu-install-packages
 
     - name: Install packages (macOS)
-      if: matrix.os == 'macos-latest'
+      if: matrix.os == 'macos-12'
       run: |
         ci/macos-install-packages
 
@@ -148,14 +148,14 @@ jobs:
       run: ${{ env.CARGO }} test --verbose --workspace ${{ env.TARGET_FLAGS }}
 
     - name: Test for existence of build artifacts (Windows)
-      if: matrix.os == 'windows-2019'
+      if: matrix.os == 'windows-2022'
       shell: bash
       run: |
         outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
         ls "$outdir/_rg.ps1" && file "$outdir/_rg.ps1"
 
     - name: Test for existence of build artifacts (Unix)
-      if: matrix.os != 'windows-2019'
+      if: matrix.os != 'windows-2022'
       shell: bash
       run: |
         outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
@@ -172,13 +172,13 @@ jobs:
       # 'rg' binary (done in test-complete) with qemu, which is a pain and
       # doesn't really gain us much. If shell completion works in one place,
       # it probably works everywhere.
-      if: matrix.target == '' && matrix.os != 'windows-2019'
+      if: matrix.target == '' && matrix.os != 'windows-2022'
       shell: bash
       run: ci/test-complete
 
   rustfmt:
     name: rustfmt
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
@@ -193,7 +193,7 @@ jobs:
 
   docs:
     name: Docs
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
