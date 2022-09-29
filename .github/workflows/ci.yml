@@ -98,7 +98,7 @@ jobs:
         ci/macos-install-packages
 
     - name: Install Rust
-      uses: dtolnay/rust-toolchain@v1
+      uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
 
@@ -183,7 +183,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
     - name: Install Rust
-      uses: dtolnay/rust-toolchain@v1
+      uses: dtolnay/rust-toolchain@master
       with:
         toolchain: stable
         components: rustfmt
@@ -198,7 +198,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
       - name: Check documentation
