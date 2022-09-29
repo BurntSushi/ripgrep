@@ -188,8 +188,7 @@ jobs:
         toolchain: stable
         components: rustfmt
     - name: Check formatting
-      run: |
-        cargo fmt --all -- --check
+      run: cargo fmt --all --check
 
   docs:
     name: Docs
