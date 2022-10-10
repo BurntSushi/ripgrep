@@ -316,6 +316,13 @@ seem to work right and generate a number of very strange bug reports that I
 don't know how to fix and don't have the time to fix. Therefore, it is no
 longer a recommended installation option.)
 
+If you're an **ALT** user, you can install ripgrep from the
+[official repo](https://packages.altlinux.org/en/search?name=ripgrep):
+
+```
+$ sudo apt-get install ripgrep
+```
+
 If you're a **FreeBSD** user, then you can install ripgrep from the
 [official ports](https://www.freshports.org/textproc/ripgrep/):
 
