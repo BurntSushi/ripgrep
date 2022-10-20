@@ -32,6 +32,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("bzip2", &["*.bz2", "*.tbz2"]),
     ("c", &["*.[chH]", "*.[chH].in", "*.cats"]),
     ("cabal", &["*.cabal"]),
+    ("candid", &["*.did"]),
     ("cbor", &["*.cbor"]),
     ("ceylon", &["*.ceylon"]),
     ("clojure", &["*.clj", "*.cljc", "*.cljs", "*.cljx"]),
@@ -154,6 +155,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("mint", &["*.mint"]),
     ("mk", &["mkfile"]),
     ("ml", &["*.ml"]),
+    ("motoko", &["*.mo"]),
     ("msbuild", &[
         "*.csproj", "*.fsproj", "*.vcxproj", "*.proj", "*.props", "*.targets",
     ]),
