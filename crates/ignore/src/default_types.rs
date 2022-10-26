@@ -189,6 +189,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("racket", &["*.rkt"]),
     ("rdoc", &["*.rdoc"]),
     ("readme", &["README*", "*README"]),
+    ("reasonml", &["*.re", "*.rei"]),
     ("red", &["*.r", "*.red", "*.reds"]),
     ("rescript", &["*.res", "*.resi"]),
     ("robot", &["*.robot"]),
