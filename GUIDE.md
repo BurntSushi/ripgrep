@@ -567,12 +567,15 @@ $ cat $HOME/.ripgreprc
 --type-add
 web:*.{html,css,js}*
 
+# Search hidden files / directories (e.g. dotfiles) by default
+--hidden
+
 # Using glob patterns to include/exclude files or folders
---glob=!git/*
+--glob=!.git/*
 
 # or
 --glob
-!git/*
+!.git/*
 
 # Set the colors.
 --colors=line:none
