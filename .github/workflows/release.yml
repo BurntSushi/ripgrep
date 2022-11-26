@@ -29,9 +29,9 @@ jobs:
       # Set to force version number, e.g., when no tag exists.
       # RG_VERSION: TEST-0.0.0
     outputs:
-      upload_url: ${{ steps.release.outputs.upload_url }}
       rg_version: ${{ env.RG_VERSION }}
     steps:
+      - uses: actions/checkout@v3
       - name: Get the release version from the tag
         shell: bash
         if: env.RG_VERSION == ''
@@ -42,13 +42,9 @@ jobs:
           echo "RG_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
           echo "version is: ${{ env.RG_VERSION }}"
       - name: Create GitHub release
-        id: release
-        uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ env.RG_VERSION }}
-          release_name: ${{ env.RG_VERSION }}
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create ${{ env.RG_VERSION }}
 
   build-release:
     name: build-release
@@ -170,11 +166,6 @@ jobs:
         fi
 
     - name: Upload release archive
-      uses: actions/upload-release-asset@v1.0.2
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: ${{ env.ASSET }}
-        asset_name: ${{ env.ASSET }}
-        asset_content_type: application/octet-stream
+        GH_TOKEN: ${{ github.token }}
+      run: gh release upload ${{ needs.create-release.outputs.rg_version }} ${{ env.ASSET }}
