@@ -1065,3 +1065,66 @@ rgtest!(type_list, |_: Dir, mut cmd: TestCommand| {
     // This can change over time, so just make sure we print something.
     assert!(!cmd.stdout().is_empty());
 });
+
+// The following series of tests seeks to test all permutations of ripgrep's
+// sorted queries.
+//
+// They all rely on this setup function, which sets up this particular file
+// structure with a particular creation order:
+//  ├── a             # 1
+//  ├── b             # 4
+//  └── dir           # 2
+//     ├── c          # 3
+//     └── d          # 5
+//
+// This order is important when sorting them by system time-stamps.
+fn sort_setup(dir: Dir) {
+    let sub_dir = dir.path().join("dir");
+    dir.create("a", "test");
+    dir.create_dir(&sub_dir);
+    dir.create(sub_dir.join("c"), "test");
+    dir.create("b", "test");
+    dir.create(sub_dir.join("d"), "test");
+}
+
+rgtest!(sort_files, |dir: Dir, mut cmd: TestCommand| {
+    sort_setup(dir);
+    let expected = "a:test\nb:test\ndir/c:test\ndir/d:test\n";
+    eqnice!(expected, cmd.args(["--sort-files", "test"]).stdout());
+});
+
+rgtest!(sort_modified, |dir: Dir, mut cmd: TestCommand| {
+    sort_setup(dir);
+    let expected = "a:test\ndir/c:test\nb:test\ndir/d:test\n";
+    eqnice!(expected, cmd.args(["--sort", "modified", "test"]).stdout());
+});
+
+rgtest!(sortr_modified, |dir: Dir, mut cmd: TestCommand| {
+    sort_setup(dir);
+    let expected = "dir/d:test\nb:test\ndir/c:test\na:test\n";
+    eqnice!(expected, cmd.args(["--sortr", "modified", "test"]).stdout());
+});
+
+rgtest!(sort_accessed, |dir: Dir, mut cmd: TestCommand| {
+    sort_setup(dir);
+    let expected = "a:test\ndir/c:test\nb:test\ndir/d:test\n";
+    eqnice!(expected, cmd.args(["--sort", "accessed", "test"]).stdout());
+});
+
+rgtest!(sortr_accessed, |dir: Dir, mut cmd: TestCommand| {
+    sort_setup(dir);
+    let expected = "dir/d:test\nb:test\ndir/c:test\na:test\n";
+    eqnice!(expected, cmd.args(["--sortr", "accessed", "test"]).stdout());
+});
+
+rgtest!(sort_created, |dir: Dir, mut cmd: TestCommand| {
+    sort_setup(dir);
+    let expected = "a:test\ndir/c:test\nb:test\ndir/d:test\n";
+    eqnice!(expected, cmd.args(["--sort", "created", "test"]).stdout());
+});
+
+rgtest!(sortr_created, |dir: Dir, mut cmd: TestCommand| {
+    sort_setup(dir);
+    let expected = "dir/d:test\nb:test\ndir/c:test\na:test\n";
+    eqnice!(expected, cmd.args(["--sortr", "created", "test"]).stdout());
+});
