@@ -43,7 +43,7 @@ use crate::path_printer::{PathPrinter, PathPrinterBuilder};
 use crate::search::{
     PatternMatcher, Printer, SearchWorker, SearchWorkerBuilder,
 };
-use crate::subject::SubjectBuilder;
+use crate::subject::{Subject, SubjectBuilder};
 use crate::Result;
 
 /// The command that ripgrep should execute based on the command line
@@ -346,6 +346,47 @@ impl Args {
         Ok(self.matches().walker_builder(self.paths())?.build())
     }
 
+    /// Sort subjects if a sorter is specified
+    pub fn sort(&self, subjects: Vec<Subject>) -> Vec<Subject> {
+        let sorter = match self.matches().sort_by() {
+            Ok(v) => v,
+            Err(_) => return subjects,
+        };
+        #[inline]
+        fn unzip<K, V>(v: Vec<(K, V)>) -> Vec<V> {
+            v.into_iter().map(|v| v.1).collect()
+        }
+        match sorter.kind {
+            SortByKind::Path => {
+                let mut k: Vec<(PathBuf, Subject)> = subjects
+                    .into_iter()
+                    .map(|s| (s.path().to_path_buf(), s))
+                    .collect();
+                k.sort_by(|a, b| match sorter.reverse {
+                    false => a.0.cmp(&b.0),
+                    true => a.0.cmp(&b.0).reverse(),
+                });
+                unzip(k)
+            }
+            SortByKind::LastModified => {
+                let mut k = load_timestamps(subjects, |m| m.modified());
+                k.sort_by(|a, b| sort_by_option(&a.0, &b.0, sorter.reverse));
+                unzip(k)
+            }
+            SortByKind::LastAccessed => {
+                let mut k = load_timestamps(subjects, |m| m.accessed());
+                k.sort_by(|a, b| sort_by_option(&a.0, &b.0, sorter.reverse));
+                unzip(k)
+            }
+            SortByKind::Created => {
+                let mut k = load_timestamps(subjects, |m| m.created());
+                k.sort_by(|a, b| sort_by_option(&a.0, &b.0, sorter.reverse));
+                unzip(k)
+            }
+            SortByKind::None => subjects,
+        }
+    }
+
     /// Return a parallel walker that may use additional threads.
     pub fn walker_parallel(&self) -> Result<WalkParallel> {
         Ok(self.matches().walker_builder(self.paths())?.build_parallel())
@@ -403,64 +444,6 @@ impl SortBy {
 
     fn none() -> SortBy {
         SortBy::asc(SortByKind::None)
-    }
-
-    /// Try to check that the sorting criteria selected is actually supported.
-    /// If it isn't, then an error is returned.
-    fn check(&self) -> Result<()> {
-        match self.kind {
-            SortByKind::None | SortByKind::Path => {}
-            SortByKind::LastModified => {
-                env::current_exe()?.metadata()?.modified()?;
-            }
-            SortByKind::LastAccessed => {
-                env::current_exe()?.metadata()?.accessed()?;
-            }
-            SortByKind::Created => {
-                env::current_exe()?.metadata()?.created()?;
-            }
-        }
-        Ok(())
-    }
-
-    fn configure_walk_builder(self, builder: &mut WalkBuilder) {
-        // This isn't entirely optimal. In particular, we will wind up issuing
-        // a stat for many files redundantly. Aside from having potentially
-        // inconsistent results with respect to sorting, this is also slow.
-        // We could fix this here at the expense of memory by caching stat
-        // calls. A better fix would be to find a way to push this down into
-        // directory traversal itself, but that's a somewhat nasty change.
-        match self.kind {
-            SortByKind::None => {}
-            SortByKind::Path => {
-                if self.reverse {
-                    builder.sort_by_file_name(|a, b| a.cmp(b).reverse());
-                } else {
-                    builder.sort_by_file_name(|a, b| a.cmp(b));
-                }
-            }
-            SortByKind::LastModified => {
-                builder.sort_by_file_path(move |a, b| {
-                    sort_by_metadata_time(a, b, self.reverse, |md| {
-                        md.modified()
-                    })
-                });
-            }
-            SortByKind::LastAccessed => {
-                builder.sort_by_file_path(move |a, b| {
-                    sort_by_metadata_time(a, b, self.reverse, |md| {
-                        md.accessed()
-                    })
-                });
-            }
-            SortByKind::Created => {
-                builder.sort_by_file_path(move |a, b| {
-                    sort_by_metadata_time(a, b, self.reverse, |md| {
-                        md.created()
-                    })
-                });
-            }
-        }
     }
 }
 
@@ -890,9 +873,6 @@ impl ArgMatches {
         if !self.no_ignore() {
             builder.add_custom_ignore_filename(".rgignore");
         }
-        let sortby = self.sort_by()?;
-        sortby.check()?;
-        sortby.configure_walk_builder(&mut builder);
         Ok(builder)
     }
 }
@@ -1792,32 +1772,18 @@ fn u64_to_usize(arg_name: &str, value: Option<u64>) -> Result<Option<usize>> {
     }
 }
 
-/// Builds a comparator for sorting two files according to a system time
-/// extracted from the file's metadata.
-///
-/// If there was a problem extracting the metadata or if the time is not
-/// available, then both entries compare equal.
-fn sort_by_metadata_time<G>(
-    p1: &Path,
-    p2: &Path,
+/// Sorts by an optional parameter.
+//
+/// If parameter is found to be `None`, both entries compare equal.
+fn sort_by_option<T: Ord>(
+    p1: &Option<T>,
+    p2: &Option<T>,
     reverse: bool,
-    get_time: G,
-) -> cmp::Ordering
-where
-    G: Fn(&fs::Metadata) -> io::Result<SystemTime>,
-{
-    let t1 = match p1.metadata().and_then(|md| get_time(&md)) {
-        Ok(t) => t,
-        Err(_) => return cmp::Ordering::Equal,
-    };
-    let t2 = match p2.metadata().and_then(|md| get_time(&md)) {
-        Ok(t) => t,
-        Err(_) => return cmp::Ordering::Equal,
-    };
-    if reverse {
-        t1.cmp(&t2).reverse()
-    } else {
-        t1.cmp(&t2)
+) -> cmp::Ordering {
+    match (p1, p2, reverse) {
+        (Some(p1), Some(p2), true) => p1.cmp(&p2).reverse(),
+        (Some(p1), Some(p2), false) => p1.cmp(&p2),
+        _ => cmp::Ordering::Equal,
     }
 }
 
@@ -1870,4 +1836,19 @@ fn current_dir() -> Result<PathBuf> {
         err,
     )
     .into())
+}
+
+/// Tries to assign a timestamp to every `Subject` in the vector to help with
+/// sorting Subjects by time.
+fn load_timestamps<G>(
+    subjects: Vec<Subject>,
+    get_time: G,
+) -> Vec<(Option<SystemTime>, Subject)>
+where
+    G: Fn(&fs::Metadata) -> io::Result<SystemTime>,
+{
+    subjects
+        .into_iter()
+        .map(|s| (s.path().metadata().and_then(|m| get_time(&m)).ok(), s))
+        .collect()
 }

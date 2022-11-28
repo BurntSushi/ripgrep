@@ -79,18 +79,14 @@ fn try_main(args: Args) -> Result<()> {
 fn search(args: &Args) -> Result<bool> {
     let started_at = Instant::now();
     let quit_after_match = args.quit_after_match()?;
-    let subject_builder = args.subject_builder();
     let mut stats = args.stats()?;
     let mut searcher = args.search_worker(args.stdout())?;
     let mut matched = false;
     let mut searched = false;
-
-    for result in args.walker()? {
-        let subject = match subject_builder.build_from_result(result) {
-            Some(subject) => subject,
-            None => continue,
-        };
+    let subjects = sorted_results(args);
+    for subject in subjects {
         searched = true;
+        // searcher.search() contains the printing function
         let search_result = match searcher.search(&subject) {
             Ok(search_result) => search_result,
             Err(err) => {
@@ -215,14 +211,10 @@ fn eprint_nothing_searched() {
 /// prints each path sequentially using a single thread.
 fn files(args: &Args) -> Result<bool> {
     let quit_after_match = args.quit_after_match()?;
-    let subject_builder = args.subject_builder();
     let mut matched = false;
     let mut path_printer = args.path_printer(args.stdout())?;
-    for result in args.walker()? {
-        let subject = match subject_builder.build_from_result(result) {
-            Some(subject) => subject,
-            None => continue,
-        };
+    let subjects = sorted_results(args);
+    for subject in subjects {
         matched = true;
         if quit_after_match {
             break;
@@ -341,4 +333,17 @@ fn pcre2_version(args: &Args) -> Result<bool> {
     }
 
     imp(args)
+}
+
+/// Collect all results from a configured Args struct and sorts them
+fn sorted_results(args: &Args) -> Vec<Subject> {
+    let walker = match args.walker() {
+        Ok(v) => v,
+        Err(_) => return vec![],
+    };
+    let subject_builder = args.subject_builder();
+    let subjects = walker
+        .filter_map(|result| subject_builder.build_from_result(result))
+        .collect();
+    args.sort(subjects)
 }
