@@ -86,7 +86,6 @@ fn search(args: &Args) -> Result<bool> {
     let subjects = sorted_results(args);
     for subject in subjects {
         searched = true;
-        // searcher.search() contains the printing function
         let search_result = match searcher.search(&subject) {
             Ok(search_result) => search_result,
             Err(err) => {

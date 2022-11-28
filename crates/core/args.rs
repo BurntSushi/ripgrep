@@ -352,6 +352,9 @@ impl Args {
             Ok(v) => v,
             Err(_) => return subjects,
         };
+        if sorter.check().is_err() {
+            return subjects;
+        }
         #[inline]
         fn unzip<K, V>(v: Vec<(K, V)>) -> Vec<V> {
             v.into_iter().map(|v| v.1).collect()
@@ -444,6 +447,24 @@ impl SortBy {
 
     fn none() -> SortBy {
         SortBy::asc(SortByKind::None)
+    }
+
+    /// Try to check that the sorting criteria selected is actually supported.
+    /// If it isn't, then an error is returned.
+    fn check(&self) -> Result<()> {
+        match self.kind {
+            SortByKind::None | SortByKind::Path => {}
+            SortByKind::LastModified => {
+                env::current_exe()?.metadata()?.modified()?;
+            }
+            SortByKind::LastAccessed => {
+                env::current_exe()?.metadata()?.accessed()?;
+            }
+            SortByKind::Created => {
+                env::current_exe()?.metadata()?.created()?;
+            }
+        }
+        Ok(())
     }
 }
 
