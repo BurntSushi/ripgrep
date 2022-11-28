@@ -77,53 +77,70 @@ fn try_main(args: Args) -> Result<()> {
 /// steps through the file list (current directory by default) and searches
 /// each file sequentially.
 fn search(args: &Args) -> Result<bool> {
-    let started_at = Instant::now();
-    let quit_after_match = args.quit_after_match()?;
-    let subject_builder = args.subject_builder();
-    let mut stats = args.stats()?;
-    let mut searcher = args.search_worker(args.stdout())?;
-    let mut matched = false;
-    let mut searched = false;
+    /// The meat of the routine is here. This lets us call the same iteration
+    /// code over each file regardless of whether we stream over the files
+    /// as they're produced by the underlying directory traversal or whether
+    /// they've been collected and sorted (for example) first.
+    fn iter(
+        args: &Args,
+        subjects: impl Iterator<Item = Subject>,
+        started_at: std::time::Instant,
+    ) -> Result<bool> {
+        let quit_after_match = args.quit_after_match()?;
+        let mut stats = args.stats()?;
+        let mut searcher = args.search_worker(args.stdout())?;
+        let mut matched = false;
+        let mut searched = false;
 
-    for result in args.walker()? {
-        let subject = match subject_builder.build_from_result(result) {
-            Some(subject) => subject,
-            None => continue,
-        };
-        searched = true;
-        let search_result = match searcher.search(&subject) {
-            Ok(search_result) => search_result,
-            Err(err) => {
+        for subject in subjects {
+            searched = true;
+            let search_result = match searcher.search(&subject) {
+                Ok(search_result) => search_result,
                 // A broken pipe means graceful termination.
-                if err.kind() == io::ErrorKind::BrokenPipe {
-                    break;
+                Err(err) if err.kind() == io::ErrorKind::BrokenPipe => break,
+                Err(err) => {
+                    err_message!("{}: {}", subject.path().display(), err);
+                    continue;
                 }
-                err_message!("{}: {}", subject.path().display(), err);
-                continue;
+            };
+            matched |= search_result.has_match();
+            if let Some(ref mut stats) = stats {
+                *stats += search_result.stats().unwrap();
             }
-        };
-        matched = matched || search_result.has_match();
-        if let Some(ref mut stats) = stats {
-            *stats += search_result.stats().unwrap();
+            if matched && quit_after_match {
+                break;
+            }
         }
-        if matched && quit_after_match {
-            break;
+        if args.using_default_path() && !searched {
+            eprint_nothing_searched();
         }
+        if let Some(ref stats) = stats {
+            let elapsed = Instant::now().duration_since(started_at);
+            // We don't care if we couldn't print this successfully.
+            let _ = searcher.print_stats(elapsed, stats);
+        }
+        Ok(matched)
     }
-    if args.using_default_path() && !searched {
-        eprint_nothing_searched();
+
+    let started_at = Instant::now();
+    let subject_builder = args.subject_builder();
+    let subjects = args
+        .walker()?
+        .filter_map(|result| subject_builder.build_from_result(result));
+    if args.needs_stat_sort() {
+        let subjects = args.sort_by_stat(subjects).into_iter();
+        iter(args, subjects, started_at)
+    } else {
+        iter(args, subjects, started_at)
     }
-    if let Some(ref stats) = stats {
-        let elapsed = Instant::now().duration_since(started_at);
-        // We don't care if we couldn't print this successfully.
-        let _ = searcher.print_stats(elapsed, stats);
-    }
-    Ok(matched)
 }
 
 /// The top-level entry point for multi-threaded search. The parallelism is
 /// itself achieved by the recursive directory traversal. All we need to do is
 /// feed it a worker for performing a search on each file.
+///
+/// Requesting a sorted output from ripgrep (such as with `--sort path`) will
+/// automatically disable parallelism and hence sorting is not handled here.
 fn search_parallel(args: &Args) -> Result<bool> {
     use std::sync::atomic::AtomicBool;
     use std::sync::atomic::Ordering::SeqCst;
@@ -214,35 +231,54 @@ fn eprint_nothing_searched() {
 /// recursively steps through the file list (current directory by default) and
 /// prints each path sequentially using a single thread.
 fn files(args: &Args) -> Result<bool> {
-    let quit_after_match = args.quit_after_match()?;
-    let subject_builder = args.subject_builder();
-    let mut matched = false;
-    let mut path_printer = args.path_printer(args.stdout())?;
-    for result in args.walker()? {
-        let subject = match subject_builder.build_from_result(result) {
-            Some(subject) => subject,
-            None => continue,
-        };
-        matched = true;
-        if quit_after_match {
-            break;
-        }
-        if let Err(err) = path_printer.write_path(subject.path()) {
-            // A broken pipe means graceful termination.
-            if err.kind() == io::ErrorKind::BrokenPipe {
+    /// The meat of the routine is here. This lets us call the same iteration
+    /// code over each file regardless of whether we stream over the files
+    /// as they're produced by the underlying directory traversal or whether
+    /// they've been collected and sorted (for example) first.
+    fn iter(
+        args: &Args,
+        subjects: impl Iterator<Item = Subject>,
+    ) -> Result<bool> {
+        let quit_after_match = args.quit_after_match()?;
+        let mut matched = false;
+        let mut path_printer = args.path_printer(args.stdout())?;
+
+        for subject in subjects {
+            matched = true;
+            if quit_after_match {
                 break;
             }
-            // Otherwise, we have some other error that's preventing us from
-            // writing to stdout, so we should bubble it up.
-            return Err(err.into());
+            if let Err(err) = path_printer.write_path(subject.path()) {
+                // A broken pipe means graceful termination.
+                if err.kind() == io::ErrorKind::BrokenPipe {
+                    break;
+                }
+                // Otherwise, we have some other error that's preventing us from
+                // writing to stdout, so we should bubble it up.
+                return Err(err.into());
+            }
         }
+        Ok(matched)
     }
-    Ok(matched)
+
+    let subject_builder = args.subject_builder();
+    let subjects = args
+        .walker()?
+        .filter_map(|result| subject_builder.build_from_result(result));
+    if args.needs_stat_sort() {
+        let subjects = args.sort_by_stat(subjects).into_iter();
+        iter(args, subjects)
+    } else {
+        iter(args, subjects)
+    }
 }
 
 /// The top-level entry point for listing files without searching them. This
 /// recursively steps through the file list (current directory by default) and
 /// prints each path sequentially using multiple threads.
+///
+/// Requesting a sorted output from ripgrep (such as with `--sort path`) will
+/// automatically disable parallelism and hence sorting is not handled here.
 fn files_parallel(args: &Args) -> Result<bool> {
     use std::sync::atomic::AtomicBool;
     use std::sync::atomic::Ordering::SeqCst;

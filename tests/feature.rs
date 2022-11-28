@@ -787,6 +787,28 @@ rgtest!(f1466_no_ignore_files, |dir: Dir, mut cmd: TestCommand| {
     eqnice!("foo\n", cmd.arg("-u").stdout());
 });
 
+// See: https://github.com/BurntSushi/ripgrep/pull/2361
+rgtest!(f2361_sort_nested_files, |dir: Dir, mut cmd: TestCommand| {
+    use std::{thread::sleep, time::Duration};
+
+    dir.create("foo", "1");
+    sleep(Duration::from_millis(100));
+    dir.create_dir("dir");
+    sleep(Duration::from_millis(100));
+    dir.create(dir.path().join("dir").join("bar"), "1");
+
+    cmd.arg("--sort").arg("accessed").arg("--files");
+    eqnice!("foo\ndir/bar\n", cmd.stdout());
+
+    dir.create("foo", "2");
+    sleep(Duration::from_millis(100));
+    dir.create(dir.path().join("dir").join("bar"), "2");
+    sleep(Duration::from_millis(100));
+
+    cmd.arg("--sort").arg("accessed").arg("--files");
+    eqnice!("foo\ndir/bar\n", cmd.stdout());
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/1404
 rgtest!(f1404_nothing_searched_warning, |dir: Dir, mut cmd: TestCommand| {
     dir.create(".ignore", "ignored-dir/**");
