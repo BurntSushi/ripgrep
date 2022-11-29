@@ -2068,6 +2068,19 @@ mod tests {
     }
 
     #[test]
+    fn gitignore_parent_with_sl() {
+        let td = tmpdir();
+        mkdirp(td.path().join(".sl"));
+        mkdirp(td.path().join("a"));
+        wfile(td.path().join(".gitignore"), "foo");
+        wfile(td.path().join("a/foo"), "");
+        wfile(td.path().join("a/bar"), "");
+
+        let root = td.path().join("a");
+        assert_paths(&root, &WalkBuilder::new(&root), &["bar"]);
+    }
+
+    #[test]
     fn max_depth() {
         let td = tmpdir();
         mkdirp(td.path().join("a/b/c"));

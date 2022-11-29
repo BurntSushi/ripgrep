@@ -204,7 +204,7 @@ impl Ignore {
             igtmp.absolute_base = Some(absolute_base.clone());
             igtmp.has_git =
                 if self.0.opts.require_git && self.0.opts.git_ignore {
-                    parent.join(".git").exists()
+                    parent.join(".git").exists() || parent.join(".sl").exists()
                 } else {
                     false
                 };
