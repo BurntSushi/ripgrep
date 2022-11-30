@@ -78,26 +78,45 @@ fn try_main(args: Args) -> Result<()> {
 /// each file sequentially.
 fn search(args: &Args) -> Result<bool> {
     let started_at = Instant::now();
+    let subject_builder = args.subject_builder();
+    let results = args
+        .walker()?
+        .filter_map(|result| subject_builder.build_from_result(result));
+    if args.needs_stat_sort() {
+        let results = args.sort_by_stat(results).into_iter();
+        continue_search(args, results, started_at)
+    } else {
+        continue_search(args, results, started_at)
+    }
+}
+
+/// The second function after the top-level search() function. This accepts
+/// an Iterator of `Subject`s to continue executing the search. Depending on the
+/// sorting strategy, this iterator may have been flattened, sorted, and
+/// rebuilt.
+fn continue_search(
+    args: &Args,
+    subjects: impl Iterator<Item = Subject>,
+    started_at: std::time::Instant,
+) -> Result<bool> {
     let quit_after_match = args.quit_after_match()?;
     let mut stats = args.stats()?;
     let mut searcher = args.search_worker(args.stdout())?;
     let mut matched = false;
     let mut searched = false;
-    let subjects = sorted_results(args);
+
     for subject in subjects {
         searched = true;
         let search_result = match searcher.search(&subject) {
             Ok(search_result) => search_result,
+            // A broken pipe means graceful termination.
+            Err(err) if err.kind() == io::ErrorKind::BrokenPipe => break,
             Err(err) => {
-                // A broken pipe means graceful termination.
-                if err.kind() == io::ErrorKind::BrokenPipe {
-                    break;
-                }
                 err_message!("{}: {}", subject.path().display(), err);
                 continue;
             }
         };
-        matched = matched || search_result.has_match();
+        matched |= search_result.has_match();
         if let Some(ref mut stats) = stats {
             *stats += search_result.stats().unwrap();
         }
@@ -212,7 +231,11 @@ fn files(args: &Args) -> Result<bool> {
     let quit_after_match = args.quit_after_match()?;
     let mut matched = false;
     let mut path_printer = args.path_printer(args.stdout())?;
-    let subjects = sorted_results(args);
+    let subject_builder = args.subject_builder();
+    let results = args
+        .walker()?
+        .filter_map(|result| subject_builder.build_from_result(result));
+    let subjects = args.sort_by_stat(results);
     for subject in subjects {
         matched = true;
         if quit_after_match {
@@ -332,17 +355,4 @@ fn pcre2_version(args: &Args) -> Result<bool> {
     }
 
     imp(args)
-}
-
-/// Collect all results from a configured Args struct and sorts them
-fn sorted_results(args: &Args) -> Vec<Subject> {
-    let walker = match args.walker() {
-        Ok(v) => v,
-        Err(_) => return vec![],
-    };
-    let subject_builder = args.subject_builder();
-    let subjects = walker
-        .filter_map(|result| subject_builder.build_from_result(result))
-        .collect();
-    args.sort(subjects)
 }

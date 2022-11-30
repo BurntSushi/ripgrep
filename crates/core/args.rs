@@ -346,48 +346,44 @@ impl Args {
         Ok(self.matches().walker_builder(self.paths())?.build())
     }
 
-    /// Sort subjects if a sorter is specified
-    pub fn sort(&self, subjects: Vec<Subject>) -> Vec<Subject> {
+    /// Returns true if and only if `stat`-related sorting is required
+    pub fn needs_stat_sort(&self) -> bool {
+        return self.matches().sort_by().map_or(
+            false,
+            |sort_by| match sort_by.kind {
+                SortByKind::LastModified
+                | SortByKind::Created
+                | SortByKind::LastAccessed => sort_by.check().is_ok(),
+                _ => false,
+            },
+        );
+    }
+
+    /// Sort subjects if a sorter is specified, but only if the sort requires
+    /// stat calls. Non-stat related sorts are handled during file traversal
+    ///
+    /// This function assumes that it is known that a stat-related sort is
+    /// required, and does not check for it again.
+    ///
+    /// It is important that that precondition is fulfilled, since this function
+    /// consumes the subjects iterator, and is therefore a blocking function.
+    pub fn sort_by_stat<I>(&self, subjects: I) -> Vec<Subject>
+    where
+        I: Iterator<Item = Subject>,
+    {
         let sorter = match self.matches().sort_by() {
             Ok(v) => v,
-            Err(_) => return subjects,
+            Err(_) => return subjects.collect(),
         };
-        if sorter.check().is_err() {
-            return subjects;
-        }
-        #[inline]
-        fn unzip<K, V>(v: Vec<(K, V)>) -> Vec<V> {
-            v.into_iter().map(|v| v.1).collect()
-        }
-        match sorter.kind {
-            SortByKind::Path => {
-                let mut k: Vec<(PathBuf, Subject)> = subjects
-                    .into_iter()
-                    .map(|s| (s.path().to_path_buf(), s))
-                    .collect();
-                k.sort_by(|a, b| match sorter.reverse {
-                    false => a.0.cmp(&b.0),
-                    true => a.0.cmp(&b.0).reverse(),
-                });
-                unzip(k)
-            }
-            SortByKind::LastModified => {
-                let mut k = load_timestamps(subjects, |m| m.modified());
-                k.sort_by(|a, b| sort_by_option(&a.0, &b.0, sorter.reverse));
-                unzip(k)
-            }
-            SortByKind::LastAccessed => {
-                let mut k = load_timestamps(subjects, |m| m.accessed());
-                k.sort_by(|a, b| sort_by_option(&a.0, &b.0, sorter.reverse));
-                unzip(k)
-            }
-            SortByKind::Created => {
-                let mut k = load_timestamps(subjects, |m| m.created());
-                k.sort_by(|a, b| sort_by_option(&a.0, &b.0, sorter.reverse));
-                unzip(k)
-            }
-            SortByKind::None => subjects,
-        }
+        use SortByKind::*;
+        let mut keyed = match sorter.kind {
+            LastModified => load_timestamps(subjects, |m| m.modified()),
+            LastAccessed => load_timestamps(subjects, |m| m.accessed()),
+            Created => load_timestamps(subjects, |m| m.created()),
+            _ => return subjects.collect(),
+        };
+        keyed.sort_by(|a, b| sort_by_option(&a.0, &b.0, sorter.reverse));
+        keyed.into_iter().map(|v| v.1).collect()
     }
 
     /// Return a parallel walker that may use additional threads.
@@ -465,6 +461,23 @@ impl SortBy {
             }
         }
         Ok(())
+    }
+
+    /// Load sorters only if they are applicable at the walk stage.
+    ///
+    /// In particular, sorts that involve `stat` calls are not loaded because
+    /// the walk inherently assumes that parent directories are aware of all its
+    /// decendent properties, but `stat` does not work that way.
+    fn configure_builder_sort(self, builder: &mut WalkBuilder) {
+        use SortByKind::*;
+        match self.kind {
+            Path => match self.reverse {
+                true => builder.sort_by_file_name(|a, b| a.cmp(b).reverse()),
+                false => builder.sort_by_file_name(|a, b| a.cmp(b)),
+            },
+            // these use `stat` calls and will be sorted in Args::sort_by_stat()
+            LastModified | LastAccessed | Created | None => (),
+        };
     }
 }
 
@@ -894,6 +907,7 @@ impl ArgMatches {
         if !self.no_ignore() {
             builder.add_custom_ignore_filename(".rgignore");
         }
+        self.sort_by()?.configure_builder_sort(&mut builder);
         Ok(builder)
     }
 }
@@ -1862,14 +1876,13 @@ fn current_dir() -> Result<PathBuf> {
 /// Tries to assign a timestamp to every `Subject` in the vector to help with
 /// sorting Subjects by time.
 fn load_timestamps<G>(
-    subjects: Vec<Subject>,
+    subjects: impl Iterator<Item = Subject>,
     get_time: G,
 ) -> Vec<(Option<SystemTime>, Subject)>
 where
     G: Fn(&fs::Metadata) -> io::Result<SystemTime>,
 {
     subjects
-        .into_iter()
         .map(|s| (s.path().metadata().and_then(|m| get_time(&m)).ok(), s))
         .collect()
 }
