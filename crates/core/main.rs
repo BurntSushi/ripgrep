@@ -79,18 +79,18 @@ fn try_main(args: Args) -> Result<()> {
 fn search(args: &Args) -> Result<bool> {
     let started_at = Instant::now();
     let subject_builder = args.subject_builder();
-    let results = args
+    let subjects = args
         .walker()?
         .filter_map(|result| subject_builder.build_from_result(result));
     if args.needs_stat_sort() {
-        let results = args.sort_by_stat(results).into_iter();
-        continue_search(args, results, started_at)
+        let subjects = args.sort_by_stat(subjects).into_iter();
+        continue_search(args, subjects, started_at)
     } else {
-        continue_search(args, results, started_at)
+        continue_search(args, subjects, started_at)
     }
 }
 
-/// The second function after the top-level search() function. This accepts
+/// The continued function after the top-level search() function. This accepts
 /// an Iterator of `Subject`s to continue executing the search. Depending on the
 /// sorting strategy, this iterator may have been flattened, sorted, and
 /// rebuilt.
@@ -138,6 +138,9 @@ fn continue_search(
 /// The top-level entry point for multi-threaded search. The parallelism is
 /// itself achieved by the recursive directory traversal. All we need to do is
 /// feed it a worker for performing a search on each file.
+///
+/// Requesting a sorted output from ripgrep (such as with `--sort path`) will
+/// automatically disable parallelism and hence sorting is not handled here.
 fn search_parallel(args: &Args) -> Result<bool> {
     use std::sync::atomic::AtomicBool;
     use std::sync::atomic::Ordering::SeqCst;
@@ -228,14 +231,30 @@ fn eprint_nothing_searched() {
 /// recursively steps through the file list (current directory by default) and
 /// prints each path sequentially using a single thread.
 fn files(args: &Args) -> Result<bool> {
+    let subject_builder = args.subject_builder();
+    let subjects = args
+        .walker()?
+        .filter_map(|result| subject_builder.build_from_result(result));
+    if args.needs_stat_sort() {
+        let subjects = args.sort_by_stat(subjects).into_iter();
+        continue_files(args, subjects)
+    } else {
+        continue_files(args, subjects)
+    }
+}
+
+/// The continued function after the top-level files() function. This accepts
+/// an Iterator of `Subject`s to continue executing the search. Depending on the
+/// sorting strategy, this iterator may have been flattened, sorted, and
+/// rebuilt.
+fn continue_files(
+    args: &Args,
+    subjects: impl Iterator<Item = Subject>,
+) -> Result<bool> {
     let quit_after_match = args.quit_after_match()?;
     let mut matched = false;
     let mut path_printer = args.path_printer(args.stdout())?;
-    let subject_builder = args.subject_builder();
-    let results = args
-        .walker()?
-        .filter_map(|result| subject_builder.build_from_result(result));
-    let subjects = args.sort_by_stat(results);
+
     for subject in subjects {
         matched = true;
         if quit_after_match {
@@ -257,6 +276,9 @@ fn files(args: &Args) -> Result<bool> {
 /// The top-level entry point for listing files without searching them. This
 /// recursively steps through the file list (current directory by default) and
 /// prints each path sequentially using multiple threads.
+///
+/// Requesting a sorted output from ripgrep (such as with `--sort path`) will
+/// automatically disable parallelism and hence sorting is not handled here.
 fn files_parallel(args: &Args) -> Result<bool> {
     use std::sync::atomic::AtomicBool;
     use std::sync::atomic::Ordering::SeqCst;
