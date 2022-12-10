@@ -208,6 +208,9 @@ struct GlobOptions {
     /// Whether or not to use `\` to escape special characters.
     /// e.g., when enabled, `\*` will match a literal `*`.
     backslash_escape: bool,
+    /// Whether or not an empty case in an alternate will be removed.
+    /// e.g., when enabled, `{,a}` will match "" and "a".
+    empty_alternates: bool,
 }
 
 impl GlobOptions {
@@ -216,6 +219,7 @@ impl GlobOptions {
             case_insensitive: false,
             literal_separator: false,
             backslash_escape: !is_separator('\\'),
+            empty_alternates: false,
         }
     }
 }
@@ -633,6 +637,16 @@ impl<'a> GlobBuilder<'a> {
         self.opts.backslash_escape = yes;
         self
     }
+
+    /// Toggle whether an empty pattern in a list of alternates is accepted.
+    /// 
+    /// For example, if this is set then the glob `foo{,.txt}` will match both `foo` and `foo.txt`.
+    /// 
+    /// By default this is false.
+    pub fn empty_alternates(&mut self, yes: bool) -> &mut GlobBuilder<'a> {
+        self.opts.empty_alternates = yes;
+        self
+    }
 }
 
 impl Tokens {
@@ -714,7 +728,7 @@ impl Tokens {
                     for pat in patterns {
                         let mut altre = String::new();
                         self.tokens_to_regex(options, &pat, &mut altre);
-                        if !altre.is_empty() {
+                        if !altre.is_empty() || options.empty_alternates {
                             parts.push(altre);
                         }
                     }
@@ -1020,6 +1034,7 @@ mod tests {
         casei: Option<bool>,
         litsep: Option<bool>,
         bsesc: Option<bool>,
+        ealtre: Option<bool>,
     }
 
     macro_rules! syntax {
@@ -1059,6 +1074,9 @@ mod tests {
                 if let Some(bsesc) = $options.bsesc {
                     builder.backslash_escape(bsesc);
                 }
+                if let Some(ealtre) = $options.ealtre {
+                    builder.empty_alternates(ealtre);
+                }
                 let pat = builder.build().unwrap();
                 assert_eq!(format!("(?-u){}", $re), pat.regex());
             }
@@ -1081,6 +1099,9 @@ mod tests {
                 }
                 if let Some(bsesc) = $options.bsesc {
                     builder.backslash_escape(bsesc);
+                }
+                if let Some(ealtre) = $options.ealtre {
+                    builder.empty_alternates(ealtre);
                 }
                 let pat = builder.build().unwrap();
                 let matcher = pat.compile_matcher();
@@ -1109,6 +1130,9 @@ mod tests {
                 }
                 if let Some(bsesc) = $options.bsesc {
                     builder.backslash_escape(bsesc);
+                }
+                if let Some(ealtre) = $options.ealtre {
+                    builder.empty_alternates(ealtre);
                 }
                 let pat = builder.build().unwrap();
                 let matcher = pat.compile_matcher();
@@ -1195,13 +1219,15 @@ mod tests {
     syntaxerr!(err_range2, "[z--]", ErrorKind::InvalidRange('z', '-'));
 
     const CASEI: Options =
-        Options { casei: Some(true), litsep: None, bsesc: None };
+        Options { casei: Some(true), litsep: None, bsesc: None, ealtre: None };
     const SLASHLIT: Options =
-        Options { casei: None, litsep: Some(true), bsesc: None };
+        Options { casei: None, litsep: Some(true), bsesc: None, ealtre: None };
     const NOBSESC: Options =
-        Options { casei: None, litsep: None, bsesc: Some(false) };
+        Options { casei: None, litsep: None, bsesc: Some(false), ealtre: None };
     const BSESC: Options =
-        Options { casei: None, litsep: None, bsesc: Some(true) };
+        Options { casei: None, litsep: None, bsesc: Some(true), ealtre: None };
+    const EALTRE: Options =
+        Options { casei: None, litsep: None, bsesc: Some(true), ealtre: Some(true) };
 
     toregex!(re_casei, "a", "(?i)^a$", &CASEI);
 
@@ -1326,6 +1352,9 @@ mod tests {
     matches!(matchalt11, "{*.foo,*.bar,*.wat}", "test.foo");
     matches!(matchalt12, "{*.foo,*.bar,*.wat}", "test.bar");
     matches!(matchalt13, "{*.foo,*.bar,*.wat}", "test.wat");
+    matches!(matchalt14, "foo{,.txt}", "foo.txt");
+    nmatches!(matchalt15, "foo{,.txt}", "foo");
+    matches!(matchalt16, "foo{,.txt}", "foo", EALTRE);
 
     matches!(matchslash1, "abc/def", "abc/def", SLASHLIT);
     #[cfg(unix)]
@@ -1424,6 +1453,9 @@ mod tests {
                 }
                 if let Some(bsesc) = $options.bsesc {
                     builder.backslash_escape(bsesc);
+                }
+                if let Some(ealtre) = $options.ealtre {
+                    builder.empty_alternates(ealtre);
                 }
                 let pat = builder.build().unwrap();
                 assert_eq!($expect, pat.$which());
