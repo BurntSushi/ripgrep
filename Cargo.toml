@@ -17,6 +17,7 @@ exclude = ["HomebrewFormula"]
 build = "build.rs"
 autotests = false
 edition = "2018"
+rust-version = "1.65"
 
 [[bin]]
 bench = false
