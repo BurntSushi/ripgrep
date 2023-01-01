@@ -23,7 +23,25 @@ impl<'de> Deserialize<'de> for Glob {
 
 #[cfg(test)]
 mod tests {
-    use Glob;
+    use crate::glob::Glob;
+    use std::collections::HashMap;
+
+    #[test]
+    fn glob_deserialize_borrowed() {
+        let string = r#"{"markdown": "*.md"}"#;
+
+        let map: HashMap<String, Glob> = serde_json::from_str(&string).unwrap();
+        assert_eq!(map["markdown"], Glob::new("*.md").unwrap());
+    }
+
+    #[test]
+    fn glob_deserialize_owned() {
+        let string = r#"{"markdown": "*.md"}"#;
+
+        let v: serde_json::Value = serde_json::from_str(&string).unwrap();
+        let map: HashMap<String, Glob> = serde_json::from_value(v).unwrap();
+        assert_eq!(map["markdown"], Glob::new("*.md").unwrap());
+    }
 
     #[test]
     fn glob_json_works() {
