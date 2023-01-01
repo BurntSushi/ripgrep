@@ -1,5 +1,6 @@
 use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::borrow::Cow;
 
 use crate::Glob;
 
@@ -16,8 +17,8 @@ impl<'de> Deserialize<'de> for Glob {
     fn deserialize<D: Deserializer<'de>>(
         deserializer: D,
     ) -> Result<Self, D::Error> {
-        let glob = <&str as Deserialize>::deserialize(deserializer)?;
-        Glob::new(glob).map_err(D::Error::custom)
+        let glob = <Cow<str> as Deserialize>::deserialize(deserializer)?;
+        Glob::new(&glob).map_err(D::Error::custom)
     }
 }
 
@@ -30,7 +31,8 @@ mod tests {
     fn glob_deserialize_borrowed() {
         let string = r#"{"markdown": "*.md"}"#;
 
-        let map: HashMap<String, Glob> = serde_json::from_str(&string).unwrap();
+        let map: HashMap<String, Glob> =
+            serde_json::from_str(&string).unwrap();
         assert_eq!(map["markdown"], Glob::new("*.md").unwrap());
     }
 
