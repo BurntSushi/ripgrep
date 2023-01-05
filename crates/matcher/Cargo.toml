@@ -18,7 +18,7 @@ edition = "2018"
 memchr = "2.1"
 
 [dev-dependencies]
-regex = "1.1"
+regex = "1.7"
 
 [[test]]
 name = "integration"

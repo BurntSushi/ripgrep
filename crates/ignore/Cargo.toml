@@ -22,9 +22,9 @@ bench = false
 crossbeam-utils = "0.8.0"
 globset = { version = "0.4.9", path = "../globset" }
 lazy_static = "1.1"
-log = "0.4.5"
+log = "0.4.17"
 memchr = "2.1"
-regex = "1.1"
+regex = "1.7"
 same-file = "1.0.4"
 thread_local = "1"
 walkdir = "2.2.7"

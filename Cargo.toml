@@ -42,13 +42,13 @@ members = [
 ]
 
 [dependencies]
-bstr = "0.2.12"
+bstr = "1.0.1"
 grep = { version = "0.2.8", path = "crates/grep" }
 ignore = { version = "0.4.18", path = "crates/ignore" }
 lazy_static = "1.1.0"
-log = "0.4.5"
+log = "0.4.17"
 num_cpus = "1.8.0"
-regex = "1.3.5"
+regex = "1.7.0"
 serde_json = "1.0.23"
 termcolor = "1.1.0"
 

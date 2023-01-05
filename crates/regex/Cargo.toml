@@ -14,10 +14,10 @@ license = "Unlicense OR MIT"
 edition = "2018"
 
 [dependencies]
-aho-corasick = "0.7.3"
-bstr = "0.2.10"
+aho-corasick = "0.7.20"
+bstr = "1.0.1"
 grep-matcher = { version = "0.1.5", path = "../matcher" }
-log = "0.4.5"
-regex = "1.1"
+log = "0.4.17"
+regex = "1.7"
 regex-syntax = "0.6.5"
 thread_local = "1.1.2"

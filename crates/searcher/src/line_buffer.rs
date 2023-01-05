@@ -481,7 +481,7 @@ impl LineBuffer {
         }
 
         let roll_len = self.end - self.pos;
-        self.buf.copy_within_str(self.pos..self.end, 0);
+        self.buf.copy_within(self.pos..self.end, 0);
         self.pos = 0;
         self.last_lineterm = roll_len;
         self.end = roll_len;

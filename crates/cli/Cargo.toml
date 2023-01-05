@@ -15,11 +15,11 @@ edition = "2018"
 
 [dependencies]
 atty = "0.2.11"
-bstr = "0.2.0"
+bstr = "1.0.1"
 globset = { version = "0.4.9", path = "../globset" }
 lazy_static = "1.1.0"
-log = "0.4.5"
-regex = "1.1"
+log = "0.4.17"
+regex = "1.7"
 same-file = "1.0.4"
 termcolor = "1.0.4"
 
