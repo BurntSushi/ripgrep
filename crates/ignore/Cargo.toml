@@ -13,6 +13,7 @@ readme = "README.md"
 keywords = ["glob", "ignore", "gitignore", "pattern", "file"]
 license = "Unlicense OR MIT"
 edition = "2018"
+rust-version = "1.63"
 
 [lib]
 name = "ignore"
