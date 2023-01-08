@@ -1,6 +1,6 @@
 [package]
 name = "grep-matcher"
-version = "0.1.5"  #:version
+version = "0.1.6"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 A trait for regular expressions, with a focus on line oriented search.

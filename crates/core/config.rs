@@ -80,7 +80,7 @@ fn parse<P: AsRef<Path>>(
 fn parse_reader<R: io::Read>(
     rdr: R,
 ) -> Result<(Vec<OsString>, Vec<Box<dyn Error>>)> {
-    let bufrdr = io::BufReader::new(rdr);
+    let mut bufrdr = io::BufReader::new(rdr);
     let (mut args, mut errs) = (vec![], vec![]);
     let mut line_number = 0;
     bufrdr.for_byte_line_with_terminator(|line| {

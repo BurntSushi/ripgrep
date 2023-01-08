@@ -1,6 +1,6 @@
 [package]
 name = "grep-pcre2"
-version = "0.1.5"  #:version
+version = "0.1.6"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 Use PCRE2 with the 'grep' crate.
@@ -14,5 +14,5 @@ license = "Unlicense OR MIT"
 edition = "2018"
 
 [dependencies]
-grep-matcher = { version = "0.1.5", path = "../matcher" }
+grep-matcher = { version = "0.1.6", path = "../matcher" }
 pcre2 = "0.2.3"

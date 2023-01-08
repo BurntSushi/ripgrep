@@ -1282,7 +1282,7 @@ impl WalkParallel {
         let quit_now = Arc::new(AtomicBool::new(false));
         let num_pending =
             Arc::new(AtomicUsize::new(stack.lock().unwrap().len()));
-        crossbeam_utils::thread::scope(|s| {
+        std::thread::scope(|s| {
             let mut handles = vec![];
             for _ in 0..threads {
                 let worker = Worker {
@@ -1296,13 +1296,12 @@ impl WalkParallel {
                     skip: self.skip.clone(),
                     filter: self.filter.clone(),
                 };
-                handles.push(s.spawn(|_| worker.run()));
+                handles.push(s.spawn(|| worker.run()));
             }
             for handle in handles {
                 handle.join().unwrap();
             }
-        })
-        .unwrap(); // Pass along panics from threads
+        });
     }
 
     fn threads(&self) -> usize {

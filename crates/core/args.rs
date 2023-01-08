@@ -31,7 +31,6 @@ use ignore::overrides::{Override, OverrideBuilder};
 use ignore::types::{FileTypeDef, Types, TypesBuilder};
 use ignore::{Walk, WalkBuilder, WalkParallel};
 use log;
-use num_cpus;
 use regex;
 use termcolor::{BufferWriter, ColorChoice, WriteColor};
 
@@ -97,9 +96,12 @@ pub struct Args(Arc<ArgsImp>);
 struct ArgsImp {
     /// Mid-to-low level routines for extracting CLI arguments.
     matches: ArgMatches,
-    /// The patterns provided at the command line and/or via the -f/--file
-    /// flag. This may be empty.
-    patterns: Vec<String>,
+    /// The command we want to execute.
+    command: Command,
+    /// The number of threads to use. This is based in part on available
+    /// threads, in part on the number of threads requested and in part on the
+    /// command we're running.
+    threads: usize,
     /// A matcher built from the patterns.
     ///
     /// It's important that this is only built once, since building this goes
@@ -165,12 +167,6 @@ impl Args {
         &self.0.matches
     }
 
-    /// Return the patterns found in the command line arguments. This includes
-    /// patterns read via the -f/--file flags.
-    fn patterns(&self) -> &[String] {
-        &self.0.patterns
-    }
-
     /// Return the matcher builder from the patterns.
     fn matcher(&self) -> &PatternMatcher {
         &self.0.matcher
@@ -197,7 +193,7 @@ impl Args {
     fn printer<W: WriteColor>(&self, wtr: W) -> Result<Printer<W>> {
         match self.matches().output_kind() {
             OutputKind::Standard => {
-                let separator_search = self.command()? == Command::Search;
+                let separator_search = self.command() == Command::Search;
                 self.matches()
                     .printer_standard(self.paths(), wtr, separator_search)
                     .map(Printer::Standard)
@@ -225,28 +221,8 @@ impl Args {
     }
 
     /// Return the high-level command that ripgrep should run.
-    pub fn command(&self) -> Result<Command> {
-        let is_one_search = self.matches().is_one_search(self.paths());
-        let threads = self.matches().threads()?;
-        let one_thread = is_one_search || threads == 1;
-
-        Ok(if self.matches().is_present("pcre2-version") {
-            Command::PCRE2Version
-        } else if self.matches().is_present("type-list") {
-            Command::Types
-        } else if self.matches().is_present("files") {
-            if one_thread {
-                Command::Files
-            } else {
-                Command::FilesParallel
-            }
-        } else if self.matches().can_never_match(self.patterns()) {
-            Command::SearchNever
-        } else if one_thread {
-            Command::Search
-        } else {
-            Command::SearchParallel
-        })
+    pub fn command(&self) -> Command {
+        self.0.command
     }
 
     /// Builder a path printer that can be used for printing just file paths,
@@ -304,7 +280,7 @@ impl Args {
     /// When this returns a `Stats` value, then it is guaranteed that the
     /// search worker will be configured to track statistics as well.
     pub fn stats(&self) -> Result<Option<Stats>> {
-        Ok(if self.command()?.is_search() && self.matches().stats() {
+        Ok(if self.command().is_search() && self.matches().stats() {
             Some(Stats::new())
         } else {
             None
@@ -343,12 +319,18 @@ impl Args {
 
     /// Return a walker that never uses additional threads.
     pub fn walker(&self) -> Result<Walk> {
-        Ok(self.matches().walker_builder(self.paths())?.build())
+        Ok(self
+            .matches()
+            .walker_builder(self.paths(), self.0.threads)?
+            .build())
     }
 
     /// Return a parallel walker that may use additional threads.
     pub fn walker_parallel(&self) -> Result<WalkParallel> {
-        Ok(self.matches().walker_builder(self.paths())?.build_parallel())
+        Ok(self
+            .matches()
+            .walker_builder(self.paths(), self.0.threads)?
+            .build_parallel())
     }
 }
 
@@ -557,9 +539,36 @@ impl ArgMatches {
         } else {
             false
         };
+        // Now figure out the number of threads we'll use and which
+        // command will run.
+        let is_one_search = self.is_one_search(&paths);
+        let threads = if is_one_search { 1 } else { self.threads()? };
+        if threads == 1 {
+            log::debug!("running in single threaded mode");
+        } else {
+            log::debug!("running with {threads} threads for parallelism");
+        }
+        let command = if self.is_present("pcre2-version") {
+            Command::PCRE2Version
+        } else if self.is_present("type-list") {
+            Command::Types
+        } else if self.is_present("files") {
+            if threads == 1 {
+                Command::Files
+            } else {
+                Command::FilesParallel
+            }
+        } else if self.can_never_match(&patterns) {
+            Command::SearchNever
+        } else if threads == 1 {
+            Command::Search
+        } else {
+            Command::SearchParallel
+        };
         Ok(Args(Arc::new(ArgsImp {
             matches: self,
-            patterns,
+            command,
+            threads,
             matcher,
             paths,
             using_default_path,
@@ -858,7 +867,11 @@ impl ArgMatches {
     ///
     /// If there was a problem parsing the CLI arguments necessary for
     /// constructing the builder, then this returns an error.
-    fn walker_builder(&self, paths: &[PathBuf]) -> Result<WalkBuilder> {
+    fn walker_builder(
+        &self,
+        paths: &[PathBuf],
+        threads: usize,
+    ) -> Result<WalkBuilder> {
         let mut builder = WalkBuilder::new(&paths[0]);
         for path in &paths[1..] {
             builder.add(path);
@@ -874,7 +887,7 @@ impl ArgMatches {
             .max_depth(self.usize_of("max-depth")?)
             .follow_links(self.is_present("follow"))
             .max_filesize(self.max_file_size()?)
-            .threads(self.threads()?)
+            .threads(threads)
             .same_file_system(self.is_present("one-file-system"))
             .skip_stdout(!self.is_present("files"))
             .overrides(self.overrides()?)
@@ -1592,7 +1605,9 @@ impl ArgMatches {
             return Ok(1);
         }
         let threads = self.usize_of("threads")?.unwrap_or(0);
-        Ok(if threads == 0 { cmp::min(12, num_cpus::get()) } else { threads })
+        let available =
+            std::thread::available_parallelism().map_or(1, |n| n.get());
+        Ok(if threads == 0 { cmp::min(12, available) } else { threads })
     }
 
     /// Builds a file type matcher from the command line flags.
