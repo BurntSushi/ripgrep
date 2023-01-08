@@ -1,6 +1,7 @@
-use serde::de::Error;
+use serde::de::{Error, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::borrow::Cow;
+use std::fmt;
 
 use crate::Glob;
 
@@ -13,12 +14,59 @@ impl Serialize for Glob {
     }
 }
 
+struct CowStrVisitor;
+
+impl<'a> Visitor<'a> for CowStrVisitor {
+    type Value = Cow<'a, str>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a string")
+    }
+
+    fn visit_borrowed_str<E>(self, v: &'a str) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(Cow::Borrowed(v))
+    }
+
+    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(Cow::Owned(v))
+    }
+
+    fn visit_borrowed_bytes<E>(self, v: &'a [u8]) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        let s = std::str::from_utf8(v)
+            .map_err(|_| Error::invalid_value(Unexpected::Bytes(v), &self))?;
+        Ok(Cow::Borrowed(s))
+    }
+
+    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        match String::from_utf8(v) {
+            Ok(s) => Ok(Cow::Owned(s)),
+            Err(e) => Err(Error::invalid_value(
+                Unexpected::Bytes(&e.into_bytes()),
+                &self,
+            )),
+        }
+    }
+}
+
 impl<'de> Deserialize<'de> for Glob {
     fn deserialize<D: Deserializer<'de>>(
         deserializer: D,
     ) -> Result<Self, D::Error> {
-        let glob = <Cow<str> as Deserialize>::deserialize(deserializer)?;
-        Glob::new(&glob).map_err(D::Error::custom)
+        let cow = deserializer.deserialize_str(CowStrVisitor)?;
+
+        Glob::new(&cow).map_err(D::Error::custom)
     }
 }
 
