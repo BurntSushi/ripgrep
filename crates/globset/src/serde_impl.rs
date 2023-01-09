@@ -1,6 +1,5 @@
-use serde::de::{Error, Unexpected, Visitor};
+use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::borrow::Cow;
 use std::fmt;
 
 use crate::Glob;
@@ -14,49 +13,20 @@ impl Serialize for Glob {
     }
 }
 
-struct CowStrVisitor;
+struct GlobVisitor;
 
-impl<'a> Visitor<'a> for CowStrVisitor {
-    type Value = Cow<'a, str>;
+impl<'a> Visitor<'a> for GlobVisitor {
+    type Value = Glob;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a string")
+        formatter.write_str("a string or a borrowed string")
     }
 
-    fn visit_borrowed_str<E>(self, v: &'a str) -> Result<Self::Value, E>
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
     where
         E: Error,
     {
-        Ok(Cow::Borrowed(v))
-    }
-
-    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        Ok(Cow::Owned(v))
-    }
-
-    fn visit_borrowed_bytes<E>(self, v: &'a [u8]) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        let s = std::str::from_utf8(v)
-            .map_err(|_| Error::invalid_value(Unexpected::Bytes(v), &self))?;
-        Ok(Cow::Borrowed(s))
-    }
-
-    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        match String::from_utf8(v) {
-            Ok(s) => Ok(Cow::Owned(s)),
-            Err(e) => Err(Error::invalid_value(
-                Unexpected::Bytes(&e.into_bytes()),
-                &self,
-            )),
-        }
+        Glob::new(v).map_err(serde::de::Error::custom)
     }
 }
 
@@ -64,9 +34,7 @@ impl<'de> Deserialize<'de> for Glob {
     fn deserialize<D: Deserializer<'de>>(
         deserializer: D,
     ) -> Result<Self, D::Error> {
-        let cow = deserializer.deserialize_str(CowStrVisitor)?;
-
-        Glob::new(&cow).map_err(D::Error::custom)
+        deserializer.deserialize_str(GlobVisitor)
     }
 }
 
@@ -91,6 +59,15 @@ mod tests {
         let v: serde_json::Value = serde_json::from_str(&string).unwrap();
         let map: HashMap<String, Glob> = serde_json::from_value(v).unwrap();
         assert_eq!(map["markdown"], Glob::new("*.md").unwrap());
+    }
+
+    #[test]
+    fn glob_deserialize_error() {
+        let string = r#"{"error": "["}"#;
+
+        let map = serde_json::from_str::<HashMap<String, Glob>>(&string);
+
+        assert!(map.is_err());
     }
 
     #[test]
