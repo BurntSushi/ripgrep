@@ -19,7 +19,7 @@ impl<'a> Visitor<'a> for GlobVisitor {
     type Value = Glob;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a string or a borrowed string")
+        formatter.write_str("a glob pattern")
     }
 
     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
