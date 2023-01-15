@@ -106,6 +106,7 @@ impl Override {
 }
 
 /// Builds a matcher for a set of glob overrides.
+#[derive(Clone, Debug)]
 pub struct OverrideBuilder {
     builder: GitignoreBuilder,
 }
