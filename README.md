@@ -433,8 +433,8 @@ from the repository root.
 ### Vulnerability reporting
 
 For reporting a security vulnerability, please
-[contact Andrew Gallant](https://blog.burntsushi.net/about/),
-which has my email address and PGP public key if you wish to send an encrypted
+[contact Andrew Gallant](https://blog.burntsushi.net/about/).
+The contact page has my email address and PGP public key if you wish to send an encrypted
 message.
 
 
