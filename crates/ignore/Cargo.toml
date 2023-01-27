@@ -25,7 +25,7 @@ log = "0.4.5"
 memchr = "2.1"
 regex = "1.5.5"
 same-file = "1.0.4"
-thread_local = "1"
+thread_local = "1.1.4"
 walkdir = "2.2.7"
 
 [target.'cfg(windows)'.dependencies.winapi-util]
