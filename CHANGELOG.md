@@ -11,6 +11,8 @@ Unreleased changes. Release notes have not yet been written.
 Feature enhancements:
 
 * Added or improved file type filtering for Elixir, Fuchsia, Gentoo, GraphQL, USD
+* [FEATURE #2409](https://github.com/BurntSushi/ripgrep/pull/2409):
+  Added installation instructions for `winget`.
 
 Bug fixes:
 
