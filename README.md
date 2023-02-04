@@ -228,6 +228,17 @@ If you're a **Windows Scoop** user, then you can install ripgrep from the
 $ scoop install ripgrep
 ```
 
+If you're a **Windows Winget** user, then you can install ripgrep from the
+[winget-pkgs](https://github.com/microsoft/winget-pkgs/tree/master/manifests/b/BurntSushi/ripgrep) repository:
+
+```
+$ winget install BurntSushi.ripgrep.MSVC
+```
+or
+```
+$ winget install BurntSushi.ripgrep.GNU
+```
+
 If you're an **Arch Linux** user, then you can install ripgrep from the official repos:
 
 ```
