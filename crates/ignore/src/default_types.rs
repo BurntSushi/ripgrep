@@ -251,7 +251,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("tex", &["*.tex", "*.ltx", "*.cls", "*.sty", "*.bib", "*.dtx", "*.ins"]),
     ("texinfo", &["*.texi"]),
     ("textile", &["*.textile"]),
-    ("tf", &["*.tf"]),
+    ("tf", &["*.tf", "*.auto.tfvars", "terraform.tfvars", "*.tf.json", "*.auto.tfvars.json", "terraform.tfvars.json", "*.terraformrc", "terraform.rc", "*.tfrc", "*.terraform.lock.hcl"]),
     ("thrift", &["*.thrift"]),
     ("toml", &["*.toml", "Cargo.lock"]),
     ("ts", &["*.ts", "*.tsx", "*.cts", "*.mts"]),
