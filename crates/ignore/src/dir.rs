@@ -20,7 +20,7 @@ use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 
-use crate::gitignore::{self, Gitignore, GitignoreBuilder};
+use crate::gitignore::{self, Gitignore, GitignoreBuilder, parse_excludes_file, read_file_contents};
 use crate::overrides::{self, Override};
 use crate::pathutil::{is_hidden, strip_prefix};
 use crate::types::{self, Types};
@@ -74,7 +74,7 @@ struct IgnoreOptions {
     git_global: bool,
     /// Whether to read .gitignore files.
     git_ignore: bool,
-    /// Whether to read .git/info/exclude files.
+    /// Whether to read .git/info/exclude and .git/config exclude files.
     git_exclude: bool,
     /// Whether to ignore files case insensitively
     ignore_case_insensitive: bool,
@@ -124,6 +124,8 @@ struct IgnoreInner {
     git_global_matcher: Arc<Gitignore>,
     /// The matcher for .gitignore files.
     git_ignore_matcher: Gitignore,
+    /// The matcher for .git/config files.
+    git_config_matcher: Gitignore,
     /// Special matcher for `.git/info/exclude` files.
     git_exclude_matcher: Gitignore,
     /// Whether this directory contains a .git sub-directory.
@@ -242,6 +244,36 @@ impl Ignore {
         let has_git = git_type.map(|_| true).unwrap_or(false);
 
         let mut errs = PartialErrorBuilder::default();
+        let mut has_git_config = false;
+        let gc_matcher = if !self.0.opts.git_exclude {
+            Gitignore::empty()
+        } else {
+            has_git_config = true;
+            match resolve_git_commondir(dir, git_type) {
+                Ok(git_dir) => {
+                    read_file_contents(&git_dir.join("config")).and_then(|config_contents| {
+                        parse_excludes_file(&config_contents)
+                    }).map(|excludes_file| {
+                        let (m, err) = create_gitignore(
+                            &dir,
+                            &dir,
+                            &[excludes_file],
+                            self.0.opts.ignore_case_insensitive,
+                        );
+                        errs.maybe_push(err);
+                        m
+                    }).unwrap_or_else(|| {
+                        has_git_config = false;
+                        Gitignore::empty()
+                    })
+                }
+                Err(err) => {
+                    errs.maybe_push(err);
+                    has_git_config = false;
+                    Gitignore::empty()
+                }
+            }
+        };
         let custom_ig_matcher = if self.0.custom_ignore_filenames.is_empty() {
             Gitignore::empty()
         } else {
@@ -298,6 +330,13 @@ impl Ignore {
                 }
             }
         };
+
+        let global_matcher = if has_git_config {
+            Arc::new(Gitignore::empty())
+        } else {
+            self.0.git_global_matcher.clone()
+        };
+
         let ig = IgnoreInner {
             compiled: self.0.compiled.clone(),
             dir: dir.to_path_buf(),
@@ -308,9 +347,10 @@ impl Ignore {
             absolute_base: self.0.absolute_base.clone(),
             explicit_ignores: self.0.explicit_ignores.clone(),
             custom_ignore_filenames: self.0.custom_ignore_filenames.clone(),
+            git_config_matcher: gc_matcher,
             custom_ignore_matcher: custom_ig_matcher,
             ignore_matcher: ig_matcher,
-            git_global_matcher: self.0.git_global_matcher.clone(),
+            git_global_matcher: global_matcher,
             git_ignore_matcher: gi_matcher,
             git_exclude_matcher: gi_exclude_matcher,
             has_git,
@@ -407,9 +447,10 @@ impl Ignore {
             mut m_custom_ignore,
             mut m_ignore,
             mut m_gi,
+            mut m_gc,
             mut m_gi_exclude,
             mut m_explicit,
-        ) = (Match::None, Match::None, Match::None, Match::None, Match::None);
+        ) = (Match::None, Match::None, Match::None, Match::None, Match::None, Match::None);
         let any_git =
             !self.0.opts.require_git || self.parents().any(|ig| ig.0.has_git);
         let mut saw_git = false;
@@ -417,6 +458,12 @@ impl Ignore {
             if m_custom_ignore.is_none() {
                 m_custom_ignore =
                     ig.0.custom_ignore_matcher
+                        .matched(path, is_dir)
+                        .map(IgnoreMatch::gitignore);
+            }
+            if m_gc.is_none() {
+                m_gc =
+                    ig.0.git_config_matcher
                         .matched(path, is_dir)
                         .map(IgnoreMatch::gitignore);
             }
@@ -449,6 +496,12 @@ impl Ignore {
                     if m_custom_ignore.is_none() {
                         m_custom_ignore =
                             ig.0.custom_ignore_matcher
+                                .matched(&path, is_dir)
+                                .map(IgnoreMatch::gitignore);
+                    }
+                    if m_gc.is_none() {
+                        m_gc =
+                            ig.0.git_config_matcher
                                 .matched(&path, is_dir)
                                 .map(IgnoreMatch::gitignore);
                     }
@@ -493,6 +546,7 @@ impl Ignore {
             .or(m_ignore)
             .or(m_gi)
             .or(m_gi_exclude)
+            .or(m_gc)
             .or(m_global)
             .or(m_explicit)
     }
@@ -598,6 +652,7 @@ impl IgnoreBuilder {
             is_absolute_parent: true,
             absolute_base: None,
             explicit_ignores: Arc::new(self.explicit_ignores.clone()),
+            git_config_matcher: Gitignore::empty(),
             custom_ignore_filenames: Arc::new(
                 self.custom_ignore_filenames.clone(),
             ),
@@ -705,7 +760,7 @@ impl IgnoreBuilder {
         self
     }
 
-    /// Enables reading `.git/info/exclude` files.
+    /// Enables reading `.git/info/exclude` and `.git/config`s exclude files.
     ///
     /// `.git/info/exclude` files have match semantics as described in the
     /// `gitignore` man page.

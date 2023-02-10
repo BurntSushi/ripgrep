@@ -539,26 +539,20 @@ fn gitconfig_excludes_path() -> Option<PathBuf> {
     // time, where the local .git/config takes precedence, then $HOME/.gitconfig and
     // then $XDG_CONFIG_HOME/git/config. So if .git/config defines a `core.excludesFile`,
     // then we're done.
-    gitconfig_local_contents()
+    gitconfig_home_contents()
         .and_then(|x| parse_excludes_file(&x))
-        .or_else(|| gitconfig_home_contents().and_then(|x| parse_excludes_file(&x)))
         .or_else(|| gitconfig_xdg_contents().and_then(|x| parse_excludes_file(&x)))
         .or_else(excludes_file_default)
 }
 
 /// Returns the file contents of the specified file.
-fn read_file_contents(path: &Path) -> Option<Vec<u8>> {
+pub fn read_file_contents(path: &Path) -> Option<Vec<u8>> {
     let mut file = match File::open(path) {
         Err(_) => return None,
         Ok(file) => io::BufReader::new(file),
     };
     let mut contents = vec![];
     file.read_to_end(&mut contents).ok().map(|_| contents)
-}
-
-/// Returns the file contents of git's local config file, if one exists.
-fn gitconfig_local_contents() -> Option<Vec<u8>> {
-    read_file_contents(Path::new(".git/config"))
 }
 
 /// Returns the file contents of git's global config file, if one exists, in
@@ -591,7 +585,7 @@ fn excludes_file_default() -> Option<PathBuf> {
 
 /// Extract git's `core.excludesfile` config setting from the raw file contents
 /// given.
-fn parse_excludes_file(data: &[u8]) -> Option<PathBuf> {
+pub fn parse_excludes_file(data: &[u8]) -> Option<PathBuf> {
     // N.B. This is the lazy approach, and isn't technically correct, but
     // probably works in more circumstances. I guess we would ideally have
     // a full INI parser. Yuck.
