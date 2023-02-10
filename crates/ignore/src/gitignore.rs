@@ -541,7 +541,9 @@ fn gitconfig_excludes_path() -> Option<PathBuf> {
     // then we're done.
     gitconfig_home_contents()
         .and_then(|x| parse_excludes_file(&x))
-        .or_else(|| gitconfig_xdg_contents().and_then(|x| parse_excludes_file(&x)))
+        .or_else(|| {
+            gitconfig_xdg_contents().and_then(|x| parse_excludes_file(&x))
+        })
         .or_else(excludes_file_default)
 }
 

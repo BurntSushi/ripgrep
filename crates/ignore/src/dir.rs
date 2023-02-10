@@ -20,7 +20,9 @@ use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 
-use crate::gitignore::{self, Gitignore, GitignoreBuilder, parse_excludes_file, read_file_contents};
+use crate::gitignore::{
+    self, parse_excludes_file, read_file_contents, Gitignore, GitignoreBuilder,
+};
 use crate::overrides::{self, Override};
 use crate::pathutil::{is_hidden, strip_prefix};
 use crate::types::{self, Types};
@@ -250,10 +252,11 @@ impl Ignore {
         } else {
             has_git_config = true;
             match resolve_git_commondir(dir, git_type) {
-                Ok(git_dir) => {
-                    read_file_contents(&git_dir.join("config")).and_then(|config_contents| {
+                Ok(git_dir) => read_file_contents(&git_dir.join("config"))
+                    .and_then(|config_contents| {
                         parse_excludes_file(&config_contents)
-                    }).map(|excludes_file| {
+                    })
+                    .map(|excludes_file| {
                         let (m, err) = create_gitignore(
                             &dir,
                             &dir,
@@ -262,11 +265,11 @@ impl Ignore {
                         );
                         errs.maybe_push(err);
                         m
-                    }).unwrap_or_else(|| {
+                    })
+                    .unwrap_or_else(|| {
                         has_git_config = false;
                         Gitignore::empty()
-                    })
-                }
+                    }),
                 Err(err) => {
                     errs.maybe_push(err);
                     has_git_config = false;
@@ -450,7 +453,14 @@ impl Ignore {
             mut m_gc,
             mut m_gi_exclude,
             mut m_explicit,
-        ) = (Match::None, Match::None, Match::None, Match::None, Match::None, Match::None);
+        ) = (
+            Match::None,
+            Match::None,
+            Match::None,
+            Match::None,
+            Match::None,
+            Match::None,
+        );
         let any_git =
             !self.0.opts.require_git || self.parents().any(|ig| ig.0.has_git);
         let mut saw_git = false;
