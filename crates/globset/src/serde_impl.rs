@@ -1,6 +1,7 @@
+use std::fmt;
+
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::fmt;
 
 use crate::Glob;
 
@@ -40,8 +41,9 @@ impl<'de> Deserialize<'de> for Glob {
 
 #[cfg(test)]
 mod tests {
-    use crate::glob::Glob;
     use std::collections::HashMap;
+
+    use crate::glob::Glob;
 
     #[test]
     fn glob_deserialize_borrowed() {
