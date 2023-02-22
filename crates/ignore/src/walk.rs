@@ -826,6 +826,12 @@ impl WalkBuilder {
     /// by `sort_by_file_name`.
     ///
     /// Note that this is not used in the parallel iterator.
+    ///
+    /// ```rust,no_run
+    /// let walk = WalkBuilder::new(root)
+    ///     .sort_by_file_path(|a, b| a.cmp(b))
+    ///     .build();
+    /// ````
     pub fn sort_by_file_path<F>(&mut self, cmp: F) -> &mut WalkBuilder
     where
         F: Fn(&Path, &Path) -> cmp::Ordering + Send + Sync + 'static,
@@ -845,6 +851,11 @@ impl WalkBuilder {
     /// by `sort_by_file_path`.
     ///
     /// Note that this is not used in the parallel iterator.
+    ///
+    /// ```rust,no_run
+    /// let walk = WalkBuilder::new(root)
+    ///     .sort_by_file_name(|a, b| a.cmp(b))
+    ///     .build();
     pub fn sort_by_file_name<F>(&mut self, cmp: F) -> &mut WalkBuilder
     where
         F: Fn(&OsStr, &OsStr) -> cmp::Ordering + Send + Sync + 'static,
