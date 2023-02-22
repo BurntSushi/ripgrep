@@ -1,5 +1,4 @@
 ## FAQ
-
 * [Does ripgrep support configuration files?](#config)
 * [What's changed in ripgrep recently?](#changelog)
 * [When is the next release?](#release)
@@ -25,6 +24,7 @@
 * [How can I search and replace with ripgrep?](#search-and-replace)
 * [How is ripgrep licensed?](#license)
 * [Can ripgrep replace grep?](#posix4ever)
+* [How is ripgrep faster than GNU grep?](#vs-grep)
 * [What does the "rip" in ripgrep mean?](#intentcountsforsomething)
 * [How can I donate to ripgrep or its maintainers?](#donations)
 
@@ -968,6 +968,42 @@ for the previous section apply.
   have or never will have? If the former, file a bug report, maybe ripgrep can
   do it! If the latter, well, then, just use grep.
 
+<h3 name="vs-grep">
+How is ripgrep faster than GNU grep?
+</h3>
+
+Mike on why GNU Grep is fast (2010): https://lists.freebsd.org/pipermail/freebsd-current/2010-August/019310.html
+
+Why is ripgrep fast?
+ * https://old.reddit.com/r/linux/comments/118ok87/why_gnu_grep_is_fast/j9jdo7b/
+ * https://blog.burntsushi.net/ripgrep/#anatomy-of-a-grep
+
+Let's try to dissect Mike's mailing list post. It's generally quite good and 
+he's obviously on point, but it is quite dated at this point and some parts 
+do I think benefit from some revision. OK, so here are Mike's points:
+
+1. GNU grep is fast because it AVOIDS LOOKING AT EVERY INPUT BYTE.
+2. GNU grep is fast because it EXECUTES VERY FEW INSTRUCTIONS FOR EACH BYTE that it does look at.
+3. GNU grep uses raw Unix input system calls and avoids copying data after reading it.
+4. Moreover, GNU grep AVOIDS BREAKING THE INPUT INTO LINES. Looking for newlines would slow grep down by a factor of several times, because to find the newlines it would have to look at every byte!
+5. Finally, when I was last the maintainer of GNU grep (15+ years ago...), GNU grep also tried very hard to set things up so that the kernel could ALSO avoid handling every byte of the input, by using mmap() instead of read() for file input.
+
+And here are my clarifications for each:
+
+1. This is basically talking about how [Boyer-Moore](https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore_string-search_algorithm) might actually avoid looking at some bytes in the haystack based on a couple of mismatch tables computed for the needle before the search begins. While Boyer-Moore does indeed work this way, and it was perhaps the main thing that made it fast on the CPUs of yore, the mismatch tables are not really relevant today other than for guaranteeing worst case time complexity on uncommon inputs. I don't think it was even relevant in 2010 when Mike wrote this mailing list post. But it definitely would have been relevant 15 years prior to 2010. The reason why this isn't relevant today is that substring search algorithms are today dominated SIMD algorithms such as this one. They don't appear much in the literature because academics aren't really interested in them. (Not totally true, there is some literature on "packed substring searching.") In particular, the SIMD algorithms often do not have good worst case time complexity. But they make such good use of the processor that they completely stomp all over classical algorithms like Boyer-Moore. Still though, GNU grep is pretty fast. Why? That's because more implementations of Boyer-Moore have a "skip loop" where it looks for occurrences of the last byte in the needle. This is usually implemented with memchr, which uses SIMD! But this is largely incidental and can suffer badly depending on what that last byte actually is. See my first link above.
+2. Executing as few instructions as possible is indeed still important... but it's complicated. CPUs today are pretty crazy and just because you decrease the number of instructions doesn't mean you get a faster program. But the things Mike is talking about here (like loop unrolling) are still optimizations that apply today. But I wouldn't call them super critical.
+3. Yes, definitely important to use read syscalls and do as little copying as possible. I do wonder what things looked like 25 years ago. This seems mundane to me, so I wonder if there was a common alternative pitfall that folks fell into.
+4. Yes, avoiding breaking the haystack into individual lines is critical. A naive grep works by iterating over every line and running the regex engine for every line. But this turns out to be quite slow, especially when there are very few or no matches.
+5. GNU grep no longer has a memory map optimization. IIRC, this is because it can lead to SIGBUS (if the file is truncated during a search) and because they couldn't see a measurable improvement. ripgrep says "I'm fine with a SIGBUS if it happens," and I absolutely can measurement an improvement from memory mapping. But it's complicated, the improvement isn't huge, and if you try memory mapping lots of files all at once in parallel, it actually tends to slow things down.
+
+So in addition to those points, I would add on the following:
+
+1. Running fast in the presence of Unicode needs to be designed and accounted for up front. IMO, the best way I've seen to tackle Unicode in a robust way is through a lazy DFA and compiling UTF-8 automata into it. So for example, \p{Greek} in ripgrep doesn't get compiled up front. It gets compiled incrementally during a search, only building the transitions it needs as it goes. GNU grep, I believe, also has a lazy DFA, but for whatever reason doesn't build UTF-8 automata into it (I think). I'm not an expert on GNU grep's implementation, but dealing with Unicode is just not something it does well from a performance perspective. It's not like it's easy to do it fast. It's not. And it might be even harder than I think it is because of GNU grep's requirement to support POSIX locales. ripgrep does not. It just supports Unicode everywhere all the time.
+2. For optimizing case insensitive searches and common patterns like foo|bar|quux, you really want more SIMD, but this time for multiple substring search. This requires more sophistication.
+3. Parallelism is an obvious one. AIUI, multiple people have tried patching GNU grep to use parallelism, but I don't think it's ever landed. I'm not sure why. It's certainly not trivial to do. Last time I looked at GNU grep's source, there was global mutable state everywhere. Have fun with that.
+4. Another possible optimization that makes ripgrep faster is that it respects gitignores by default and ignores hidden directories. So when you do grep -r foo ./ in your code repository, it's going to fish through your .git directory. Not only does that take a lot of time for bigger repos, but it's likely to show matches you don't care about. ripgrep skips all of that by default. Of course, you can disable smart filtering with -uuu. This also shows up when you build your code and there are huge binary artifacts that aren't part of your repository, but are part of your directory tree. GNU grep will happily search those. ripgrep probably won't, assuming they're in your .gitignore.
+
+via https://www.reddit.com/r/linux/comments/118ok87/why_gnu_grep_is_fast/j9k0n5z/
 
 <h3 name="intentcountsforsomething">
 What does the "rip" in ripgrep mean?
