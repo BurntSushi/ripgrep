@@ -1543,6 +1543,9 @@ impl<'s> Worker<'s> {
         };
         let is_symlink = dent.file_type().map_or(false, |ft| ft.is_symlink());
         if self.follow_links && is_symlink {
+            if should_skip_entry(ig, &dent) {
+                return WalkState::Continue;
+            }
             let path = dent.path().to_path_buf();
             dent = match DirEntryRaw::from_path(depth, path, true) {
                 Ok(dent) => DirEntry::new_raw(dent, None),
@@ -1844,6 +1847,7 @@ fn device_num<P: AsRef<Path>>(_: P) -> io::Result<u64> {
 
 #[cfg(test)]
 mod tests {
+    use crate::Error;
     use std::ffi::OsStr;
     use std::fs::{self, File};
     use std::io::Write;
@@ -2139,6 +2143,34 @@ mod tests {
             &builder.follow_links(true),
             &["a", "a/b", "a/b/foo", "z", "z/foo"],
         );
+    }
+
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn parallel_walker_should_ignore_broken_symlink() {
+        let temp_dir = tmpdir();
+        let temp_path = temp_dir.path();
+        symlink(temp_path.join("broken_link"), "missing_file");
+        wfile(temp_path.join(".gitignore"), "broken_link");
+        let mut walk_builder = WalkBuilder::new(temp_path);
+        let dir_entries_parallel =
+            collect_parallel_walker_results(&walk_builder.follow_links(true));
+        assert_eq!(1, dir_entries_parallel.len());
+    }
+
+    fn collect_parallel_walker_results(
+        builder: &WalkBuilder,
+    ) -> Vec<Result<DirEntry, Error>> {
+        let dir_entries = Arc::new(Mutex::new(vec![]));
+        builder.build_parallel().run(|| {
+            let dir_entries = dir_entries.clone();
+            Box::new(move |result| {
+                dir_entries.lock().unwrap().push(result);
+                WalkState::Continue
+            })
+        });
+        let dir_entries = dir_entries.lock().unwrap();
+        dir_entries.to_vec()
     }
 
     #[cfg(unix)] // because symlinks on windows are weird
