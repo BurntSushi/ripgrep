@@ -67,7 +67,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("ebuild", &["*.ebuild"]),
     ("edn", &["*.edn"]),
     ("elisp", &["*.el"]),
-    ("elixir", &["*.ex", "*.eex", "*.exs"]),
+    ("elixir", &["*.ex", "*.eex", "*.exs", "*.heex", "*.leex", "*.livemd"]),
     ("elm", &["*.elm"]),
     ("erb", &["*.erb"]),
     ("erlang", &["*.erl", "*.hrl"]),

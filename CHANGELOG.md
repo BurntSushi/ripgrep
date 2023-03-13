@@ -10,7 +10,7 @@ Unreleased changes. Release notes have not yet been written.
 
 Feature enhancements:
 
-* Added or improved file type filtering for Fuchsia, GraphQL
+* Added or improved file type filtering for Elixir, Fuchsia, GraphQL
 
 Bug fixes:
 
