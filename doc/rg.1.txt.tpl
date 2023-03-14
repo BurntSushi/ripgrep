@@ -186,7 +186,7 @@ ripgrep supports reading configuration files that change ripgrep's default
 behavior. The format of the configuration file is an "rc" style and is very
 simple. It is defined by two rules:
 
-    1. Every line is a shell argument, after trimming whitespace.
+    1. Every shell argument needs to go in one line, with e.g. '-j 4' counting as two arguments.
     2. Lines starting with *#* (optionally preceded by any amount of
        whitespace) are ignored.
 
@@ -210,7 +210,7 @@ would behave identically to the following command
 
     rg --smart-case foo
 
-another example is adding types
+Another example is adding types
 
     --type-add
     web:*.{html,css,js}*
@@ -219,7 +219,7 @@ would behave identically to the following command
 
     rg --type-add 'web:*.{html,css,js}*' foo
 
-same with using globs
+Same with using globs
 
     --glob=!.git
 
