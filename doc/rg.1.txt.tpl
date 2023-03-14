@@ -186,7 +186,8 @@ ripgrep supports reading configuration files that change ripgrep's default
 behavior. The format of the configuration file is an "rc" style and is very
 simple. It is defined by two rules:
 
-    1. Every shell argument needs to go in one line, with e.g. '-j 4' counting as two arguments.
+    1. Every shell argument needs to go in one line, with e.g. '-j 4' counting
+       as two arguments and therefor needing two lines.
     2. Lines starting with *#* (optionally preceded by any amount of
        whitespace) are ignored.
 
