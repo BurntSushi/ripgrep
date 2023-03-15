@@ -1711,6 +1711,8 @@ fn flag_line_number(args: &mut Vec<RGArg>) {
         "\
 Show line numbers (1-based). This is enabled by default when searching in a
 terminal.
+
+This flag overrides --no-line-number.
 "
     );
     let arg = RGArg::switch("line-number")
@@ -1725,6 +1727,8 @@ terminal.
         "\
 Suppress line numbers. This is enabled by default when not searching in a
 terminal.
+
+This flag overrides --line-number.
 "
     );
     let arg = RGArg::switch("no-line-number")
