@@ -2583,8 +2583,8 @@ Do not print anything to stdout. If a match is found in a file, then ripgrep
 will stop searching. This is useful when ripgrep is used only for its exit
 code (which will be an error if no matches are found).
 
-When --files is used, then ripgrep will stop finding files after finding the
-first file that matches all ignore rules.
+When --files is used, ripgrep will stop finding files after finding the
+first file that does not match any ignore rules.
 "
     );
     let arg = RGArg::switch("quiet").short("q").help(SHORT).long_help(LONG);
