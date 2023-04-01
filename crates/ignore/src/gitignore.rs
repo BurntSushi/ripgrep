@@ -533,7 +533,7 @@ impl GitignoreBuilder {
 /// Return the file path of the current environment's global gitignore file.
 ///
 /// Note that the file path returned may not exist.
-fn gitconfig_excludes_path() -> Option<PathBuf> {
+pub fn gitconfig_excludes_path() -> Option<PathBuf> {
     // git supports $HOME/.gitconfig and $XDG_CONFIG_HOME/git/config. Notably,
     // both can be active at the same time, where $HOME/.gitconfig takes
     // precedent. So if $HOME/.gitconfig defines a `core.excludesFile`, then
