@@ -700,7 +700,13 @@ impl ArgMatches {
         let res = if self.is_present("fixed-strings") {
             builder.build_literals(patterns)
         } else {
-            builder.build(&patterns.join("|"))
+            builder.build(
+                &patterns
+                    .iter()
+                    .map(|s| format!("(?:{})", s))
+                    .collect::<Vec<String>>()
+                    .join("|"),
+            )
         };
         match res {
             Ok(m) => Ok(m),
