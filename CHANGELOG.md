@@ -14,6 +14,8 @@ Bug fixes:
   Disable mmap searching in all non-64-bit environments.
 * [BUG #2236](https://github.com/BurntSushi/ripgrep/issues/2236):
   Fix gitignore parsing bug where a trailing `\/` resulted in an error.
+* [BUG #2480](https://github.com/BurntSushi/ripgrep/issues/2480):
+  Fix bug when using inline regex flags with `-e/--regexp`.
 * [BUG #2523](https://github.com/BurntSushi/ripgrep/issues/2523):
   Make executable searching take `.com` into account on Windows.
 
