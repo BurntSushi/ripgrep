@@ -700,16 +700,8 @@ impl ArgMatches {
         let res = if self.is_present("fixed-strings") {
             builder.build_literals(patterns)
         } else {
-            match patterns.len() {
-                1 => builder.build(&patterns[0]),
-                _ => builder.build(
-                    &patterns
-                        .iter()
-                        .map(|s| format!("(?:{})", s))
-                        .collect::<Vec<String>>()
-                        .join("|"),
-                ),
-            }
+            let joined = self.join_patterns(&patterns);
+            builder.build(&joined)
         };
         match res {
             Ok(m) => Ok(m),
@@ -717,6 +709,16 @@ impl ArgMatches {
         }
     }
 
+    fn join_patterns(&self, patterns: &[String]) -> String {
+        match patterns.len() {
+            1 => patterns[0].to_owned(),
+            _ => patterns
+                .iter()
+                .map(|s| format!("(?:{})", s))
+                .collect::<Vec<String>>()
+                .join("|"),
+        }
+    }
     /// Build a matcher using PCRE2.
     ///
     /// If there was a problem building the matcher (such as a regex syntax
@@ -756,7 +758,8 @@ impl ArgMatches {
         if self.is_present("crlf") {
             builder.crlf(true);
         }
-        Ok(builder.build(&patterns.join("|"))?)
+        let joined = self.join_patterns(&patterns);
+        Ok(builder.build(&joined)?)
     }
 
     /// Build a JSON printer that writes results to the given writer.
