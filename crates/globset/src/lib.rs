@@ -5,7 +5,7 @@ Glob set matching is the process of matching one or more glob patterns against
 a single candidate path simultaneously, and returning all of the globs that
 matched. For example, given this set of globs:
 
-```ignore
+```text
 *.rs
 src/lib.rs
 src/**/foo.rs
