@@ -597,7 +597,7 @@ fn parse_excludes_file(data: &[u8]) -> Option<PathBuf> {
     // a full INI parser. Yuck.
     lazy_static::lazy_static! {
         static ref RE: Regex =
-            Regex::new(r"(?im)^\s*excludesfile\s*=\s*(.+)\s*$").unwrap();
+            Regex::new(r"(?im-u)^[[:space:]]*excludesfile[[:space:]]*=[[:space:]]*(.+)[[:space:]]*$").unwrap();
     };
     let caps = match RE.captures(data) {
         None => return None,
