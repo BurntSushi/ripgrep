@@ -1,4 +1,4 @@
-use aho_corasick::{AhoCorasick, AhoCorasickBuilder, MatchKind};
+use aho_corasick::{AhoCorasick, MatchKind};
 use grep_matcher::{Match, Matcher, NoError};
 use regex_syntax::hir::Hir;
 
@@ -23,10 +23,9 @@ impl MultiLiteralMatcher {
     pub fn new<B: AsRef<[u8]>>(
         literals: &[B],
     ) -> Result<MultiLiteralMatcher, Error> {
-        let ac = AhoCorasickBuilder::new()
+        let ac = AhoCorasick::builder()
             .match_kind(MatchKind::LeftmostFirst)
-            .auto_configure(literals)
-            .build_with_size::<usize, _, _>(literals)
+            .build(literals)
             .map_err(Error::regex)?;
         Ok(MultiLiteralMatcher { ac })
     }
