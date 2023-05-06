@@ -4,7 +4,7 @@ Unreleased changes. Release notes have not yet been written.
 
 Feature enhancements:
 
-* Added or improved file type filtering for Fuchsia
+* Added or improved file type filtering for Fuchsia, GraphQL
 
 Bug fixes:
 
