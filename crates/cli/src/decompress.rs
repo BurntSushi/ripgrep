@@ -455,9 +455,11 @@ pub fn resolve_binary<P: AsRef<Path>>(
             return Ok(abs_prog.to_path_buf());
         }
         if abs_prog.extension().is_none() {
-            let abs_prog = abs_prog.with_extension("exe");
-            if is_exe(&abs_prog) {
-                return Ok(abs_prog.to_path_buf());
+            for extension in ["com", "exe"] {
+                let abs_prog = abs_prog.with_extension(extension);
+                if is_exe(&abs_prog) {
+                    return Ok(abs_prog.to_path_buf());
+                }
             }
         }
     }

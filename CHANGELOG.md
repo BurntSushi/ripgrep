@@ -2,6 +2,10 @@ TBD
 ===
 Unreleased changes. Release notes have not yet been written.
 
+Feature enhancements:
+
+* Added or improved file type filtering for Fuchsia
+
 Bug fixes:
 
 * [BUG #1891](https://github.com/BurntSushi/ripgrep/issues/1891):
@@ -10,6 +14,8 @@ Bug fixes:
   Disable mmap searching in all non-64-bit environments.
 * [BUG #2236](https://github.com/BurntSushi/ripgrep/issues/2236):
   Fix gitignore parsing bug where a trailing `\/` resulted in an error.
+* [BUG #2523](https://github.com/BurntSushi/ripgrep/issues/2523):
+  Make executable searching take `.com` into account on Windows.
 
 
 13.0.0 (2021-06-12)
