@@ -142,7 +142,7 @@ checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 name = "globset"
 version = "0.4.10"
 dependencies = [
- "aho-corasick 0.7.20",
+ "aho-corasick 1.0.1",
  "bstr",
  "fnv",
  "glob",

@@ -170,6 +170,8 @@ pub enum ErrorKind {
     NestedAlternates,
     /// Occurs when an unescaped '\' is found at the end of a glob.
     DanglingEscape,
+    /// An error associated with building a match search
+    MatchBuild(String),
     /// An error associated with parsing or compiling a regex.
     Regex(String),
     /// Hints that destructuring should not be exhaustive.
@@ -221,6 +223,7 @@ impl ErrorKind {
                 "nested alternate groups are not allowed"
             }
             ErrorKind::DanglingEscape => "dangling '\\'",
+            ErrorKind::MatchBuild(ref err) => err,
             ErrorKind::Regex(ref err) => err,
             ErrorKind::__Nonexhaustive => unreachable!(),
         }
@@ -247,7 +250,8 @@ impl fmt::Display for ErrorKind {
             | ErrorKind::UnclosedAlternates
             | ErrorKind::NestedAlternates
             | ErrorKind::DanglingEscape
-            | ErrorKind::Regex(_) => write!(f, "{}", self.description()),
+            | ErrorKind::MatchBuild(_) => write!(f, "{}", self.description()),
+            ErrorKind::Regex(_) => write!(f, "{}", self.description()),
             ErrorKind::InvalidRange(s, e) => {
                 write!(f, "invalid range; '{}' > '{}'", s, e)
             }
@@ -445,8 +449,8 @@ impl GlobSet {
                 GlobSetMatchStrategy::Extension(exts),
                 GlobSetMatchStrategy::BasenameLiteral(base_lits),
                 GlobSetMatchStrategy::Literal(lits),
-                GlobSetMatchStrategy::Suffix(suffixes.suffix()),
-                GlobSetMatchStrategy::Prefix(prefixes.prefix()),
+                GlobSetMatchStrategy::Suffix(suffixes.suffix()?),
+                GlobSetMatchStrategy::Prefix(prefixes.prefix()?),
                 GlobSetMatchStrategy::RequiredExtension(
                     required_exts.build()?,
                 ),
@@ -816,20 +820,30 @@ impl MultiStrategyBuilder {
         self.literals.push(literal);
     }
 
-    fn prefix(self) -> PrefixStrategy {
-        PrefixStrategy {
-            matcher: AhoCorasick::new_auto_configured(&self.literals),
-            map: self.map,
-            longest: self.longest,
-        }
+    fn prefix(self) -> Result<PrefixStrategy, Error> {
+        AhoCorasick::new(&self.literals)
+            .map_err(|err| Error {
+                glob: None,
+                kind: ErrorKind::MatchBuild(err.to_string()),
+            })
+            .map(|matcher| PrefixStrategy {
+                matcher,
+                map: self.map,
+                longest: self.longest,
+            })
     }
 
-    fn suffix(self) -> SuffixStrategy {
-        SuffixStrategy {
-            matcher: AhoCorasick::new_auto_configured(&self.literals),
-            map: self.map,
-            longest: self.longest,
-        }
+    fn suffix(self) -> Result<SuffixStrategy, Error> {
+        AhoCorasick::new(&self.literals)
+            .map_err(|err| Error {
+                glob: None,
+                kind: ErrorKind::MatchBuild(err.to_string()),
+            })
+            .map(|matcher| SuffixStrategy {
+                matcher,
+                map: self.map,
+                longest: self.longest,
+            })
     }
 
     fn regex_set(self) -> Result<RegexSetStrategy, Error> {
