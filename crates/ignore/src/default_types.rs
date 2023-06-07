@@ -38,6 +38,7 @@ pub const DEFAULT_TYPES: &[(&str, &[&str])] = &[
     ("ceylon", &["*.ceylon"]),
     ("clojure", &["*.clj", "*.cljc", "*.cljs", "*.cljx"]),
     ("cmake", &["*.cmake", "CMakeLists.txt"]),
+    ("cml", &["*.cml"]),
     ("coffeescript", &["*.coffee"]),
     ("config", &["*.cfg", "*.conf", "*.config", "*.ini"]),
     ("coq", &["*.v"]),
