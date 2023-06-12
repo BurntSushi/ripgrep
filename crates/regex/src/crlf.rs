@@ -124,32 +124,26 @@ pub fn adjust_match(haystack: &[u8], m: Match) -> Match {
 /// nicely in most cases, especially when a match is limited to a single line.
 pub fn crlfify(expr: Hir) -> Hir {
     match expr.into_kind() {
-        HirKind::Anchor(hir::Anchor::EndLine) => {
-            let concat = Hir::concat(vec![
-                Hir::repetition(hir::Repetition {
-                    kind: hir::RepetitionKind::ZeroOrOne,
-                    greedy: false,
-                    hir: Box::new(Hir::literal(hir::Literal::Unicode('\r'))),
-                }),
-                Hir::anchor(hir::Anchor::EndLine),
-            ]);
-            Hir::group(hir::Group {
-                kind: hir::GroupKind::NonCapturing,
-                hir: Box::new(concat),
-            })
-        }
+        HirKind::Look(hir::Look::EndLF) => Hir::concat(vec![
+            Hir::repetition(hir::Repetition {
+                min: 0,
+                max: Some(1),
+                greedy: false,
+                sub: Box::new(Hir::literal("\r".as_bytes())),
+            }),
+            Hir::look(hir::Look::EndLF),
+        ]),
         HirKind::Empty => Hir::empty(),
-        HirKind::Literal(x) => Hir::literal(x),
+        HirKind::Literal(hir::Literal(x)) => Hir::literal(x),
         HirKind::Class(x) => Hir::class(x),
-        HirKind::Anchor(x) => Hir::anchor(x),
-        HirKind::WordBoundary(x) => Hir::word_boundary(x),
+        HirKind::Look(x) => Hir::look(x),
         HirKind::Repetition(mut x) => {
-            x.hir = Box::new(crlfify(*x.hir));
+            x.sub = Box::new(crlfify(*x.sub));
             Hir::repetition(x)
         }
-        HirKind::Group(mut x) => {
-            x.hir = Box::new(crlfify(*x.hir));
-            Hir::group(x)
+        HirKind::Capture(mut x) => {
+            x.sub = Box::new(crlfify(*x.sub));
+            Hir::capture(x)
         }
         HirKind::Concat(xs) => {
             Hir::concat(xs.into_iter().map(crlfify).collect())
@@ -174,12 +168,12 @@ mod tests {
     #[test]
     fn various() {
         assert_eq!(roundtrip(r"(?m)$"), "(?:\r??(?m:$))");
-        assert_eq!(roundtrip(r"(?m)$$"), "(?:\r??(?m:$))(?:\r??(?m:$))");
+        assert_eq!(roundtrip(r"(?m)$$"), "(?:\r??(?m:$)\r??(?m:$))");
         assert_eq!(
             roundtrip(r"(?m)(?:foo$|bar$)"),
-            "(?:foo(?:\r??(?m:$))|bar(?:\r??(?m:$)))"
+            "(?:(?:(?:foo)\r??(?m:$))|(?:(?:bar)\r??(?m:$)))"
         );
-        assert_eq!(roundtrip(r"(?m)$a"), "(?:\r??(?m:$))a");
+        assert_eq!(roundtrip(r"(?m)$a"), "(?:\r??(?m:$)a)");
 
         // Not a multiline `$`, so no crlfifying occurs.
         assert_eq!(roundtrip(r"$"), "\\z");

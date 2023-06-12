@@ -1,6 +1,6 @@
-use aho_corasick::{AhoCorasick, AhoCorasickBuilder, MatchKind};
+use aho_corasick::{AhoCorasick, MatchKind};
 use grep_matcher::{Match, Matcher, NoError};
-use regex_syntax::hir::Hir;
+use regex_syntax::hir::{Hir, HirKind};
 
 use crate::error::Error;
 use crate::matcher::RegexCaptures;
@@ -23,10 +23,9 @@ impl MultiLiteralMatcher {
     pub fn new<B: AsRef<[u8]>>(
         literals: &[B],
     ) -> Result<MultiLiteralMatcher, Error> {
-        let ac = AhoCorasickBuilder::new()
+        let ac = AhoCorasick::builder()
             .match_kind(MatchKind::LeftmostFirst)
-            .auto_configure(literals)
-            .build_with_size::<usize, _, _>(literals)
+            .build(literals)
             .map_err(Error::regex)?;
         Ok(MultiLiteralMatcher { ac })
     }
@@ -79,13 +78,11 @@ impl Matcher for MultiLiteralMatcher {
 /// Alternation literals checks if the given HIR is a simple alternation of
 /// literals, and if so, returns them. Otherwise, this returns None.
 pub fn alternation_literals(expr: &Hir) -> Option<Vec<Vec<u8>>> {
-    use regex_syntax::hir::{HirKind, Literal};
-
     // This is pretty hacky, but basically, if `is_alternation_literal` is
     // true, then we can make several assumptions about the structure of our
     // HIR. This is what justifies the `unreachable!` statements below.
 
-    if !expr.is_alternation_literal() {
+    if !expr.properties().is_alternation_literal() {
         return None;
     }
     let alts = match *expr.kind() {
@@ -93,26 +90,16 @@ pub fn alternation_literals(expr: &Hir) -> Option<Vec<Vec<u8>>> {
         _ => return None, // one literal isn't worth it
     };
 
-    let extendlit = |lit: &Literal, dst: &mut Vec<u8>| match *lit {
-        Literal::Unicode(c) => {
-            let mut buf = [0; 4];
-            dst.extend_from_slice(c.encode_utf8(&mut buf).as_bytes());
-        }
-        Literal::Byte(b) => {
-            dst.push(b);
-        }
-    };
-
     let mut lits = vec![];
     for alt in alts {
         let mut lit = vec![];
         match *alt.kind() {
             HirKind::Empty => {}
-            HirKind::Literal(ref x) => extendlit(x, &mut lit),
+            HirKind::Literal(ref x) => lit.extend_from_slice(&x.0),
             HirKind::Concat(ref exprs) => {
                 for e in exprs {
                     match *e.kind() {
-                        HirKind::Literal(ref x) => extendlit(x, &mut lit),
+                        HirKind::Literal(ref x) => lit.extend_from_slice(&x.0),
                         _ => unreachable!("expected literal, got {:?}", e),
                     }
                 }

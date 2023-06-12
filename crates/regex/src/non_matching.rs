@@ -1,6 +1,10 @@
-use grep_matcher::ByteSet;
-use regex_syntax::hir::{self, Hir, HirKind};
-use regex_syntax::utf8::Utf8Sequences;
+use {
+    grep_matcher::ByteSet,
+    regex_syntax::{
+        hir::{self, Hir, HirKind, Look},
+        utf8::Utf8Sequences,
+    },
+};
 
 /// Return a confirmed set of non-matching bytes from the given expression.
 pub fn non_matching_bytes(expr: &Hir) -> ByteSet {
@@ -13,17 +17,27 @@ pub fn non_matching_bytes(expr: &Hir) -> ByteSet {
 /// the given expression.
 fn remove_matching_bytes(expr: &Hir, set: &mut ByteSet) {
     match *expr.kind() {
-        HirKind::Empty | HirKind::WordBoundary(_) => {}
-        HirKind::Anchor(_) => {
+        HirKind::Empty
+        // | HirKind::Look(Look::Start | Look::End)
+        | HirKind::Look(Look::WordAscii | Look::WordAsciiNegate)
+        | HirKind::Look(Look::WordUnicode | Look::WordUnicodeNegate) => {}
+        HirKind::Look(Look::Start | Look::End) => {
+            // FIXME: This is wrong, but not doing this leads to incorrect
+            // results because of how anchored searches are implemented in
+            // the 'grep-searcher' crate.
             set.remove(b'\n');
         }
-        HirKind::Literal(hir::Literal::Unicode(c)) => {
-            for &b in c.encode_utf8(&mut [0; 4]).as_bytes() {
+        HirKind::Look(Look::StartLF | Look::EndLF) => {
+            set.remove(b'\n');
+        }
+        HirKind::Look(Look::StartCRLF | Look::EndCRLF) => {
+            set.remove(b'\r');
+            set.remove(b'\n');
+        }
+        HirKind::Literal(hir::Literal(ref lit)) => {
+            for &b in lit.iter() {
                 set.remove(b);
             }
-        }
-        HirKind::Literal(hir::Literal::Byte(b)) => {
-            set.remove(b);
         }
         HirKind::Class(hir::Class::Unicode(ref cls)) => {
             for range in cls.iter() {
@@ -42,10 +56,10 @@ fn remove_matching_bytes(expr: &Hir, set: &mut ByteSet) {
             }
         }
         HirKind::Repetition(ref x) => {
-            remove_matching_bytes(&x.hir, set);
+            remove_matching_bytes(&x.sub, set);
         }
-        HirKind::Group(ref x) => {
-            remove_matching_bytes(&x.hir, set);
+        HirKind::Capture(ref x) => {
+            remove_matching_bytes(&x.sub, set);
         }
         HirKind::Concat(ref xs) => {
             for x in xs {
@@ -62,17 +76,13 @@ fn remove_matching_bytes(expr: &Hir, set: &mut ByteSet) {
 
 #[cfg(test)]
 mod tests {
-    use grep_matcher::ByteSet;
-    use regex_syntax::ParserBuilder;
+    use {grep_matcher::ByteSet, regex_syntax::ParserBuilder};
 
     use super::non_matching_bytes;
 
     fn extract(pattern: &str) -> ByteSet {
-        let expr = ParserBuilder::new()
-            .allow_invalid_utf8(true)
-            .build()
-            .parse(pattern)
-            .unwrap();
+        let expr =
+            ParserBuilder::new().utf8(false).build().parse(pattern).unwrap();
         non_matching_bytes(&expr)
     }
 
@@ -131,9 +141,13 @@ mod tests {
 
     #[test]
     fn anchor() {
+        // FIXME: The first four tests below should correspond to a full set
+        // of bytes for the non-matching bytes I think.
         assert_eq!(sparse(&extract(r"^")), sparse_except(&[b'\n']));
         assert_eq!(sparse(&extract(r"$")), sparse_except(&[b'\n']));
         assert_eq!(sparse(&extract(r"\A")), sparse_except(&[b'\n']));
         assert_eq!(sparse(&extract(r"\z")), sparse_except(&[b'\n']));
+        assert_eq!(sparse(&extract(r"(?m)^")), sparse_except(&[b'\n']));
+        assert_eq!(sparse(&extract(r"(?m)$")), sparse_except(&[b'\n']));
     }
 }

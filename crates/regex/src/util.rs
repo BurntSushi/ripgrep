@@ -1,5 +1,6 @@
 /// Converts an arbitrary sequence of bytes to a literal suitable for building
 /// a regular expression.
+#[allow(dead_code)]
 pub fn bytes_to_regex(bs: &[u8]) -> String {
     use regex_syntax::is_meta_character;
     use std::fmt::Write;

@@ -818,7 +818,7 @@ impl MultiStrategyBuilder {
 
     fn prefix(self) -> PrefixStrategy {
         PrefixStrategy {
-            matcher: AhoCorasick::new_auto_configured(&self.literals),
+            matcher: AhoCorasick::new(&self.literals).unwrap(),
             map: self.map,
             longest: self.longest,
         }
@@ -826,7 +826,7 @@ impl MultiStrategyBuilder {
 
     fn suffix(self) -> SuffixStrategy {
         SuffixStrategy {
-            matcher: AhoCorasick::new_auto_configured(&self.literals),
+            matcher: AhoCorasick::new(&self.literals).unwrap(),
             map: self.map,
             longest: self.longest,
         }

@@ -1464,7 +1464,7 @@ impl ArgMatches {
         // own, but if the patterns are joined in a set of alternations, then
         // you wind up with `foo|`, which is currently invalid in Rust's regex
         // engine.
-        "(?:z{0})*".to_string()
+        "(?:)".to_string()
     }
 
     /// Converts an OsStr pattern to a String pattern. The pattern is escaped

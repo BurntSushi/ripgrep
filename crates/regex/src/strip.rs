@@ -42,17 +42,11 @@ fn strip_from_match_ascii(expr: Hir, byte: u8) -> Result<Hir, Error> {
 
     Ok(match expr.into_kind() {
         HirKind::Empty => Hir::empty(),
-        HirKind::Literal(hir::Literal::Unicode(c)) => {
-            if c == chr {
+        HirKind::Literal(hir::Literal(lit)) => {
+            if lit.iter().find(|&&b| b == byte).is_some() {
                 return invalid();
             }
-            Hir::literal(hir::Literal::Unicode(c))
-        }
-        HirKind::Literal(hir::Literal::Byte(b)) => {
-            if b as char == chr {
-                return invalid();
-            }
-            Hir::literal(hir::Literal::Byte(b))
+            Hir::literal(lit)
         }
         HirKind::Class(hir::Class::Unicode(mut cls)) => {
             let remove = hir::ClassUnicode::new(Some(
@@ -74,15 +68,14 @@ fn strip_from_match_ascii(expr: Hir, byte: u8) -> Result<Hir, Error> {
             }
             Hir::class(hir::Class::Bytes(cls))
         }
-        HirKind::Anchor(x) => Hir::anchor(x),
-        HirKind::WordBoundary(x) => Hir::word_boundary(x),
+        HirKind::Look(x) => Hir::look(x),
         HirKind::Repetition(mut x) => {
-            x.hir = Box::new(strip_from_match_ascii(*x.hir, byte)?);
+            x.sub = Box::new(strip_from_match_ascii(*x.sub, byte)?);
             Hir::repetition(x)
         }
-        HirKind::Group(mut x) => {
-            x.hir = Box::new(strip_from_match_ascii(*x.hir, byte)?);
-            Hir::group(x)
+        HirKind::Capture(mut x) => {
+            x.sub = Box::new(strip_from_match_ascii(*x.sub, byte)?);
+            Hir::capture(x)
         }
         HirKind::Concat(xs) => {
             let xs = xs
@@ -131,11 +124,11 @@ mod tests {
 
     #[test]
     fn various() {
-        assert_eq!(roundtrip(r"[a\n]", b'\n'), "[a]");
-        assert_eq!(roundtrip(r"[a\n]", b'a'), "[\n]");
-        assert_eq!(roundtrip_crlf(r"[a\n]"), "[a]");
-        assert_eq!(roundtrip_crlf(r"[a\r]"), "[a]");
-        assert_eq!(roundtrip_crlf(r"[a\r\n]"), "[a]");
+        assert_eq!(roundtrip(r"[a\n]", b'\n'), "a");
+        assert_eq!(roundtrip(r"[a\n]", b'a'), "\n");
+        assert_eq!(roundtrip_crlf(r"[a\n]"), "a");
+        assert_eq!(roundtrip_crlf(r"[a\r]"), "a");
+        assert_eq!(roundtrip_crlf(r"[a\r\n]"), "a");
 
         assert_eq!(roundtrip(r"(?-u)\s", b'a'), r"(?-u:[\x09-\x0D\x20])");
         assert_eq!(roundtrip(r"(?-u)\s", b'\n'), r"(?-u:[\x09\x0B-\x0D\x20])");

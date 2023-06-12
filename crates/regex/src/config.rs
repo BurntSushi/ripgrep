@@ -71,7 +71,7 @@ impl Config {
         let ast = self.ast(pattern)?;
         let analysis = self.analysis(&ast)?;
         let expr = hir::translate::TranslatorBuilder::new()
-            .allow_invalid_utf8(true)
+            .utf8(false)
             .case_insensitive(self.is_case_insensitive(&analysis))
             .multi_line(self.multi_line)
             .dot_matches_new_line(self.dot_matches_new_line)
@@ -172,7 +172,12 @@ impl ConfiguredHIR {
     /// CRLF hack is enabled and the regex is line anchored at the end. In
     /// this case, matches that end with a `\r` have the `\r` stripped.
     pub fn needs_crlf_stripped(&self) -> bool {
-        self.config.crlf && self.expr.is_line_anchored_end()
+        self.config.crlf
+            && self
+                .expr
+                .properties()
+                .look_set_suffix_any()
+                .contains(hir::Look::EndLF)
     }
 
     /// Returns the line terminator configured on this expression.
@@ -202,7 +207,7 @@ impl ConfiguredHIR {
 
     /// Returns true if and only if the underlying HIR has any text anchors.
     fn is_any_anchored(&self) -> bool {
-        self.expr.is_any_anchored_start() || self.expr.is_any_anchored_end()
+        self.expr.properties().look_set().contains_anchor_haystack()
     }
 
     /// Builds a regular expression from this HIR expression.
@@ -301,7 +306,7 @@ impl ConfiguredHIR {
         let expr = ::regex_syntax::ParserBuilder::new()
             .nest_limit(self.config.nest_limit)
             .octal(self.config.octal)
-            .allow_invalid_utf8(true)
+            .utf8(false)
             .multi_line(self.config.multi_line)
             .dot_matches_new_line(self.config.dot_matches_new_line)
             .unicode(self.config.unicode)
