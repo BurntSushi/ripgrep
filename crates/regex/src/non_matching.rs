@@ -18,7 +18,6 @@ pub fn non_matching_bytes(expr: &Hir) -> ByteSet {
 fn remove_matching_bytes(expr: &Hir, set: &mut ByteSet) {
     match *expr.kind() {
         HirKind::Empty
-        // | HirKind::Look(Look::Start | Look::End)
         | HirKind::Look(Look::WordAscii | Look::WordAsciiNegate)
         | HirKind::Look(Look::WordUnicode | Look::WordUnicodeNegate) => {}
         HirKind::Look(Look::Start | Look::End) => {

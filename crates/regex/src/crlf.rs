@@ -1,18 +1,20 @@
 use std::collections::HashMap;
 
-use grep_matcher::{Match, Matcher, NoError};
-use regex::bytes::Regex;
-use regex_syntax::hir::{self, Hir, HirKind};
+use {
+    grep_matcher::{Match, Matcher, NoError},
+    regex_automata::{meta::Regex, Input, PatternID},
+    regex_syntax::hir::{self, Hir, HirKind},
+};
 
-use crate::config::ConfiguredHIR;
-use crate::error::Error;
-use crate::matcher::RegexCaptures;
+use crate::{config::ConfiguredHIR, error::Error, matcher::RegexCaptures};
 
 /// A matcher for implementing "word match" semantics.
 #[derive(Clone, Debug)]
 pub struct CRLFMatcher {
     /// The regex.
     regex: Regex,
+    /// The pattern string corresponding to the regex above.
+    pattern: String,
     /// A map from capture group name to capture group index.
     names: HashMap<String, usize>,
 }
@@ -26,18 +28,21 @@ impl CRLFMatcher {
         assert!(expr.needs_crlf_stripped());
 
         let regex = expr.regex()?;
+        let pattern = expr.pattern();
         let mut names = HashMap::new();
-        for (i, optional_name) in regex.capture_names().enumerate() {
+        let it = regex.group_info().pattern_names(PatternID::ZERO);
+        for (i, optional_name) in it.enumerate() {
             if let Some(name) = optional_name {
                 names.insert(name.to_string(), i.checked_sub(1).unwrap());
             }
         }
-        Ok(CRLFMatcher { regex, names })
+        Ok(CRLFMatcher { regex, pattern, names })
     }
 
-    /// Return the underlying regex used by this matcher.
-    pub fn regex(&self) -> &Regex {
-        &self.regex
+    /// Return the underlying pattern string for the regex used by this
+    /// matcher.
+    pub fn pattern(&self) -> &str {
+        &self.pattern
     }
 }
 
@@ -50,7 +55,8 @@ impl Matcher for CRLFMatcher {
         haystack: &[u8],
         at: usize,
     ) -> Result<Option<Match>, NoError> {
-        let m = match self.regex.find_at(haystack, at) {
+        let input = Input::new(haystack).span(at..haystack.len());
+        let m = match self.regex.find(input) {
             None => return Ok(None),
             Some(m) => Match::new(m.start(), m.end()),
         };
@@ -58,7 +64,7 @@ impl Matcher for CRLFMatcher {
     }
 
     fn new_captures(&self) -> Result<RegexCaptures, NoError> {
-        Ok(RegexCaptures::new(self.regex.capture_locations()))
+        Ok(RegexCaptures::new(self.regex.create_captures()))
     }
 
     fn capture_count(&self) -> usize {
@@ -76,15 +82,15 @@ impl Matcher for CRLFMatcher {
         caps: &mut RegexCaptures,
     ) -> Result<bool, NoError> {
         caps.strip_crlf(false);
-        let r =
-            self.regex.captures_read_at(caps.locations_mut(), haystack, at);
-        if !r.is_some() {
+        let input = Input::new(haystack).span(at..haystack.len());
+        self.regex.search_captures(&input, caps.locations_mut());
+        if !caps.locations().is_match() {
             return Ok(false);
         }
 
         // If the end of our match includes a `\r`, then strip it from all
         // capture groups ending at the same location.
-        let end = caps.locations().get(0).unwrap().1;
+        let end = caps.locations().get_match().unwrap().end();
         if end > 0 && haystack.get(end - 1) == Some(&b'\r') {
             caps.strip_crlf(true);
         }

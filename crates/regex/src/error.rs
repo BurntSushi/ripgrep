@@ -18,7 +18,21 @@ impl Error {
         Error { kind }
     }
 
-    pub(crate) fn regex<E: error::Error>(err: E) -> Error {
+    pub(crate) fn regex(err: regex_automata::meta::BuildError) -> Error {
+        // Error { kind: ErrorKind::Regex(err.to_string()) }
+        if let Some(size_limit) = err.size_limit() {
+            let kind = ErrorKind::Regex(format!(
+                "compiled regex exceeds size limit of {size_limit}",
+            ));
+            Error { kind }
+        } else if let Some(ref err) = err.syntax_error() {
+            Error::generic(err)
+        } else {
+            Error::generic(err)
+        }
+    }
+
+    pub(crate) fn generic<E: error::Error>(err: E) -> Error {
         Error { kind: ErrorKind::Regex(err.to_string()) }
     }
 
@@ -30,6 +44,7 @@ impl Error {
 
 /// The kind of an error that can occur.
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub enum ErrorKind {
     /// An error that occurred as a result of parsing a regular expression.
     /// This can be a syntax error or an error that results from attempting to
@@ -51,25 +66,9 @@ pub enum ErrorKind {
     ///
     /// The invalid byte is included in this error.
     InvalidLineTerminator(u8),
-    /// Hints that destructuring should not be exhaustive.
-    ///
-    /// This enum may grow additional variants, so this makes sure clients
-    /// don't count on exhaustive matching. (Otherwise, adding a new variant
-    /// could break existing code.)
-    #[doc(hidden)]
-    __Nonexhaustive,
 }
 
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        match self.kind {
-            ErrorKind::Regex(_) => "regex error",
-            ErrorKind::NotAllowed(_) => "literal not allowed",
-            ErrorKind::InvalidLineTerminator(_) => "invalid line terminator",
-            ErrorKind::__Nonexhaustive => unreachable!(),
-        }
-    }
-}
+impl error::Error for Error {}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -82,7 +81,6 @@ impl fmt::Display for Error {
                 let x = util::show_bytes(&[byte]);
                 write!(f, "line terminators must be ASCII, but '{}' is not", x)
             }
-            ErrorKind::__Nonexhaustive => unreachable!(),
         }
     }
 }

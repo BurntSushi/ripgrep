@@ -19,5 +19,6 @@ bstr = "1.5.0"
 grep-matcher = { version = "0.1.6", path = "../matcher" }
 log = "0.4.5"
 regex = "1.8.3"
+regex-automata = { version = "0.3.0" }
 regex-syntax = "0.7.2"
 thread_local = "1.1.7"

@@ -22,8 +22,8 @@ bench = false
 globset = { version = "0.4.10", path = "../globset" }
 lazy_static = "1.1"
 log = "0.4.5"
-memchr = "2.1"
-regex = "1.1"
+memchr = "2.5"
+regex = "1.8.3"
 same-file = "1.0.4"
 thread_local = "1"
 walkdir = "2.2.7"

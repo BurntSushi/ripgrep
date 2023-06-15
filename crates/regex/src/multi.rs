@@ -26,7 +26,7 @@ impl MultiLiteralMatcher {
         let ac = AhoCorasick::builder()
             .match_kind(MatchKind::LeftmostFirst)
             .build(literals)
-            .map_err(Error::regex)?;
+            .map_err(Error::generic)?;
         Ok(MultiLiteralMatcher { ac })
     }
 }

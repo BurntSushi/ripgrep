@@ -1,15 +1,15 @@
-use grep_matcher::{ByteSet, LineTerminator};
-use regex::bytes::{Regex, RegexBuilder};
-use regex_syntax::ast::{self, Ast};
-use regex_syntax::hir::{self, Hir};
+use {
+    grep_matcher::{ByteSet, LineTerminator},
+    regex_automata::meta::Regex,
+    regex_syntax::ast::{self, Ast},
+    regex_syntax::hir::{self, Hir},
+};
 
-use crate::ast::AstAnalysis;
-use crate::crlf::crlfify;
-use crate::error::Error;
-use crate::literal::LiteralSets;
-use crate::multi::alternation_literals;
-use crate::non_matching::non_matching_bytes;
-use crate::strip::strip_from_match;
+use crate::{
+    ast::AstAnalysis, crlf::crlfify, error::Error, literal::LiteralSets,
+    multi::alternation_literals, non_matching::non_matching_bytes,
+    strip::strip_from_match,
+};
 
 /// Config represents the configuration of a regex matcher in this crate.
 /// The configuration is itself a rough combination of the knobs found in
@@ -79,7 +79,7 @@ impl Config {
             .unicode(self.unicode)
             .build()
             .translate(pattern, &ast)
-            .map_err(Error::regex)?;
+            .map_err(Error::generic)?;
         let expr = match self.line_terminator {
             None => expr,
             Some(line_term) => strip_from_match(expr, line_term)?,
@@ -133,7 +133,7 @@ impl Config {
             .ignore_whitespace(self.ignore_whitespace)
             .build()
             .parse(pattern)
-            .map_err(Error::regex)
+            .map_err(Error::generic)
     }
 }
 
@@ -212,7 +212,13 @@ impl ConfiguredHIR {
 
     /// Builds a regular expression from this HIR expression.
     pub fn regex(&self) -> Result<Regex, Error> {
-        self.pattern_to_regex(&self.expr.to_string())
+        self.pattern_to_regex(&self.pattern())
+    }
+
+    /// Returns the pattern string by converting this HIR to its concrete
+    /// syntax.
+    pub fn pattern(&self) -> String {
+        self.expr.to_string()
     }
 
     /// If this HIR corresponds to an alternation of literals with no
@@ -234,7 +240,7 @@ impl ConfiguredHIR {
         &self,
         mut f: F,
     ) -> Result<ConfiguredHIR, Error> {
-        self.pattern_to_hir(&f(&self.expr.to_string()))
+        self.pattern_to_hir(&f(&self.pattern()))
     }
 
     /// If the current configuration has a line terminator set and if useful
@@ -286,15 +292,21 @@ impl ConfiguredHIR {
         // intention of the original pattern. For example, the Unicode flag
         // will impact how the WordMatcher functions, namely, whether its
         // word boundaries are Unicode aware or not.
-        RegexBuilder::new(&pattern)
+        let syntax = regex_automata::util::syntax::Config::new()
+            .utf8(false)
             .nest_limit(self.config.nest_limit)
             .octal(self.config.octal)
             .multi_line(self.config.multi_line)
             .dot_matches_new_line(self.config.dot_matches_new_line)
-            .unicode(self.config.unicode)
-            .size_limit(self.config.size_limit)
-            .dfa_size_limit(self.config.dfa_size_limit)
-            .build()
+            .unicode(self.config.unicode);
+        let meta = Regex::config()
+            .utf8_empty(false)
+            .nfa_size_limit(Some(self.config.size_limit))
+            .hybrid_cache_capacity(self.config.dfa_size_limit);
+        Regex::builder()
+            .syntax(syntax)
+            .configure(meta)
+            .build(pattern)
             .map_err(Error::regex)
     }
 
@@ -303,7 +315,7 @@ impl ConfiguredHIR {
     fn pattern_to_hir(&self, pattern: &str) -> Result<ConfiguredHIR, Error> {
         // See `pattern_to_regex` comment for explanation of why we only set
         // a subset of knobs here. e.g., `swap_greed` is explicitly left out.
-        let expr = ::regex_syntax::ParserBuilder::new()
+        let expr = regex_syntax::ParserBuilder::new()
             .nest_limit(self.config.nest_limit)
             .octal(self.config.octal)
             .utf8(false)
@@ -312,7 +324,7 @@ impl ConfiguredHIR {
             .unicode(self.config.unicode)
             .build()
             .parse(pattern)
-            .map_err(Error::regex)?;
+            .map_err(Error::generic)?;
         Ok(ConfiguredHIR {
             original: self.original.clone(),
             config: self.config.clone(),
@@ -320,4 +332,21 @@ impl ConfiguredHIR {
             expr,
         })
     }
+
+    /*
+    fn syntax_config(&self) -> regex_automata::util::syntax::Config {
+        regex_automata::util::syntax::Config::new()
+            .nest_limit(self.config.nest_limit)
+            .octal(self.config.octal)
+            .multi_line(self.config.multi_line)
+            .dot_matches_new_line(self.config.dot_matches_new_line)
+            .unicode(self.config.unicode)
+    }
+
+    fn meta_config(&self) -> regex_automata::meta::Config {
+        Regex::config()
+            .nfa_size_limit(Some(self.config.size_limit))
+            .hybrid_cache_capacity(self.config.dfa_size_limit)
+    }
+    */
 }

@@ -1,15 +1,21 @@
-use std::collections::HashMap;
-
-use grep_matcher::{
-    ByteSet, Captures, LineMatchKind, LineTerminator, Match, Matcher, NoError,
+use {
+    grep_matcher::{
+        ByteSet, Captures, LineMatchKind, LineTerminator, Match, Matcher,
+        NoError,
+    },
+    regex_automata::{
+        meta::Regex, util::captures::Captures as AutomataCaptures, Input,
+        PatternID,
+    },
 };
-use regex::bytes::{CaptureLocations, Regex};
 
-use crate::config::{Config, ConfiguredHIR};
-use crate::crlf::CRLFMatcher;
-use crate::error::Error;
-use crate::multi::MultiLiteralMatcher;
-use crate::word::WordMatcher;
+use crate::{
+    config::{Config, ConfiguredHIR},
+    crlf::CRLFMatcher,
+    error::Error,
+    multi::MultiLiteralMatcher,
+    word::WordMatcher,
+};
 
 /// A builder for constructing a `Matcher` using regular expressions.
 ///
@@ -73,6 +79,33 @@ impl RegexMatcherBuilder {
         &self,
         literals: &[B],
     ) -> Result<RegexMatcher, Error> {
+        // BREADCRUMBS: Ideally we would remove this method and just let the
+        // underlying regex engine handle this case. But... this is tricky.
+        // Part of the problem is that ripgrep escapes all patterns by the
+        // time the regex engine is constructed, which is necessary for PCRE2
+        // for example. So that logic would need to change so that we don't
+        // escape things first.
+        //
+        // If we adjusted that, then I think we could just build an HIR value
+        // directly from the literals, thus skipping the parser altogether.
+        //
+        // But that still requires using and keeping this method. But we could
+        // at least get rid of the MultiLiteral matcher since the regex engine
+        // should now handle that case.
+        //
+        // Getting rid of this method is trickier, unless we make multi-pattern
+        // support a first class concept. But I don't think I want to go down
+        // that path? That implies we still need to accept a single pattern
+        // everywhere, which in turn means ripgrep would be forced to join
+        // the literals together using | and escape meta characters. By that
+        // point, we've lost. So I do think we still need this special method.
+        // But we can at least simplify the implementation.
+        //
+        // I still wonder if "fast parse" is still a good idea though.
+        // Basically, reject all nesting except for single-depth alternation.
+        // And reject character classes and all options. Just basically
+        // support `foo|bar|..|quux`. Maybe skip this for now I think.
+
         let mut has_escape = false;
         let mut slices = vec![];
         for lit in literals {
@@ -430,10 +463,10 @@ impl RegexMatcherImpl {
     /// Return the underlying regex object used.
     fn regex(&self) -> String {
         match *self {
-            RegexMatcherImpl::Word(ref x) => x.regex().to_string(),
-            RegexMatcherImpl::CRLF(ref x) => x.regex().to_string(),
+            RegexMatcherImpl::Word(ref x) => x.pattern().to_string(),
+            RegexMatcherImpl::CRLF(ref x) => x.pattern().to_string(),
             RegexMatcherImpl::MultiLiteral(_) => "<N/A>".to_string(),
-            RegexMatcherImpl::Standard(ref x) => x.regex.to_string(),
+            RegexMatcherImpl::Standard(ref x) => x.pattern.clone(),
         }
     }
 }
@@ -706,7 +739,10 @@ impl Matcher for RegexMatcher {
     ) -> Result<Option<LineMatchKind>, NoError> {
         Ok(match self.fast_line_regex {
             Some(ref regex) => {
-                regex.shortest_match(haystack).map(LineMatchKind::Candidate)
+                let input = Input::new(haystack);
+                regex
+                    .search_half(&input)
+                    .map(|hm| LineMatchKind::Candidate(hm.offset()))
             }
             None => {
                 self.shortest_match(haystack)?.map(LineMatchKind::Confirmed)
@@ -721,20 +757,15 @@ struct StandardMatcher {
     /// The regular expression compiled from the pattern provided by the
     /// caller.
     regex: Regex,
-    /// A map from capture group name to its corresponding index.
-    names: HashMap<String, usize>,
+    /// The underlying pattern string for the regex.
+    pattern: String,
 }
 
 impl StandardMatcher {
     fn new(expr: &ConfiguredHIR) -> Result<StandardMatcher, Error> {
         let regex = expr.regex()?;
-        let mut names = HashMap::new();
-        for (i, optional_name) in regex.capture_names().enumerate() {
-            if let Some(name) = optional_name {
-                names.insert(name.to_string(), i);
-            }
-        }
-        Ok(StandardMatcher { regex, names })
+        let pattern = expr.pattern();
+        Ok(StandardMatcher { regex, pattern })
     }
 }
 
@@ -747,14 +778,12 @@ impl Matcher for StandardMatcher {
         haystack: &[u8],
         at: usize,
     ) -> Result<Option<Match>, NoError> {
-        Ok(self
-            .regex
-            .find_at(haystack, at)
-            .map(|m| Match::new(m.start(), m.end())))
+        let input = Input::new(haystack).span(at..haystack.len());
+        Ok(self.regex.find(input).map(|m| Match::new(m.start(), m.end())))
     }
 
     fn new_captures(&self) -> Result<RegexCaptures, NoError> {
-        Ok(RegexCaptures::new(self.regex.capture_locations()))
+        Ok(RegexCaptures::new(self.regex.create_captures()))
     }
 
     fn capture_count(&self) -> usize {
@@ -762,7 +791,7 @@ impl Matcher for StandardMatcher {
     }
 
     fn capture_index(&self, name: &str) -> Option<usize> {
-        self.names.get(name).map(|i| *i)
+        self.regex.group_info().to_index(PatternID::ZERO, name)
     }
 
     fn try_find_iter<F, E>(
@@ -789,10 +818,10 @@ impl Matcher for StandardMatcher {
         at: usize,
         caps: &mut RegexCaptures,
     ) -> Result<bool, NoError> {
-        Ok(self
-            .regex
-            .captures_read_at(&mut caps.locations_mut(), haystack, at)
-            .is_some())
+        let input = Input::new(haystack).span(at..haystack.len());
+        let caps = caps.locations_mut();
+        self.regex.search_captures(&input, caps);
+        Ok(caps.is_match())
     }
 
     fn shortest_match_at(
@@ -800,7 +829,8 @@ impl Matcher for StandardMatcher {
         haystack: &[u8],
         at: usize,
     ) -> Result<Option<usize>, NoError> {
-        Ok(self.regex.shortest_match_at(haystack, at))
+        let input = Input::new(haystack).span(at..haystack.len());
+        Ok(self.regex.search_half(&input).map(|hm| hm.offset()))
     }
 }
 
@@ -829,7 +859,7 @@ enum RegexCapturesImp {
     },
     Regex {
         /// Where the locations are stored.
-        locs: CaptureLocations,
+        locs: AutomataCaptures,
         /// These captures behave as if the capturing groups begin at the given
         /// offset. When set to `0`, this has no affect and capture groups are
         /// indexed like normal.
@@ -852,7 +882,7 @@ impl Captures for RegexCaptures {
         match self.0 {
             RegexCapturesImp::AhoCorasick { .. } => 1,
             RegexCapturesImp::Regex { ref locs, offset, .. } => {
-                locs.len().checked_sub(offset).unwrap()
+                locs.group_info().all_group_len().checked_sub(offset).unwrap()
             }
         }
     }
@@ -869,20 +899,25 @@ impl Captures for RegexCaptures {
             RegexCapturesImp::Regex { ref locs, offset, strip_crlf } => {
                 if !strip_crlf {
                     let actual = i.checked_add(offset).unwrap();
-                    return locs.pos(actual).map(|(s, e)| Match::new(s, e));
+                    return locs
+                        .get_group(actual)
+                        .map(|sp| Match::new(sp.start, sp.end));
                 }
 
                 // currently don't support capture offsetting with CRLF
                 // stripping
                 assert_eq!(offset, 0);
-                let m = match locs.pos(i).map(|(s, e)| Match::new(s, e)) {
+                let m = match locs
+                    .get_group(i)
+                    .map(|sp| Match::new(sp.start, sp.end))
+                {
                     None => return None,
                     Some(m) => m,
                 };
                 // If the end position of this match corresponds to the end
                 // position of the overall match, then we apply our CRLF
                 // stripping. Otherwise, we cannot assume stripping is correct.
-                if i == 0 || m.end() == locs.pos(0).unwrap().1 {
+                if i == 0 || m.end() == locs.get_group(0).unwrap().end {
                     Some(m.with_end(m.end() - 1))
                 } else {
                     Some(m)
@@ -897,12 +932,12 @@ impl RegexCaptures {
         RegexCaptures(RegexCapturesImp::AhoCorasick { mat: None })
     }
 
-    pub(crate) fn new(locs: CaptureLocations) -> RegexCaptures {
+    pub(crate) fn new(locs: AutomataCaptures) -> RegexCaptures {
         RegexCaptures::with_offset(locs, 0)
     }
 
     pub(crate) fn with_offset(
-        locs: CaptureLocations,
+        locs: AutomataCaptures,
         offset: usize,
     ) -> RegexCaptures {
         RegexCaptures(RegexCapturesImp::Regex {
@@ -912,7 +947,7 @@ impl RegexCaptures {
         })
     }
 
-    pub(crate) fn locations(&self) -> &CaptureLocations {
+    pub(crate) fn locations(&self) -> &AutomataCaptures {
         match self.0 {
             RegexCapturesImp::AhoCorasick { .. } => {
                 panic!("getting locations for simple captures is invalid")
@@ -921,7 +956,7 @@ impl RegexCaptures {
         }
     }
 
-    pub(crate) fn locations_mut(&mut self) -> &mut CaptureLocations {
+    pub(crate) fn locations_mut(&mut self) -> &mut AutomataCaptures {
         match self.0 {
             RegexCapturesImp::AhoCorasick { .. } => {
                 panic!("getting locations for simple captures is invalid")
