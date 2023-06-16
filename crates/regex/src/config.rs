@@ -6,7 +6,7 @@ use {
 };
 
 use crate::{
-    ast::AstAnalysis, crlf::crlfify, error::Error, literal::LiteralSets,
+    ast::AstAnalysis, error::Error, literal::LiteralSets,
     multi::alternation_literals, non_matching::non_matching_bytes,
     strip::strip_from_match,
 };
@@ -75,6 +75,7 @@ impl Config {
             .case_insensitive(self.is_case_insensitive(&analysis))
             .multi_line(self.multi_line)
             .dot_matches_new_line(self.dot_matches_new_line)
+            .crlf(self.crlf)
             .swap_greed(self.swap_greed)
             .unicode(self.unicode)
             .build()
@@ -88,8 +89,7 @@ impl Config {
             original: pattern.to_string(),
             config: self.clone(),
             analysis,
-            // If CRLF mode is enabled, replace `$` with `(?:\r?$)`.
-            expr: if self.crlf { crlfify(expr) } else { expr },
+            expr,
         })
     }
 
@@ -165,19 +165,6 @@ impl ConfiguredHIR {
     /// Compute the set of non-matching bytes for this HIR expression.
     pub fn non_matching_bytes(&self) -> ByteSet {
         non_matching_bytes(&self.expr)
-    }
-
-    /// Returns true if and only if this regex needs to have its match offsets
-    /// tweaked because of CRLF support. Specifically, this occurs when the
-    /// CRLF hack is enabled and the regex is line anchored at the end. In
-    /// this case, matches that end with a `\r` have the `\r` stripped.
-    pub fn needs_crlf_stripped(&self) -> bool {
-        self.config.crlf
-            && self
-                .expr
-                .properties()
-                .look_set_suffix_any()
-                .contains(hir::Look::EndLF)
     }
 
     /// Returns the line terminator configured on this expression.
@@ -298,6 +285,7 @@ impl ConfiguredHIR {
             .octal(self.config.octal)
             .multi_line(self.config.multi_line)
             .dot_matches_new_line(self.config.dot_matches_new_line)
+            .crlf(self.config.crlf)
             .unicode(self.config.unicode);
         let meta = Regex::config()
             .utf8_empty(false)
@@ -321,6 +309,7 @@ impl ConfiguredHIR {
             .utf8(false)
             .multi_line(self.config.multi_line)
             .dot_matches_new_line(self.config.dot_matches_new_line)
+            .crlf(self.config.crlf)
             .unicode(self.config.unicode)
             .build()
             .parse(pattern)

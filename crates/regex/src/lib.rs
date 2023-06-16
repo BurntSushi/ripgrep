@@ -8,7 +8,6 @@ pub use crate::matcher::{RegexCaptures, RegexMatcher, RegexMatcherBuilder};
 
 mod ast;
 mod config;
-mod crlf;
 mod error;
 mod literal;
 mod matcher;
