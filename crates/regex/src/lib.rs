@@ -14,5 +14,4 @@ mod matcher;
 mod multi;
 mod non_matching;
 mod strip;
-mod util;
 mod word;

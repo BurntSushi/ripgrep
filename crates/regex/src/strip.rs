@@ -1,5 +1,7 @@
-use grep_matcher::LineTerminator;
-use regex_syntax::hir::{self, Hir, HirKind};
+use {
+    grep_matcher::LineTerminator,
+    regex_syntax::hir::{self, Hir, HirKind},
+};
 
 use crate::error::{Error, ErrorKind};
 
@@ -15,7 +17,26 @@ use crate::error::{Error, ErrorKind};
 ///
 /// If the given line terminator is not ASCII, then this function returns an
 /// error.
-pub fn strip_from_match(
+///
+/// Note that as of regex 1.9, this routine could theoretically be implemented
+/// without returning an error. Namely, for example, we could turn
+/// `foo\nbar` into `foo[a&&b]bar`. That is, replace line terminators with a
+/// sub-expression that can never match anything. Thus, ripgrep would accept
+/// such regexes and just silently not match anything. Regex versions prior to 1.8
+/// don't support such constructs. I ended up deciding to leave the existing
+/// behavior of returning an error instead. For example:
+///
+/// ```text
+/// $ echo -n 'foo\nbar\n' | rg 'foo\nbar'
+/// the literal '"\n"' is not allowed in a regex
+///
+/// Consider enabling multiline mode with the --multiline flag (or -U for short).
+/// When multiline mode is enabled, new line characters can be matched.
+/// ```
+///
+/// This looks like a good error message to me, and even suggests a flag that
+/// the user can use instead.
+pub(crate) fn strip_from_match(
     expr: Hir,
     line_term: LineTerminator,
 ) -> Result<Hir, Error> {
@@ -23,23 +44,20 @@ pub fn strip_from_match(
         let expr1 = strip_from_match_ascii(expr, b'\r')?;
         strip_from_match_ascii(expr1, b'\n')
     } else {
-        let b = line_term.as_byte();
-        if b > 0x7F {
-            return Err(Error::new(ErrorKind::InvalidLineTerminator(b)));
-        }
-        strip_from_match_ascii(expr, b)
+        strip_from_match_ascii(expr, line_term.as_byte())
     }
 }
 
-/// The implementation of strip_from_match. The given byte must be ASCII. This
-/// function panics otherwise.
+/// The implementation of strip_from_match. The given byte must be ASCII.
+/// This function returns an error otherwise. It also returns an error if
+/// it couldn't remove `\n` from the given regex without leaving an empty
+/// character class in its place.
 fn strip_from_match_ascii(expr: Hir, byte: u8) -> Result<Hir, Error> {
-    assert!(byte <= 0x7F);
-    let chr = byte as char;
-    assert_eq!(chr.len_utf8(), 1);
-
-    let invalid = || Err(Error::new(ErrorKind::NotAllowed(chr.to_string())));
-
+    if !byte.is_ascii() {
+        return Err(Error::new(ErrorKind::InvalidLineTerminator(byte)));
+    }
+    let ch = char::from(byte);
+    let invalid = || Err(Error::new(ErrorKind::NotAllowed(ch.to_string())));
     Ok(match expr.into_kind() {
         HirKind::Empty => Hir::empty(),
         HirKind::Literal(hir::Literal(lit)) => {
@@ -50,7 +68,7 @@ fn strip_from_match_ascii(expr: Hir, byte: u8) -> Result<Hir, Error> {
         }
         HirKind::Class(hir::Class::Unicode(mut cls)) => {
             let remove = hir::ClassUnicode::new(Some(
-                hir::ClassUnicodeRange::new(chr, chr),
+                hir::ClassUnicodeRange::new(ch, ch),
             ));
             cls.difference(&remove);
             if cls.ranges().is_empty() {

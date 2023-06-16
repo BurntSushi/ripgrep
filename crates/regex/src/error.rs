@@ -1,8 +1,3 @@
-use std::error;
-use std::fmt;
-
-use crate::util;
-
 /// An error that can occur in this crate.
 ///
 /// Generally, this error corresponds to problems building a regular
@@ -32,7 +27,7 @@ impl Error {
         }
     }
 
-    pub(crate) fn generic<E: error::Error>(err: E) -> Error {
+    pub(crate) fn generic<E: std::error::Error>(err: E) -> Error {
         Error { kind: ErrorKind::Regex(err.to_string()) }
     }
 
@@ -68,18 +63,23 @@ pub enum ErrorKind {
     InvalidLineTerminator(u8),
 }
 
-impl error::Error for Error {}
+impl std::error::Error for Error {}
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use bstr::ByteSlice;
+
         match self.kind {
             ErrorKind::Regex(ref s) => write!(f, "{}", s),
             ErrorKind::NotAllowed(ref lit) => {
-                write!(f, "the literal '{:?}' is not allowed in a regex", lit)
+                write!(f, "the literal {:?} is not allowed in a regex", lit)
             }
             ErrorKind::InvalidLineTerminator(byte) => {
-                let x = util::show_bytes(&[byte]);
-                write!(f, "line terminators must be ASCII, but '{}' is not", x)
+                write!(
+                    f,
+                    "line terminators must be ASCII, but {} is not",
+                    [byte].as_bstr()
+                )
             }
         }
     }
