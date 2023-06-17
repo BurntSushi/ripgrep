@@ -14,7 +14,6 @@ impl Error {
     }
 
     pub(crate) fn regex(err: regex_automata::meta::BuildError) -> Error {
-        // Error { kind: ErrorKind::Regex(err.to_string()) }
         if let Some(size_limit) = err.size_limit() {
             let kind = ErrorKind::Regex(format!(
                 "compiled regex exceeds size limit of {size_limit}",
@@ -66,7 +65,7 @@ pub enum ErrorKind {
 impl std::error::Error for Error {}
 
 impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         use bstr::ByteSlice;
 
         match self.kind {

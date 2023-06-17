@@ -791,7 +791,7 @@ impl Matcher for StandardMatcher {
         caps: &mut RegexCaptures,
     ) -> Result<bool, NoError> {
         let input = Input::new(haystack).span(at..haystack.len());
-        let caps = caps.locations_mut();
+        let caps = caps.captures_mut();
         self.regex.search_captures(&input, caps);
         Ok(caps.is_match())
     }
@@ -830,8 +830,8 @@ enum RegexCapturesImp {
         mat: Option<Match>,
     },
     Regex {
-        /// Where the locations are stored.
-        locs: AutomataCaptures,
+        /// Where the captures are stored.
+        caps: AutomataCaptures,
         /// These captures behave as if the capturing groups begin at the given
         /// offset. When set to `0`, this has no affect and capture groups are
         /// indexed like normal.
@@ -850,8 +850,8 @@ impl Captures for RegexCaptures {
     fn len(&self) -> usize {
         match self.0 {
             RegexCapturesImp::AhoCorasick { .. } => 1,
-            RegexCapturesImp::Regex { ref locs, offset, .. } => {
-                locs.group_info().all_group_len().checked_sub(offset).unwrap()
+            RegexCapturesImp::Regex { ref caps, offset, .. } => {
+                caps.group_info().all_group_len().checked_sub(offset).unwrap()
             }
         }
     }
@@ -865,9 +865,9 @@ impl Captures for RegexCaptures {
                     None
                 }
             }
-            RegexCapturesImp::Regex { ref locs, offset } => {
+            RegexCapturesImp::Regex { ref caps, offset } => {
                 let actual = i.checked_add(offset).unwrap();
-                locs.get_group(actual).map(|sp| Match::new(sp.start, sp.end))
+                caps.get_group(actual).map(|sp| Match::new(sp.start, sp.end))
             }
         }
     }
@@ -878,23 +878,23 @@ impl RegexCaptures {
         RegexCaptures(RegexCapturesImp::AhoCorasick { mat: None })
     }
 
-    pub(crate) fn new(locs: AutomataCaptures) -> RegexCaptures {
-        RegexCaptures::with_offset(locs, 0)
+    pub(crate) fn new(caps: AutomataCaptures) -> RegexCaptures {
+        RegexCaptures::with_offset(caps, 0)
     }
 
     pub(crate) fn with_offset(
-        locs: AutomataCaptures,
+        caps: AutomataCaptures,
         offset: usize,
     ) -> RegexCaptures {
-        RegexCaptures(RegexCapturesImp::Regex { locs, offset })
+        RegexCaptures(RegexCapturesImp::Regex { caps, offset })
     }
 
-    pub(crate) fn locations_mut(&mut self) -> &mut AutomataCaptures {
+    pub(crate) fn captures_mut(&mut self) -> &mut AutomataCaptures {
         match self.0 {
             RegexCapturesImp::AhoCorasick { .. } => {
-                panic!("getting locations for simple captures is invalid")
+                panic!("getting captures for multi-literal matcher is invalid")
             }
-            RegexCapturesImp::Regex { ref mut locs, .. } => locs,
+            RegexCapturesImp::Regex { ref mut caps, .. } => caps,
         }
     }
 

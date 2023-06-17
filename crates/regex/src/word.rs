@@ -22,21 +22,21 @@ pub struct WordMatcher {
     original: Regex,
     /// A map from capture group name to capture group index.
     names: HashMap<String, usize>,
-    /// A reusable buffer for finding the match location of the inner group.
-    locs: Arc<ThreadLocal<RefCell<Captures>>>,
+    /// A reusable buffer for finding the match offset of the inner group.
+    caps: Arc<ThreadLocal<RefCell<Captures>>>,
 }
 
 impl Clone for WordMatcher {
     fn clone(&self) -> WordMatcher {
         // We implement Clone manually so that we get a fresh ThreadLocal such
         // that it can set its own thread owner. This permits each thread
-        // usings `locs` to hit the fast path.
+        // usings `caps` to hit the fast path.
         WordMatcher {
             regex: self.regex.clone(),
             pattern: self.pattern.clone(),
             original: self.original.clone(),
             names: self.names.clone(),
-            locs: Arc::new(ThreadLocal::new()),
+            caps: Arc::new(ThreadLocal::new()),
         }
     }
 }
@@ -57,7 +57,7 @@ impl WordMatcher {
         })?;
         let regex = word_expr.regex()?;
         let pattern = word_expr.pattern();
-        let locs = Arc::new(ThreadLocal::new());
+        let caps = Arc::new(ThreadLocal::new());
 
         let mut names = HashMap::new();
         let it = regex.group_info().pattern_names(PatternID::ZERO);
@@ -66,7 +66,7 @@ impl WordMatcher {
                 names.insert(name.to_string(), i.checked_sub(1).unwrap());
             }
         }
-        Ok(WordMatcher { regex, pattern, original, names, locs })
+        Ok(WordMatcher { regex, pattern, original, names, caps })
     }
 
     /// Return the underlying pattern string for the regex used by this
@@ -161,7 +161,7 @@ impl Matcher for WordMatcher {
         }
 
         let cell =
-            self.locs.get_or(|| RefCell::new(self.regex.create_captures()));
+            self.caps.get_or(|| RefCell::new(self.regex.create_captures()));
         let input = Input::new(haystack).span(at..haystack.len());
         let mut caps = cell.borrow_mut();
         self.regex.search_captures(&input, &mut caps);
@@ -187,7 +187,7 @@ impl Matcher for WordMatcher {
         caps: &mut RegexCaptures,
     ) -> Result<bool, NoError> {
         let input = Input::new(haystack).span(at..haystack.len());
-        let caps = caps.locations_mut();
+        let caps = caps.captures_mut();
         self.regex.search_captures(&input, caps);
         Ok(caps.is_match())
     }
