@@ -472,24 +472,6 @@ enum EncodingMode {
     Disabled,
 }
 
-impl EncodingMode {
-    /// Checks if an explicit encoding has been set. Returns false for
-    /// automatic BOM sniffing and no sniffing.
-    ///
-    /// This is only used to determine whether PCRE2 needs to have its own
-    /// UTF-8 checking enabled. If we have an explicit encoding set, then
-    /// we're always guaranteed to get UTF-8, so we can disable PCRE2's check.
-    /// Otherwise, we have no such guarantee, and must enable PCRE2' UTF-8
-    /// check.
-    #[cfg(feature = "pcre2")]
-    fn has_explicit_encoding(&self) -> bool {
-        match self {
-            EncodingMode::Some(_) => true,
-            _ => false,
-        }
-    }
-}
-
 impl ArgMatches {
     /// Create an ArgMatches from clap's parse result.
     fn new(clap_matches: clap::ArgMatches<'static>) -> ArgMatches {
@@ -732,14 +714,6 @@ impl ArgMatches {
         }
         if self.unicode() {
             builder.utf(true).ucp(true);
-            if self.encoding()?.has_explicit_encoding() {
-                // SAFETY: If an encoding was specified, then we're guaranteed
-                // to get valid UTF-8, so we can disable PCRE2's UTF checking.
-                // (Feeding invalid UTF-8 to PCRE2 is undefined behavior.)
-                unsafe {
-                    builder.disable_utf_check();
-                }
-            }
         }
         if self.is_present("multiline") {
             builder.dotall(self.is_present("multiline-dotall"));
@@ -1080,7 +1054,6 @@ impl ArgMatches {
         }
 
         let label = match self.value_of_lossy("encoding") {
-            None if self.pcre2_unicode() => "utf-8".to_string(),
             None => return Ok(EncodingMode::Auto),
             Some(label) => label,
         };
@@ -1639,12 +1612,6 @@ impl ArgMatches {
         // Unicode mode is enabled by default, so only disable it when
         // --no-unicode is given explicitly.
         !(self.is_present("no-unicode") || self.is_present("no-pcre2-unicode"))
-    }
-
-    /// Returns true if and only if PCRE2 is enabled and its Unicode mode is
-    /// enabled.
-    fn pcre2_unicode(&self) -> bool {
-        self.is_present("pcre2") && self.unicode()
     }
 
     /// Returns true if and only if file names containing each match should

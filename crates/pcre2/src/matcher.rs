@@ -178,23 +178,22 @@ impl RegexMatcherBuilder {
         self
     }
 
-    /// When UTF matching mode is enabled, this will disable the UTF checking
-    /// that PCRE2 will normally perform automatically. If UTF matching mode
-    /// is not enabled, then this has no effect.
+    /// This is now deprecated and is a no-op.
     ///
-    /// UTF checking is enabled by default when UTF matching mode is enabled.
-    /// If UTF matching mode is enabled and UTF checking is enabled, then PCRE2
-    /// will return an error if you attempt to search a subject string that is
-    /// not valid UTF-8.
+    /// Previously, this option permitted disabling PCRE2's UTF-8 validity
+    /// check, which could result in undefined behavior if the haystack was
+    /// not valid UTF-8. But PCRE2 introduced a new option, `PCRE2_MATCH_INVALID_UTF`,
+    /// in 10.34 which this crate always sets. When this option is enabled,
+    /// PCRE2 claims to not have undefined behavior when the haystack is
+    /// invalid UTF-8.
     ///
-    /// # Safety
-    ///
-    /// It is undefined behavior to disable the UTF check in UTF matching mode
-    /// and search a subject string that is not valid UTF-8. When the UTF check
-    /// is disabled, callers must guarantee that the subject string is valid
-    /// UTF-8.
-    pub unsafe fn disable_utf_check(&mut self) -> &mut RegexMatcherBuilder {
-        self.builder.disable_utf_check();
+    /// Therefore, disabling the UTF-8 check is not something that is exposed
+    /// by this crate.
+    #[deprecated(
+        since = "0.2.4",
+        note = "now a no-op due to new PCRE2 features"
+    )]
+    pub fn disable_utf_check(&mut self) -> &mut RegexMatcherBuilder {
         self
     }
 
