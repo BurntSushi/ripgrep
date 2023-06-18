@@ -23,7 +23,7 @@ impl<'de> Deserialize<'de> for Glob {
 
 #[cfg(test)]
 mod tests {
-    use Glob;
+    use crate::Glob;
 
     #[test]
     fn glob_json_works() {
