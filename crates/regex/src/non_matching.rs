@@ -7,7 +7,7 @@ use {
 };
 
 /// Return a confirmed set of non-matching bytes from the given expression.
-pub fn non_matching_bytes(expr: &Hir) -> ByteSet {
+pub(crate) fn non_matching_bytes(expr: &Hir) -> ByteSet {
     let mut set = ByteSet::full();
     remove_matching_bytes(expr, &mut set);
     set

@@ -202,7 +202,6 @@ dependencies = [
  "regex",
  "regex-automata 0.3.0",
  "regex-syntax",
- "thread_local",
 ]
 
 [[package]]

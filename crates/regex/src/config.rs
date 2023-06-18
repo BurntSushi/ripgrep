@@ -21,21 +21,21 @@ use crate::{
 /// configuration which generated it, and provides transformation on that HIR
 /// such that the configuration is preserved.
 #[derive(Clone, Debug)]
-pub struct Config {
-    pub case_insensitive: bool,
-    pub case_smart: bool,
-    pub multi_line: bool,
-    pub dot_matches_new_line: bool,
-    pub swap_greed: bool,
-    pub ignore_whitespace: bool,
-    pub unicode: bool,
-    pub octal: bool,
-    pub size_limit: usize,
-    pub dfa_size_limit: usize,
-    pub nest_limit: u32,
-    pub line_terminator: Option<LineTerminator>,
-    pub crlf: bool,
-    pub word: bool,
+pub(crate) struct Config {
+    pub(crate) case_insensitive: bool,
+    pub(crate) case_smart: bool,
+    pub(crate) multi_line: bool,
+    pub(crate) dot_matches_new_line: bool,
+    pub(crate) swap_greed: bool,
+    pub(crate) ignore_whitespace: bool,
+    pub(crate) unicode: bool,
+    pub(crate) octal: bool,
+    pub(crate) size_limit: usize,
+    pub(crate) dfa_size_limit: usize,
+    pub(crate) nest_limit: u32,
+    pub(crate) line_terminator: Option<LineTerminator>,
+    pub(crate) crlf: bool,
+    pub(crate) word: bool,
 }
 
 impl Default for Config {
@@ -67,7 +67,7 @@ impl Config {
     ///
     /// If there was a problem parsing the given expression then an error
     /// is returned.
-    pub fn hir(&self, pattern: &str) -> Result<ConfiguredHIR, Error> {
+    pub(crate) fn hir(&self, pattern: &str) -> Result<ConfiguredHIR, Error> {
         let ast = self.ast(pattern)?;
         let analysis = self.analysis(&ast)?;
         let expr = hir::translate::TranslatorBuilder::new()
@@ -112,7 +112,7 @@ impl Config {
     /// Note that it is OK to return true even when settings like `multi_line`
     /// are enabled, since if multi-line can impact the match semantics of a
     /// regex, then it is by definition not a simple alternation of literals.
-    pub fn can_plain_aho_corasick(&self) -> bool {
+    pub(crate) fn can_plain_aho_corasick(&self) -> bool {
         !self.word && !self.case_insensitive && !self.case_smart
     }
 
@@ -149,7 +149,7 @@ impl Config {
 /// size limits set on the configured HIR will be propagated out to any
 /// subsequently constructed HIR or regular expression.
 #[derive(Clone, Debug)]
-pub struct ConfiguredHIR {
+pub(crate) struct ConfiguredHIR {
     original: String,
     config: Config,
     analysis: AstAnalysis,
@@ -158,12 +158,12 @@ pub struct ConfiguredHIR {
 
 impl ConfiguredHIR {
     /// Return the configuration for this HIR expression.
-    pub fn config(&self) -> &Config {
+    pub(crate) fn config(&self) -> &Config {
         &self.config
     }
 
     /// Compute the set of non-matching bytes for this HIR expression.
-    pub fn non_matching_bytes(&self) -> ByteSet {
+    pub(crate) fn non_matching_bytes(&self) -> ByteSet {
         non_matching_bytes(&self.expr)
     }
 
@@ -184,7 +184,7 @@ impl ConfiguredHIR {
     /// without a line terminator, the fast search path can't be executed.
     ///
     /// See: <https://github.com/BurntSushi/ripgrep/issues/2260>
-    pub fn line_terminator(&self) -> Option<LineTerminator> {
+    pub(crate) fn line_terminator(&self) -> Option<LineTerminator> {
         if self.is_any_anchored() {
             None
         } else {
@@ -198,19 +198,19 @@ impl ConfiguredHIR {
     }
 
     /// Builds a regular expression from this HIR expression.
-    pub fn regex(&self) -> Result<Regex, Error> {
+    pub(crate) fn regex(&self) -> Result<Regex, Error> {
         self.pattern_to_regex(&self.pattern())
     }
 
     /// Returns the pattern string by converting this HIR to its concrete
     /// syntax.
-    pub fn pattern(&self) -> String {
+    pub(crate) fn pattern(&self) -> String {
         self.expr.to_string()
     }
 
     /// If this HIR corresponds to an alternation of literals with no
     /// capturing groups, then this returns those literals.
-    pub fn alternation_literals(&self) -> Option<Vec<Vec<u8>>> {
+    pub(crate) fn alternation_literals(&self) -> Option<Vec<Vec<u8>>> {
         if !self.config.can_plain_aho_corasick() {
             return None;
         }
@@ -223,7 +223,7 @@ impl ConfiguredHIR {
     ///
     /// For example, this can be used to wrap a user provided regular
     /// expression with additional semantics. e.g., See the `WordMatcher`.
-    pub fn with_pattern<F: FnMut(&str) -> String>(
+    pub(crate) fn with_pattern<F: FnMut(&str) -> String>(
         &self,
         mut f: F,
     ) -> Result<ConfiguredHIR, Error> {
@@ -246,7 +246,7 @@ impl ConfiguredHIR {
     /// match. This only works when the line terminator is set because the line
     /// terminator setting guarantees that the regex itself can never match
     /// through the line terminator byte.
-    pub fn fast_line_regex(&self) -> Result<Option<Regex>, Error> {
+    pub(crate) fn fast_line_regex(&self) -> Result<Option<Regex>, Error> {
         if self.config.line_terminator.is_none() {
             return Ok(None);
         }
