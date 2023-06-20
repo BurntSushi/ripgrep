@@ -233,6 +233,15 @@ impl ConfiguredHIR {
         let meta = Regex::config()
             .utf8_empty(false)
             .nfa_size_limit(Some(self.config.size_limit))
+            // We don't expose a knob for this because the one-pass DFA is
+            // usually not a perf bottleneck for ripgrep. But we give it some
+            // extra room than the default.
+            .onepass_size_limit(Some(10 * (1 << 20)))
+            // Same deal here. The default limit for full DFAs is VERY small,
+            // but with ripgrep we can afford to spend a bit more time on
+            // building them I think.
+            .dfa_size_limit(Some(10 * (1 << 20)))
+            .dfa_state_limit(Some(10_000))
             .hybrid_cache_capacity(self.config.dfa_size_limit);
         Regex::builder()
             .configure(meta)
