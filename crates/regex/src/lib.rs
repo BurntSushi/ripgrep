@@ -11,7 +11,6 @@ mod config;
 mod error;
 mod literal;
 mod matcher;
-mod multi;
 mod non_matching;
 mod strip;
 mod word;

@@ -59,16 +59,11 @@ impl WordMatcher {
     ///
     /// The given options are used to construct the regular expression
     /// internally.
-    pub(crate) fn new(expr: &ConfiguredHIR) -> Result<WordMatcher, Error> {
-        let original =
-            expr.with_pattern(|pat| format!("^(?:{})$", pat))?.regex()?;
-        let word_expr = expr.with_pattern(|pat| {
-            let pat = format!(r"(?:(?m:^)|\W)({})(?:\W|(?m:$))", pat);
-            log::debug!("word regex: {:?}", pat);
-            pat
-        })?;
-        let regex = word_expr.regex()?;
-        let pattern = word_expr.pattern();
+    pub(crate) fn new(chir: ConfiguredHIR) -> Result<WordMatcher, Error> {
+        let original = chir.clone().into_anchored().to_regex()?;
+        let word_chir = chir.into_word()?;
+        let regex = word_chir.to_regex()?;
+        let pattern = word_chir.to_pattern();
         let caps = Arc::new(Pool::new({
             let regex = regex.clone();
             Box::new(move || regex.create_captures()) as PoolFn
@@ -104,7 +99,7 @@ impl WordMatcher {
         // slower regex engine to extract capture groups. Remember, our word
         // regex looks like this:
         //
-        //     (^|\W)(<original regex>)($|\W)
+        //     (^|\W)(<original regex>)(\W|$)
         //
         // What we want are the match offsets of <original regex>. So in the
         // easy/common case, the original regex will be sandwiched between
@@ -217,8 +212,8 @@ mod tests {
     use grep_matcher::{Captures, Match, Matcher};
 
     fn matcher(pattern: &str) -> WordMatcher {
-        let chir = Config::default().hir(pattern).unwrap();
-        WordMatcher::new(&chir).unwrap()
+        let chir = Config::default().build_many(&[pattern]).unwrap();
+        WordMatcher::new(chir).unwrap()
     }
 
     fn find(pattern: &str, haystack: &str) -> Option<(usize, usize)> {

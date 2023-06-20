@@ -12,7 +12,6 @@ use {
 use crate::{
     config::{Config, ConfiguredHIR},
     error::Error,
-    multi::MultiLiteralMatcher,
     word::WordMatcher,
 };
 
@@ -48,19 +47,30 @@ impl RegexMatcherBuilder {
     /// The syntax supported is documented as part of the regex crate:
     /// <https://docs.rs/regex/#syntax>.
     pub fn build(&self, pattern: &str) -> Result<RegexMatcher, Error> {
-        let chir = self.config.hir(pattern)?;
-        let fast_line_regex = chir.fast_line_regex()?;
+        self.build_many(&[pattern])
+    }
+
+    /// Build a new matcher using the current configuration for the provided
+    /// patterns. The resulting matcher behaves as if all of the patterns
+    /// given are joined together into a single alternation. That is, it
+    /// reports matches where at least one of the given patterns matches.
+    pub fn build_many<P: AsRef<str>>(
+        &self,
+        patterns: &[P],
+    ) -> Result<RegexMatcher, Error> {
+        let chir = self.config.build_many(patterns)?;
+        let fast_line_regex = chir.to_fast_line_regex()?;
         let non_matching_bytes = chir.non_matching_bytes();
         if let Some(ref re) = fast_line_regex {
             log::debug!("extracted fast line regex: {:?}", re);
         }
 
-        let matcher = RegexMatcherImpl::new(&chir)?;
-        log::trace!("final regex: {:?}", matcher.regex());
-        let mut config = self.config.clone();
-        // We override the line terminator in case the configured expr doesn't
+        // We override the line terminator in case the configured HIR doesn't
         // support it.
+        let mut config = self.config.clone();
         config.line_terminator = chir.line_terminator();
+        let matcher = RegexMatcherImpl::new(chir)?;
+        log::trace!("final regex: {:?}", matcher.regex());
         Ok(RegexMatcher {
             config,
             matcher,
@@ -78,66 +88,7 @@ impl RegexMatcherBuilder {
         &self,
         literals: &[B],
     ) -> Result<RegexMatcher, Error> {
-        // BREADCRUMBS: Ideally we would remove this method and just let the
-        // underlying regex engine handle this case. But... this is tricky.
-        // Part of the problem is that ripgrep escapes all patterns by the
-        // time the regex engine is constructed, which is necessary for PCRE2
-        // for example. So that logic would need to change so that we don't
-        // escape things first.
-        //
-        // If we adjusted that, then I think we could just build an HIR value
-        // directly from the literals, thus skipping the parser altogether.
-        //
-        // But that still requires using and keeping this method. But we could
-        // at least get rid of the MultiLiteral matcher since the regex engine
-        // should now handle that case.
-        //
-        // Getting rid of this method is trickier, unless we make multi-pattern
-        // support a first class concept. But I don't think I want to go down
-        // that path? That implies we still need to accept a single pattern
-        // everywhere, which in turn means ripgrep would be forced to join
-        // the literals together using | and escape meta characters. By that
-        // point, we've lost. So I do think we still need this special method.
-        // But we can at least simplify the implementation.
-        //
-        // I still wonder if "fast parse" is still a good idea though.
-        // Basically, reject all nesting except for single-depth alternation.
-        // And reject character classes and all options. Just basically
-        // support `foo|bar|..|quux`. Maybe skip this for now I think.
-
-        let mut has_escape = false;
-        let mut slices = vec![];
-        for lit in literals {
-            slices.push(lit.as_ref());
-            has_escape = has_escape || lit.as_ref().contains('\\');
-        }
-        // Even when we have a fixed set of literals, we might still want to
-        // use the regex engine. Specifically, if any string has an escape
-        // in it, then we probably can't feed it to Aho-Corasick without
-        // removing the escape. Additionally, if there are any particular
-        // special match semantics we need to honor, that Aho-Corasick isn't
-        // enough. Finally, the regex engine can do really well with a small
-        // number of literals (at time of writing, this is changing soon), so
-        // we use it when there's a small set.
-        //
-        // Yes, this is one giant hack. Ideally, this entirely separate literal
-        // matcher that uses Aho-Corasick would be pushed down into the regex
-        // engine.
-        if has_escape
-            || !self.config.can_plain_aho_corasick()
-            || literals.len() < 40
-        {
-            return self.build(&slices.join("|"));
-        }
-
-        let matcher = MultiLiteralMatcher::new(&slices)?;
-        let imp = RegexMatcherImpl::MultiLiteral(matcher);
-        Ok(RegexMatcher {
-            config: self.config.clone(),
-            matcher: imp,
-            fast_line_regex: None,
-            non_matching_bytes: ByteSet::empty(),
-        })
+        self.build_many(literals)
     }
 
     /// Set the value for the case insensitive (`i`) flag.
@@ -338,20 +289,15 @@ impl RegexMatcherBuilder {
     /// 1. It causes the line terminator for the matcher to be `\r\n`. Namely,
     ///    this prevents the matcher from ever producing a match that contains
     ///    a `\r` or `\n`.
-    /// 2. It translates all instances of `$` in the pattern to `(?:\r??$)`.
-    ///    This works around the fact that the regex engine does not support
-    ///    matching CRLF as a line terminator when using `$`.
+    /// 2. It enables CRLF mode for `^` and `$`. This means that line anchors
+    ///    will treat both `\r` and `\n` as line terminators, but will never
+    ///    match between a `\r` and `\n`.
     ///
-    /// In particular, because of (2), the matches produced by the matcher may
-    /// be slightly different than what one would expect given the pattern.
-    /// This is the trade off made: in many cases, `$` will "just work" in the
-    /// presence of `\r\n` line terminators, but matches may require some
-    /// trimming to faithfully represent the intended match.
-    ///
-    /// Note that if you do not wish to set the line terminator but would still
-    /// like `$` to match `\r\n` line terminators, then it is valid to call
-    /// `crlf(true)` followed by `line_terminator(None)`. Ordering is
-    /// important, since `crlf` and `line_terminator` override each other.
+    /// Note that if you do not wish to set the line terminator but would
+    /// still like `$` to match `\r\n` line terminators, then it is valid to
+    /// call `crlf(true)` followed by `line_terminator(None)`. Ordering is
+    /// important, since `crlf` sets the line terminator, but `line_terminator`
+    /// does not touch the `crlf` setting.
     pub fn crlf(&mut self, yes: bool) -> &mut RegexMatcherBuilder {
         if yes {
             self.config.line_terminator = Some(LineTerminator::crlf());
@@ -375,6 +321,21 @@ impl RegexMatcherBuilder {
     /// match the `-2` in `foo -2 bar`.
     pub fn word(&mut self, yes: bool) -> &mut RegexMatcherBuilder {
         self.config.word = yes;
+        self
+    }
+
+    /// Whether the patterns should be treated as literal strings or not. When
+    /// this is active, all characters, including ones that would normally be
+    /// special regex meta characters, are matched literally.
+    pub fn fixed_strings(&mut self, yes: bool) -> &mut RegexMatcherBuilder {
+        self.config.fixed_strings = yes;
+        self
+    }
+
+    /// Whether each pattern should match the entire line or not. This is
+    /// equivalent to surrounding the pattern with `(?m:^)` and `(?m:$)`.
+    pub fn whole_line(&mut self, yes: bool) -> &mut RegexMatcherBuilder {
+        self.config.whole_line = yes;
         self
     }
 }
@@ -406,10 +367,10 @@ impl RegexMatcher {
     /// Create a new matcher from the given pattern using the default
     /// configuration, but matches lines terminated by `\n`.
     ///
-    /// This is meant to be a convenience constructor for using a
-    /// `RegexMatcherBuilder` and setting its
-    /// [`line_terminator`](struct.RegexMatcherBuilder.html#method.line_terminator)
-    /// to `\n`. The purpose of using this constructor is to permit special
+    /// This is meant to be a convenience constructor for
+    /// using a `RegexMatcherBuilder` and setting its
+    /// [`line_terminator`](RegexMatcherBuilder::method.line_terminator) to
+    /// `\n`. The purpose of using this constructor is to permit special
     /// optimizations that help speed up line oriented search. These types of
     /// optimizations are only appropriate when matches span no more than one
     /// line. For this reason, this constructor will return an error if the
@@ -425,8 +386,6 @@ impl RegexMatcher {
 enum RegexMatcherImpl {
     /// The standard matcher used for all regular expressions.
     Standard(StandardMatcher),
-    /// A matcher for an alternation of plain literals.
-    MultiLiteral(MultiLiteralMatcher),
     /// A matcher that only matches at word boundaries. This transforms the
     /// regex to `(^|\W)(...)($|\W)` instead of the more intuitive `\b(...)\b`.
     /// Because of this, the WordMatcher provides its own implementation of
@@ -438,25 +397,24 @@ enum RegexMatcherImpl {
 impl RegexMatcherImpl {
     /// Based on the configuration, create a new implementation of the
     /// `Matcher` trait.
-    fn new(expr: &ConfiguredHIR) -> Result<RegexMatcherImpl, Error> {
-        if expr.config().word {
-            Ok(RegexMatcherImpl::Word(WordMatcher::new(expr)?))
+    fn new(mut chir: ConfiguredHIR) -> Result<RegexMatcherImpl, Error> {
+        // When whole_line is set, we don't use a word matcher even if word
+        // matching was requested. Why? Because `(?m:^)(pat)(?m:$)` implies
+        // word matching.
+        Ok(if chir.config().word && !chir.config().whole_line {
+            RegexMatcherImpl::Word(WordMatcher::new(chir)?)
         } else {
-            if let Some(lits) = expr.alternation_literals() {
-                if lits.len() >= 40 {
-                    let matcher = MultiLiteralMatcher::new(&lits)?;
-                    return Ok(RegexMatcherImpl::MultiLiteral(matcher));
-                }
+            if chir.config().whole_line {
+                chir = chir.into_whole_line();
             }
-            Ok(RegexMatcherImpl::Standard(StandardMatcher::new(expr)?))
-        }
+            RegexMatcherImpl::Standard(StandardMatcher::new(chir)?)
+        })
     }
 
     /// Return the underlying regex object used.
     fn regex(&self) -> String {
         match *self {
             RegexMatcherImpl::Word(ref x) => x.pattern().to_string(),
-            RegexMatcherImpl::MultiLiteral(_) => "<N/A>".to_string(),
             RegexMatcherImpl::Standard(ref x) => x.pattern.clone(),
         }
     }
@@ -477,7 +435,6 @@ impl Matcher for RegexMatcher {
         use self::RegexMatcherImpl::*;
         match self.matcher {
             Standard(ref m) => m.find_at(haystack, at),
-            MultiLiteral(ref m) => m.find_at(haystack, at),
             Word(ref m) => m.find_at(haystack, at),
         }
     }
@@ -486,7 +443,6 @@ impl Matcher for RegexMatcher {
         use self::RegexMatcherImpl::*;
         match self.matcher {
             Standard(ref m) => m.new_captures(),
-            MultiLiteral(ref m) => m.new_captures(),
             Word(ref m) => m.new_captures(),
         }
     }
@@ -495,7 +451,6 @@ impl Matcher for RegexMatcher {
         use self::RegexMatcherImpl::*;
         match self.matcher {
             Standard(ref m) => m.capture_count(),
-            MultiLiteral(ref m) => m.capture_count(),
             Word(ref m) => m.capture_count(),
         }
     }
@@ -504,7 +459,6 @@ impl Matcher for RegexMatcher {
         use self::RegexMatcherImpl::*;
         match self.matcher {
             Standard(ref m) => m.capture_index(name),
-            MultiLiteral(ref m) => m.capture_index(name),
             Word(ref m) => m.capture_index(name),
         }
     }
@@ -513,7 +467,6 @@ impl Matcher for RegexMatcher {
         use self::RegexMatcherImpl::*;
         match self.matcher {
             Standard(ref m) => m.find(haystack),
-            MultiLiteral(ref m) => m.find(haystack),
             Word(ref m) => m.find(haystack),
         }
     }
@@ -525,7 +478,6 @@ impl Matcher for RegexMatcher {
         use self::RegexMatcherImpl::*;
         match self.matcher {
             Standard(ref m) => m.find_iter(haystack, matched),
-            MultiLiteral(ref m) => m.find_iter(haystack, matched),
             Word(ref m) => m.find_iter(haystack, matched),
         }
     }
@@ -541,7 +493,6 @@ impl Matcher for RegexMatcher {
         use self::RegexMatcherImpl::*;
         match self.matcher {
             Standard(ref m) => m.try_find_iter(haystack, matched),
-            MultiLiteral(ref m) => m.try_find_iter(haystack, matched),
             Word(ref m) => m.try_find_iter(haystack, matched),
         }
     }
@@ -554,7 +505,6 @@ impl Matcher for RegexMatcher {
         use self::RegexMatcherImpl::*;
         match self.matcher {
             Standard(ref m) => m.captures(haystack, caps),
-            MultiLiteral(ref m) => m.captures(haystack, caps),
             Word(ref m) => m.captures(haystack, caps),
         }
     }
@@ -571,7 +521,6 @@ impl Matcher for RegexMatcher {
         use self::RegexMatcherImpl::*;
         match self.matcher {
             Standard(ref m) => m.captures_iter(haystack, caps, matched),
-            MultiLiteral(ref m) => m.captures_iter(haystack, caps, matched),
             Word(ref m) => m.captures_iter(haystack, caps, matched),
         }
     }
@@ -588,9 +537,6 @@ impl Matcher for RegexMatcher {
         use self::RegexMatcherImpl::*;
         match self.matcher {
             Standard(ref m) => m.try_captures_iter(haystack, caps, matched),
-            MultiLiteral(ref m) => {
-                m.try_captures_iter(haystack, caps, matched)
-            }
             Word(ref m) => m.try_captures_iter(haystack, caps, matched),
         }
     }
@@ -604,7 +550,6 @@ impl Matcher for RegexMatcher {
         use self::RegexMatcherImpl::*;
         match self.matcher {
             Standard(ref m) => m.captures_at(haystack, at, caps),
-            MultiLiteral(ref m) => m.captures_at(haystack, at, caps),
             Word(ref m) => m.captures_at(haystack, at, caps),
         }
     }
@@ -621,7 +566,6 @@ impl Matcher for RegexMatcher {
         use self::RegexMatcherImpl::*;
         match self.matcher {
             Standard(ref m) => m.replace(haystack, dst, append),
-            MultiLiteral(ref m) => m.replace(haystack, dst, append),
             Word(ref m) => m.replace(haystack, dst, append),
         }
     }
@@ -641,9 +585,6 @@ impl Matcher for RegexMatcher {
             Standard(ref m) => {
                 m.replace_with_captures(haystack, caps, dst, append)
             }
-            MultiLiteral(ref m) => {
-                m.replace_with_captures(haystack, caps, dst, append)
-            }
             Word(ref m) => {
                 m.replace_with_captures(haystack, caps, dst, append)
             }
@@ -654,7 +595,6 @@ impl Matcher for RegexMatcher {
         use self::RegexMatcherImpl::*;
         match self.matcher {
             Standard(ref m) => m.is_match(haystack),
-            MultiLiteral(ref m) => m.is_match(haystack),
             Word(ref m) => m.is_match(haystack),
         }
     }
@@ -667,7 +607,6 @@ impl Matcher for RegexMatcher {
         use self::RegexMatcherImpl::*;
         match self.matcher {
             Standard(ref m) => m.is_match_at(haystack, at),
-            MultiLiteral(ref m) => m.is_match_at(haystack, at),
             Word(ref m) => m.is_match_at(haystack, at),
         }
     }
@@ -679,7 +618,6 @@ impl Matcher for RegexMatcher {
         use self::RegexMatcherImpl::*;
         match self.matcher {
             Standard(ref m) => m.shortest_match(haystack),
-            MultiLiteral(ref m) => m.shortest_match(haystack),
             Word(ref m) => m.shortest_match(haystack),
         }
     }
@@ -692,7 +630,6 @@ impl Matcher for RegexMatcher {
         use self::RegexMatcherImpl::*;
         match self.matcher {
             Standard(ref m) => m.shortest_match_at(haystack, at),
-            MultiLiteral(ref m) => m.shortest_match_at(haystack, at),
             Word(ref m) => m.shortest_match_at(haystack, at),
         }
     }
@@ -734,9 +671,9 @@ struct StandardMatcher {
 }
 
 impl StandardMatcher {
-    fn new(expr: &ConfiguredHIR) -> Result<StandardMatcher, Error> {
-        let regex = expr.regex()?;
-        let pattern = expr.pattern();
+    fn new(chir: ConfiguredHIR) -> Result<StandardMatcher, Error> {
+        let regex = chir.to_regex()?;
+        let pattern = chir.to_pattern();
         Ok(StandardMatcher { regex, pattern })
     }
 }
@@ -821,63 +758,38 @@ impl Matcher for StandardMatcher {
 /// index of the group using the corresponding matcher's `capture_index`
 /// method, and then use that index with `RegexCaptures::get`.
 #[derive(Clone, Debug)]
-pub struct RegexCaptures(RegexCapturesImp);
-
-#[derive(Clone, Debug)]
-enum RegexCapturesImp {
-    AhoCorasick {
-        /// The start and end of the match, corresponding to capture group 0.
-        mat: Option<Match>,
-    },
-    Regex {
-        /// Where the captures are stored.
-        caps: AutomataCaptures,
-        /// These captures behave as if the capturing groups begin at the given
-        /// offset. When set to `0`, this has no affect and capture groups are
-        /// indexed like normal.
-        ///
-        /// This is useful when building matchers that wrap arbitrary regular
-        /// expressions. For example, `WordMatcher` takes an existing regex
-        /// `re` and creates `(?:^|\W)(re)(?:$|\W)`, but hides the fact that
-        /// the regex has been wrapped from the caller. In order to do this,
-        /// the matcher and the capturing groups must behave as if `(re)` is
-        /// the `0`th capture group.
-        offset: usize,
-    },
+pub struct RegexCaptures {
+    /// Where the captures are stored.
+    caps: AutomataCaptures,
+    /// These captures behave as if the capturing groups begin at the given
+    /// offset. When set to `0`, this has no affect and capture groups are
+    /// indexed like normal.
+    ///
+    /// This is useful when building matchers that wrap arbitrary regular
+    /// expressions. For example, `WordMatcher` takes an existing regex
+    /// `re` and creates `(?:^|\W)(re)(?:$|\W)`, but hides the fact that
+    /// the regex has been wrapped from the caller. In order to do this,
+    /// the matcher and the capturing groups must behave as if `(re)` is
+    /// the `0`th capture group.
+    offset: usize,
 }
 
 impl Captures for RegexCaptures {
     fn len(&self) -> usize {
-        match self.0 {
-            RegexCapturesImp::AhoCorasick { .. } => 1,
-            RegexCapturesImp::Regex { ref caps, offset, .. } => {
-                caps.group_info().all_group_len().checked_sub(offset).unwrap()
-            }
-        }
+        self.caps
+            .group_info()
+            .all_group_len()
+            .checked_sub(self.offset)
+            .unwrap()
     }
 
     fn get(&self, i: usize) -> Option<Match> {
-        match self.0 {
-            RegexCapturesImp::AhoCorasick { mat, .. } => {
-                if i == 0 {
-                    mat
-                } else {
-                    None
-                }
-            }
-            RegexCapturesImp::Regex { ref caps, offset } => {
-                let actual = i.checked_add(offset).unwrap();
-                caps.get_group(actual).map(|sp| Match::new(sp.start, sp.end))
-            }
-        }
+        let actual = i.checked_add(self.offset).unwrap();
+        self.caps.get_group(actual).map(|sp| Match::new(sp.start, sp.end))
     }
 }
 
 impl RegexCaptures {
-    pub(crate) fn simple() -> RegexCaptures {
-        RegexCaptures(RegexCapturesImp::AhoCorasick { mat: None })
-    }
-
     pub(crate) fn new(caps: AutomataCaptures) -> RegexCaptures {
         RegexCaptures::with_offset(caps, 0)
     }
@@ -886,27 +798,11 @@ impl RegexCaptures {
         caps: AutomataCaptures,
         offset: usize,
     ) -> RegexCaptures {
-        RegexCaptures(RegexCapturesImp::Regex { caps, offset })
+        RegexCaptures { caps, offset }
     }
 
     pub(crate) fn captures_mut(&mut self) -> &mut AutomataCaptures {
-        match self.0 {
-            RegexCapturesImp::AhoCorasick { .. } => {
-                panic!("getting captures for multi-literal matcher is invalid")
-            }
-            RegexCapturesImp::Regex { ref mut caps, .. } => caps,
-        }
-    }
-
-    pub(crate) fn set_simple(&mut self, one: Option<Match>) {
-        match self.0 {
-            RegexCapturesImp::AhoCorasick { ref mut mat } => {
-                *mat = one;
-            }
-            RegexCapturesImp::Regex { .. } => {
-                panic!("setting simple captures for regex is invalid")
-            }
-        }
+        &mut self.caps
     }
 }
 

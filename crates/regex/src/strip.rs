@@ -67,6 +67,9 @@ fn strip_from_match_ascii(expr: Hir, byte: u8) -> Result<Hir, Error> {
             Hir::literal(lit)
         }
         HirKind::Class(hir::Class::Unicode(mut cls)) => {
+            if cls.ranges().is_empty() {
+                return Ok(Hir::class(hir::Class::Unicode(cls)));
+            }
             let remove = hir::ClassUnicode::new(Some(
                 hir::ClassUnicodeRange::new(ch, ch),
             ));
@@ -77,6 +80,9 @@ fn strip_from_match_ascii(expr: Hir, byte: u8) -> Result<Hir, Error> {
             Hir::class(hir::Class::Unicode(cls))
         }
         HirKind::Class(hir::Class::Bytes(mut cls)) => {
+            if cls.ranges().is_empty() {
+                return Ok(Hir::class(hir::Class::Bytes(cls)));
+            }
             let remove = hir::ClassBytes::new(Some(
                 hir::ClassBytesRange::new(byte, byte),
             ));

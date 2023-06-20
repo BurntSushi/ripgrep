@@ -11,6 +11,8 @@ pub struct RegexMatcherBuilder {
     builder: RegexBuilder,
     case_smart: bool,
     word: bool,
+    fixed_strings: bool,
+    whole_line: bool,
 }
 
 impl RegexMatcherBuilder {
@@ -20,6 +22,8 @@ impl RegexMatcherBuilder {
             builder: RegexBuilder::new(),
             case_smart: false,
             word: false,
+            fixed_strings: false,
+            whole_line: false,
         }
     }
 
@@ -29,17 +33,40 @@ impl RegexMatcherBuilder {
     /// If there was a problem compiling the pattern, then an error is
     /// returned.
     pub fn build(&self, pattern: &str) -> Result<RegexMatcher, Error> {
+        self.build_many(&[pattern])
+    }
+
+    /// Compile all of the given patterns into a single regex that matches when
+    /// at least one of the patterns matches.
+    ///
+    /// If there was a problem building the regex, then an error is returned.
+    pub fn build_many<P: AsRef<str>>(
+        &self,
+        patterns: &[P],
+    ) -> Result<RegexMatcher, Error> {
         let mut builder = self.builder.clone();
-        if self.case_smart && !has_uppercase_literal(pattern) {
+        let mut pats = Vec::with_capacity(patterns.len());
+        for p in patterns.iter() {
+            pats.push(if self.fixed_strings {
+                format!("(?:{})", pcre2::escape(p.as_ref()))
+            } else {
+                format!("(?:{})", p.as_ref())
+            });
+        }
+        let mut singlepat = pats.join("|");
+        if self.case_smart && !has_uppercase_literal(&singlepat) {
             builder.caseless(true);
         }
-        let res = if self.word {
-            let pattern = format!(r"(?<!\w)(?:{})(?!\w)", pattern);
-            builder.build(&pattern)
-        } else {
-            builder.build(pattern)
-        };
-        res.map_err(Error::regex).map(|regex| {
+        if self.whole_line {
+            singlepat = format!(r"(?m:^)(?:{})(?m:$)", singlepat);
+        } else if self.word {
+            // We make this option exclusive with whole_line because when
+            // whole_line is enabled, all matches necessary fall on word
+            // boundaries. So this extra goop is strictly redundant.
+            singlepat = format!(r"(?<!\w)(?:{})(?!\w)", singlepat);
+        }
+        log::trace!("final regex: {:?}", singlepat);
+        builder.build(&singlepat).map_err(Error::regex).map(|regex| {
             let mut names = HashMap::new();
             for (i, name) in regex.capture_names().iter().enumerate() {
                 if let Some(ref name) = *name {
@@ -141,6 +168,21 @@ impl RegexMatcherBuilder {
     /// match the `-2` in `foo -2 bar`.
     pub fn word(&mut self, yes: bool) -> &mut RegexMatcherBuilder {
         self.word = yes;
+        self
+    }
+
+    /// Whether the patterns should be treated as literal strings or not. When
+    /// this is active, all characters, including ones that would normally be
+    /// special regex meta characters, are matched literally.
+    pub fn fixed_strings(&mut self, yes: bool) -> &mut RegexMatcherBuilder {
+        self.fixed_strings = yes;
+        self
+    }
+
+    /// Whether each pattern should match the entire line or not. This is
+    /// equivalent to surrounding the pattern with `(?m:^)` and `(?m:$)`.
+    pub fn whole_line(&mut self, yes: bool) -> &mut RegexMatcherBuilder {
+        self.whole_line = yes;
         self
     }
 

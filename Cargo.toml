@@ -52,7 +52,6 @@ grep = { version = "0.2.12", path = "crates/grep" }
 ignore = { version = "0.4.19", path = "crates/ignore" }
 lazy_static = "1.1.0"
 log = "0.4.5"
-regex = "1.8.3"
 serde_json = "1.0.23"
 termcolor = "1.1.0"
 

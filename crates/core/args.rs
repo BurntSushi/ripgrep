@@ -31,7 +31,6 @@ use ignore::overrides::{Override, OverrideBuilder};
 use ignore::types::{FileTypeDef, Types, TypesBuilder};
 use ignore::{Walk, WalkBuilder, WalkParallel};
 use log;
-use regex;
 use termcolor::{BufferWriter, ColorChoice, WriteColor};
 
 use crate::app;
@@ -653,6 +652,8 @@ impl ArgMatches {
             .multi_line(true)
             .unicode(self.unicode())
             .octal(false)
+            .fixed_strings(self.is_present("fixed-strings"))
+            .whole_line(self.is_present("line-regexp"))
             .word(self.is_present("word-regexp"));
         if self.is_present("multiline") {
             builder.dot_matches_new_line(self.is_present("multiline-dotall"));
@@ -679,12 +680,7 @@ impl ArgMatches {
         if let Some(limit) = self.dfa_size_limit()? {
             builder.dfa_size_limit(limit);
         }
-        let res = if self.is_present("fixed-strings") {
-            builder.build_literals(patterns)
-        } else {
-            builder.build(&patterns.join("|"))
-        };
-        match res {
+        match builder.build_many(patterns) {
             Ok(m) => Ok(m),
             Err(err) => Err(From::from(suggest_multiline(err.to_string()))),
         }
@@ -701,6 +697,8 @@ impl ArgMatches {
             .case_smart(self.case_smart())
             .caseless(self.case_insensitive())
             .multi_line(true)
+            .fixed_strings(self.is_present("fixed-strings"))
+            .whole_line(self.is_present("line-regexp"))
             .word(self.is_present("word-regexp"));
         // For whatever reason, the JIT craps out during regex compilation with
         // a "no more memory" error on 32 bit systems. So don't use it there.
@@ -721,7 +719,7 @@ impl ArgMatches {
         if self.is_present("crlf") {
             builder.crlf(true);
         }
-        Ok(builder.build(&patterns.join("|"))?)
+        Ok(builder.build_many(patterns)?)
     }
 
     /// Build a JSON printer that writes results to the given writer.
@@ -1385,11 +1383,6 @@ impl ArgMatches {
     /// Get a sequence of all available patterns from the command line.
     /// This includes reading the -e/--regexp and -f/--file flags.
     ///
-    /// Note that if -F/--fixed-strings is set, then all patterns will be
-    /// escaped. If -x/--line-regexp is set, then all patterns are surrounded
-    /// by `^...$`. Other things, such as --word-regexp, are handled by the
-    /// regex matcher itself.
-    ///
     /// If any pattern is invalid UTF-8, then an error is returned.
     fn patterns(&self) -> Result<Vec<String>> {
         if self.is_present("files") || self.is_present("type-list") {
@@ -1430,16 +1423,6 @@ impl ArgMatches {
         Ok(pats)
     }
 
-    /// Returns a pattern that is guaranteed to produce an empty regular
-    /// expression that is valid in any position.
-    fn pattern_empty(&self) -> String {
-        // This would normally just be an empty string, which works on its
-        // own, but if the patterns are joined in a set of alternations, then
-        // you wind up with `foo|`, which is currently invalid in Rust's regex
-        // engine.
-        "(?:)".to_string()
-    }
-
     /// Converts an OsStr pattern to a String pattern. The pattern is escaped
     /// if -F/--fixed-strings is set.
     ///
@@ -1458,30 +1441,12 @@ impl ArgMatches {
     /// Applies additional processing on the given pattern if necessary
     /// (such as escaping meta characters or turning it into a line regex).
     fn pattern_from_string(&self, pat: String) -> String {
-        let pat = self.pattern_line(self.pattern_literal(pat));
         if pat.is_empty() {
-            self.pattern_empty()
-        } else {
-            pat
-        }
-    }
-
-    /// Returns the given pattern as a line pattern if the -x/--line-regexp
-    /// flag is set. Otherwise, the pattern is returned unchanged.
-    fn pattern_line(&self, pat: String) -> String {
-        if self.is_present("line-regexp") {
-            format!(r"^(?:{})$", pat)
-        } else {
-            pat
-        }
-    }
-
-    /// Returns the given pattern as a literal pattern if the
-    /// -F/--fixed-strings flag is set. Otherwise, the pattern is returned
-    /// unchanged.
-    fn pattern_literal(&self, pat: String) -> String {
-        if self.is_present("fixed-strings") {
-            regex::escape(&pat)
+            // This would normally just be an empty string, which works on its
+            // own, but if the patterns are joined in a set of alternations,
+            // then you wind up with `foo|`, which is currently invalid in
+            // Rust's regex engine.
+            "(?:)".to_string()
         } else {
             pat
         }
