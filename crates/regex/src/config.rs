@@ -8,8 +8,8 @@ use {
 };
 
 use crate::{
-    ast::AstAnalysis, error::Error, literal::LiteralSets,
-    non_matching::non_matching_bytes, strip::strip_from_match,
+    ast::AstAnalysis, error::Error, non_matching::non_matching_bytes,
+    strip::strip_from_match,
 };
 
 /// Config represents the configuration of a regex matcher in this crate.
@@ -228,6 +228,11 @@ impl ConfiguredHIR {
         &self.config
     }
 
+    /// Return a reference to the underyling HIR.
+    pub(crate) fn hir(&self) -> &Hir {
+        &self.hir
+    }
+
     /// Convert this HIR to a regex that can be used for matching.
     pub(crate) fn to_regex(&self) -> Result<Regex, Error> {
         let meta = Regex::config()
@@ -240,38 +245,13 @@ impl ConfiguredHIR {
             // Same deal here. The default limit for full DFAs is VERY small,
             // but with ripgrep we can afford to spend a bit more time on
             // building them I think.
-            .dfa_size_limit(Some(10 * (1 << 20)))
-            .dfa_state_limit(Some(10_000))
+            .dfa_size_limit(Some(1 * (1 << 20)))
+            .dfa_state_limit(Some(1_000))
             .hybrid_cache_capacity(self.config.dfa_size_limit);
         Regex::builder()
             .configure(meta)
             .build_from_hir(&self.hir)
             .map_err(Error::regex)
-    }
-
-    /// Convert this HIR to its concrete syntax.
-    pub(crate) fn to_pattern(&self) -> String {
-        self.hir.to_string()
-    }
-
-    /// Attempt to extract a "fast" regex that can be used for quickly finding
-    /// candidates lines for a match.
-    ///
-    /// If no line terminator was configured, then this always returns
-    /// `Ok(None)`. If a line terminator is configured, then this may return a
-    /// regex.
-    pub(crate) fn to_fast_line_regex(&self) -> Result<Option<Regex>, Error> {
-        if self.config.line_terminator.is_none() {
-            return Ok(None);
-        }
-        match LiteralSets::new(&self.hir).one_regex(self.config.word) {
-            None => Ok(None),
-            Some(pattern) => {
-                let config = self.config.clone();
-                let chir = ConfiguredHIR::new(config, &[pattern])?;
-                Ok(Some(chir.to_regex()?))
-            }
-        }
     }
 
     /// Compute the set of non-matching bytes for this HIR expression.

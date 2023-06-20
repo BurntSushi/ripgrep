@@ -1,32 +1,42 @@
-use regex_syntax::hir::Hir;
+#![allow(warnings)]
 
-// BREADCRUMBS:
-//
-// The way we deal with line terminators in the regex is clunky, but probably
-// the least bad option for now unfortunately.
-//
-// The `non_matching_bytes` routine currently hardcodes line terminators for
-// anchors. But it's not really clear it should even care about line terminators
-// anyway, since anchors aren't actually part of a match. If we fix that
-// though, that currently reveals a different bug elsewhere: '(?-m:^)' isn't
-// implemented correctly in multi-line search, because it defers to the fast
-// line-by-line strategy, which ends up being wrong. I think the way forward
-// there is to:
-//
-// 1) Adding something in the grep-matcher interface that exposes a way to
-// query for \A and \z specifically. If they're in the pattern, then we can
-// decide how to handle them.
-//
-// 2) Perhaps provide a way to "translate \A/\z to ^/$" for cases when
-// mulit-line search is not enabled.
+use {
+    regex_automata::meta::Regex,
+    regex_syntax::hir::{
+        literal::{self, Seq},
+        Hir,
+    },
+};
+
+use crate::config::ConfiguredHIR;
 
 #[derive(Clone, Debug)]
-pub struct LiteralSets {}
+pub(crate) struct InnerLiterals {
+    seq: Seq,
+}
 
-impl LiteralSets {
-    /// Create a set of literals from the given HIR expression.
-    pub fn new(_: &Hir) -> LiteralSets {
-        LiteralSets {}
+impl InnerLiterals {
+    /// Create a set of inner literals from the given HIR expression.
+    ///
+    /// If no line terminator was configured, then this always declines to
+    /// extract literals because the inner literal optimization may not be
+    /// valid.
+    ///
+    /// Note that this requires the actual regex that will be used for a search
+    /// because it will query some state about the compiled regex. That state
+    /// may influence inner literal extraction.
+    pub(crate) fn new(chir: &ConfiguredHIR, re: &Regex) -> InnerLiterals {
+        let seq = Seq::infinite();
+        if chir.config().line_terminator.is_none() || re.is_accelerated() {
+            return InnerLiterals::none();
+        }
+        InnerLiterals { seq }
+    }
+
+    /// Returns a infinite set of inner literals, such that it can never
+    /// produce a matcher.
+    pub(crate) fn none() -> InnerLiterals {
+        InnerLiterals { seq: Seq::infinite() }
     }
 
     /// If it is deemed advantageuous to do so (via various suspicious
@@ -35,7 +45,10 @@ impl LiteralSets {
     /// generated these literal sets. The idea here is that the pattern
     /// returned by this method is much cheaper to search for. i.e., It is
     /// usually a single literal or an alternation of literals.
-    pub fn one_regex(&self, _word: bool) -> Option<String> {
+    pub(crate) fn one_regex(&self) -> Option<String> {
+        if !self.seq.is_finite() {
+            return None;
+        }
         None
     }
 }

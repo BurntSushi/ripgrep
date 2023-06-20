@@ -22,8 +22,13 @@ type PoolFn =
 pub(crate) struct WordMatcher {
     /// The regex which is roughly `(?:^|\W)(<original pattern>)(?:$|\W)`.
     regex: Regex,
-    /// The pattern string corresponding to the above regex.
-    pattern: String,
+    /// The HIR that produced the regex above. We don't keep the HIR for the
+    /// `original` regex.
+    ///
+    /// We put this in an `Arc` because by the time it gets here, it won't
+    /// change. And because cloning and dropping an `Hir` is somewhat expensive
+    /// due to its deep recursive representation.
+    chir: Arc<ConfiguredHIR>,
     /// The original regex supplied by the user, which we use in a fast path
     /// to try and detect matches before deferring to slower engines.
     original: Regex,
@@ -45,7 +50,7 @@ impl Clone for WordMatcher {
         let re = self.regex.clone();
         WordMatcher {
             regex: self.regex.clone(),
-            pattern: self.pattern.clone(),
+            chir: Arc::clone(&self.chir),
             original: self.original.clone(),
             names: self.names.clone(),
             caps: Arc::new(Pool::new(Box::new(move || re.create_captures()))),
@@ -61,9 +66,8 @@ impl WordMatcher {
     /// internally.
     pub(crate) fn new(chir: ConfiguredHIR) -> Result<WordMatcher, Error> {
         let original = chir.clone().into_anchored().to_regex()?;
-        let word_chir = chir.into_word()?;
-        let regex = word_chir.to_regex()?;
-        let pattern = word_chir.to_pattern();
+        let chir = Arc::new(chir.into_word()?);
+        let regex = chir.to_regex()?;
         let caps = Arc::new(Pool::new({
             let regex = regex.clone();
             Box::new(move || regex.create_captures()) as PoolFn
@@ -76,13 +80,20 @@ impl WordMatcher {
                 names.insert(name.to_string(), i.checked_sub(1).unwrap());
             }
         }
-        Ok(WordMatcher { regex, pattern, original, names, caps })
+        Ok(WordMatcher { regex, chir, original, names, caps })
     }
 
-    /// Return the underlying pattern string for the regex used by this
-    /// matcher.
-    pub(crate) fn pattern(&self) -> &str {
-        &self.pattern
+    /// Return the underlying regex used to match at word boundaries.
+    ///
+    /// The original regex is in the capture group at index 1.
+    pub(crate) fn regex(&self) -> &Regex {
+        &self.regex
+    }
+
+    /// Return the underlying HIR for the regex used to match at word
+    /// boundaries.
+    pub(crate) fn chir(&self) -> &ConfiguredHIR {
+        &self.chir
     }
 
     /// Attempt to do a fast confirmation of a word match that covers a subset

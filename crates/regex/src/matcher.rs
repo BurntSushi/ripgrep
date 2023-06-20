@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use {
     grep_matcher::{
         ByteSet, Captures, LineMatchKind, LineTerminator, Match, Matcher,
@@ -12,6 +14,7 @@ use {
 use crate::{
     config::{Config, ConfiguredHIR},
     error::Error,
+    literal::InnerLiterals,
     word::WordMatcher,
 };
 
@@ -59,8 +62,26 @@ impl RegexMatcherBuilder {
         patterns: &[P],
     ) -> Result<RegexMatcher, Error> {
         let chir = self.config.build_many(patterns)?;
-        let fast_line_regex = chir.to_fast_line_regex()?;
+        let matcher = RegexMatcherImpl::new(chir)?;
+        let (chir, re) = (matcher.chir(), matcher.regex());
+        log::trace!("final regex: {:?}", chir.hir().to_string());
+
         let non_matching_bytes = chir.non_matching_bytes();
+        // If we can pick out some literals from the regex, then we might be
+        // able to build a faster regex that quickly identifies candidate
+        // matching lines. The regex engine will do what it can on its own, but
+        // we can specifically do a little more when a line terminator is set.
+        // For example, for a regex like `\w+foo\w+`, we can look for `foo`,
+        // and when a match is found, look for the line containing `foo` and
+        // then run the original regex on only that line. (In this case, the
+        // regex engine is likely to handle this case for us since it's so
+        // simple, but the idea applies.)
+        let fast_line_regex = match InnerLiterals::new(chir, re).one_regex() {
+            None => None,
+            Some(pattern) => {
+                Some(chir.config().build_many(&[pattern])?.to_regex()?)
+            }
+        };
         if let Some(ref re) = fast_line_regex {
             log::debug!("extracted fast line regex: {:?}", re);
         }
@@ -69,8 +90,6 @@ impl RegexMatcherBuilder {
         // support it.
         let mut config = self.config.clone();
         config.line_terminator = chir.line_terminator();
-        let matcher = RegexMatcherImpl::new(chir)?;
-        log::trace!("final regex: {:?}", matcher.regex());
         Ok(RegexMatcher {
             config,
             matcher,
@@ -412,10 +431,18 @@ impl RegexMatcherImpl {
     }
 
     /// Return the underlying regex object used.
-    fn regex(&self) -> String {
+    fn regex(&self) -> &Regex {
         match *self {
-            RegexMatcherImpl::Word(ref x) => x.pattern().to_string(),
-            RegexMatcherImpl::Standard(ref x) => x.pattern.clone(),
+            RegexMatcherImpl::Word(ref x) => x.regex(),
+            RegexMatcherImpl::Standard(ref x) => &x.regex,
+        }
+    }
+
+    /// Return the underlying HIR of the regex used for searching.
+    fn chir(&self) -> &ConfiguredHIR {
+        match *self {
+            RegexMatcherImpl::Word(ref x) => x.chir(),
+            RegexMatcherImpl::Standard(ref x) => &x.chir,
         }
     }
 }
@@ -666,15 +693,19 @@ struct StandardMatcher {
     /// The regular expression compiled from the pattern provided by the
     /// caller.
     regex: Regex,
-    /// The underlying pattern string for the regex.
-    pattern: String,
+    /// The HIR that produced this regex.
+    ///
+    /// We put this in an `Arc` because by the time it gets here, it won't
+    /// change. And because cloning and dropping an `Hir` is somewhat expensive
+    /// due to its deep recursive representation.
+    chir: Arc<ConfiguredHIR>,
 }
 
 impl StandardMatcher {
     fn new(chir: ConfiguredHIR) -> Result<StandardMatcher, Error> {
+        let chir = Arc::new(chir);
         let regex = chir.to_regex()?;
-        let pattern = chir.to_pattern();
-        Ok(StandardMatcher { regex, pattern })
+        Ok(StandardMatcher { regex, chir })
     }
 }
 
