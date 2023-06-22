@@ -76,15 +76,7 @@ impl RegexMatcherBuilder {
         // then run the original regex on only that line. (In this case, the
         // regex engine is likely to handle this case for us since it's so
         // simple, but the idea applies.)
-        let fast_line_regex = match InnerLiterals::new(chir, re).one_regex() {
-            None => None,
-            Some(pattern) => {
-                Some(chir.config().build_many(&[pattern])?.to_regex()?)
-            }
-        };
-        if let Some(ref re) = fast_line_regex {
-            log::debug!("extracted fast line regex: {:?}", re);
-        }
+        let fast_line_regex = InnerLiterals::new(chir, re).one_regex()?;
 
         // We override the line terminator in case the configured HIR doesn't
         // support it.
