@@ -15,7 +15,7 @@ edition = "2021"
 
 [dependencies]
 aho-corasick = "1.0.2"
-bstr = "1.5.0"
+bstr = "1.6.0"
 grep-matcher = { version = "0.1.6", path = "../matcher" }
 log = "0.4.19"
 regex-automata = { version = "0.3.0" }

@@ -14,7 +14,7 @@ license = "Unlicense OR MIT"
 edition = "2018"
 
 [dependencies]
-bstr = "1.1.0"
+bstr = "1.6.0"
 globset = { version = "0.4.10", path = "../globset" }
 lazy_static = "1.1.0"
 log = "0.4.5"

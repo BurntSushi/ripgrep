@@ -19,11 +19,6 @@ autotests = false
 edition = "2018"
 rust-version = "1.65"
 
-[patch.crates-io]
-regex = { path = "/home/andrew/rust/regex" }
-regex-automata = { path = "/home/andrew/rust/regex/regex-automata" }
-regex-syntax = { path = "/home/andrew/rust/regex/regex-syntax" }
-
 [[bin]]
 bench = false
 path = "crates/core/main.rs"
@@ -47,7 +42,7 @@ members = [
 ]
 
 [dependencies]
-bstr = "1.1.0"
+bstr = "1.6.0"
 grep = { version = "0.2.12", path = "crates/grep" }
 ignore = { version = "0.4.19", path = "crates/ignore" }
 lazy_static = "1.1.0"

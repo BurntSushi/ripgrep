@@ -21,7 +21,7 @@ bench = false
 
 [dependencies]
 aho-corasick = "1.0.2"
-bstr = { version = "1.5.0", default-features = false, features = ["std"] }
+bstr = { version = "1.6.0", default-features = false, features = ["std"] }
 fnv = "1.0.6"
 log = { version = "0.4.5", optional = true }
 regex = { version = "1.8.3", default-features = false, features = ["perf", "std"] }
