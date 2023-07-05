@@ -6,6 +6,7 @@ image = "burntsushi/cross:i686-unknown-linux-gnu"
 
 [target.mips64-unknown-linux-gnuabi64]
 image = "burntsushi/cross:mips64-unknown-linux-gnuabi64"
+build-std = true
 
 [target.arm-unknown-linux-gnueabihf]
 image = "burntsushi/cross:arm-unknown-linux-gnueabihf"

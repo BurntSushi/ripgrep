@@ -42,31 +42,31 @@ jobs:
         - win-gnu
         include:
         - build: pinned
-          os: ubuntu-22.04
+          os: ubuntu-latest
           rust: 1.70.0
         - build: stable
-          os: ubuntu-22.04
+          os: ubuntu-latest
           rust: stable
         - build: beta
-          os: ubuntu-22.04
+          os: ubuntu-latest
           rust: beta
         - build: nightly
-          os: ubuntu-22.04
+          os: ubuntu-latest
           rust: nightly
         - build: nightly-musl
-          os: ubuntu-22.04
+          os: ubuntu-latest
           rust: nightly
           target: x86_64-unknown-linux-musl
         - build: nightly-32
-          os: ubuntu-22.04
+          os: ubuntu-latest
           rust: nightly
           target: i686-unknown-linux-gnu
         - build: nightly-mips
-          os: ubuntu-22.04
+          os: ubuntu-latest
           rust: nightly
           target: mips64-unknown-linux-gnuabi64
         - build: nightly-arm
-          os: ubuntu-22.04
+          os: ubuntu-latest
           rust: nightly
           # For stripping release binaries:
           # docker run --rm -v $PWD/target:/target:Z \
@@ -75,7 +75,7 @@ jobs:
           #   /target/arm-unknown-linux-gnueabihf/debug/rg
           target: arm-unknown-linux-gnueabihf
         - build: macos
-          os: macos-12
+          os: macos-latest
           rust: nightly
         - build: win-msvc
           os: windows-2022
@@ -88,12 +88,12 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Install packages (Ubuntu)
-      if: matrix.os == 'ubuntu-22.04'
+      if: matrix.os == 'ubuntu-latest'
       run: |
         ci/ubuntu-install-packages
 
     - name: Install packages (macOS)
-      if: matrix.os == 'macos-12'
+      if: matrix.os == 'macos-latest'
       run: |
         ci/macos-install-packages
 
@@ -178,7 +178,7 @@ jobs:
 
   rustfmt:
     name: rustfmt
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -192,7 +192,7 @@ jobs:
 
   docs:
     name: Docs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
