@@ -165,6 +165,8 @@ mod pattern;
 mod process;
 mod wtr;
 
+use std::io::IsTerminal;
+
 pub use crate::decompress::{
     resolve_binary, DecompressionMatcher, DecompressionMatcherBuilder,
     DecompressionReader, DecompressionReaderBuilder,
@@ -215,7 +217,7 @@ pub fn is_readable_stdin() -> bool {
 /// Returns true if and only if stdin is believed to be connected to a tty
 /// or a console.
 pub fn is_tty_stdin() -> bool {
-    atty::is(atty::Stream::Stdin)
+    std::io::stdin().is_terminal()
 }
 
 /// Returns true if and only if stdout is believed to be connected to a tty
@@ -227,11 +229,11 @@ pub fn is_tty_stdin() -> bool {
 /// implementations of `ls` will often show one item per line when stdout is
 /// redirected, but will condensed output when printing to a tty.
 pub fn is_tty_stdout() -> bool {
-    atty::is(atty::Stream::Stdout)
+    std::io::stdout().is_terminal()
 }
 
 /// Returns true if and only if stderr is believed to be connected to a tty
 /// or a console.
 pub fn is_tty_stderr() -> bool {
-    atty::is(atty::Stream::Stderr)
+    std::io::stderr().is_terminal()
 }

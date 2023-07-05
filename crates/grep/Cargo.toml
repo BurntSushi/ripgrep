@@ -1,6 +1,6 @@
 [package]
 name = "grep"
-version = "0.2.11"  #:version
+version = "0.2.12"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 Fast line oriented regex searching as a library.

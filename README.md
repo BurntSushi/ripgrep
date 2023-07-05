@@ -287,8 +287,10 @@ $ curl -LO https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgre
 $ sudo dpkg -i ripgrep_13.0.0_amd64.deb
 ```
 
-If you run Debian Buster (currently Debian stable) or Debian sid, ripgrep is
-[officially maintained by Debian](https://tracker.debian.org/pkg/rust-ripgrep).
+If you run Debian stable, ripgrep is [officially maintained by
+Debian](https://tracker.debian.org/pkg/rust-ripgrep), although its version may
+be older than the `deb` package available in the previous step.
+
 ```
 $ sudo apt-get install ripgrep
 ```
@@ -343,7 +345,7 @@ $ pkgman install ripgrep_x86
 
 If you're a **Rust programmer**, ripgrep can be installed with `cargo`.
 
-* Note that the minimum supported version of Rust for ripgrep is **1.65.0**,
+* Note that the minimum supported version of Rust for ripgrep is **1.70.0**,
   although ripgrep may work with older versions.
 * Note that the binary may be bigger than expected because it contains debug
   symbols. This is intentional. To remove debug symbols and therefore reduce
@@ -428,6 +430,14 @@ $ cargo test --all
 ```
 
 from the repository root.
+
+
+### Related tools
+
+* [delta](https://github.com/dandavison/delta) is a syntax highlighting
+pager that supports the `rg --json` output format. So all you need to do to
+make it work is `rg --json pattern | delta`. See [delta's manual section on
+grep](https://dandavison.github.io/delta/grep.html) for more details.
 
 
 ### Vulnerability reporting
