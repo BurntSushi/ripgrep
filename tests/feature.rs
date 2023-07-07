@@ -921,6 +921,23 @@ rgtest!(f1842_field_match_separator, |dir: Dir, _: TestCommand| {
     eqnice!(expected, dir.command().args(&args).stdout());
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/2288
+rgtest!(f2288_context_partial_override, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("test", "1\n2\n3\n4\n5\n6\n7\n8\n9\n");
+    cmd.args(&["-C1", "-A2", "5", "test"]);
+    eqnice!("4\n5\n6\n7\n", cmd.stdout());
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/2288
+rgtest!(
+    f2288_context_partial_override_rev,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create("test", "1\n2\n3\n4\n5\n6\n7\n8\n9\n");
+        cmd.args(&["-A2", "-C1", "5", "test"]);
+        eqnice!("4\n5\n6\n7\n", cmd.stdout());
+    }
+);
+
 rgtest!(no_context_sep, |dir: Dir, mut cmd: TestCommand| {
     dir.create("test", "foo\nctx\nbar\nctx\nfoo\nctx");
     cmd.args(&["-A1", "--no-context-separator", "foo", "test"]);

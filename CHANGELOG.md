@@ -2,6 +2,12 @@ TBD
 ===
 Unreleased changes. Release notes have not yet been written.
 
+**BREAKING CHANGES**
+
+* `rg -C1 -A2` used to be equivalent to `rg -A2`, but now it is equivalent to
+  `rg -B1 -A2`. That is, `-A` and `-B` no longer completely override `-C`.
+  Instead, they only partially override `-C`.
+
 Feature enhancements:
 
 * Added or improved file type filtering for Fuchsia, GraphQL
@@ -12,6 +18,8 @@ Bug fixes:
   Fix bug when using `-w` with a regex that can match the empty string.
 * [BUG #1911](https://github.com/BurntSushi/ripgrep/issues/1911):
   Disable mmap searching in all non-64-bit environments.
+* [BUG #2288](https://github.com/BurntSushi/ripgrep/issues/2288):
+  `-A` and `-B` now only each partially override `-C`.
 * [BUG #2236](https://github.com/BurntSushi/ripgrep/issues/2236):
   Fix gitignore parsing bug where a trailing `\/` resulted in an error.
 * [BUG #2480](https://github.com/BurntSushi/ripgrep/issues/2480):

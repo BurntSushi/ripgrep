@@ -698,7 +698,7 @@ fn flag_after_context(args: &mut Vec<RGArg>) {
         "\
 Show NUM lines after each match.
 
-This overrides the --context and --passthru flags.
+This overrides the --passthru flag and partially overrides --context.
 "
     );
     let arg = RGArg::flag("after-context", "NUM")
@@ -706,8 +706,7 @@ This overrides the --context and --passthru flags.
         .help(SHORT)
         .long_help(LONG)
         .number()
-        .overrides("passthru")
-        .overrides("context");
+        .overrides("passthru");
     args.push(arg);
 }
 
@@ -768,7 +767,7 @@ fn flag_before_context(args: &mut Vec<RGArg>) {
         "\
 Show NUM lines before each match.
 
-This overrides the --context and --passthru flags.
+This overrides the --passthru flag and partially overrides --context.
 "
     );
     let arg = RGArg::flag("before-context", "NUM")
@@ -776,8 +775,7 @@ This overrides the --context and --passthru flags.
         .help(SHORT)
         .long_help(LONG)
         .number()
-        .overrides("passthru")
-        .overrides("context");
+        .overrides("passthru");
     args.push(arg);
 }
 
@@ -1009,8 +1007,7 @@ fn flag_context(args: &mut Vec<RGArg>) {
 Show NUM lines before and after each match. This is equivalent to providing
 both the -B/--before-context and -A/--after-context flags with the same value.
 
-This overrides both the -B/--before-context and -A/--after-context flags,
-in addition to the --passthru flag.
+This overrides the --passthru flag.
 "
     );
     let arg = RGArg::flag("context", "NUM")
@@ -1018,9 +1015,7 @@ in addition to the --passthru flag.
         .help(SHORT)
         .long_help(LONG)
         .number()
-        .overrides("passthru")
-        .overrides("before-context")
-        .overrides("after-context");
+        .overrides("passthru");
     args.push(arg);
 }
 

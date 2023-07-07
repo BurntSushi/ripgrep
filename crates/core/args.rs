@@ -992,10 +992,10 @@ impl ArgMatches {
     /// If there was a problem parsing the values from the user as an integer,
     /// then an error is returned.
     fn contexts(&self) -> Result<(usize, usize)> {
-        let after = self.usize_of("after-context")?.unwrap_or(0);
-        let before = self.usize_of("before-context")?.unwrap_or(0);
         let both = self.usize_of("context")?.unwrap_or(0);
-        Ok(if both > 0 { (both, both) } else { (before, after) })
+        let after = self.usize_of("after-context")?.unwrap_or(both);
+        let before = self.usize_of("before-context")?.unwrap_or(both);
+        Ok((before, after))
     }
 
     /// Returns the unescaped context separator in UTF-8 bytes.
