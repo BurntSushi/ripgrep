@@ -1,8 +1,8 @@
 use std::borrow::Cow;
-use std::fmt;
-use std::io;
+use std::cell::OnceCell;
 use std::path::Path;
 use std::time;
+use std::{fmt, io};
 
 use bstr::{ByteSlice, ByteVec};
 use grep_matcher::{Captures, LineTerminator, Match, Matcher};
@@ -11,7 +11,9 @@ use grep_searcher::{
 };
 #[cfg(feature = "serde1")]
 use serde::{Serialize, Serializer};
+use termcolor::HyperlinkSpec;
 
+use crate::hyperlink::{HyperlinkPath, HyperlinkPattern, HyperlinkValues};
 use crate::MAX_LOOK_AHEAD;
 
 /// A type for handling replacements while amortizing allocation.
@@ -276,12 +278,20 @@ impl<'a> Sunk<'a> {
 /// portability with a small cost: on Windows, paths that are not valid UTF-16
 /// will not roundtrip correctly.
 #[derive(Clone, Debug)]
-pub struct PrinterPath<'a>(Cow<'a, [u8]>);
+pub struct PrinterPath<'a> {
+    path: &'a Path,
+    bytes: Cow<'a, [u8]>,
+    hyperlink_path: OnceCell<Option<HyperlinkPath>>,
+}
 
 impl<'a> PrinterPath<'a> {
     /// Create a new path suitable for printing.
     pub fn new(path: &'a Path) -> PrinterPath<'a> {
-        PrinterPath(Vec::from_path_lossy(path))
+        PrinterPath {
+            path,
+            bytes: Vec::from_path_lossy(path),
+            hyperlink_path: OnceCell::new(),
+        }
     }
 
     /// Create a new printer path from the given path which can be efficiently
@@ -303,7 +313,7 @@ impl<'a> PrinterPath<'a> {
     /// environments, only `/` is treated as a path separator.
     fn replace_separator(&mut self, new_sep: u8) {
         let transformed_path: Vec<u8> = self
-            .0
+            .as_bytes()
             .bytes()
             .map(|b| {
                 if b == b'/' || (cfg!(windows) && b == b'\\') {
@@ -313,12 +323,40 @@ impl<'a> PrinterPath<'a> {
                 }
             })
             .collect();
-        self.0 = Cow::Owned(transformed_path);
+        self.bytes = Cow::Owned(transformed_path);
     }
 
     /// Return the raw bytes for this path.
     pub fn as_bytes(&self) -> &[u8] {
-        &self.0
+        &self.bytes
+    }
+
+    /// Creates a hyperlink for this path and the given line and column, using the specified
+    /// pattern. Uses the given buffer to store the hyperlink.
+    pub fn create_hyperlink_spec<'b>(
+        &self,
+        pattern: &HyperlinkPattern,
+        line_number: Option<u64>,
+        column: Option<u64>,
+        buffer: &'b mut Vec<u8>,
+    ) -> Option<HyperlinkSpec<'b>> {
+        if pattern.is_empty() {
+            return None;
+        }
+        let file_path = self.hyperlink_path()?;
+        let values = HyperlinkValues::new(file_path, line_number, column);
+        buffer.clear();
+        pattern.render(&values, buffer).ok()?;
+        Some(HyperlinkSpec::open(buffer))
+    }
+
+    /// Returns the file path to use in hyperlinks, if any.
+    ///
+    /// This is what the {file} placeholder will be substituted with.
+    fn hyperlink_path(&self) -> Option<&HyperlinkPath> {
+        self.hyperlink_path
+            .get_or_init(|| HyperlinkPath::from_path(self.path))
+            .as_ref()
     }
 }
 

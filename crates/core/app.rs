@@ -580,6 +580,7 @@ pub fn all_args_and_flags() -> Vec<RGArg> {
     flag_glob_case_insensitive(&mut args);
     flag_heading(&mut args);
     flag_hidden(&mut args);
+    flag_hyperlink_format(&mut args);
     flag_iglob(&mut args);
     flag_ignore_case(&mut args);
     flag_ignore_file(&mut args);
@@ -1491,6 +1492,26 @@ This flag can be disabled with --no-hidden.
     args.push(arg);
 
     let arg = RGArg::switch("no-hidden").hidden().overrides("hidden");
+    args.push(arg);
+}
+
+fn flag_hyperlink_format(args: &mut Vec<RGArg>) {
+    const SHORT: &str = "Set the format of hyperlinks to match results.";
+    const LONG: &str = long!(
+        "\
+Set the format of hyperlinks to match results. This defines a pattern which
+can contain the following placeholders: {file}, {line}, {column}, and {host}.
+An empty pattern or 'none' disables hyperlinks.
+
+The {file} placeholder is required, and will be replaced with the absolute
+file path with a few adjustments: The leading '/' on Unix is removed,
+and '\\' is replaced with '/' on Windows.
+
+As an example, the default pattern on Unix systems is: 'file://{host}/{file}'
+"
+    );
+    let arg =
+        RGArg::flag("hyperlink-format", "FORMAT").help(SHORT).long_help(LONG);
     args.push(arg);
 }
 

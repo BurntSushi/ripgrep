@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use termcolor::{ColorSpec, WriteColor};
+use termcolor::{ColorSpec, HyperlinkSpec, WriteColor};
 
 /// A writer that counts the number of bytes that have been successfully
 /// written.
@@ -76,8 +76,16 @@ impl<W: WriteColor> WriteColor for CounterWriter<W> {
         self.wtr.supports_color()
     }
 
+    fn supports_hyperlinks(&self) -> bool {
+        self.wtr.supports_hyperlinks()
+    }
+
     fn set_color(&mut self, spec: &ColorSpec) -> io::Result<()> {
         self.wtr.set_color(spec)
+    }
+
+    fn set_hyperlink(&mut self, link: &HyperlinkSpec) -> io::Result<()> {
+        self.wtr.set_hyperlink(link)
     }
 
     fn reset(&mut self) -> io::Result<()> {

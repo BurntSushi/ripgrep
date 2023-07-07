@@ -21,8 +21,10 @@ serde1 = ["base64", "serde", "serde_json"]
 [dependencies]
 base64 = { version = "0.20.0", optional = true }
 bstr = "1.6.0"
+gethostname = "0.4.3"
 grep-matcher = { version = "0.1.6", path = "../matcher" }
 grep-searcher = { version = "0.1.11", path = "../searcher" }
+lazy_static = "1.1.0"
 termcolor = "1.0.4"
 serde = { version = "1.0.77", optional = true, features = ["derive"] }
 serde_json = { version = "1.0.27", optional = true }

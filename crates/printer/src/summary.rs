@@ -10,6 +10,7 @@ use termcolor::{ColorSpec, NoColor, WriteColor};
 
 use crate::color::ColorSpecs;
 use crate::counter::CounterWriter;
+use crate::hyperlink::{HyperlinkPattern, HyperlinkSpan};
 use crate::stats::Stats;
 use crate::util::{find_iter_at_in_context, PrinterPath};
 
@@ -22,6 +23,7 @@ use crate::util::{find_iter_at_in_context, PrinterPath};
 struct Config {
     kind: SummaryKind,
     colors: ColorSpecs,
+    hyperlink_pattern: HyperlinkPattern,
     stats: bool,
     path: bool,
     max_matches: Option<u64>,
@@ -36,6 +38,7 @@ impl Default for Config {
         Config {
             kind: SummaryKind::Count,
             colors: ColorSpecs::default(),
+            hyperlink_pattern: HyperlinkPattern::default(),
             stats: false,
             path: true,
             max_matches: None,
@@ -160,6 +163,7 @@ impl SummaryBuilder {
         Summary {
             config: self.config.clone(),
             wtr: RefCell::new(CounterWriter::new(wtr)),
+            buf: vec![],
         }
     }
 
@@ -203,6 +207,17 @@ impl SummaryBuilder {
     /// The default color specifications provide no styling.
     pub fn color_specs(&mut self, specs: ColorSpecs) -> &mut SummaryBuilder {
         self.config.colors = specs;
+        self
+    }
+
+    /// Set the hyperlink pattern to use for hyperlinks output by this printer.
+    ///
+    /// Colors need to be enabled for hyperlinks to be output.
+    pub fn hyperlink_pattern(
+        &mut self,
+        pattern: HyperlinkPattern,
+    ) -> &mut SummaryBuilder {
+        self.config.hyperlink_pattern = pattern;
         self
     }
 
@@ -328,6 +343,7 @@ impl SummaryBuilder {
 pub struct Summary<W> {
     config: Config,
     wtr: RefCell<CounterWriter<W>>,
+    buf: Vec<u8>,
 }
 
 impl<W: WriteColor> Summary<W> {
@@ -532,12 +548,9 @@ impl<'p, 's, M: Matcher, W: WriteColor> SummarySink<'p, 's, M, W> {
     /// write that path to the underlying writer followed by a line terminator.
     /// (If a path terminator is set, then that is used instead of the line
     /// terminator.)
-    fn write_path_line(&self, searcher: &Searcher) -> io::Result<()> {
-        if let Some(ref path) = self.path {
-            self.write_spec(
-                self.summary.config.colors.path(),
-                path.as_bytes(),
-            )?;
+    fn write_path_line(&mut self, searcher: &Searcher) -> io::Result<()> {
+        if self.path.is_some() {
+            self.write_path()?;
             if let Some(term) = self.summary.config.path_terminator {
                 self.write(&[term])?;
             } else {
@@ -551,12 +564,9 @@ impl<'p, 's, M: Matcher, W: WriteColor> SummarySink<'p, 's, M, W> {
     /// write that path to the underlying writer followed by the field
     /// separator. (If a path terminator is set, then that is used instead of
     /// the field separator.)
-    fn write_path_field(&self) -> io::Result<()> {
-        if let Some(ref path) = self.path {
-            self.write_spec(
-                self.summary.config.colors.path(),
-                path.as_bytes(),
-            )?;
+    fn write_path_field(&mut self) -> io::Result<()> {
+        if self.path.is_some() {
+            self.write_path()?;
             if let Some(term) = self.summary.config.path_terminator {
                 self.write(&[term])?;
             } else {
@@ -564,6 +574,43 @@ impl<'p, 's, M: Matcher, W: WriteColor> SummarySink<'p, 's, M, W> {
             }
         }
         Ok(())
+    }
+
+    /// If this printer has a file path associated with it, then this will
+    /// write that path to the underlying writer in the appropriate style
+    /// (color and hyperlink).
+    fn write_path(&mut self) -> io::Result<()> {
+        if self.path.is_some() {
+            let mut hyperlink = self.start_hyperlink_span()?;
+
+            self.write_spec(
+                self.summary.config.colors.path(),
+                self.path.as_ref().unwrap().as_bytes(),
+            )?;
+
+            if hyperlink.is_active() {
+                hyperlink.end(&mut *self.summary.wtr.borrow_mut())?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Starts a hyperlink span when applicable.
+    fn start_hyperlink_span(&mut self) -> io::Result<HyperlinkSpan> {
+        if let Some(ref path) = self.path {
+            let mut wtr = self.summary.wtr.borrow_mut();
+            if wtr.supports_hyperlinks() {
+                if let Some(spec) = path.create_hyperlink_spec(
+                    &self.summary.config.hyperlink_pattern,
+                    None,
+                    None,
+                    &mut self.summary.buf,
+                ) {
+                    return Ok(HyperlinkSpan::start(&mut *wtr, &spec)?);
+                }
+            }
+        }
+        Ok(HyperlinkSpan::default())
     }
 
     /// Write the line terminator configured on the given searcher.
@@ -704,11 +751,11 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for SummarySink<'p, 's, M, W> {
             }
             SummaryKind::CountMatches => {
                 if show_count {
+                    self.write_path_field()?;
                     let stats = self
                         .stats
                         .as_ref()
                         .expect("CountMatches should enable stats tracking");
-                    self.write_path_field()?;
                     self.write(stats.matches().to_string().as_bytes())?;
                     self.write_line_term(searcher)?;
                 }

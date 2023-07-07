@@ -380,6 +380,7 @@ rgtest!(r428_color_context_path, |dir: Dir, mut cmd: TestCommand| {
         "-N",
         "--colors=match:none",
         "--color=always",
+        "--hyperlink-format=",
         "foo",
     ]);
 

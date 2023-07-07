@@ -5,6 +5,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::SystemTime;
 
@@ -17,8 +18,8 @@ use grep::pcre2::{
     RegexMatcherBuilder as PCRE2RegexMatcherBuilder,
 };
 use grep::printer::{
-    default_color_specs, ColorSpecs, JSONBuilder, Standard, StandardBuilder,
-    Stats, Summary, SummaryBuilder, SummaryKind, JSON,
+    default_color_specs, ColorSpecs, HyperlinkPattern, JSONBuilder, Standard,
+    StandardBuilder, Stats, Summary, SummaryBuilder, SummaryKind, JSON,
 };
 use grep::regex::{
     RegexMatcher as RustRegexMatcher,
@@ -235,6 +236,7 @@ impl Args {
         let mut builder = PathPrinterBuilder::new();
         builder
             .color_specs(self.matches().color_specs()?)
+            .hyperlink_pattern(self.matches().hyperlink_pattern()?)
             .separator(self.matches().path_separator()?)
             .terminator(self.matches().path_terminator().unwrap_or(b'\n'));
         Ok(builder.build(wtr))
@@ -772,6 +774,7 @@ impl ArgMatches {
         let mut builder = StandardBuilder::new();
         builder
             .color_specs(self.color_specs()?)
+            .hyperlink_pattern(self.hyperlink_pattern()?)
             .stats(self.stats())
             .heading(self.heading())
             .path(self.with_filename(paths))
@@ -811,6 +814,7 @@ impl ArgMatches {
         builder
             .kind(self.summary_kind().expect("summary format"))
             .color_specs(self.color_specs()?)
+            .hyperlink_pattern(self.hyperlink_pattern()?)
             .stats(self.stats())
             .path(self.with_filename(paths))
             .max_matches(self.max_count()?)
@@ -1116,6 +1120,17 @@ impl ArgMatches {
     /// searched.
     fn hidden(&self) -> bool {
         self.is_present("hidden") || self.unrestricted_count() >= 2
+    }
+
+    /// Returns the hyperlink pattern to use. A default pattern suitable
+    /// for the current system is used if the value is not set.
+    ///
+    /// If an invalid pattern is provided, then an error is returned.
+    fn hyperlink_pattern(&self) -> Result<HyperlinkPattern> {
+        Ok(match self.value_of_lossy("hyperlink-format") {
+            Some(pattern) => HyperlinkPattern::from_str(&pattern)?,
+            None => HyperlinkPattern::default_file_scheme(),
+        })
     }
 
     /// Returns true if ignore files should be processed case insensitively.
