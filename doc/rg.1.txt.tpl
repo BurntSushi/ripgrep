@@ -232,6 +232,16 @@ would behave identically to the following command
 
     rg --glob '!.git' foo
 
+The bottom line is that every shell argument needs to be on its own line. So
+for example, a config file containing
+
+    -j 4
+
+is probably not doing what you intend. Instead, you want
+
+    -j
+    4
+
 ripgrep also provides a flag, *--no-config*, that when present will suppress
 any and all support for configuration. This includes any future support
 for auto-loading configuration files from pre-determined paths.
