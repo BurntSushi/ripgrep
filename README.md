@@ -267,6 +267,7 @@ If you're a **RHEL/CentOS 7/8** user, you can install ripgrep from
 [copr](https://copr.fedorainfracloud.org/coprs/carlwgeorge/ripgrep/):
 
 ```
+$ sudo yum install -y yum-utils
 $ sudo yum-config-manager --add-repo=https://copr.fedorainfracloud.org/coprs/carlwgeorge/ripgrep/repo/epel-7/carlwgeorge-ripgrep-epel-7.repo
 $ sudo yum install ripgrep
 ```
