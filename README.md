@@ -239,14 +239,14 @@ $ winget install BurntSushi.ripgrep.MSVC
 If you're an **Arch Linux** user, then you can install ripgrep from the official repos:
 
 ```
-$ pacman -S ripgrep
+$ sudo pacman -S ripgrep
 ```
 
 If you're a **Gentoo** user, you can install ripgrep from the
 [official repo](https://packages.gentoo.org/packages/sys-apps/ripgrep):
 
 ```
-$ emerge sys-apps/ripgrep
+$ sudo emerge sys-apps/ripgrep
 ```
 
 If you're a **Fedora** user, you can install ripgrep from official
@@ -276,14 +276,13 @@ If you're a **Nix** user, you can install ripgrep from
 
 ```
 $ nix-env --install ripgrep
-$ # (Or using the attribute name, which is also ripgrep.)
 ```
 
 If you're a **Guix** user, you can install ripgrep from the official
 package collection:
 
 ```
-$ guix install ripgrep
+$ sudo guix install ripgrep
 ```
 
 If you're a **Debian** user (or a user of a Debian derivative like **Ubuntu**),
@@ -327,7 +326,7 @@ If you're a **FreeBSD** user, then you can install ripgrep from the
 [official ports](https://www.freshports.org/textproc/ripgrep/):
 
 ```
-# pkg install ripgrep
+$ sudo pkg install ripgrep
 ```
 
 If you're an **OpenBSD** user, then you can install ripgrep from the
@@ -341,21 +340,21 @@ If you're a **NetBSD** user, then you can install ripgrep from
 [pkgsrc](https://pkgsrc.se/textproc/ripgrep):
 
 ```
-# pkgin install ripgrep
+$ sudo pkgin install ripgrep
 ```
 
 If you're a **Haiku x86_64** user, then you can install ripgrep from the
 [official ports](https://github.com/haikuports/haikuports/tree/master/sys-apps/ripgrep):
 
 ```
-$ pkgman install ripgrep
+$ sudo pkgman install ripgrep
 ```
 
 If you're a **Haiku x86_gcc2** user, then you can install ripgrep from the
 same port as Haiku x86_64 using the x86 secondary architecture build:
 
 ```
-$ pkgman install ripgrep_x86
+$ sudo pkgman install ripgrep_x86
 ```
 
 If you're a **Rust programmer**, ripgrep can be installed with `cargo`.
