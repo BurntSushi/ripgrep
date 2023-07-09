@@ -472,8 +472,12 @@ impl SortBy {
         use SortByKind::*;
         match self.kind {
             Path => match self.reverse {
-                true => builder.sort_by_file_name(|a, b| a.cmp(b).reverse()),
-                false => builder.sort_by_file_name(|a, b| a.cmp(b)),
+                true => {
+                    builder.sort_by_file_name(|a, b| a.cmp(b).reverse());
+                }
+                false => {
+                    builder.sort_by_file_name(|a, b| a.cmp(b));
+                }
             },
             // these use `stat` calls and will be sorted in Args::sort_by_stat()
             LastModified | LastAccessed | Created | None => (),

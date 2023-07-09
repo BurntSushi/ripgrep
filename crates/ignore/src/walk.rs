@@ -826,11 +826,12 @@ impl WalkBuilder {
     /// by `sort_by_file_name`.
     ///
     /// Note that this is not used in the parallel iterator.
-    pub fn sort_by_file_path<F>(&mut self, cmp: F)
+    pub fn sort_by_file_path<F>(&mut self, cmp: F) -> &mut WalkBuilder
     where
         F: Fn(&Path, &Path) -> cmp::Ordering + Send + Sync + 'static,
     {
         self.sorter = Some(Sorter::ByPath(Arc::new(cmp)));
+        self
     }
 
     /// Set a function for sorting directory entries by file name.
@@ -844,11 +845,12 @@ impl WalkBuilder {
     /// by `sort_by_file_path`.
     ///
     /// Note that this is not used in the parallel iterator.
-    pub fn sort_by_file_name<F>(&mut self, cmp: F)
+    pub fn sort_by_file_name<F>(&mut self, cmp: F) -> &mut WalkBuilder
     where
         F: Fn(&OsStr, &OsStr) -> cmp::Ordering + Send + Sync + 'static,
     {
         self.sorter = Some(Sorter::ByName(Arc::new(cmp)));
+        self
     }
 
     /// Do not cross file system boundaries.
