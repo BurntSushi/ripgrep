@@ -24,7 +24,7 @@ on:
 jobs:
   create-release:
     name: create-release
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     # env:
       # Set to force version number, e.g., when no tag exists.
       # RG_VERSION: TEST-0.0.0
@@ -64,27 +64,27 @@ jobs:
         build: [linux, linux-arm, macos, win-msvc, win-gnu, win32-msvc]
         include:
         - build: linux
-          os: ubuntu-22.04
+          os: ubuntu-latest
           rust: nightly
           target: x86_64-unknown-linux-musl
         - build: linux-arm
-          os: ubuntu-22.04
+          os: ubuntu-latest
           rust: nightly
           target: arm-unknown-linux-gnueabihf
         - build: macos
-          os: macos-12
+          os: macos-latest
           rust: nightly
           target: x86_64-apple-darwin
         - build: win-msvc
-          os: windows-2022
+          os: windows-latest
           rust: nightly
           target: x86_64-pc-windows-msvc
         - build: win-gnu
-          os: windows-2022
+          os: windows-latest
           rust: nightly-x86_64-gnu
           target: x86_64-pc-windows-gnu
         - build: win32-msvc
-          os: windows-2022
+          os: windows-latest
           rust: nightly
           target: i686-pc-windows-msvc
 
@@ -93,12 +93,12 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Install packages (Ubuntu)
-      if: matrix.os == 'ubuntu-22.04'
+      if: matrix.os == 'ubuntu-latest'
       run: |
         ci/ubuntu-install-packages
 
     - name: Install packages (macOS)
-      if: matrix.os == 'macos-12'
+      if: matrix.os == 'macos-latest'
       run: |
         ci/macos-install-packages
 
@@ -125,8 +125,8 @@ jobs:
     - name: Build release binary
       run: ${{ env.CARGO }} build --verbose --release --features pcre2 ${{ env.TARGET_FLAGS }}
 
-    - name: Strip release binary (linux and macos)
-      if: matrix.build == 'linux' || matrix.build == 'macos'
+    - name: Strip release binary (linux, macos and macos-arm)
+      if: matrix.build == 'linux' || matrix.os == 'macos'
       run: strip "target/${{ matrix.target }}/release/rg"
 
     - name: Strip release binary (arm)
@@ -150,7 +150,7 @@ jobs:
         cp "$outdir"/{rg.bash,rg.fish,_rg.ps1} "$staging/complete/"
         cp complete/_rg "$staging/complete/"
 
-        if [ "${{ matrix.os }}" = "windows-2022" ]; then
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
           cp "target/${{ matrix.target }}/release/rg.exe" "$staging/"
           7z a "$staging.zip" "$staging"
           certutil -hashfile "$staging.zip" SHA256 > "$staging.zip.sha256"
