@@ -24,6 +24,7 @@ pub const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["ats"], &["*.ats", "*.dats", "*.sats", "*.hats"]),
     (&["avro"], &["*.avdl", "*.avpr", "*.avsc"]),
     (&["awk"], &["*.awk"]),
+    (&["bat", "batch"], &["*.bat"]),
     (&["bazel"], &[
         "*.bazel", "*.bzl", "*.BUILD", "*.bazelrc", "BUILD", "MODULE.bazel",
         "WORKSPACE", "WORKSPACE.bazel",
@@ -40,6 +41,7 @@ pub const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["ceylon"], &["*.ceylon"]),
     (&["clojure"], &["*.clj", "*.cljc", "*.cljs", "*.cljx"]),
     (&["cmake"], &["*.cmake", "CMakeLists.txt"]),
+    (&["cmd"], &["*.bat", "*.cmd"]),
     (&["cml"], &["*.cml"]),
     (&["coffeescript"], &["*.coffee"]),
     (&["config"], &["*.cfg", "*.conf", "*.config", "*.ini"]),
