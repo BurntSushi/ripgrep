@@ -1,0 +1,101 @@
+name: Bug Report
+description: An issue with ripgrep or any of its crates (ignore, globset, etc.).
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please review the following common issues before filing a bug. You may also be interested in reading the [FAQ](https://github.com/BurntSushi/ripgrep/blob/master/FAQ.md)
+        and the [user guide](https://github.com/BurntSushi/ripgrep/blob/master/GUIDE.md).
+
+        * Unable to search for text with leading dash/hyphen: This is not a bug. Use `rg -- -mytext` or `rg -e -mytext`. See #102, #215, #624.
+        * Unable to build with old version of Rust. This is not a bug. ripgrep tracks the latest stable release of Rust. See #1019, #1433, #2534.
+        * ripgrep package is broken or out of date. ripgrep's author does not maintain packages for Red Hat, Ubuntu, Arch, Homebrew, WinGet, etc. If you have an issue with one of these, please contact your package maintainer. See #1637, #2264, #2459.
+
+  - type: checkboxes
+    id: issue-not-common
+    attributes:
+      label: Please tick this box to confirm you have reviewed the above.
+      options:
+        - label: I have a different issue.
+          required: true
+
+  - type: textarea
+    id: ripgrep-version
+    attributes:
+      label: What version of ripgrep are you using?
+      description: Enter the output of `rg --version`.
+      placeholder: ex. ripgrep 13.0.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: install-method
+    attributes:
+      label: How did you install ripgrep?
+      description: |
+        If you installed ripgrep with snap and are getting strange file permission or file not found errors, then please do not file a bug. Instead, use one of the GitHub binary releases.
+
+        Please report any other issues with downstream ripgrep packages to their respective maintainers as mentioned above.
+      placeholder: ex. Cargo, APT, Homebrew
+    validations:
+      required: true
+
+  - type: textarea
+    id: operating-system
+    attributes:
+      label: What operating system are you using ripgrep on?
+      description: Enter the name and version of your operating system.
+      placeholder: ex. Debian 12.0, macOS 13.4.1
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe your bug.
+      description: Give a high level description of the bug.
+      placeholder: ex. ripgrep fails to return the expected matches when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: What are the steps to reproduce the behavior?
+      description: |
+        If possible, please include both your search patterns and the corpus on which you are searching. Unless the bug is very obvious, then it is unlikely that it will be fixed if the ripgrep maintainers cannot reproduce it.
+
+        If the corpus is too big and you cannot decrease its size, file the bug anyway and the ripgrep maintainers will help figure out next steps.
+      placeholder: >
+        ex. Run `rg bar` in a directory containing a file with the lines 'bar' and 'barbaz'
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: What is the actual behavior?
+      description: |
+        Show the command you ran and the actual output. **Include the `--debug` flag in your invocation of ripgrep.**
+
+        If the output is large, put it in a gist: <https://gist.github.com/>
+
+        If the output is small, put it in code fences (see placeholder text).
+      placeholder: |
+        ex.
+        ```
+        $ rg --debug bar
+        DEBUG|grep_regex::literal|crates/regex/src/literal.rs:58: literal prefixes detected: Literals { lits: [Complete(bar)], limit_size: 250, limit_class: 10 }
+        ...
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: What is the expected behavior?
+      description: What do you think ripgrep should have done?
+      placeholder: ex. ripgrep should have returned 2 matches
+    validations:
+      required: true
