@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::env;
 use std::fmt;
 use std::io;
 use std::path::Path;
@@ -278,6 +279,24 @@ impl<'a> Sunk<'a> {
 #[derive(Clone, Debug)]
 pub struct PrinterPath<'a>(Cow<'a, [u8]>);
 
+/// Default value for the path_separator, mainly for MSYS/MSYS2, which set the
+/// MSYSTEM environment variable. In such case, set printer's path separator
+/// to '/' rather than Rust's default of '\'.
+///
+/// Returns Some to use a nonstandard path separator, or None to use rust's
+/// default on the target platform.
+fn default_path_separator() -> Option<u8> {
+    if cfg!(windows) {
+        let msystem = env::var("MSYSTEM").ok()?;
+        match msystem.as_str() {
+            "MINGW64" | "MINGW32" | "MSYS" => Some(b'/'.to_owned()),
+            _ => None,
+        }
+    } else {
+        None
+    }
+}
+
 impl<'a> PrinterPath<'a> {
     /// Create a new path suitable for printing.
     pub fn new(path: &'a Path) -> PrinterPath<'a> {
@@ -291,6 +310,10 @@ impl<'a> PrinterPath<'a> {
     /// replaced with it.
     pub fn with_separator(path: &'a Path, sep: Option<u8>) -> PrinterPath<'a> {
         let mut ppath = PrinterPath::new(path);
+        let sep = match sep {
+            Some(sep) => Some(sep),
+            None => default_path_separator(),
+        };
         if let Some(sep) = sep {
             ppath.replace_separator(sep);
         }
