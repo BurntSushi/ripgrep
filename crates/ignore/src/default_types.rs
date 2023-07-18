@@ -268,6 +268,7 @@ pub const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
         "*.timer",
     ]),
     (&["taskpaper"], &["*.taskpaper"]),
+    (&["tcc"], &["*.bat", "*.btm", "*.cmd"]),
     (&["tcl"], &["*.tcl"]),
     (&["tex"], &["*.tex", "*.ltx", "*.cls", "*.sty", "*.bib", "*.dtx", "*.ins"]),
     (&["texinfo"], &["*.texi"]),
