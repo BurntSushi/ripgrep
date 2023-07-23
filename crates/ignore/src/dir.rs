@@ -267,7 +267,7 @@ impl Ignore {
             errs.maybe_push(err);
             m
         };
-        let ig_matcher = if !self.0.opts.ignore {
+        let ig_matcher = if is_leaf || !self.0.opts.ignore {
             Gitignore::empty()
         } else {
             let (m, err) = create_gitignore(
@@ -279,7 +279,7 @@ impl Ignore {
             errs.maybe_push(err);
             m
         };
-        let gi_matcher = if !self.0.opts.git_ignore {
+        let gi_matcher = if is_leaf || !self.0.opts.git_ignore {
             Gitignore::empty()
         } else {
             let (m, err) = create_gitignore(
@@ -291,7 +291,7 @@ impl Ignore {
             errs.maybe_push(err);
             m
         };
-        let gi_exclude_matcher = if !self.0.opts.git_exclude {
+        let gi_exclude_matcher = if is_leaf || !self.0.opts.git_exclude {
             Gitignore::empty()
         } else {
             match resolve_git_commondir(dir, git_type) {
