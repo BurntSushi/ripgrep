@@ -245,8 +245,9 @@ impl Ignore {
         dir: &Path,
         is_leaf: bool,
     ) -> (IgnoreInner, Option<Error>) {
-        let git_type = if self.0.opts.require_git
-            && (self.0.opts.git_ignore || self.0.opts.git_exclude)
+        let git_type = if !is_leaf
+            && (self.0.opts.require_git
+                && (self.0.opts.git_ignore || self.0.opts.git_exclude))
         {
             dir.join(".git").metadata().ok().map(|md| md.file_type())
         } else {
@@ -255,18 +256,19 @@ impl Ignore {
         let has_git = git_type.map(|_| true).unwrap_or(false);
 
         let mut errs = PartialErrorBuilder::default();
-        let custom_ig_matcher = if self.0.custom_ignore_filenames.is_empty() {
-            Gitignore::empty()
-        } else {
-            let (m, err) = create_gitignore(
-                &dir,
-                &dir,
-                &self.0.custom_ignore_filenames,
-                self.0.opts.ignore_case_insensitive,
-            );
-            errs.maybe_push(err);
-            m
-        };
+        let custom_ig_matcher =
+            if is_leaf || self.0.custom_ignore_filenames.is_empty() {
+                Gitignore::empty()
+            } else {
+                let (m, err) = create_gitignore(
+                    &dir,
+                    &dir,
+                    &self.0.custom_ignore_filenames,
+                    self.0.opts.ignore_case_insensitive,
+                );
+                errs.maybe_push(err);
+                m
+            };
         let ig_matcher = if is_leaf || !self.0.opts.ignore {
             Gitignore::empty()
         } else {
