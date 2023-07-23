@@ -198,7 +198,7 @@ impl Ignore {
                 ig = prebuilt.clone();
                 continue;
             }
-            let (mut igtmp, err) = ig.add_child_path(parent);
+            let (mut igtmp, err) = ig.add_child_path(parent, false);
             errs.maybe_push(err);
             igtmp.is_absolute_parent = true;
             igtmp.absolute_base = Some(absolute_base.clone());
@@ -226,12 +226,25 @@ impl Ignore {
         &self,
         dir: P,
     ) -> (Ignore, Option<Error>) {
-        let (ig, err) = self.add_child_path(dir.as_ref());
+        let (ig, err) = self.add_child_path(dir.as_ref(), false);
+        (Ignore(Arc::new(ig)), err)
+    }
+
+    pub(crate) fn add_child2<P: AsRef<Path>>(
+        &self,
+        dir: P,
+        is_leaf: bool,
+    ) -> (Ignore, Option<Error>) {
+        let (ig, err) = self.add_child_path(dir.as_ref(), is_leaf);
         (Ignore(Arc::new(ig)), err)
     }
 
     /// Like add_child, but takes a full path and returns an IgnoreInner.
-    fn add_child_path(&self, dir: &Path) -> (IgnoreInner, Option<Error>) {
+    fn add_child_path(
+        &self,
+        dir: &Path,
+        is_leaf: bool,
+    ) -> (IgnoreInner, Option<Error>) {
         let git_type = if self.0.opts.require_git
             && (self.0.opts.git_ignore || self.0.opts.git_exclude)
         {

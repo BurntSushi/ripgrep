@@ -585,6 +585,7 @@ impl WalkBuilder {
             max_filesize: self.max_filesize,
             skip: self.skip.clone(),
             filter: self.filter.clone(),
+            max_depth: max_depth,
         }
     }
 
@@ -918,6 +919,7 @@ pub struct Walk {
     max_filesize: Option<u64>,
     skip: Option<Arc<Handle>>,
     filter: Option<Filter>,
+    max_depth: Option<usize>,
 }
 
 impl Walk {
@@ -1019,7 +1021,13 @@ impl Iterator for Walk {
                         self.ig = igtmp;
                         continue;
                     }
-                    let (igtmp, err) = self.ig.add_child(ent.path());
+
+                    let is_leaf = self
+                        .max_depth
+                        .map(|max| ent.depth() >= max)
+                        .unwrap_or(false);
+
+                    let (igtmp, err) = self.ig.add_child2(ent.path(), is_leaf);
                     self.ig = igtmp;
                     ent.err = err;
                     return Some(Ok(ent));
