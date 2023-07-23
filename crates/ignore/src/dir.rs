@@ -230,6 +230,8 @@ impl Ignore {
         (Ignore(Arc::new(ig)), err)
     }
 
+    /// Like add_child but takes `is_leaf` boolean, if set to true, we assume that the search won't recurse inside
+    /// the provided dir which allows us to do some optimizations like not searching for ignore files.
     pub(crate) fn add_child2<P: AsRef<Path>>(
         &self,
         dir: P,
@@ -240,6 +242,8 @@ impl Ignore {
     }
 
     /// Like add_child, but takes a full path and returns an IgnoreInner.
+    /// Also takes `is_leaf` boolean, if set to true, we assume that the search won't recurse inside
+    /// the provided dir which allows us to do some optimizations like not searching for ignore files.
     fn add_child_path(
         &self,
         dir: &Path,
