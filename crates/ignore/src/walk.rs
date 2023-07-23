@@ -1026,7 +1026,6 @@ impl Iterator for Walk {
                         self.ig = igtmp;
                         continue;
                     }
-
                     let (igtmp, err) = self.ig.add_child2(ent.path(), is_leaf);
                     self.ig = igtmp;
                     ent.err = err;
