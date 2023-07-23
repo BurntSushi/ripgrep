@@ -1012,20 +1012,20 @@ impl Iterator for Walk {
                         Err(err) => return Some(Err(err)),
                         Ok(should_skip) => should_skip,
                     };
+                    let is_leaf = self
+                        .max_depth
+                        .map(|max| ent.depth() >= max)
+                        .unwrap_or(false);
                     if should_skip {
                         self.it.as_mut().unwrap().it.skip_current_dir();
                         // Still need to push this on the stack because
                         // we'll get a WalkEvent::Exit event for this dir.
                         // We don't care if it errors though.
-                        let (igtmp, _) = self.ig.add_child(ent.path());
+                        let (igtmp, _) =
+                            self.ig.add_child2(ent.path(), is_leaf);
                         self.ig = igtmp;
                         continue;
                     }
-
-                    let is_leaf = self
-                        .max_depth
-                        .map(|max| ent.depth() >= max)
-                        .unwrap_or(false);
 
                     let (igtmp, err) = self.ig.add_child2(ent.path(), is_leaf);
                     self.ig = igtmp;
