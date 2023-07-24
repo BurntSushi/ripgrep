@@ -3,6 +3,7 @@ use std::ffi::OsStr;
 use std::fmt;
 use std::fs::{self, FileType, Metadata};
 use std::io;
+use std::iter::FusedIterator;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -1039,6 +1040,8 @@ impl Iterator for Walk {
         }
     }
 }
+
+impl FusedIterator for Walk {}
 
 /// WalkEventIter transforms a WalkDir iterator into an iterator that more
 /// accurately describes the directory tree. Namely, it emits events that are
