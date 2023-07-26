@@ -1,9 +1,9 @@
 use serde::{
-    de::{Error, Visitor},
+    de::{Error, SeqAccess, Visitor},
     {Deserialize, Deserializer, Serialize, Serializer},
 };
 
-use crate::Glob;
+use crate::{Glob, GlobSet, GlobSetBuilder};
 
 impl Serialize for Glob {
     fn serialize<S: Serializer>(
@@ -16,7 +16,7 @@ impl Serialize for Glob {
 
 struct GlobVisitor;
 
-impl<'a> Visitor<'a> for GlobVisitor {
+impl<'de> Visitor<'de> for GlobVisitor {
     type Value = Glob;
 
     fn expecting(
@@ -42,11 +42,43 @@ impl<'de> Deserialize<'de> for Glob {
     }
 }
 
+struct GlobSetVisitor;
+
+impl<'de> Visitor<'de> for GlobSetVisitor {
+    type Value = GlobSet;
+
+    fn expecting(
+        &self,
+        formatter: &mut std::fmt::Formatter,
+    ) -> std::fmt::Result {
+        formatter.write_str("an array of glob patterns")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut builder = GlobSetBuilder::new();
+        while let Some(glob) = seq.next_element()? {
+            builder.add(glob);
+        }
+        builder.build().map_err(serde::de::Error::custom)
+    }
+}
+
+impl<'de> Deserialize<'de> for GlobSet {
+    fn deserialize<D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Self, D::Error> {
+        deserializer.deserialize_seq(GlobSetVisitor)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
-    use crate::Glob;
+    use crate::{Glob, GlobSet};
 
     #[test]
     fn glob_deserialize_borrowed() {
@@ -84,5 +116,13 @@ mod tests {
 
         let de: Glob = serde_json::from_str(&ser).unwrap();
         assert_eq!(test_glob, de);
+    }
+
+    #[test]
+    fn glob_set_deserialize() {
+        let j = r#" ["src/**/*.rs", "README.md"] "#;
+        let set: GlobSet = serde_json::from_str(j).unwrap();
+        assert!(set.is_match("src/lib.rs"));
+        assert!(!set.is_match("Cargo.lock"));
     }
 }
