@@ -38,6 +38,8 @@ Bug fixes:
   Fix bug when using inline regex flags with `-e/--regexp`.
 * [BUG #2523](https://github.com/BurntSushi/ripgrep/issues/2523):
   Make executable searching take `.com` into account on Windows.
+* [BUG #2574](https://github.com/BurntSushi/ripgrep/issues/2574):
+  Fix bug in `-w/--word-regexp` that would result in incorrect match offsets.
 
 
 13.0.0 (2021-06-12)

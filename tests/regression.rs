@@ -1173,3 +1173,18 @@ rgtest!(r2480, |dir: Dir, mut cmd: TestCommand| {
     cmd.args(&["--only-matching", "-e", "(?i)notfoo", "-e", "bar", "file"]);
     cmd.assert_err();
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/2574
+rgtest!(r2574, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("haystack", "some.domain.com\nsome.domain.com/x\n");
+    let got = cmd
+        .args(&[
+            "--no-filename",
+            "--no-unicode",
+            "-w",
+            "-o",
+            r"(\w+\.)*domain\.(\w+)",
+        ])
+        .stdout();
+    eqnice!("some.domain.com\nsome.domain.com\n", got);
+});

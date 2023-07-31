@@ -128,6 +128,9 @@ impl WordMatcher {
         // The reason why we cannot handle the ^/$ cases here is because we
         // can't assume anything about the original pattern. (Try commenting
         // out the checks for ^/$ below and run the tests to see examples.)
+        //
+        // NOTE(2023-07-31): After fixing #2574, this logic honestly still
+        // doesn't seem correct. Regex composition is hard.
         let input = Input::new(haystack).span(at..haystack.len());
         let mut cand = match self.regex.find(input) {
             None => return Ok(None),
@@ -136,8 +139,17 @@ impl WordMatcher {
         if cand.start() == 0 || cand.end() == haystack.len() {
             return Err(());
         }
-        let (_, slen) = bstr::decode_utf8(&haystack[cand]);
-        let (_, elen) = bstr::decode_last_utf8(&haystack[cand]);
+        // We decode the chars on either side of the match. If either char is
+        // a word character, then that means the ^/$ matched and not \W. In
+        // that case, we defer to the slower engine.
+        let (ch, slen) = bstr::decode_utf8(&haystack[cand]);
+        if ch.map_or(true, regex_syntax::is_word_character) {
+            return Err(());
+        }
+        let (ch, elen) = bstr::decode_last_utf8(&haystack[cand]);
+        if ch.map_or(true, regex_syntax::is_word_character) {
+            return Err(());
+        }
         let new_start = cand.start() + slen;
         let new_end = cand.end() - elen;
         // This occurs the original regex can match the empty string. In this
