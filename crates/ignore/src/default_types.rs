@@ -55,6 +55,7 @@ pub const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["cs"], &["*.cs"]),
     (&["csharp"], &["*.cs"]),
     (&["cshtml"], &["*.cshtml"]),
+    (&["csproj"], &["*.csproj"]),
     (&["css"], &["*.css", "*.scss"]),
     (&["csv"], &["*.csv"]),
     (&["cuda"], &["*.cu", "*.cuh"]),
