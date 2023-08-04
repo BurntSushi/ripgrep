@@ -736,7 +736,7 @@ impl Tokens {
                     // It is possible to have an empty set in which case the
                     // resulting alternation '()' would be an error.
                     if !parts.is_empty() {
-                        re.push('(');
+                        re.push_str("(?:");
                         re.push_str(&parts.join("|"));
                         re.push(')');
                     }
@@ -1276,6 +1276,7 @@ mod tests {
     toregex!(re32, "/a**", r"^/a.*.*$");
     toregex!(re33, "/**a", r"^/.*.*a$");
     toregex!(re34, "/a**b", r"^/a.*.*b$");
+    toregex!(re35, "{a,b}", r"^(?:b|a)$");
 
     matches!(match1, "a", "a");
     matches!(match2, "a*b", "a_b");
