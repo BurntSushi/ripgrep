@@ -91,7 +91,10 @@ pub const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["gn"], &["*.gn", "*.gni"]),
     (&["go"], &["*.go"]),
     (&["gprbuild"], &["*.gpr"]),
-    (&["gradle"], &["*.gradle"]),
+    (&["gradle"], &[
+        "*.gradle", "*.gradle.kts", "gradle.properties", "gradle-wrapper.*",
+        "gradlew", "gradlew.bat",
+    ]),
     (&["graphql"], &["*.graphql", "*.graphqls"]),
     (&["groovy"], &["*.groovy", "*.gradle"]),
     (&["gzip"], &["*.gz", "*.tgz"]),

@@ -10,7 +10,8 @@ Unreleased changes. Release notes have not yet been written.
 
 Feature enhancements:
 
-* Added or improved file type filtering for Ada, DITA, Elixir, Fuchsia, Gentoo, GraphQL, Markdown, Raku, TypeScript, USD, V
+* Added or improved file type filtering for Ada, DITA, Elixir, Fuchsia, Gentoo,
+  Gradle, GraphQL, Markdown, Raku, TypeScript, USD, V
 * [FEATURE #1790](https://github.com/BurntSushi/ripgrep/issues/1790):
   Add new `--stop-on-nonmatch` flag.
 * [FEATURE #2195](https://github.com/BurntSushi/ripgrep/issues/2195):
