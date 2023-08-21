@@ -19,6 +19,7 @@ name = "ignore"
 bench = false
 
 [dependencies]
+crossbeam-deque = "0.8.3"
 globset = { version = "0.4.10", path = "../globset" }
 lazy_static = "1.1"
 log = "0.4.5"
