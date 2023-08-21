@@ -3,14 +3,15 @@ use std::ffi::OsStr;
 use std::fmt;
 use std::fs::{self, FileType, Metadata};
 use std::io;
-use std::iter::FusedIterator;
+use std::iter::{self, FusedIterator};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use std::vec;
 
+use crossbeam_deque::{Stealer, Worker as Deque};
 use same_file::Handle;
 use walkdir::{self, WalkDir};
 
@@ -1231,9 +1232,8 @@ impl WalkParallel {
     /// can be merged together into a single data structure.
     pub fn visit(mut self, builder: &mut dyn ParallelVisitorBuilder<'_>) {
         let threads = self.threads();
-        let stack = Arc::new(Mutex::new(vec![]));
+        let mut stack = vec![];
         {
-            let mut stack = stack.lock().unwrap();
             let mut visitor = builder.build();
             let mut paths = Vec::new().into_iter();
             std::mem::swap(&mut paths, &mut self.paths);
@@ -1283,14 +1283,14 @@ impl WalkParallel {
         }
         // Create the workers and then wait for them to finish.
         let quit_now = Arc::new(AtomicBool::new(false));
-        let num_pending =
-            Arc::new(AtomicUsize::new(stack.lock().unwrap().len()));
+        let num_pending = Arc::new(AtomicUsize::new(stack.len()));
+        let stacks = Stack::new_for_each_thread(threads, stack);
         std::thread::scope(|s| {
-            let mut handles = vec![];
-            for _ in 0..threads {
-                let worker = Worker {
+            let handles: Vec<_> = stacks
+                .into_iter()
+                .map(|stack| Worker {
                     visitor: builder.build(),
-                    stack: stack.clone(),
+                    stack,
                     quit_now: quit_now.clone(),
                     num_pending: num_pending.clone(),
                     max_depth: self.max_depth,
@@ -1298,9 +1298,9 @@ impl WalkParallel {
                     follow_links: self.follow_links,
                     skip: self.skip.clone(),
                     filter: self.filter.clone(),
-                };
-                handles.push(s.spawn(|| worker.run()));
-            }
+                })
+                .map(|worker| s.spawn(|| worker.run()))
+                .collect();
             for handle in handles {
                 handle.join().unwrap();
             }
@@ -1390,6 +1390,73 @@ impl Work {
     }
 }
 
+/// A work-stealing stack.
+#[derive(Debug)]
+struct Stack {
+    /// This thread's index.
+    index: usize,
+    /// The thread-local stack.
+    deque: Deque<Message>,
+    /// The work stealers.
+    stealers: Arc<[Stealer<Message>]>,
+}
+
+impl Stack {
+    /// Create a work-stealing stack for each thread. The given messages
+    /// correspond to the initial paths to start the search at. They will
+    /// be distributed automatically to each stack in a round-robin fashion.
+    fn new_for_each_thread(threads: usize, init: Vec<Message>) -> Vec<Stack> {
+        // Using new_lifo() ensures each worker operates depth-first, not
+        // breadth-first. We do depth-first because a breadth first traversal
+        // on wide directories with a lot of gitignores is disastrous (for
+        // example, searching a directory tree containing all of crates.io).
+        let deques: Vec<Deque<Message>> =
+            iter::repeat_with(Deque::new_lifo).take(threads).collect();
+        let stealers = Arc::<[Stealer<Message>]>::from(
+            deques.iter().map(Deque::stealer).collect::<Vec<_>>(),
+        );
+        let stacks: Vec<Stack> = deques
+            .into_iter()
+            .enumerate()
+            .map(|(index, deque)| Stack {
+                index,
+                deque,
+                stealers: stealers.clone(),
+            })
+            .collect();
+        // Distribute the initial messages.
+        init.into_iter()
+            .zip(stacks.iter().cycle())
+            .for_each(|(m, s)| s.push(m));
+        stacks
+    }
+
+    /// Push a message.
+    fn push(&self, msg: Message) {
+        self.deque.push(msg);
+    }
+
+    /// Pop a message.
+    fn pop(&self) -> Option<Message> {
+        self.deque.pop().or_else(|| self.steal())
+    }
+
+    /// Steal a message from another queue.
+    fn steal(&self) -> Option<Message> {
+        // For fairness, try to steal from index - 1, then index - 2, ... 0,
+        // then wrap around to len - 1, len - 2, ... index + 1.
+        let (left, right) = self.stealers.split_at(self.index);
+        // Don't steal from ourselves
+        let right = &right[1..];
+
+        left.iter()
+            .rev()
+            .chain(right.iter().rev())
+            .map(|s| s.steal_batch_and_pop(&self.deque))
+            .find_map(|s| s.success())
+    }
+}
+
 /// A worker is responsible for descending into directories, updating the
 /// ignore matchers, producing new work and invoking the caller's callback.
 ///
@@ -1397,13 +1464,13 @@ impl Work {
 struct Worker<'s> {
     /// The caller's callback.
     visitor: Box<dyn ParallelVisitor + 's>,
-    /// A stack of work to do.
+    /// A work-stealing stack of work to do.
     ///
     /// We use a stack instead of a channel because a stack lets us visit
     /// directories in depth first order. This can substantially reduce peak
-    /// memory usage by keeping both the number of files path and gitignore
+    /// memory usage by keeping both the number of file paths and gitignore
     /// matchers in memory lower.
-    stack: Arc<Mutex<Vec<Message>>>,
+    stack: Stack,
     /// Whether all workers should terminate at the next opportunity. Note
     /// that we need this because we don't want other `Work` to be done after
     /// we quit. We wouldn't need this if have a priority channel.
@@ -1668,20 +1735,17 @@ impl<'s> Worker<'s> {
     /// Send work.
     fn send(&self, work: Work) {
         self.num_pending.fetch_add(1, Ordering::SeqCst);
-        let mut stack = self.stack.lock().unwrap();
-        stack.push(Message::Work(work));
+        self.stack.push(Message::Work(work));
     }
 
     /// Send a quit message.
     fn send_quit(&self) {
-        let mut stack = self.stack.lock().unwrap();
-        stack.push(Message::Quit);
+        self.stack.push(Message::Quit);
     }
 
     /// Receive work.
     fn recv(&self) -> Option<Message> {
-        let mut stack = self.stack.lock().unwrap();
-        stack.pop()
+        self.stack.pop()
     }
 
     /// Signal that work has been finished.
