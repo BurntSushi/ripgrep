@@ -201,6 +201,7 @@ pub const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["po"], &["*.po"]),
     (&["pod"], &["*.pod"]),
     (&["postscript"], &["*.eps", "*.ps"]),
+    (&["prolog"], &["*.pl", "*.pro", "*.prolog", "*.P"]),
     (&["protobuf"], &["*.proto"]),
     (&["ps"], &["*.cdxml", "*.ps1", "*.ps1xml", "*.psd1", "*.psm1"]),
     (&["puppet"], &["*.epp", "*.erb", "*.pp", "*.rb"]),
