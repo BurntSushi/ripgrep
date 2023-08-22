@@ -39,10 +39,23 @@ mod subject;
 //
 // Moreover, we only do this on 64-bit systems since jemalloc doesn't support
 // i686.
+//
+// 由于Rust不再默认使用jemalloc, ripgrep将默认使用系统分配器。在Linux上，这通常是glibc的分配器，这非常好。
+// 特别是，ripgrep没有特别繁重的分配工作负载，所以在glibc的分配器和jemalloc之间没有太大的区别(对于ripgrep的目的)。
+// 然而，当ripgrep与musl一起构建时，这意味着ripgrep将使用musl的分配器，这看起来更糟糕。(musl的目标不是拥有最快的版本。
+//
+// 它的目标是很小并且适合静态编译。)尽管ripgrep不是特别重分配，但musl的分配器似乎大大降低了ripgrep的速度。因此，当使用肌肉构建时，我们使用jemalloc。
+//
+// 我们不会无条件地使用jemalloc，因为默认情况下使用系统的默认分配器会很好。此外，jemalloc似乎增加了编译时间。
+//
+// 此外，我们只在64位系统上执行此操作，因为jemalloc不支持i686。
+
+// #[cfg()] 是 Rust 中的条件编译属性
+// 只有当目标环境为 "musl"（表示使用 Musl libc）且目标指针宽度为 64 位时，才会包含或执行下面的代码块
 #[cfg(all(target_env = "musl", target_pointer_width = "64"))]
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
-
+// 别名
 type Result<T> = ::std::result::Result<T, Box<dyn error::Error>>;
 
 fn main() {

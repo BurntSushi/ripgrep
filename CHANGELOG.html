@@ -1,0 +1,1661 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>no title</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+    .markdown-preview{width:100%;height:100%;box-sizing:border-box}.markdown-preview .pagebreak,.markdown-preview .newpage{page-break-before:always}.markdown-preview pre.line-numbers{position:relative;padding-left:3.8em;counter-reset:linenumber}.markdown-preview pre.line-numbers>code{position:relative}.markdown-preview pre.line-numbers .line-numbers-rows{position:absolute;pointer-events:none;top:1em;font-size:100%;left:0;width:3em;letter-spacing:-1px;border-right:1px solid #999;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.markdown-preview pre.line-numbers .line-numbers-rows>span{pointer-events:none;display:block;counter-increment:linenumber}.markdown-preview pre.line-numbers .line-numbers-rows>span:before{content:counter(linenumber);color:#999;display:block;padding-right:.8em;text-align:right}.markdown-preview .mathjax-exps .MathJax_Display{text-align:center !important}.markdown-preview:not([for="preview"]) .code-chunk .btn-group{display:none}.markdown-preview:not([for="preview"]) .code-chunk .status{display:none}.markdown-preview:not([for="preview"]) .code-chunk .output-div{margin-bottom:16px}.markdown-preview .md-toc{padding:0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link p,.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link div{display:inline}.markdown-preview .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}.scrollbar-style::-webkit-scrollbar{width:8px}.scrollbar-style::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}.scrollbar-style::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,0.66);border:4px solid rgba(150,150,150,0.66);background-clip:content-box}html body[for="html-export"]:not([data-presentation-mode]){position:relative;width:100%;height:100%;top:0;left:0;margin:0;padding:0;overflow:auto}html body[for="html-export"]:not([data-presentation-mode]) .markdown-preview{position:relative;top:0}@media screen and (min-width:914px){html body[for="html-export"]:not([data-presentation-mode]) .markdown-preview{padding:2em calc(50% - 457px + 2em)}}@media screen and (max-width:914px){html body[for="html-export"]:not([data-presentation-mode]) .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for="html-export"]:not([data-presentation-mode]) .markdown-preview{font-size:14px !important;padding:1em}}@media print{html body[for="html-export"]:not([data-presentation-mode]) #sidebar-toc-btn{display:none}}html body[for="html-export"]:not([data-presentation-mode]) #sidebar-toc-btn{position:fixed;bottom:8px;left:8px;font-size:28px;cursor:pointer;color:inherit;z-index:99;width:32px;text-align:center;opacity:.4}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] #sidebar-toc-btn{opacity:1}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc{position:fixed;top:0;left:0;width:300px;height:100%;padding:32px 0 48px 0;font-size:14px;box-shadow:0 0 4px rgba(150,150,150,0.33);box-sizing:border-box;overflow:auto;background-color:inherit}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar{width:8px}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,0.66);border:4px solid rgba(150,150,150,0.66);background-clip:content-box}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc a{text-decoration:none}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc{padding:0 16px}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link p,html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link div{display:inline}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{left:300px;width:calc(100% -  300px);padding:2em calc(50% - 457px -  300px/2);margin:0;box-sizing:border-box}@media screen and (max-width:1274px){html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{width:100%}}html body[for="html-export"]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .markdown-preview{left:50%;transform:translateX(-50%)}html body[for="html-export"]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .md-sidebar-toc{display:none}/**
+ * prism.js Github theme based on GitHub's theme.
+ * @author Sam Clarke
+ */
+code[class*="language-"],
+pre[class*="language-"] {
+  color: #333;
+  background: none;
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  word-wrap: normal;
+  line-height: 1.4;
+
+  -moz-tab-size: 8;
+  -o-tab-size: 8;
+  tab-size: 8;
+
+  -webkit-hyphens: none;
+  -moz-hyphens: none;
+  -ms-hyphens: none;
+  hyphens: none;
+}
+
+/* Code blocks */
+pre[class*="language-"] {
+  padding: .8em;
+  overflow: auto;
+  /* border: 1px solid #ddd; */
+  border-radius: 3px;
+  /* background: #fff; */
+  background: #f5f5f5;
+}
+
+/* Inline code */
+:not(pre) > code[class*="language-"] {
+  padding: .1em;
+  border-radius: .3em;
+  white-space: normal;
+  background: #f5f5f5;
+}
+
+.token.comment,
+.token.blockquote {
+  color: #969896;
+}
+
+.token.cdata {
+  color: #183691;
+}
+
+.token.doctype,
+.token.punctuation,
+.token.variable,
+.token.macro.property {
+  color: #333;
+}
+
+.token.operator,
+.token.important,
+.token.keyword,
+.token.rule,
+.token.builtin {
+  color: #a71d5d;
+}
+
+.token.string,
+.token.url,
+.token.regex,
+.token.attr-value {
+  color: #183691;
+}
+
+.token.property,
+.token.number,
+.token.boolean,
+.token.entity,
+.token.atrule,
+.token.constant,
+.token.symbol,
+.token.command,
+.token.code {
+  color: #0086b3;
+}
+
+.token.tag,
+.token.selector,
+.token.prolog {
+  color: #63a35c;
+}
+
+.token.function,
+.token.namespace,
+.token.pseudo-element,
+.token.class,
+.token.class-name,
+.token.pseudo-class,
+.token.id,
+.token.url-reference .token.variable,
+.token.attr-name {
+  color: #795da3;
+}
+
+.token.entity {
+  cursor: help;
+}
+
+.token.title,
+.token.title .token.punctuation {
+  font-weight: bold;
+  color: #1d3e81;
+}
+
+.token.list {
+  color: #ed6a43;
+}
+
+.token.inserted {
+  background-color: #eaffea;
+  color: #55a532;
+}
+
+.token.deleted {
+  background-color: #ffecec;
+  color: #bd2c00;
+}
+
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+
+/* JSON */
+.language-json .token.property {
+  color: #183691;
+}
+
+.language-markup .token.tag .token.punctuation {
+  color: #333;
+}
+
+/* CSS */
+code.language-css,
+.language-css .token.function {
+  color: #0086b3;
+}
+
+/* YAML */
+.language-yaml .token.atrule {
+  color: #63a35c;
+}
+
+code.language-yaml {
+  color: #183691;
+}
+
+/* Ruby */
+.language-ruby .token.function {
+  color: #333;
+}
+
+/* Markdown */
+.language-markdown .token.url {
+  color: #795da3;
+}
+
+/* Makefile */
+.language-makefile .token.symbol {
+  color: #795da3;
+}
+
+.language-makefile .token.variable {
+  color: #183691;
+}
+
+.language-makefile .token.builtin {
+  color: #0086b3;
+}
+
+/* Bash */
+.language-bash .token.keyword {
+  color: #0086b3;
+}
+
+/* highlight */
+pre[data-line] {
+  position: relative;
+  padding: 1em 0 1em 3em;
+}
+pre[data-line] .line-highlight-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: transparent;
+  display: block;
+  width: 100%;
+}
+
+pre[data-line] .line-highlight {
+  position: absolute;
+  left: 0;
+  right: 0;
+  padding: inherit 0;
+  margin-top: 1em;
+  background: hsla(24, 20%, 50%,.08);
+  background: linear-gradient(to right, hsla(24, 20%, 50%,.1) 70%, hsla(24, 20%, 50%,0));
+  pointer-events: none;
+  line-height: inherit;
+  white-space: pre;
+}
+
+pre[data-line] .line-highlight:before, 
+pre[data-line] .line-highlight[data-end]:after {
+  content: attr(data-start);
+  position: absolute;
+  top: .4em;
+  left: .6em;
+  min-width: 1em;
+  padding: 0 .5em;
+  background-color: hsla(24, 20%, 50%,.4);
+  color: hsl(24, 20%, 95%);
+  font: bold 65%/1.5 sans-serif;
+  text-align: center;
+  vertical-align: .3em;
+  border-radius: 999px;
+  text-shadow: none;
+  box-shadow: 0 1px white;
+}
+
+pre[data-line] .line-highlight[data-end]:after {
+  content: attr(data-end);
+  top: auto;
+  bottom: .4em;
+}.emoji {
+  height: 0.8em;
+}html body{font-family:"Helvetica Neue",Helvetica,"Segoe UI",Arial,freesans,sans-serif;font-size:16px;line-height:1.6;color:#333;background-color:#fff;overflow:initial;box-sizing:border-box;word-wrap:break-word}html body>:first-child{margin-top:0}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{line-height:1.2;margin-top:1em;margin-bottom:16px;color:#000}html body h1{font-size:2.25em;font-weight:300;padding-bottom:.3em}html body h2{font-size:1.75em;font-weight:400;padding-bottom:.3em}html body h3{font-size:1.5em;font-weight:500}html body h4{font-size:1.25em;font-weight:600}html body h5{font-size:1.1em;font-weight:600}html body h6{font-size:1em;font-weight:600}html body h1,html body h2,html body h3,html body h4,html body h5{font-weight:600}html body h5{font-size:1em}html body h6{color:#5c5c5c}html body strong{color:#000}html body del{color:#5c5c5c}html body a:not([href]){color:inherit;text-decoration:none}html body a{color:#08c;text-decoration:none}html body a:hover{color:#00a3f5;text-decoration:none}html body img{max-width:100%}html body>p{margin-top:0;margin-bottom:16px;word-wrap:break-word}html body>ul,html body>ol{margin-bottom:16px}html body ul,html body ol{padding-left:2em}html body ul.no-list,html body ol.no-list{padding:0;list-style-type:none}html body ul ul,html body ul ol,html body ol ol,html body ol ul{margin-top:0;margin-bottom:0}html body li{margin-bottom:0}html body li.task-list-item{list-style:none}html body li>p{margin-top:0;margin-bottom:0}html body .task-list-item-checkbox{margin:0 .2em .25em -1.8em;vertical-align:middle}html body .task-list-item-checkbox:hover{cursor:pointer}html body blockquote{margin:16px 0;font-size:inherit;padding:0 15px;color:#5c5c5c;background-color:#f0f0f0;border-left:4px solid #d6d6d6}html body blockquote>:first-child{margin-top:0}html body blockquote>:last-child{margin-bottom:0}html body hr{height:4px;margin:32px 0;background-color:#d6d6d6;border:0 none}html body table{margin:10px 0 15px 0;border-collapse:collapse;border-spacing:0;display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all}html body table th{font-weight:bold;color:#000}html body table td,html body table th{border:1px solid #d6d6d6;padding:6px 13px}html body dl{padding:0}html body dl dt{padding:0;margin-top:16px;font-size:1em;font-style:italic;font-weight:bold}html body dl dd{padding:0 16px;margin-bottom:16px}html body code{font-family:Menlo,Monaco,Consolas,'Courier New',monospace;font-size:.85em !important;color:#000;background-color:#f0f0f0;border-radius:3px;padding:.2em 0}html body code::before,html body code::after{letter-spacing:-0.2em;content:"\00a0"}html body pre>code{padding:0;margin:0;font-size:.85em !important;word-break:normal;white-space:pre;background:transparent;border:0}html body .highlight{margin-bottom:16px}html body .highlight pre,html body pre{padding:1em;overflow:auto;font-size:.85em !important;line-height:1.45;border:#d6d6d6;border-radius:3px}html body .highlight pre{margin-bottom:0;word-break:normal}html body pre code,html body pre tt{display:inline;max-width:initial;padding:0;margin:0;overflow:initial;line-height:inherit;word-wrap:normal;background-color:transparent;border:0}html body pre code:before,html body pre tt:before,html body pre code:after,html body pre tt:after{content:normal}html body p,html body blockquote,html body ul,html body ol,html body dl,html body pre{margin-top:0;margin-bottom:16px}html body kbd{color:#000;border:1px solid #d6d6d6;border-bottom:2px solid #c7c7c7;padding:2px 4px;background-color:#f0f0f0;border-radius:3px}@media print{html body{background-color:#fff}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{color:#000;page-break-after:avoid}html body blockquote{color:#5c5c5c}html body pre{page-break-inside:avoid}html body table{display:table}html body img{display:block;max-width:100%;max-height:100%}html body pre,html body code{word-wrap:break-word;white-space:pre}}
+    /* Please visit the URL below for more information: */
+/*   https://shd101wyy.github.io/markdown-preview-enhanced/#/customize-css */
+
+    </style>
+    
+  </head>
+  <body for="html-export">
+    <div class="mume markdown-preview">
+    <html><head></head><body><div><h1 ebook-toc-level-1 heading="TBD">TBD</h1>
+<p>Unreleased changes. Release notes have not yet been written.</p>
+<p><strong>BREAKING CHANGES</strong></p>
+<ul>
+<li><code>rg -C1 -A2</code> used to be equivalent to <code>rg -A2</code>, but now it is equivalent to<br>
+<code>rg -B1 -A2</code>. That is, <code>-A</code> and <code>-B</code> no longer completely override <code>-C</code>.<br>
+Instead, they only partially override <code>-C</code>.</li>
+</ul>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for Ada, DITA, Elixir, Fuchsia, Gentoo,<br>
+Gradle, GraphQL, Markdown, Prolog, Raku, TypeScript, USD, V</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1790">FEATURE #1790</a>:<br>
+Add new <code>--stop-on-nonmatch</code> flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/2195">FEATURE #2195</a>:<br>
+When <code>extra-verbose</code> mode is enabled in zsh, show extra file type info.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/2409">FEATURE #2409</a>:<br>
+Added installation instructions for <code>winget</code>.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1891">BUG #1891</a>:<br>
+Fix bug when using <code>-w</code> with a regex that can match the empty string.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1911">BUG #1911</a>:<br>
+Disable mmap searching in all non-64-bit environments.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/2108">BUG #2108</a>:<br>
+Improve docs for <code>-r/--replace</code> syntax.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/2198">BUG #2198</a>:<br>
+Fix bug where <code>--no-ignore-dot</code> would not ignore <code>.rgignore</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/2288">BUG #2288</a>:<br>
+<code>-A</code> and <code>-B</code> now only each partially override <code>-C</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/2236">BUG #2236</a>:<br>
+Fix gitignore parsing bug where a trailing <code>\/</code> resulted in an error.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/2243">BUG #2243</a>:<br>
+Fix <code>--sort</code> flag for values other than <code>path</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/2480">BUG #2480</a>:<br>
+Fix bug when using inline regex flags with <code>-e/--regexp</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/2523">BUG #2523</a>:<br>
+Make executable searching take <code>.com</code> into account on Windows.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/2574">BUG #2574</a>:<br>
+Fix bug in <code>-w/--word-regexp</code> that would result in incorrect match offsets.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="13.0.0 (2021-06-12)">13.0.0 (2021-06-12)</h1>
+<p>ripgrep 13 is a new major version release of ripgrep that primarily contains<br>
+bug fixes, some performance improvements and a few minor breaking changes.<br>
+There is also a fix for a security vulnerability on Windows<br>
+(<a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-3013">CVE-2021-3013</a>).</p>
+<p>Some highlights:</p>
+<p>A new short flag, <code>-.</code>, has been added. It is an alias for the <code>--hidden</code> flag,<br>
+which instructs ripgrep to search hidden files and directories.</p>
+<p>ripgrep is now using a new<br>
+<a href="https://github.com/BurntSushi/memchr/pull/82">vectorized implementation of <code>memmem</code></a>,<br>
+which accelerates many common searches. If you notice any performance<br>
+regressions (or major improvements), I&apos;d love to hear about them through an<br>
+issue report!</p>
+<p>Also, for Windows users targeting MSVC, Cargo will now build fully static<br>
+executables of ripgrep. The release binaries for ripgrep 13 have been compiled<br>
+using this configuration.</p>
+<p><strong>BREAKING CHANGES</strong>:</p>
+<p><strong>Binary detection output has changed slightly.</strong></p>
+<p>In this release, a small tweak has been made to the output format when a binary<br>
+file is detected. Previously, it looked like this:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>Binary file FOO matches (found &quot;\0&quot; byte around offset XXX)
+</code></pre><p>Now it looks like this:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>FOO: binary file matches (found &quot;\0&quot; byte around offset XXX)
+</code></pre><p><strong>vimgrep output in multi-line now only prints the first line for each match.</strong></p>
+<p>See <a href="https://github.com/BurntSushi/ripgrep/issues/1866">issue 1866</a> for more<br>
+discussion on this. Previously, every line in a match was duplicated, even<br>
+when it spanned multiple lines. There are no changes to vimgrep output when<br>
+multi-line mode is disabled.</p>
+<p><strong>In multi-line mode, --count is now equivalent to --count-matches.</strong></p>
+<p>This appears to match how <code>pcre2grep</code> implements <code>--count</code>. Previously, ripgrep<br>
+would produce outright incorrect counts. Another alternative would be to simply<br>
+count the number of lines---even if it&apos;s more than the number of matches---but<br>
+that seems highly unintuitive.</p>
+<p><strong>FULL LIST OF FIXES AND IMPROVEMENTS:</strong></p>
+<p>Security fixes:</p>
+<ul>
+<li><a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-3013">CVE-2021-3013</a>:<br>
+Fixes a security hole on Windows where running ripgrep with either the<br>
+<code>-z/--search-zip</code> or <code>--pre</code> flags can result in running arbitrary<br>
+executables from the current directory.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1773">VULN #1773</a>:<br>
+This is the public facing issue tracking CVE-2021-3013. ripgrep&apos;s README<br>
+now contains a section describing how to report a vulnerability.</li>
+</ul>
+<p>Performance improvements:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/discussions/1657">PERF #1657</a>:<br>
+Check if a file should be ignored first before issuing stat calls.</li>
+<li><a href="https://github.com/BurntSushi/memchr/pull/82">PERF memchr#82</a>:<br>
+ripgrep now uses a new vectorized implementation of <code>memmem</code>.</li>
+</ul>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for ASP, Bazel, dvc, FlatBuffers,<br>
+Futhark, minified files, Mint, pofiles (from GNU gettext) Racket, Red, Ruby,<br>
+VCL, Yang.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1404">FEATURE #1404</a>:<br>
+ripgrep now prints a warning if nothing is searched.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1613">FEATURE #1613</a>:<br>
+Cargo will now produce static executables on Windows when using MSVC.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1680">FEATURE #1680</a>:<br>
+Add <code>-.</code> as a short flag alias for <code>--hidden</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1842">FEATURE #1842</a>:<br>
+Add <code>--field-{context,match}-separator</code> for customizing field delimiters.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1856">FEATURE #1856</a>:<br>
+The README now links to a<br>
+<a href="https://github.com/UltiRequiem/traducciones/tree/master/ripgrep">Spanish translation</a>.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1277">BUG #1277</a>:<br>
+Document cygwin path translation behavior in the FAQ.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1739">BUG #1739</a>:<br>
+Fix bug where replacements were buggy if the regex matched a line terminator.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1311">BUG #1311</a>:<br>
+Fix multi-line bug where a search &amp; replace for <code>\n</code> didn&apos;t work as expected.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1401">BUG #1401</a>:<br>
+Fix buggy interaction between PCRE2 look-around and <code>-o/--only-matching</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1412">BUG #1412</a>:<br>
+Fix multi-line bug with searches using look-around past matching lines.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1577">BUG #1577</a>:<br>
+Fish shell completions will continue to be auto-generated.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1642">BUG #1642</a>:<br>
+Fixes a bug where using <code>-m</code> and <code>-A</code> printed more matches than the limit.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1703">BUG #1703</a>:<br>
+Clarify the function of <code>-u/--unrestricted</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1708">BUG #1708</a>:<br>
+Clarify how <code>-S/--smart-case</code> works.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1730">BUG #1730</a>:<br>
+Clarify that CLI invocation must always be valid, regardless of config file.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1741">BUG #1741</a>:<br>
+Fix stdin detection when using PowerShell in UNIX environments.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1756">BUG #1756</a>:<br>
+Fix bug where <code>foo/**</code> would match <code>foo</code>, but it shouldn&apos;t.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1765">BUG #1765</a>:<br>
+Fix panic when <code>--crlf</code> is used in some cases.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1638">BUG #1638</a>:<br>
+Correctly sniff UTF-8 and do transcoding, like we do for UTF-16.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1816">BUG #1816</a>:<br>
+Add documentation for glob alternate syntax, e.g., <code>{a,b,..}</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1847">BUG #1847</a>:<br>
+Clarify how the <code>--hidden</code> flag works.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1866#issuecomment-841635553">BUG #1866</a>:<br>
+Fix bug when computing column numbers in <code>--vimgrep</code> mode.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1868">BUG #1868</a>:<br>
+Fix bug where <code>--passthru</code> and <code>-A/-B/-C</code> did not override each other.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1869">BUG #1869</a>:<br>
+Clarify docs for <code>--files-with-matches</code> and <code>--files-without-match</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1878">BUG #1878</a>:<br>
+Fix bug where <code>\A</code> could produce unanchored matches in multiline search.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/commit/94e4b8e3">BUG 94e4b8e3</a>:<br>
+Fix column numbers with <code>--vimgrep</code> is used with <code>-U/--multiline</code>.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="12.1.1 (2020-05-29)">12.1.1 (2020-05-29)</h1>
+<p>ripgrep 12.1.1 is a patch release that fixes a couple small bugs. In<br>
+particular, the ripgrep 12.1.0 release did not tag new releases for all of its<br>
+in-tree dependencies. As a result, ripgrep built dependencies from <a href="http://crates.io">crates.io</a><br>
+would produce a different build than compiling ripgrep from source on the<br>
+<code>12.1.0</code> tag. Namely, some crates like <code>grep-cli</code> had unreleased changes.</p>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1581">BUG #1581</a>:<br>
+Corrects some egregious markup output in <code>--help</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1591">BUG #1591</a>:<br>
+Mention the special <code>$0</code> capture group in docs for the <code>-r/--replace</code> flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1602">BUG #1602</a>:<br>
+Fix failing test resulting from out-of-sync dependencies.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="12.1.0 (2020-05-09)">12.1.0 (2020-05-09)</h1>
+<p>ripgrep 12.1.0 is a small minor version release that mostly includes bug fixes<br>
+and documentation improvements. This release also contains some important<br>
+notices for downstream packagers.</p>
+<p><strong>Notices for downstream ripgrep package maintainers:</strong></p>
+<ul>
+<li>Fish shell completions will be removed in the ripgrep 13 release.<br>
+See <a href="https://github.com/BurntSushi/ripgrep/issues/1577">#1577</a><br>
+for more details.</li>
+<li>ripgrep has switched from <code>a2x</code> to <code>asciidoctor</code> to generate the man page.<br>
+If <code>asciidoctor</code> is not present, then ripgrep will currently fall back to<br>
+<code>a2x</code>. Support for <code>a2x</code> will be dropped in the ripgrep 13 release.<br>
+See <a href="https://github.com/BurntSushi/ripgrep/issues/1544">#1544</a><br>
+for more details.</li>
+</ul>
+<p>Feature enhancements:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1547">FEATURE #1547</a>:<br>
+Support decompressing <code>.Z</code> files via <code>uncompress</code>.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1252">BUG #1252</a>:<br>
+Add a section on the <code>--pre</code> flag to the GUIDE.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1339">BUG #1339</a>:<br>
+Improve error message when a pattern with invalid UTF-8 is provided.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1524">BUG #1524</a>:<br>
+Note how to escape a <code>$</code> when using <code>--replace</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1537">BUG #1537</a>:<br>
+Fix match bug caused by inner literal optimization.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1544">BUG #1544</a>:<br>
+ripgrep now uses <code>asciidoctor</code> instead of <code>a2x</code> to generate its man page.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1550">BUG #1550</a>:<br>
+Substantially reduce peak memory usage when searching wide directories.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1571">BUG #1571</a>:<br>
+Add note about configuration files in <code>--type-{add,clear}</code> docs.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1573">BUG #1573</a>:<br>
+Fix incorrect <code>--count-matches</code> output when using look-around.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="12.0.1 (2020-03-29)">12.0.1 (2020-03-29)</h1>
+<p>ripgrep 12.0.1 is a small patch release that includes a minor bug fix relating<br>
+to superfluous error messages when searching git repositories with sub-modules.<br>
+This was a regression introduced in the 12.0.0 release.</p>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1520">BUG #1520</a>:<br>
+Don&apos;t emit spurious error messages in git repositories with submodules.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="12.0.0 (2020-03-15)">12.0.0 (2020-03-15)</h1>
+<p>ripgrep 12 is a new major version release of ripgrep that contains many bug<br>
+fixes, several important performance improvements and a few minor new features.</p>
+<p>In a near future release, I am hoping to add an<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/1497">indexing feature</a><br>
+to ripgrep, which will dramatically speed up searching by building an index.<br>
+Feedback would very much be appreciated, especially on the user experience<br>
+which will be difficult to get right.</p>
+<p>This release has no known breaking changes.</p>
+<p>Deprecations:</p>
+<ul>
+<li>The <code>--no-pcre2-unicode</code> flag is deprecated. Instead, use the <code>--no-unicode</code><br>
+flag, which applies to both the default regex engine and PCRE2. For now,<br>
+<code>--no-pcre2-unicode</code> and <code>--pcre2-unicode</code> are aliases to <code>--no-unicode</code><br>
+and <code>--unicode</code>, respectively. The <code>--[no-]pcre2-unicode</code> flags may be<br>
+removed in a future release.</li>
+<li>The <code>--auto-hybrid-regex</code> flag is deprecated. Instead, use the new <code>--engine</code><br>
+flag with the <code>auto</code> value.</li>
+</ul>
+<p>Performance improvements:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1087">PERF #1087</a>:<br>
+ripgrep is smarter when detected literals are whitespace.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1381">PERF #1381</a>:<br>
+Directory traversal is sped up with speculative ignore-file existence checks.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/commit/cd8ec38a">PERF cd8ec38a</a>:<br>
+Improve inner literal detection to cover more cases more effectively.<br>
+e.g., <code>+Sherlock Holmes +</code> now has <code>Sherlock Holmes</code> extracted instead<br>
+of <code></code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/commit/6a0e0147">PERF 6a0e0147</a>:<br>
+Improve literal detection when the <code>-w/--word-regexp</code> flag is used.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/commit/ad97e9c9">PERF ad97e9c9</a>:<br>
+Improve overall performance of the <code>-w/--word-regexp</code> flag.</li>
+</ul>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for erb, diff, Gradle, HAML, Org,<br>
+Postscript, Skim, Slim, Slime, RPM Spec files, Typoscript, xml.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1370">FEATURE #1370</a>:<br>
+Add <code>--include-zero</code> flag that shows files searched without matches.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1390">FEATURE #1390</a>:<br>
+Add <code>--no-context-separator</code> flag that always hides context separators.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1414">FEATURE #1414</a>:<br>
+Add <code>--no-require-git</code> flag to allow ripgrep to respect gitignores anywhere.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1420">FEATURE #1420</a>:<br>
+Add <code>--no-ignore-exclude</code> to disregard rules in <code>.git/info/exclude</code> files.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1466">FEATURE #1466</a>:<br>
+Add <code>--no-ignore-files</code> flag to disable all <code>--ignore-file</code> flags.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1488">FEATURE #1488</a>:<br>
+Add &apos;--engine&apos; flag for easier switching between regex engines.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/commit/75cbe88f">FEATURE 75cbe88f</a>:<br>
+Add <code>--no-unicode</code> flag. This works on all supported regex engines.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1291">BUG #1291</a>:<br>
+ripgrep now works in non-existent directories.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1319">BUG #1319</a>:<br>
+Fix match bug due to errant literal detection.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1335"><strong>BUG #1335</strong></a>:<br>
+Fixes a performance bug when searching plain text files with very long lines.<br>
+This was a serious performance regression in some cases.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1344">BUG #1344</a>:<br>
+Document usage of <code>--type all</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1389">BUG #1389</a>:<br>
+Fixes a bug where ripgrep would panic when searching a symlinked directory.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1439">BUG #1439</a>:<br>
+Improve documentation for ripgrep&apos;s automatic stdin detection.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1441">BUG #1441</a>:<br>
+Remove CPU features from man page.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1442">BUG #1442</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/1478">BUG #1478</a>:<br>
+Improve documentation of the <code>-g/--glob</code> flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1445">BUG #1445</a>:<br>
+ripgrep now respects ignore rules from .git/info/exclude in worktrees.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1485">BUG #1485</a>:<br>
+Fish shell completions from the release Debian package are now installed to<br>
+<code>/usr/share/fish/vendor_completions.d/rg.fish</code>.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="11.0.2 (2019-08-01)">11.0.2 (2019-08-01)</h1>
+<p>ripgrep 11.0.2 is a new patch release that fixes a few bugs, including a<br>
+performance regression and a matching bug when using the <code>-F/--fixed-strings</code><br>
+flag.</p>
+<p>Feature enhancements:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1293">FEATURE #1293</a>:<br>
+Added <code>--glob-case-insensitive</code> flag that makes <code>--glob</code> behave as <code>--iglob</code>.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1246">BUG #1246</a>:<br>
+Add translations to README, starting with an unofficial Chinese translation.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1259">BUG #1259</a>:<br>
+Fix bug where the last byte of a <code>-f file</code> was stripped if it wasn&apos;t a <code>\n</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1261">BUG #1261</a>:<br>
+Document that no error is reported when searching for <code>\n</code> with <code>-P/--pcre2</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1284">BUG #1284</a>:<br>
+Mention <code>.ignore</code> and <code>.rgignore</code> more prominently in the README.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1292">BUG #1292</a>:<br>
+Fix bug where <code>--with-filename</code> was sometimes enabled incorrectly.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1268">BUG #1268</a>:<br>
+Fix major performance regression in GitHub <code>x86_64-linux</code> binary release.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1302">BUG #1302</a>:<br>
+Show better error messages when a non-existent preprocessor command is given.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1334">BUG #1334</a>:<br>
+Fix match regression with <code>-F</code> flag when patterns contain meta characters.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="11.0.1 (2019-04-16)">11.0.1 (2019-04-16)</h1>
+<p>ripgrep 11.0.1 is a new patch release that fixes a search regression introduced<br>
+in the previous 11.0.0 release. In particular, ripgrep can enter an infinite<br>
+loop for some search patterns when searching invalid UTF-8.</p>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1247">BUG #1247</a>:<br>
+Fix search bug that can cause ripgrep to enter an infinite loop.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="11.0.0 (2019-04-15)">11.0.0 (2019-04-15)</h1>
+<p>ripgrep 11 is a new major version release of ripgrep that contains many bug<br>
+fixes, some performance improvements and a few feature enhancements. Notably,<br>
+ripgrep&apos;s user experience for binary file filtering has been improved. See the<br>
+<a href="file:///Users/yangluchao/Documents/rust/ripgrep/GUIDE.md#binary-data">guide&apos;s new section on binary data</a> for more details.</p>
+<p>This release also marks a change in ripgrep&apos;s versioning. Where as the previous<br>
+version was <code>0.10.0</code>, this version is <code>11.0.0</code>. Moving forward, ripgrep&apos;s<br>
+major version will be increased a few times per year. ripgrep will continue to<br>
+be conservative with respect to backwards compatibility, but may occasionally<br>
+introduce breaking changes, which will always be documented in this CHANGELOG.<br>
+See <a href="https://github.com/BurntSushi/ripgrep/issues/1172">issue 1172</a> for a bit<br>
+more detail on why this versioning change was made.</p>
+<p>This release increases the <strong>minimum supported Rust version</strong> from 1.28.0 to<br>
+1.34.0.</p>
+<p><strong>BREAKING CHANGES</strong>:</p>
+<ul>
+<li>ripgrep has tweaked its exit status codes to be more like GNU grep&apos;s. Namely,<br>
+if a non-fatal error occurs during a search, then ripgrep will now always<br>
+emit a <code>2</code> exit status code, regardless of whether a match is found or not.<br>
+Previously, ripgrep would only emit a <code>2</code> exit status code for a catastrophic<br>
+error (e.g., regex syntax error). One exception to this is if ripgrep is run<br>
+with <code>-q/--quiet</code>. In that case, if an error occurs and a match is found,<br>
+then ripgrep will exit with a <code>0</code> exit status code.</li>
+<li>Supplying the <code>-u/--unrestricted</code> flag three times is now equivalent to<br>
+supplying <code>--no-ignore --hidden --binary</code>. Previously, <code>-uuu</code> was equivalent<br>
+to <code>--no-ignore --hidden --text</code>. The difference is that <code>--binary</code> disables<br>
+binary file filtering without potentially dumping binary data into your<br>
+terminal. That is, <code>rg -uuu foo</code> should now be equivalent to <code>grep -r foo</code>.</li>
+<li>The <code>avx-accel</code> feature of ripgrep has been removed since it is no longer<br>
+necessary. All uses of AVX in ripgrep are now enabled automatically via<br>
+runtime CPU feature detection. The <code>simd-accel</code> feature does remain available<br>
+(only for enabling SIMD for transcoding), however, it does increase<br>
+compilation times substantially at the moment.</li>
+</ul>
+<p>Performance improvements:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/497">PERF #497</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/838">PERF #838</a>:<br>
+Make <code>rg -F -f dictionary-of-literals</code> much faster.</li>
+</ul>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for Apache Thrift, ASP, Bazel, Brotli,<br>
+BuildStream, bzip2, C, C++, Cython, gzip, Java, Make, Postscript, QML, Tex,<br>
+XML, xz, zig and zstd.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/855">FEATURE #855</a>:<br>
+Add <code>--binary</code> flag for disabling binary file filtering.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1078">FEATURE #1078</a>:<br>
+Add <code>--max-columns-preview</code> flag for showing a preview of long lines.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1099">FEATURE #1099</a>:<br>
+Add support for Brotli and Zstd to the <code>-z/--search-zip</code> flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1138">FEATURE #1138</a>:<br>
+Add <code>--no-ignore-dot</code> flag for ignoring <code>.ignore</code> files.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1155">FEATURE #1155</a>:<br>
+Add <code>--auto-hybrid-regex</code> flag for automatically falling back to PCRE2.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1159">FEATURE #1159</a>:<br>
+ripgrep&apos;s exit status logic should now match GNU grep. See updated man page.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1164">FEATURE #1164</a>:<br>
+Add <code>--ignore-file-case-insensitive</code> for case insensitive ignore globs.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1185">FEATURE #1185</a>:<br>
+Add <code>-I</code> flag as a short option for the <code>--no-filename</code> flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1207">FEATURE #1207</a>:<br>
+Add <code>none</code> value to <code>-E/--encoding</code> to forcefully disable all transcoding.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/commit/da9d7204">FEATURE da9d7204</a>:<br>
+Add <code>--pcre2-version</code> for querying showing PCRE2 version information.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/306">BUG #306</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/855">BUG #855</a>:<br>
+Improve the user experience for ripgrep&apos;s binary file filtering.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/373">BUG #373</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/1098">BUG #1098</a>:<br>
+<code>**</code> is now accepted as valid syntax anywhere in a glob.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/916">BUG #916</a>:<br>
+ripgrep no longer hangs when searching <code>/proc</code> with a zombie process present.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1052">BUG #1052</a>:<br>
+Fix bug where ripgrep could panic when transcoding UTF-16 files.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1055">BUG #1055</a>:<br>
+Suggest <code>-U/--multiline</code> when a pattern contains a <code>\n</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1063">BUG #1063</a>:<br>
+Always strip a BOM if it&apos;s present, even for UTF-8.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1064">BUG #1064</a>:<br>
+Fix inner literal detection that could lead to incorrect matches.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1079">BUG #1079</a>:<br>
+Fixes a bug where the order of globs could result in missing a match.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1089">BUG #1089</a>:<br>
+Fix another bug where ripgrep could panic when transcoding UTF-16 files.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1091">BUG #1091</a>:<br>
+Add note about inverted flags to the man page.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1093">BUG #1093</a>:<br>
+Fix handling of literal slashes in gitignore patterns.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1095">BUG #1095</a>:<br>
+Fix corner cases involving the <code>--crlf</code> flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1101">BUG #1101</a>:<br>
+Fix AsciiDoc escaping for man page output.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1103">BUG #1103</a>:<br>
+Clarify what <code>--encoding auto</code> does.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1106">BUG #1106</a>:<br>
+<code>--files-with-matches</code> and <code>--files-without-match</code> work with one file.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1121">BUG #1121</a>:<br>
+Fix bug that was triggering Windows antimalware when using the <code>--files</code><br>
+flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1125">BUG #1125</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/1159">BUG #1159</a>:<br>
+ripgrep shouldn&apos;t panic for <code>rg -h | rg</code> and should emit correct exit status.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1144">BUG #1144</a>:<br>
+Fixes a bug where line numbers could be wrong on big-endian machines.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1154">BUG #1154</a>:<br>
+Windows files with &quot;hidden&quot; attribute are now treated as hidden.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1173">BUG #1173</a>:<br>
+Fix handling of <code>**</code> patterns in gitignore files.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1174">BUG #1174</a>:<br>
+Fix handling of repeated <code>**</code> patterns in gitignore files.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1176">BUG #1176</a>:<br>
+Fix bug where <code>-F</code>/<code>-x</code> weren&apos;t applied to patterns given via <code>-f</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1189">BUG #1189</a>:<br>
+Document cases where ripgrep may use a lot of memory.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1203">BUG #1203</a>:<br>
+Fix a matching bug related to the suffix literal optimization.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/commit/8f14cb18">BUG 8f14cb18</a>:<br>
+Increase the default stack size for PCRE2&apos;s JIT.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.10.0 (2018-09-07)">0.10.0 (2018-09-07)</h1>
+<p>This is a new minor version release of ripgrep that contains some major new<br>
+features, a huge number of bug fixes, and is the first release based on<br>
+libripgrep. The entirety of ripgrep&apos;s core search and printing code has been<br>
+rewritten and generalized so that anyone can make use of it.</p>
+<p>Major new features include PCRE2 support, multi-line search and a JSON output<br>
+format.</p>
+<p><strong>BREAKING CHANGES</strong>:</p>
+<ul>
+<li>The minimum version required to compile Rust has now changed to track the<br>
+latest stable version of Rust. Patch releases will continue to compile with<br>
+the same version of Rust as the previous patch release, but new minor<br>
+versions will use the current stable version of the Rust compile as its<br>
+minimum supported version.</li>
+<li>The match semantics of <code>-w/--word-regexp</code> have changed slightly. They used<br>
+to be <code>\b(?:&lt;your pattern&gt;)\b</code>, but now it&apos;s<br>
+<code>(?:^|\W)(?:&lt;your pattern&gt;)(?:$|\W)</code>. This matches the behavior of GNU grep<br>
+and is believed to be closer to the intended semantics of the flag. See<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/389">#389</a> for more details.</li>
+</ul>
+<p>Feature enhancements:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/162">FEATURE #162</a>:<br>
+libripgrep is now a thing. The primary crate is<br>
+<a href="https://docs.rs/grep"><code>grep</code></a>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/176">FEATURE #176</a>:<br>
+Add <code>-U/--multiline</code> flag that permits matching over multiple lines.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/188">FEATURE #188</a>:<br>
+Add <code>-P/--pcre2</code> flag that gives support for look-around and backreferences.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/244">FEATURE #244</a>:<br>
+Add <code>--json</code> flag that prints results in a JSON Lines format.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/321">FEATURE #321</a>:<br>
+Add <code>--one-file-system</code> flag to skip directories on different file systems.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/404">FEATURE #404</a>:<br>
+Add <code>--sort</code> and <code>--sortr</code> flag for more sorting. Deprecate <code>--sort-files</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/416">FEATURE #416</a>:<br>
+Add <code>--crlf</code> flag to permit <code>$</code> to work with carriage returns on Windows.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/917">FEATURE #917</a>:<br>
+The <code>--trim</code> flag strips prefix whitespace from all lines printed.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/993">FEATURE #993</a>:<br>
+Add <code>--null-data</code> flag, which makes ripgrep use NUL as a line terminator.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/997">FEATURE #997</a>:<br>
+The <code>--passthru</code> flag now works with the <code>--replace</code> flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1038">FEATURE #1038-1</a>:<br>
+Add <code>--line-buffered</code> and <code>--block-buffered</code> for forcing a buffer strategy.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1038">FEATURE #1038-2</a>:<br>
+Add <code>--pre-glob</code> for filtering files through the <code>--pre</code> flag.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/2">BUG #2</a>:<br>
+Searching with non-zero context can now use memory maps if appropriate.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/200">BUG #200</a>:<br>
+ripgrep will now stop correctly when its output pipe is closed.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/389">BUG #389</a>:<br>
+The <code>-w/--word-regexp</code> flag now works more intuitively.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/643">BUG #643</a>:<br>
+Detection of readable stdin has improved on Windows.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/441">BUG #441</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/690">BUG #690</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/980">BUG #980</a>:<br>
+Matching empty lines now works correctly in several corner cases.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/764">BUG #764</a>:<br>
+Color escape sequences now coalesce, which reduces output size.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/842">BUG #842</a>:<br>
+Add man page to binary Debian package.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/922">BUG #922</a>:<br>
+ripgrep is now more robust with respect to memory maps failing.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/937">BUG #937</a>:<br>
+Color escape sequences are no longer emitted for empty matches.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/940">BUG #940</a>:<br>
+Context from the <code>--passthru</code> flag should not impact process exit status.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/984">BUG #984</a>:<br>
+Fixes bug in <code>ignore</code> crate where first path was always treated as a symlink.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/990">BUG #990</a>:<br>
+Read stderr asynchronously when running a process.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1013">BUG #1013</a>:<br>
+Add compile time and runtime CPU features to <code>--version</code> output.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/1028">BUG #1028</a>:<br>
+Don&apos;t complete bare pattern after <code>-f</code> in zsh.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.9.0 (2018-08-03)">0.9.0 (2018-08-03)</h1>
+<p>This is a new minor version release of ripgrep that contains some minor new<br>
+features and a panoply of bug fixes.</p>
+<p>Releases provided on Github for <code>x86_64</code> will now work on all target CPUs, and<br>
+will also automatically take advantage of features found on modern CPUs (such<br>
+as AVX2) for additional optimizations.</p>
+<p>This release increases the <strong>minimum supported Rust version</strong> from 1.20.0 to<br>
+1.23.0.</p>
+<p>It is anticipated that the next release of ripgrep (0.10.0) will provide<br>
+multi-line search support and a JSON output format.</p>
+<p><strong>BREAKING CHANGES</strong>:</p>
+<ul>
+<li>When <code>--count</code> and <code>--only-matching</code> are provided simultaneously, the<br>
+behavior of ripgrep is as if the <code>--count-matches</code> flag was given. That is,<br>
+the total number of matches is reported, where there may be multiple matches<br>
+per line. Previously, the behavior of ripgrep was to report the total number<br>
+of matching lines. (Note that this behavior diverges from the behavior of<br>
+GNU grep.)</li>
+<li>Octal syntax is no longer supported. ripgrep previously accepted expressions<br>
+like <code>\1</code> as syntax for matching <code>U+0001</code>, but ripgrep will now report an<br>
+error instead.</li>
+<li>The <code>--line-number-width</code> flag has been removed. Its functionality was not<br>
+carefully considered with all ripgrep output formats.<br>
+See <a href="https://github.com/BurntSushi/ripgrep/issues/795">#795</a> for more<br>
+details.</li>
+</ul>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for Android, Bazel, Fuchsia, Haskell,<br>
+Java and Puppet.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/411">FEATURE #411</a>:<br>
+Add a <code>--stats</code> flag, which emits aggregate statistics after search results.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/646">FEATURE #646</a>:<br>
+Add a <code>--no-ignore-messages</code> flag, which suppresses parse errors from reading<br>
+<code>.ignore</code> and <code>.gitignore</code> files.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/702">FEATURE #702</a>:<br>
+Support <code>\u{..}</code> Unicode escape sequences.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/812">FEATURE #812</a>:<br>
+Add <code>-b/--byte-offset</code> flag that shows the byte offset of each matching line.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/814">FEATURE #814</a>:<br>
+Add <code>--count-matches</code> flag, which is like <code>--count</code>, but for each match.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/880">FEATURE #880</a>:<br>
+Add a <code>--no-column</code> flag, which disables column numbers in the output.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/898">FEATURE #898</a>:<br>
+Add support for <code>lz4</code> when using the <code>-z/--search-zip</code> flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/924">FEATURE #924</a>:<br>
+<code>termcolor</code> has moved to its own repository:<br>
+<a href="https://github.com/BurntSushi/termcolor">https://github.com/BurntSushi/termcolor</a></li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/934">FEATURE #934</a>:<br>
+Add a new flag, <code>--no-ignore-global</code>, that permits disabling global<br>
+gitignores.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/967">FEATURE #967</a>:<br>
+Rename <code>--maxdepth</code> to <code>--max-depth</code> for consistency. Keep <code>--maxdepth</code> for<br>
+backwards compatibility.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/978">FEATURE #978</a>:<br>
+Add a <code>--pre</code> option to filter inputs with an arbitrary program.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/commit/fca9709d">FEATURE fca9709d</a>:<br>
+Improve zsh completion.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/135">BUG #135</a>:<br>
+Release portable binaries that conditionally use SSSE3, AVX2, etc., at<br>
+runtime.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/268">BUG #268</a>:<br>
+Print descriptive error message when trying to use look-around or<br>
+backreferences.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/395">BUG #395</a>:<br>
+Show comprehensible error messages for regexes like <code>\s*{</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/526">BUG #526</a>:<br>
+Support backslash escapes in globs.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/795">BUG #795</a>:<br>
+Fix problems with <code>--line-number-width</code> by removing it.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/832">BUG #832</a>:<br>
+Clarify usage instructions for <code>-f/--file</code> flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/835">BUG #835</a>:<br>
+Fix small performance regression while crawling very large directory trees.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/851">BUG #851</a>:<br>
+Fix <code>-S/--smart-case</code> detection once and for all.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/852">BUG #852</a>:<br>
+Be robust with respect to <code>ENOMEM</code> errors returned by <code>mmap</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/853">BUG #853</a>:<br>
+Upgrade <code>grep</code> crate to <code>regex-syntax 0.6.0</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/893">BUG #893</a>:<br>
+Improve support for git submodules.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/900">BUG #900</a>:<br>
+When no patterns are given, ripgrep should never match anything.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/907">BUG #907</a>:<br>
+ripgrep will now stop traversing after the first file when <code>--quiet --files</code><br>
+is used.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/918">BUG #918</a>:<br>
+Don&apos;t skip tar archives when <code>-z/--search-zip</code> is used.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/934">BUG #934</a>:<br>
+Don&apos;t respect gitignore files when searching outside git repositories.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/948">BUG #948</a>:<br>
+Use exit code 2 to indicate error, and use exit code 1 to indicate no<br>
+matches.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/951">BUG #951</a>:<br>
+Add stdin example to ripgrep usage documentation.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/955">BUG #955</a>:<br>
+Use buffered writing when not printing to a tty, which fixes a performance<br>
+regression.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/957">BUG #957</a>:<br>
+Improve the error message shown for <code>--path separator /</code> in some Windows<br>
+shells.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/964">BUG #964</a>:<br>
+Add a <code>--no-fixed-strings</code> flag to disable <code>-F/--fixed-strings</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/988">BUG #988</a>:<br>
+Fix a bug in the <code>ignore</code> crate that prevented the use of explicit ignore<br>
+files after disabling all other ignore rules.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/995">BUG #995</a>:<br>
+Respect <code>$XDG_CONFIG_DIR/git/config</code> for detecting <code>core.excludesFile</code>.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.8.1 (2018-02-20)">0.8.1 (2018-02-20)</h1>
+<p>This is a patch release of ripgrep that primarily fixes regressions introduced<br>
+in 0.8.0 (#820 and #824) in directory traversal on Windows. These regressions<br>
+do not impact non-Windows users.</p>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for csv and VHDL.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/798">FEATURE #798</a>:<br>
+Add <code>underline</code> support to <code>termcolor</code> and ripgrep. See documentation on the<br>
+<code>--colors</code> flag for details.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/684">BUG #684</a>:<br>
+Improve documentation for the <code>--ignore-file</code> flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/789">BUG #789</a>:<br>
+Don&apos;t show <code>(rev )</code> if the revision wasn&apos;t available during the build.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/791">BUG #791</a>:<br>
+Add man page to ARM release.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/797">BUG #797</a>:<br>
+Improve documentation for &quot;intense&quot; setting in <code>termcolor</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/800">BUG #800</a>:<br>
+Fix a bug in the <code>ignore</code> crate for custom ignore files. This had no impact<br>
+on ripgrep.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/807">BUG #807</a>:<br>
+Fix a bug where <code>rg --hidden .</code> behaved differently from <code>rg --hidden ./</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/815">BUG #815</a>:<br>
+Clarify a common failure mode in user guide.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/820">BUG #820</a>:<br>
+Fixes a bug on Windows where symlinks were followed even if not requested.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/824">BUG #824</a>:<br>
+Fix a performance regression in directory traversal on Windows.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.8.0 (2018-02-11)">0.8.0 (2018-02-11)</h1>
+<p>This is a new minor version release of ripgrep that satisfies several popular<br>
+feature requests (config files, search compressed files, true colors), fixes<br>
+many bugs and improves the quality of life for ripgrep maintainers. This<br>
+release also includes greatly improved documentation in the form of a<br>
+<a href="file:///Users/yangluchao/Documents/rust/ripgrep/GUIDE.md">User Guide</a> and a <a href="file:///Users/yangluchao/Documents/rust/ripgrep/FAQ.md">FAQ</a>.</p>
+<p>This release increases the <strong>minimum supported Rust version</strong> from 1.17 to<br>
+1.20.</p>
+<p><strong>BREAKING CHANGES</strong>:</p>
+<p>Note that these are all very minor and unlikely to impact most users.</p>
+<ul>
+<li>In order to support configuration files, flag overrides needed to be<br>
+rethought. In some cases, this changed ripgrep&apos;s behavior. For example,<br>
+in ripgrep 0.7.1, <code>rg foo -s -i</code> will perform a case sensitive search<br>
+since the <code>-s/--case-sensitive</code> flag was defined to always take precedence<br>
+over the <code>-i/--ignore-case</code> flag, regardless of position. In ripgrep 0.8.0<br>
+however, the override rule for all flags has changed to &quot;the most recent<br>
+flag wins among competing flags.&quot; That is, <code>rg foo -s -i</code> now performs a<br>
+case insensitive search.</li>
+<li>The <code>-M/--max-columns</code> flag was tweaked so that specifying a value of <code>0</code><br>
+now makes ripgrep behave as if the flag was absent. This makes it possible<br>
+to set a default value in a configuration file and then override it. The<br>
+previous ripgrep behavior was to suppress all matching non-empty lines.</li>
+<li>In all globs, <code>[^...]</code> is now equivalent to <code>[!...]</code> (indicating class<br>
+negation). Previously, <code>^</code> had no special significance in a character class.</li>
+<li>For <strong>downstream packagers</strong>, the directory hierarchy in ripgrep&apos;s archive<br>
+releases has changed. The root directory now only contains the executable,<br>
+README and license. There is now a new directory called <code>doc</code> which contains<br>
+the man page (previously in the root), a user guide (new), a FAQ (new) and<br>
+the CHANGELOG (previously not included in release). The <code>complete</code><br>
+directory remains the same.</li>
+</ul>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for<br>
+Apache Avro, C++, GN, Google Closure Templates, Jupyter notebooks, man pages,<br>
+Protocol Buffers, Smarty and Web IDL.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/196">FEATURE #196</a>:<br>
+Support a configuration file. See<br>
+<a href="file:///Users/yangluchao/Documents/rust/ripgrep/GUIDE.md#configuration-file">the new user guide</a><br>
+for details.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/261">FEATURE #261</a>:<br>
+Add extended or &quot;true&quot; color support. Works in Windows 10!<br>
+<a href="file:///Users/yangluchao/Documents/rust/ripgrep/FAQ.md#colors">See the FAQ for details.</a></li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/539">FEATURE #539</a>:<br>
+Search gzip, bzip2, lzma or xz files when given <code>-z/--search-zip</code> flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/544">FEATURE #544</a>:<br>
+Add support for line number alignment via a new <code>--line-number-width</code> flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/654">FEATURE #654</a>:<br>
+Support linuxbrew in ripgrep&apos;s Brew tap.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/673">FEATURE #673</a>:<br>
+Bring back <code>.rgignore</code> files. (A higher precedent, application specific<br>
+version of <code>.ignore</code>.)</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/676">FEATURE #676</a>:<br>
+Provide ARM binaries. <strong>WARNING:</strong> This will be provided on a best effort<br>
+basis.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/709">FEATURE #709</a>:<br>
+Suggest <code>-F/--fixed-strings</code> flag on a regex syntax error.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/740">FEATURE #740</a>:<br>
+Add a <code>--passthru</code> flag that causes ripgrep to print every line it reads.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/785">FEATURE #785</a>:<br>
+Overhaul documentation. Cleaned up README, added user guide and FAQ.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/commit/7f5c07434be92103b5bf7e216b9c7494aed2d8cb">FEATURE 7f5c07</a>:<br>
+Add hidden flags for convenient overrides (e.g., <code>--no-text</code>).</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/553">BUG #553</a>:<br>
+Permit flags to be repeated.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/633">BUG #633</a>:<br>
+Fix a bug where ripgrep would panic on Windows while following symlinks.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/649">BUG #649</a>:<br>
+Fix handling of <code>!**/</code> in <code>.gitignore</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/663">BUG #663</a>:<br>
+<strong>BREAKING CHANGE:</strong> Support <code>[^...]</code> glob syntax (as identical to <code>[!...]</code>).</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/693">BUG #693</a>:<br>
+Don&apos;t display context separators when not printing matches.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/705">BUG #705</a>:<br>
+Fix a bug that prevented ripgrep from searching OneDrive directories.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/717">BUG #717</a>:<br>
+Improve <code>--smart-case</code> uppercase character detection.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/725">BUG #725</a>:<br>
+Clarify that globs do not override explicitly given paths to search.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/742">BUG #742</a>:<br>
+Write ANSI reset code as <code>\x1B[0m</code> instead of <code>\x1B[m</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/747">BUG #747</a>:<br>
+Remove <code>yarn.lock</code> from YAML file type.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/760">BUG #760</a>:<br>
+ripgrep can now search <code>/sys/devices/system/cpu/vulnerabilities/*</code> files.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/761">BUG #761</a>:<br>
+Fix handling of gitignore patterns that contain a <code>/</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/776">BUG #776</a>:<br>
+<strong>BREAKING CHANGE:</strong> <code>--max-columns=0</code> now disables the limit.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/779">BUG #779</a>:<br>
+Clarify documentation for <code>--files-without-match</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/780">BUG #780</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/781">BUG #781</a>:<br>
+Fix bug where ripgrep missed some matching lines.</li>
+</ul>
+<p>Maintenance fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/772">MAINT #772</a>:<br>
+Drop <code>env_logger</code> in favor of simpler logger to avoid many new dependencies.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/772">MAINT #772</a>:<br>
+Add git revision hash to ripgrep&apos;s version string.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/772">MAINT #772</a>:<br>
+(Seemingly) improve compile times.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/776">MAINT #776</a>:<br>
+Automatically generate man page during build.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/786">MAINT #786</a>:<br>
+Remove use of <code>unsafe</code> in <code>globset</code>. &#x1F389;</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/commit/e9d448e93bb4e1fb3b0c1afc29adb5af6ed5283d">MAINT e9d448</a>:<br>
+Add an issue template (has already drastically improved bug reports).</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/commit/ae2d036dd4ba2a46acac9c2d77c32e7c667eb850">MAINT ae2d03</a>:<br>
+Remove the <code>compile</code> script.</li>
+</ul>
+<p>Friends of ripgrep:</p>
+<p>I&apos;d like to extend my gratitude to<br>
+<a href="https://github.com/balajisivaraman">@balajisivaraman</a><br>
+for their recent hard work in a number of areas, and in particular, for<br>
+implementing the &quot;search compressed files&quot; feature. Their work in sketching out<br>
+a specification for that and other work has been exemplary.</p>
+<p>Thanks<br>
+<a href="https://github.com/balajisivaraman">@balajisivaraman</a>!</p>
+<h1 ebook-toc-level-1 heading="0.7.1 (2017-10-22)">0.7.1 (2017-10-22)</h1>
+<p>This is a patch release of ripgrep that includes a fix to very bad regression<br>
+introduced in ripgrep 0.7.0.</p>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/648">BUG #648</a>:<br>
+Fix a bug where it was very easy to exceed standard file descriptor limits.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.7.0 (2017-10-20)">0.7.0 (2017-10-20)</h1>
+<p>This is a new minor version release of ripgrep that includes mostly bug fixes.</p>
+<p>ripgrep continues to require Rust 1.17, and there are no known breaking changes<br>
+introduced in this release.</p>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for config &amp; license files, Elm,<br>
+Purescript, Standard ML, sh, systemd, Terraform</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/593">FEATURE #593</a>:<br>
+Using both <code>-o/--only-matching</code> and <code>-r/--replace</code> does the right thing.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/200">BUG #200</a>:<br>
+ripgrep will stop when its pipe is closed.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/402">BUG #402</a>:<br>
+Fix context printing bug when the <code>-m/--max-count</code> flag is used.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/521">BUG #521</a>:<br>
+Fix interaction between <code>-r/--replace</code> and terminal colors.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/559">BUG #559</a>:<br>
+Ignore test that tried reading a non-UTF-8 file path on macOS.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/599">BUG #599</a>:<br>
+Fix color escapes on empty matches.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/600">BUG #600</a>:<br>
+Avoid expensive (on Windows) file handle check when using --files.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/618">BUG #618</a>:<br>
+Clarify installation instructions for Ubuntu users.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/633">BUG #633</a>:<br>
+Faster symlink loop checking on Windows.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.6.0 (2017-08-23)">0.6.0 (2017-08-23)</h1>
+<p>This is a new minor version release of ripgrep that includes many bug fixes<br>
+and a few new features such as <code>--iglob</code> and <code>-x/--line-regexp</code>.</p>
+<p>Note that this release increases the minimum supported Rust version from 1.12<br>
+to 1.17.</p>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for BitBake, C++, Cabal, cshtml, Julia,<br>
+Make, msbuild, QMake, Yocto</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/163">FEATURE #163</a>:<br>
+Add an <code>--iglob</code> flag that is like <code>-g/--glob</code>, but matches globs<br>
+case insensitively.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/518">FEATURE #520</a>:<br>
+Add <code>-x/--line-regexp</code> flag, which requires a match to span an entire line.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/551">FEATURE #551</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/pull/554">FEATURE #554</a>:<br>
+<code>ignore</code>: add new <code>matched_path_or_any_parents</code> method.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/342">BUG #342</a>:<br>
+Fix invisible text in some PowerShell environments by changing the<br>
+default color scheme on Windows.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/413">BUG #413</a>:<br>
+Release binaries on Unix are now <code>strip</code>&apos;d by default. This decreases<br>
+binary size by an order of magnitude.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/483">BUG #483</a>:<br>
+When <code>--quiet</code> is passed, <code>--files</code> should be quiet.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/488">BUG #488</a>:<br>
+When <code>--vimgrep</code> is passed, <code>--with-filename</code> should be enabled<br>
+automatically.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/493">BUG #493</a>:<br>
+Fix another bug in the implementation of the <code>-o/--only-matching</code><br>
+flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/499">BUG #499</a>:<br>
+Permit certain flags to override others.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/523">BUG #523</a>:<br>
+<code>wincolor</code>: Re-fetch Windows console on all calls.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/524">BUG #523</a>:<br>
+<code>--version</code> now shows enabled compile-time features.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/532">BUG #532</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/pull/536">BUG #536</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/pull/538">BUG #538</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/pull/540">BUG #540</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/pull/560">BUG #560</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/pull/565">BUG #565</a>:<br>
+Improve zsh completion.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/578">BUG #578</a>:<br>
+Enable SIMD for <code>encoding_rs</code> when appropriate.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/580">BUG #580</a>:<br>
+Fix <code>-w/--word-regexp</code> in the presence of capturing groups.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/581">BUG #581</a>:<br>
+Document that ripgrep may terminate unexpectedly when searching via<br>
+memory maps (which can happen using default settings).</li>
+</ul>
+<p>Friends of ripgrep:</p>
+<p>I&apos;d like to give a big Thank You to @okdana for their recent hard work on<br>
+ripgrep. This includes new features like <code>--line-regexp</code>, heroic effort on<br>
+zsh auto-completion and thinking through some thorny argv issues with me.</p>
+<p>I&apos;d also like to thank @ericbn for their work on improving ripgrep&apos;s argv<br>
+parsing by allowing some flags to override others.</p>
+<p>Thanks @okdana and @ericbn!</p>
+<h1 ebook-toc-level-1 heading="0.5.2 (2017-05-11)">0.5.2 (2017-05-11)</h1>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for Nix.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/362">FEATURE #362</a>:<br>
+Add <code>--regex-size-limit</code> and <code>--dfa-size-limit</code> flags.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/444">FEATURE #444</a>:<br>
+Improve error messages for invalid globs.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/442">BUG #442</a>:<br>
+Fix line wrapping in <code>--help</code> output.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/451">BUG #451</a>:<br>
+Fix bug with duplicate output when using <code>-o/--only-matching</code> flag.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.5.1 (2017-04-09)">0.5.1 (2017-04-09)</h1>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for vim.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/34">FEATURE #34</a>:<br>
+Add a <code>-o/--only-matching</code> flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/377">FEATURE #377</a>:<br>
+Column numbers can now be customized with a color. (The default is<br>
+no color.)</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/419">FEATURE #419</a>:<br>
+Added <code>-0</code> short flag option for <code>--null</code>.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/381">BUG #381</a>:<br>
+Include license text in all subcrates.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/418">BUG #418</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/426">BUG #426</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/439">BUG #439</a>:<br>
+Fix a few bugs with <code>-h/--help</code> output.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.5.0 (2017-03-12)">0.5.0 (2017-03-12)</h1>
+<p>This is a new minor version release of ripgrep that includes one minor breaking<br>
+change, bug fixes and several new features including support for text encodings<br>
+other than UTF-8.</p>
+<p>A notable accomplishment with respect to Rust is that ripgrep proper now only<br>
+contains a single <code>unsafe</code> use (for accessing the contents of a memory map).</p>
+<p>The <strong>breaking change</strong> is:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/380">FEATURE #380</a>:<br>
+Line numbers are now hidden by default when ripgrep is printing to a tty<br>
+<strong>and</strong> the only thing searched is stdin.</li>
+</ul>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for Ceylon, CSS, Elixir, HTML, log,<br>
+SASS, SVG, Twig</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/1">FEATURE #1</a>:<br>
+Add support for additional text encodings, including automatic detection for<br>
+UTF-16 via BOM sniffing. Explicit text encoding support with the<br>
+<code>-E/--encoding</code> flag was also added for latin-1, GBK, EUC-JP<br>
+and Shift_JIS, among others. The full list can be found here:<br>
+<a href="https://encoding.spec.whatwg.org/#concept-encoding-get">https://encoding.spec.whatwg.org/#concept-encoding-get</a></li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/129">FEATURE #129</a>:<br>
+Add a new <code>-M/--max-columns</code> flag that omits lines longer than the given<br>
+number of bytes. (Disabled by default!)</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/369">FEATURE #369</a>:<br>
+A new flag, <code>--max-filesize</code>, was added for limiting searches to files with<br>
+a maximum file size.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/52">BUG #52</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/311">BUG #311</a>:<br>
+Tweak how binary files are detected and handled. (We are slightly less<br>
+conservative and will no longer use memory without bound.)</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/326">BUG #326</a>:<br>
+When --files flag is given, we should never attempt to parse positional<br>
+arguments as regexes.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/327">BUG #327</a>:<br>
+Permit the --heading flag to override the --no-heading flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/340">BUG #340</a>:<br>
+Clarify that the <code>-u/--unrestricted</code> flags are aliases.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/343">BUG #343</a>:<br>
+Global git ignore config should use <code>$HOME/.config/git/ignore</code> and not<br>
+<code>$HOME/git/ignore</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/345">BUG #345</a>:<br>
+Clarify docs for <code>-g/--glob</code> flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/381">BUG #381</a>:<br>
+Add license files to each sub-crate.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/383">BUG #383</a>:<br>
+Use latest version of clap (for argv parsing).</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/391">BUG #392</a>:<br>
+Fix translation of set globs (e.g., <code>{foo,bar,quux}</code>) to regexes.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/401">BUG #401</a>:<br>
+Add PowerShell completion file to Windows release.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/405">BUG #405</a>:<br>
+Fix bug when excluding absolute paths with the <code>-g/--glob</code> flag.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.4.0">0.4.0</h1>
+<p>This is a new minor version release of ripgrep that includes a couple very<br>
+minor breaking changes, a few new features and lots of bug fixes.</p>
+<p>This version of ripgrep upgrades its <code>regex</code> dependency from <code>0.1</code> to <code>0.2</code>,<br>
+which includes a few minor syntax changes:</p>
+<ul>
+<li>POSIX character classes now require double bracketing. Previously, the regex<br>
+<code>[:upper:]</code> would parse as the <code>upper</code> POSIX character class. Now it parses<br>
+as the character class containing the characters <code>:upper:</code>. The fix to this<br>
+change is to use <code>[[:upper:]]</code> instead. Note that variants like<br>
+<code>[[:upper:][:blank:]]</code> continue to work.</li>
+<li>The character <code>[</code> must always be escaped inside a character class.</li>
+<li>The characters <code>&amp;</code>, <code>-</code> and <code>~</code> must be escaped if any one of them are<br>
+repeated consecutively. For example, <code>[&amp;]</code>, <code>[\&amp;]</code>, <code>[\&amp;\&amp;]</code>, <code>[&amp;-&amp;]</code> are all<br>
+equivalent while <code>[&amp;&amp;]</code> is illegal. (The motivation for this and the prior<br>
+change is to provide a backwards compatible path for adding character class<br>
+set notation.)</li>
+</ul>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for Crystal, Kotlin, Perl, PowerShell,<br>
+Ruby, Swig</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/83">FEATURE #83</a>:<br>
+Type definitions can now include other type definitions.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/243">FEATURE #243</a>:<br>
+<strong>BREAKING CHANGE</strong>: The <code>--column</code> flag now implies <code>--line-number</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/263">FEATURE #263</a>:<br>
+Add a new <code>--sort-files</code> flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/275">FEATURE #275</a>:<br>
+Add a new <code>--path-separator</code> flag. Useful in cygwin.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/182">BUG #182</a>:<br>
+Redux: use more portable ANSI color escape sequences when possible.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/258">BUG #258</a>:<br>
+Fix bug that caused ripgrep&apos;s parallel iterator to spin and burn CPU.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/262">BUG #262</a>:<br>
+Document how to install shell completion files.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/266">BUG #266</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/293">BUG #293</a>:<br>
+Fix handling of bold styling and change the default colors.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/268">BUG #268</a>:<br>
+Make lack of backreference support more explicit.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/271">BUG #271</a>:<br>
+Remove <code>~</code> dependency on clap.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/277">BUG #277</a>:<br>
+Fix cosmetic issue in <code>globset</code> crate docs.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/279">BUG #279</a>:<br>
+ripgrep did not terminate when <code>-q/--quiet</code> was given.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/281">BUG #281</a>:<br>
+<strong>BREAKING CHANGE</strong>: Completely remove <code>^C</code> handling from ripgrep.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/284">BUG #284</a>:<br>
+Make docs for <code>-g/--glob</code> clearer.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/286">BUG #286</a>:<br>
+When stdout is redirected to a file, don&apos;t search that file.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/287">BUG #287</a>:<br>
+Fix ZSH completions.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/295">BUG #295</a>:<br>
+Remove superfluous <code>memmap</code> dependency in <code>grep</code> crate.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/308">BUG #308</a>:<br>
+Improve docs for <code>-r/--replace</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/313">BUG #313</a>:<br>
+Update bytecount dep to latest version.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/318">BUG #318</a>:<br>
+Fix invalid UTF-8 output bug in Windows consoles.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.3.2">0.3.2</h1>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for Less, Sass, stylus, Zsh</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/229">BUG #229</a>:<br>
+Make smart case slightly less conservative.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/247">BUG #247</a>:<br>
+Clarify use of --heading/--no-heading.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/251">BUG #251</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/264">BUG #264</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/267">BUG #267</a>:<br>
+Fix matching bug caused by literal optimizations.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/256">BUG #256</a>:<br>
+Fix bug that caused <code>rg foo</code> and <code>rg foo/</code> to have different behavior<br>
+when <code>foo</code> was a symlink.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/270">BUG #270</a>:<br>
+Fix bug where patterns starting with a <code>-</code> couldn&apos;t be used with the<br>
+<code>-e/--regexp</code> flag. (This resolves a regression that was introduced in<br>
+ripgrep 0.3.0.)</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.3.1">0.3.1</h1>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/242">BUG #242</a>:<br>
+ripgrep didn&apos;t respect <code>--colors foo:none</code> correctly. Now it does.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.3.0">0.3.0</h1>
+<p>This is a new minor version release of ripgrep that includes two breaking<br>
+changes with lots of bug fixes and some new features and performance<br>
+improvements. Notably, if you had a problem with colors or piping on Windows<br>
+before, then that should now be fixed in this release.</p>
+<p><strong>BREAKING CHANGES</strong>:</p>
+<ul>
+<li>ripgrep now requires Rust 1.11 to compile. Previously, it could build on<br>
+Rust 1.9. The cause of this was the move from<br>
+<a href="https://github.com/BurntSushi/ripgrep/pull/233">Docopt to Clap</a><br>
+for argument parsing.</li>
+<li>The <code>-e/--regexp</code> flag can no longer accept a pattern starting with a <code>-</code>.<br>
+There are two work-arounds: <code>rg -- -foo</code> and <code>rg [-]foo</code> or <code>rg -e [-]foo</code><br>
+will all search for the same <code>-foo</code> pattern. The cause of this was the move<br>
+from <a href="https://github.com/BurntSushi/ripgrep/pull/233">Docopt to Clap</a><br>
+for argument parsing.<br>
+<a href="https://github.com/kbknapp/clap-rs/issues/742">This may get fixed in the<br>
+future.</a>.</li>
+</ul>
+<p>Performance improvements:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/33">PERF #33</a>:<br>
+ripgrep now performs similar to GNU grep on small corpora.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/136">PERF #136</a>:<br>
+ripgrep no longer slows down because of argument parsing when given a large<br>
+argument list.</li>
+</ul>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for Elixir.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/7">FEATURE #7</a>:<br>
+Add a <code>-f/--file</code> flag that causes ripgrep to read patterns from a file.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/51">FEATURE #51</a>:<br>
+Add a <code>--colors</code> flag that enables one to customize the colors used in<br>
+ripgrep&apos;s output.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/138">FEATURE #138</a>:<br>
+Add a <code>--files-without-match</code> flag that shows only file paths that contain<br>
+zero matches.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/230">FEATURE #230</a>:<br>
+Add completion files to the release (Bash, Fish and PowerShell).</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/37">BUG #37</a>:<br>
+Use correct ANSI escape sequences when <code>TERM=screen.linux</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/94">BUG #94</a>:<br>
+ripgrep now detects stdin on Windows automatically.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/117">BUG #117</a>:<br>
+Colors should now work correctly and automatically inside mintty.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/182">BUG #182</a>:<br>
+Colors should now work within Emacs. In particular, <code>--color=always</code> will<br>
+emit colors regardless of the current environment.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/189">BUG #189</a>:<br>
+Show less content when running <code>rg -h</code>. The full help content can be<br>
+accessed with <code>rg --help</code>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/210">BUG #210</a>:<br>
+Support non-UTF-8 file names on Unix platforms.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/231">BUG #231</a>:<br>
+Switch from block buffering to line buffering.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/241">BUG #241</a>:<br>
+Some error messages weren&apos;t suppressed when <code>--no-messages</code> was used.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.2.9">0.2.9</h1>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/226">BUG #226</a>:<br>
+File paths explicitly given on the command line weren&apos;t searched in parallel.<br>
+(This was a regression in <code>0.2.7</code>.)</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/228">BUG #228</a>:<br>
+If a directory was given to <code>--ignore-file</code>, ripgrep&apos;s memory usage would<br>
+grow without bound.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.2.8">0.2.8</h1>
+<p>Bug fixes:</p>
+<ul>
+<li>Fixed a bug with the SIMD/AVX features for using bytecount in commit<br>
+<code>4ca15a</code>.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.2.7">0.2.7</h1>
+<p>Performance improvements:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/223">PERF #223</a>:<br>
+Added a parallel recursive directory iterator. This results in major<br>
+performance improvements on large repositories.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/11">PERF #11</a>:<br>
+ripgrep now uses the <code>bytecount</code> library for counting new lines. In some<br>
+cases, ripgrep runs twice as fast. Use<br>
+<code>RUSTFLAGS=&quot;-C target-cpu=native&quot; cargo build --release --features &apos;simd-accel avx-accel&apos;</code><br>
+to get the fastest possible binary.</li>
+</ul>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for Agda, Tex, Taskpaper, Markdown,<br>
+asciidoc, textile, rdoc, org, creole, wiki, pod, C#, PDF, C, C++.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/149">FEATURE #149</a>:<br>
+Add a new <code>--no-messages</code> flag that suppresses error messages.<br>
+Note that <code>rg foo 2&gt; /dev/null</code> also works.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/159">FEATURE #159</a>:<br>
+Add a new <code>-m/--max-count</code> flag that limits the total number of matches<br>
+printed for each file searched.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/199">BUG #199</a>:<br>
+Fixed a bug where <code>-S/--smart-case</code> wasn&apos;t being applied correctly to<br>
+literal optimizations.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/203">BUG #203</a>:<br>
+Mention the full name, ripgrep, in more places. It now appears in<br>
+the output of <code>--help</code> and <code>--version</code>. The repository URL is now also<br>
+in the output of <code>--help</code> and the man page.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/215">BUG #215</a>:<br>
+Include small note about how to search for a pattern that starts with a <code>-</code>.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.2.6">0.2.6</h1>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for Fish.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/206">BUG #206</a>:<br>
+Fixed a regression with <code>-g/--glob</code> flag in <code>0.2.5</code>.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.2.5">0.2.5</h1>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for Groovy, Handlebars, Tcl, zsh and<br>
+Python.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/9">FEATURE #9</a>:<br>
+Support global gitignore config and <code>.git/info/exclude</code> files.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/45">FEATURE #45</a>:<br>
+Add --ignore-file flag for specifying additional ignore files.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/202">FEATURE #202</a>:<br>
+Introduce a new<br>
+<a href="https://github.com/BurntSushi/ripgrep/tree/master/ignore"><code>ignore</code></a><br>
+crate that encapsulates all of ripgrep&apos;s gitignore matching logic.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/44">BUG #44</a>:<br>
+ripgrep runs slowly when given lots of positional arguments that are<br>
+directories.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/119">BUG #119</a>:<br>
+ripgrep didn&apos;t reset terminal colors if it was interrupted by <code>^C</code>.<br>
+Fixed in <a href="https://github.com/BurntSushi/ripgrep/pull/187">PR #187</a>.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/184">BUG #184</a>:<br>
+Fixed a bug related to interpreting gitignore files in parent directories.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.2.4">0.2.4</h1>
+<p>SKIPPED.</p>
+<h1 ebook-toc-level-1 heading="0.2.3">0.2.3</h1>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/164">BUG #164</a>:<br>
+Fixes a segfault on macos builds.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/167">BUG #167</a>:<br>
+Clarify documentation for --threads.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.2.2">0.2.2</h1>
+<p>Packaging updates:</p>
+<ul>
+<li><code>ripgrep</code> is now in homebrew-core. <code>brew install ripgrep</code> will do the trick<br>
+on a Mac.</li>
+<li><code>ripgrep</code> is now in the Archlinux community repository.<br>
+<code>pacman -S ripgrep</code> will do the trick on Archlinux.</li>
+<li>Support has been discontinued for i686-darwin.</li>
+<li>Glob matching has been moved out into its own crate:<br>
+<a href="https://crates.io/crates/globset"><code>globset</code></a>.</li>
+</ul>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for CMake, config, Jinja, Markdown,<br>
+Spark.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/109">FEATURE #109</a>:<br>
+Add a --max-depth flag for directory traversal.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/124">FEATURE #124</a>:<br>
+Add -s/--case-sensitive flag. Overrides --smart-case.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/139">FEATURE #139</a>:<br>
+The <code>ripgrep</code> repo is now a Homebrew tap. This is useful for installing<br>
+SIMD accelerated binaries, which aren&apos;t available in homebrew-core.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/87">BUG #87</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/127">BUG #127</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/131">BUG #131</a>:<br>
+Various issues related to glob matching.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/116">BUG #116</a>:<br>
+--quiet should stop search after first match.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/121">BUG #121</a>:<br>
+--color always should show colors, even when --vimgrep is used.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/pull/122">BUG #122</a>:<br>
+Colorize file path at beginning of line.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/134">BUG #134</a>:<br>
+Processing a large ignore file (thousands of globs) was very slow.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/137">BUG #137</a>:<br>
+Always follow symlinks when given as an explicit argument.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/147">BUG #147</a>:<br>
+Clarify documentation for --replace.</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.2.1">0.2.1</h1>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for Clojure and SystemVerilog.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/89">FEATURE #89</a>:<br>
+Add a --null flag that outputs a NUL byte after every file path.</li>
+</ul>
+<p>Bug fixes:</p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/98">BUG #98</a>:<br>
+Fix a bug in single threaded mode when if opening a file failed, ripgrep<br>
+quit instead of continuing the search.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/99">BUG #99</a>:<br>
+Fix another bug in single threaded mode where empty lines were being printed<br>
+by mistake.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/105">BUG #105</a>:<br>
+Fix an off-by-one error with --column.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/106">BUG #106</a>:<br>
+Fix a bug where a whitespace only line in a gitignore file caused ripgrep<br>
+to panic (i.e., crash).</li>
+</ul>
+<h1 ebook-toc-level-1 heading="0.2.0">0.2.0</h1>
+<p>Feature enhancements:</p>
+<ul>
+<li>Added or improved file type filtering for VB, R, F#, Swift, Nim, JavaScript,<br>
+TypeScript</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/20">FEATURE #20</a>:<br>
+Adds a --no-filename flag.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/26">FEATURE #26</a>:<br>
+Adds --files-with-matches flag. Like --count, but only prints file paths<br>
+and doesn&apos;t need to count every match.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/40">FEATURE #40</a>:<br>
+Switch from using <code>.rgignore</code> to <code>.ignore</code>. Note that <code>.rgignore</code> is<br>
+still supported, but deprecated.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/68">FEATURE #68</a>:<br>
+Add --no-ignore-vcs flag that ignores .gitignore but not .ignore.</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/70">FEATURE #70</a>:<br>
+Add -S/--smart-case flag (but is disabled by default).</li>
+<li><a href="https://github.com/BurntSushi/ripgrep/issues/80">FEATURE #80</a>:<br>
+Add support for <code>{foo,bar}</code> globs.</li>
+</ul>
+<p>Many many bug fixes. Thanks every for reporting these and helping make<br>
+<code>ripgrep</code> better! (Note that I haven&apos;t captured every tracking issue here,<br>
+some were closed as duplicates.)</p>
+<ul>
+<li><a href="#ebook-heading-bug-8">BUG #8</a>:<br>
+Don&apos;t use an intermediate buffer when --threads=1. (Permits constant memory<br>
+usage.)</li>
+<li><a href="#ebook-heading-bug-15">BUG #15</a>:<br>
+Improves the documentation for --type-add.</li>
+<li><a href="#ebook-heading-bug-16">BUG #16</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/49">BUG #49</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/50">BUG #50</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/65">BUG #65</a>:<br>
+Some gitignore globs were being treated as anchored when they weren&apos;t.</li>
+<li><a href="#ebook-heading-bug-18">BUG #18</a>:<br>
+--vimgrep reported incorrect column number.</li>
+<li><a href="#ebook-heading-bug-19">BUG #19</a>:<br>
+ripgrep was hanging waiting on stdin in some Windows terminals. Note that<br>
+this introduced a new bug:<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/94">#94</a>.</li>
+<li><a href="#ebook-heading-bug-21">BUG #21</a>:<br>
+Removes leading <code>./</code> when printing file paths.</li>
+<li><a href="#ebook-heading-bug-22">BUG #22</a>:<br>
+Running <code>rg --help | echo</code> caused <code>rg</code> to panic.</li>
+<li><a href="#ebook-heading-bug-24">BUG #24</a>:<br>
+Clarify the central purpose of rg in its usage message.</li>
+<li><a href="#ebook-heading-bug-25">BUG #25</a>:<br>
+Anchored gitignore globs weren&apos;t applied in subdirectories correctly.</li>
+<li><a href="#ebook-heading-bug-30">BUG #30</a>:<br>
+Globs like <code>foo/**</code> should match contents of <code>foo</code>, but not <code>foo</code> itself.</li>
+<li><a href="#ebook-heading-bug-35">BUG #35</a>,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/81">BUG #81</a>:<br>
+When automatically detecting stdin, only read if it&apos;s a file or a fifo.<br>
+i.e., ignore stdin in <code>rg foo &lt; /dev/null</code>.</li>
+<li><a href="#ebook-heading-bug-36">BUG #36</a>:<br>
+Don&apos;t automatically pick memory maps on MacOS. Ever.</li>
+<li><a href="#ebook-heading-bug-38">BUG #38</a>:<br>
+Trailing whitespace in gitignore wasn&apos;t being ignored.</li>
+<li><a href="#ebook-heading-bug-43">BUG #43</a>:<br>
+--glob didn&apos;t work with directories.</li>
+<li><a href="#ebook-heading-bug-46">BUG #46</a>:<br>
+Use one fewer worker thread than what is provided on CLI.</li>
+<li><a href="#ebook-heading-bug-47">BUG #47</a>:<br>
+--help/--version now work even if other options are set.</li>
+<li><a href="#ebook-heading-bug-55">BUG #55</a>:<br>
+ripgrep was refusing to search /proc/cpuinfo. Fixed by disabling memory<br>
+maps for files with zero size.</li>
+<li><a href="#ebook-heading-bug-64">BUG #64</a>:<br>
+The first path given with --files set was ignored.</li>
+<li><a href="#ebook-heading-bug-67">BUG #67</a>:<br>
+Sometimes whitelist globs like <code>!/dir</code> weren&apos;t interpreted as anchored.</li>
+<li><a href="#ebook-heading-bug-77">BUG #77</a>:<br>
+When -q/--quiet flag was passed, ripgrep kept searching even after a match<br>
+was found.</li>
+<li><a href="#ebook-heading-bug-90">BUG #90</a>:<br>
+Permit whitelisting hidden files.</li>
+<li><a href="#ebook-heading-bug-93">BUG #93</a>:<br>
+ripgrep was extracting an erroneous inner literal from a repeated pattern.</li>
+</ul>
+</div><div id="ebook-heading-bug-8" ebook-toc-level-1 heading="BUG #8"><div></div></div><div id="ebook-heading-bug-15" ebook-toc-level-1 heading="BUG #15"><div></div></div><div id="ebook-heading-bug-16" ebook-toc-level-1 heading="BUG #16"><div></div></div><div id="ebook-heading-bug-18" ebook-toc-level-1 heading="BUG #18"><div></div></div><div id="ebook-heading-bug-19" ebook-toc-level-1 heading="BUG #19"><div></div></div><div id="ebook-heading-bug-21" ebook-toc-level-1 heading="BUG #21"><div></div></div><div id="ebook-heading-bug-22" ebook-toc-level-1 heading="BUG #22"><div></div></div><div id="ebook-heading-bug-24" ebook-toc-level-1 heading="BUG #24"><div></div></div><div id="ebook-heading-bug-25" ebook-toc-level-1 heading="BUG #25"><div></div></div><div id="ebook-heading-bug-30" ebook-toc-level-1 heading="BUG #30"><div></div></div><div id="ebook-heading-bug-35" ebook-toc-level-1 heading="BUG #35"><div></div></div><div id="ebook-heading-bug-36" ebook-toc-level-1 heading="BUG #36"><div></div></div><div id="ebook-heading-bug-38" ebook-toc-level-1 heading="BUG #38"><div></div></div><div id="ebook-heading-bug-43" ebook-toc-level-1 heading="BUG #43"><div></div></div><div id="ebook-heading-bug-46" ebook-toc-level-1 heading="BUG #46"><div></div></div><div id="ebook-heading-bug-47" ebook-toc-level-1 heading="BUG #47"><div></div></div><div id="ebook-heading-bug-55" ebook-toc-level-1 heading="BUG #55"><div></div></div><div id="ebook-heading-bug-64" ebook-toc-level-1 heading="BUG #64"><div></div></div><div id="ebook-heading-bug-67" ebook-toc-level-1 heading="BUG #67"><div></div></div><div id="ebook-heading-bug-77" ebook-toc-level-1 heading="BUG #77"><div></div></div><div id="ebook-heading-bug-90" ebook-toc-level-1 heading="BUG #90"><div></div></div><div id="ebook-heading-bug-93" ebook-toc-level-1 heading="BUG #93"><div></div></div></body></html>
+    </div>
+  </body>
+</html>

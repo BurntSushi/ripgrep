@@ -1,0 +1,1040 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>no title</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+    .markdown-preview{width:100%;height:100%;box-sizing:border-box}.markdown-preview .pagebreak,.markdown-preview .newpage{page-break-before:always}.markdown-preview pre.line-numbers{position:relative;padding-left:3.8em;counter-reset:linenumber}.markdown-preview pre.line-numbers>code{position:relative}.markdown-preview pre.line-numbers .line-numbers-rows{position:absolute;pointer-events:none;top:1em;font-size:100%;left:0;width:3em;letter-spacing:-1px;border-right:1px solid #999;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.markdown-preview pre.line-numbers .line-numbers-rows>span{pointer-events:none;display:block;counter-increment:linenumber}.markdown-preview pre.line-numbers .line-numbers-rows>span:before{content:counter(linenumber);color:#999;display:block;padding-right:.8em;text-align:right}.markdown-preview .mathjax-exps .MathJax_Display{text-align:center !important}.markdown-preview:not([for="preview"]) .code-chunk .btn-group{display:none}.markdown-preview:not([for="preview"]) .code-chunk .status{display:none}.markdown-preview:not([for="preview"]) .code-chunk .output-div{margin-bottom:16px}.markdown-preview .md-toc{padding:0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link p,.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link div{display:inline}.markdown-preview .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}.scrollbar-style::-webkit-scrollbar{width:8px}.scrollbar-style::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}.scrollbar-style::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,0.66);border:4px solid rgba(150,150,150,0.66);background-clip:content-box}html body[for="html-export"]:not([data-presentation-mode]){position:relative;width:100%;height:100%;top:0;left:0;margin:0;padding:0;overflow:auto}html body[for="html-export"]:not([data-presentation-mode]) .markdown-preview{position:relative;top:0}@media screen and (min-width:914px){html body[for="html-export"]:not([data-presentation-mode]) .markdown-preview{padding:2em calc(50% - 457px + 2em)}}@media screen and (max-width:914px){html body[for="html-export"]:not([data-presentation-mode]) .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for="html-export"]:not([data-presentation-mode]) .markdown-preview{font-size:14px !important;padding:1em}}@media print{html body[for="html-export"]:not([data-presentation-mode]) #sidebar-toc-btn{display:none}}html body[for="html-export"]:not([data-presentation-mode]) #sidebar-toc-btn{position:fixed;bottom:8px;left:8px;font-size:28px;cursor:pointer;color:inherit;z-index:99;width:32px;text-align:center;opacity:.4}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] #sidebar-toc-btn{opacity:1}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc{position:fixed;top:0;left:0;width:300px;height:100%;padding:32px 0 48px 0;font-size:14px;box-shadow:0 0 4px rgba(150,150,150,0.33);box-sizing:border-box;overflow:auto;background-color:inherit}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar{width:8px}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,0.66);border:4px solid rgba(150,150,150,0.66);background-clip:content-box}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc a{text-decoration:none}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc{padding:0 16px}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link p,html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link div{display:inline}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{left:300px;width:calc(100% -  300px);padding:2em calc(50% - 457px -  300px/2);margin:0;box-sizing:border-box}@media screen and (max-width:1274px){html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{width:100%}}html body[for="html-export"]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .markdown-preview{left:50%;transform:translateX(-50%)}html body[for="html-export"]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .md-sidebar-toc{display:none}/**
+ * prism.js Github theme based on GitHub's theme.
+ * @author Sam Clarke
+ */
+code[class*="language-"],
+pre[class*="language-"] {
+  color: #333;
+  background: none;
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  word-wrap: normal;
+  line-height: 1.4;
+
+  -moz-tab-size: 8;
+  -o-tab-size: 8;
+  tab-size: 8;
+
+  -webkit-hyphens: none;
+  -moz-hyphens: none;
+  -ms-hyphens: none;
+  hyphens: none;
+}
+
+/* Code blocks */
+pre[class*="language-"] {
+  padding: .8em;
+  overflow: auto;
+  /* border: 1px solid #ddd; */
+  border-radius: 3px;
+  /* background: #fff; */
+  background: #f5f5f5;
+}
+
+/* Inline code */
+:not(pre) > code[class*="language-"] {
+  padding: .1em;
+  border-radius: .3em;
+  white-space: normal;
+  background: #f5f5f5;
+}
+
+.token.comment,
+.token.blockquote {
+  color: #969896;
+}
+
+.token.cdata {
+  color: #183691;
+}
+
+.token.doctype,
+.token.punctuation,
+.token.variable,
+.token.macro.property {
+  color: #333;
+}
+
+.token.operator,
+.token.important,
+.token.keyword,
+.token.rule,
+.token.builtin {
+  color: #a71d5d;
+}
+
+.token.string,
+.token.url,
+.token.regex,
+.token.attr-value {
+  color: #183691;
+}
+
+.token.property,
+.token.number,
+.token.boolean,
+.token.entity,
+.token.atrule,
+.token.constant,
+.token.symbol,
+.token.command,
+.token.code {
+  color: #0086b3;
+}
+
+.token.tag,
+.token.selector,
+.token.prolog {
+  color: #63a35c;
+}
+
+.token.function,
+.token.namespace,
+.token.pseudo-element,
+.token.class,
+.token.class-name,
+.token.pseudo-class,
+.token.id,
+.token.url-reference .token.variable,
+.token.attr-name {
+  color: #795da3;
+}
+
+.token.entity {
+  cursor: help;
+}
+
+.token.title,
+.token.title .token.punctuation {
+  font-weight: bold;
+  color: #1d3e81;
+}
+
+.token.list {
+  color: #ed6a43;
+}
+
+.token.inserted {
+  background-color: #eaffea;
+  color: #55a532;
+}
+
+.token.deleted {
+  background-color: #ffecec;
+  color: #bd2c00;
+}
+
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+
+/* JSON */
+.language-json .token.property {
+  color: #183691;
+}
+
+.language-markup .token.tag .token.punctuation {
+  color: #333;
+}
+
+/* CSS */
+code.language-css,
+.language-css .token.function {
+  color: #0086b3;
+}
+
+/* YAML */
+.language-yaml .token.atrule {
+  color: #63a35c;
+}
+
+code.language-yaml {
+  color: #183691;
+}
+
+/* Ruby */
+.language-ruby .token.function {
+  color: #333;
+}
+
+/* Markdown */
+.language-markdown .token.url {
+  color: #795da3;
+}
+
+/* Makefile */
+.language-makefile .token.symbol {
+  color: #795da3;
+}
+
+.language-makefile .token.variable {
+  color: #183691;
+}
+
+.language-makefile .token.builtin {
+  color: #0086b3;
+}
+
+/* Bash */
+.language-bash .token.keyword {
+  color: #0086b3;
+}
+
+/* highlight */
+pre[data-line] {
+  position: relative;
+  padding: 1em 0 1em 3em;
+}
+pre[data-line] .line-highlight-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: transparent;
+  display: block;
+  width: 100%;
+}
+
+pre[data-line] .line-highlight {
+  position: absolute;
+  left: 0;
+  right: 0;
+  padding: inherit 0;
+  margin-top: 1em;
+  background: hsla(24, 20%, 50%,.08);
+  background: linear-gradient(to right, hsla(24, 20%, 50%,.1) 70%, hsla(24, 20%, 50%,0));
+  pointer-events: none;
+  line-height: inherit;
+  white-space: pre;
+}
+
+pre[data-line] .line-highlight:before, 
+pre[data-line] .line-highlight[data-end]:after {
+  content: attr(data-start);
+  position: absolute;
+  top: .4em;
+  left: .6em;
+  min-width: 1em;
+  padding: 0 .5em;
+  background-color: hsla(24, 20%, 50%,.4);
+  color: hsl(24, 20%, 95%);
+  font: bold 65%/1.5 sans-serif;
+  text-align: center;
+  vertical-align: .3em;
+  border-radius: 999px;
+  text-shadow: none;
+  box-shadow: 0 1px white;
+}
+
+pre[data-line] .line-highlight[data-end]:after {
+  content: attr(data-end);
+  top: auto;
+  bottom: .4em;
+}.emoji {
+  height: 0.8em;
+}html body{font-family:"Helvetica Neue",Helvetica,"Segoe UI",Arial,freesans,sans-serif;font-size:16px;line-height:1.6;color:#333;background-color:#fff;overflow:initial;box-sizing:border-box;word-wrap:break-word}html body>:first-child{margin-top:0}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{line-height:1.2;margin-top:1em;margin-bottom:16px;color:#000}html body h1{font-size:2.25em;font-weight:300;padding-bottom:.3em}html body h2{font-size:1.75em;font-weight:400;padding-bottom:.3em}html body h3{font-size:1.5em;font-weight:500}html body h4{font-size:1.25em;font-weight:600}html body h5{font-size:1.1em;font-weight:600}html body h6{font-size:1em;font-weight:600}html body h1,html body h2,html body h3,html body h4,html body h5{font-weight:600}html body h5{font-size:1em}html body h6{color:#5c5c5c}html body strong{color:#000}html body del{color:#5c5c5c}html body a:not([href]){color:inherit;text-decoration:none}html body a{color:#08c;text-decoration:none}html body a:hover{color:#00a3f5;text-decoration:none}html body img{max-width:100%}html body>p{margin-top:0;margin-bottom:16px;word-wrap:break-word}html body>ul,html body>ol{margin-bottom:16px}html body ul,html body ol{padding-left:2em}html body ul.no-list,html body ol.no-list{padding:0;list-style-type:none}html body ul ul,html body ul ol,html body ol ol,html body ol ul{margin-top:0;margin-bottom:0}html body li{margin-bottom:0}html body li.task-list-item{list-style:none}html body li>p{margin-top:0;margin-bottom:0}html body .task-list-item-checkbox{margin:0 .2em .25em -1.8em;vertical-align:middle}html body .task-list-item-checkbox:hover{cursor:pointer}html body blockquote{margin:16px 0;font-size:inherit;padding:0 15px;color:#5c5c5c;background-color:#f0f0f0;border-left:4px solid #d6d6d6}html body blockquote>:first-child{margin-top:0}html body blockquote>:last-child{margin-bottom:0}html body hr{height:4px;margin:32px 0;background-color:#d6d6d6;border:0 none}html body table{margin:10px 0 15px 0;border-collapse:collapse;border-spacing:0;display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all}html body table th{font-weight:bold;color:#000}html body table td,html body table th{border:1px solid #d6d6d6;padding:6px 13px}html body dl{padding:0}html body dl dt{padding:0;margin-top:16px;font-size:1em;font-style:italic;font-weight:bold}html body dl dd{padding:0 16px;margin-bottom:16px}html body code{font-family:Menlo,Monaco,Consolas,'Courier New',monospace;font-size:.85em !important;color:#000;background-color:#f0f0f0;border-radius:3px;padding:.2em 0}html body code::before,html body code::after{letter-spacing:-0.2em;content:"\00a0"}html body pre>code{padding:0;margin:0;font-size:.85em !important;word-break:normal;white-space:pre;background:transparent;border:0}html body .highlight{margin-bottom:16px}html body .highlight pre,html body pre{padding:1em;overflow:auto;font-size:.85em !important;line-height:1.45;border:#d6d6d6;border-radius:3px}html body .highlight pre{margin-bottom:0;word-break:normal}html body pre code,html body pre tt{display:inline;max-width:initial;padding:0;margin:0;overflow:initial;line-height:inherit;word-wrap:normal;background-color:transparent;border:0}html body pre code:before,html body pre tt:before,html body pre code:after,html body pre tt:after{content:normal}html body p,html body blockquote,html body ul,html body ol,html body dl,html body pre{margin-top:0;margin-bottom:16px}html body kbd{color:#000;border:1px solid #d6d6d6;border-bottom:2px solid #c7c7c7;padding:2px 4px;background-color:#f0f0f0;border-radius:3px}@media print{html body{background-color:#fff}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{color:#000;page-break-after:avoid}html body blockquote{color:#5c5c5c}html body pre{page-break-inside:avoid}html body table{display:table}html body img{display:block;max-width:100%;max-height:100%}html body pre,html body code{word-wrap:break-word;white-space:pre}}
+    /* Please visit the URL below for more information: */
+/*   https://shd101wyy.github.io/markdown-preview-enhanced/#/customize-css */
+
+    </style>
+    
+  </head>
+  <body for="html-export">
+    <div class="mume markdown-preview">
+    <html><head></head><body><div><h2 class="mume-header" id="user-guide" ebook-toc-level-2 heading="User Guide">User Guide</h2>
+
+<p>This guide is intended to give an elementary description of ripgrep and an<br>
+overview of its capabilities. This guide assumes that ripgrep is<br>
+<a href="file:///Users/yangluchao/Documents/rust/ripgrep/README.md#installation">installed</a><br>
+and that readers have passing familiarity with using command line tools. This<br>
+also assumes a Unix-like system, although most commands are probably easily<br>
+translatable to any command line shell environment.</p>
+<h3 class="mume-header" id="table-of-contents" ebook-toc-level-3 heading="Table of Contents">Table of Contents</h3>
+
+<ul>
+<li><a href="#basics">Basics</a></li>
+<li><a href="#recursive-search">Recursive search</a></li>
+<li><a href="#automatic-filtering">Automatic filtering</a></li>
+<li><a href="#manual-filtering-globs">Manual filtering: globs</a></li>
+<li><a href="#manual-filtering-file-types">Manual filtering: file types</a></li>
+<li><a href="#replacements">Replacements</a></li>
+<li><a href="#configuration-file">Configuration file</a></li>
+<li><a href="#file-encoding">File encoding</a></li>
+<li><a href="#binary-data">Binary data</a></li>
+<li><a href="#preprocessor">Preprocessor</a></li>
+<li><a href="#common-options">Common options</a></li>
+</ul>
+<h3 class="mume-header" id="basics" ebook-toc-level-3 heading="Basics">Basics</h3>
+
+<p>ripgrep is a command line tool that searches your files for patterns that<br>
+you give it. ripgrep behaves as if reading each file line by line. If a line<br>
+matches the pattern provided to ripgrep, then that line will be printed. If a<br>
+line does not match the pattern, then the line is not printed.</p>
+<p>The best way to see how this works is with an example. To show an example, we<br>
+need something to search. Let&apos;s try searching ripgrep&apos;s source code. First<br>
+grab a ripgrep source archive from<br>
+<a href="https://github.com/BurntSushi/ripgrep/archive/0.7.1.zip">https://github.com/BurntSushi/ripgrep/archive/0.7.1.zip</a><br>
+and extract it:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ curl -LO https://github.com/BurntSushi/ripgrep/archive/0.7.1.zip
+$ unzip 0.7.1.zip
+$ cd ripgrep-0.7.1
+$ ls
+benchsuite  grep       tests         Cargo.toml       LICENSE-MIT
+ci          ignore     wincolor      CHANGELOG.md     README.md
+complete    pkg        appveyor.yml  compile          snapcraft.yaml
+doc         src        build.rs      COPYING          UNLICENSE
+globset     termcolor  Cargo.lock    HomebrewFormula
+</code></pre><p>Let&apos;s try our first search by looking for all occurrences of the word <code>fast</code><br>
+in <code>README.md</code>:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg fast README.md
+75:  faster than both. (N.B. It is not, strictly speaking, a &quot;drop-in&quot; replacement
+88:  color and full Unicode support. Unlike GNU grep, `ripgrep` stays fast while
+119:### Is it really faster than everything else?
+124:Summarizing, `ripgrep` is fast because:
+129:  optimizations to make searching very fast.
+</code></pre><p>(<strong>Note:</strong> If you see an error message from ripgrep saying that it didn&apos;t<br>
+search any files, then re-run ripgrep with the <code>--debug</code> flag. One likely cause<br>
+of this is that you have a <code>*</code> rule in a <code>$HOME/.gitignore</code> file.)</p>
+<p>So what happened here? ripgrep read the contents of <code>README.md</code>, and for each<br>
+line that contained <code>fast</code>, ripgrep printed it to your terminal. ripgrep also<br>
+included the line number for each line by default. If your terminal supports<br>
+colors, then your output might actually look something like this screenshot:</p>
+<p><a href="https://burntsushi.net/stuff/ripgrep-guide-sample.png"><img src="https://burntsushi.net/stuff/ripgrep-guide-sample.png" alt="A screenshot of a sample search ripgrep"></a></p>
+<p>In this example, we searched for something called a &quot;literal&quot; string. This<br>
+means that our pattern was just some normal text that we asked ripgrep to<br>
+find. But ripgrep supports the ability to specify patterns via <a href="https://en.wikipedia.org/wiki/Regular_expression">regular<br>
+expressions</a>. As an example,<br>
+what if we wanted to find all lines have a word that contains <code>fast</code> followed<br>
+by some number of other letters?</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;fast\w+&apos; README.md
+75:  faster than both. (N.B. It is not, strictly speaking, a &quot;drop-in&quot; replacement
+119:### Is it really faster than everything else?
+</code></pre><p>In this example, we used the pattern <code>fast\w+</code>. This pattern tells ripgrep to<br>
+look for any lines containing the letters <code>fast</code> followed by <em>one or more</em><br>
+word-like characters. Namely, <code>\w</code> matches characters that compose words (like<br>
+<code>a</code> and <code>L</code> but unlike <code>.</code> and <code></code>). The <code>+</code> after the <code>\w</code> means, &quot;match the<br>
+previous pattern one or more times.&quot; This means that the word <code>fast</code> won&apos;t<br>
+match because there are no word characters following the final <code>t</code>. But a word<br>
+like <code>faster</code> will. <code>faste</code> would also match!</p>
+<p>Here&apos;s a different variation on this same theme:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;fast\w*&apos; README.md
+75:  faster than both. (N.B. It is not, strictly speaking, a &quot;drop-in&quot; replacement
+88:  color and full Unicode support. Unlike GNU grep, `ripgrep` stays fast while
+119:### Is it really faster than everything else?
+124:Summarizing, `ripgrep` is fast because:
+129:  optimizations to make searching very fast.
+</code></pre><p>In this case, we used <code>fast\w*</code> for our pattern instead of <code>fast\w+</code>. The <code>*</code><br>
+means that it should match <em>zero</em> or more times. In this case, ripgrep will<br>
+print the same lines as the pattern <code>fast</code>, but if your terminal supports<br>
+colors, you&apos;ll notice that <code>faster</code> will be highlighted instead of just the<br>
+<code>fast</code> prefix.</p>
+<p>It is beyond the scope of this guide to provide a full tutorial on regular<br>
+expressions, but ripgrep&apos;s specific syntax is documented here:<br>
+<a href="https://docs.rs/regex/*/regex/#syntax">https://docs.rs/regex/*/regex/#syntax</a></p>
+<h3 class="mume-header" id="recursive-search" ebook-toc-level-3 heading="Recursive search">Recursive search</h3>
+
+<p>In the previous section, we showed how to use ripgrep to search a single file.<br>
+In this section, we&apos;ll show how to use ripgrep to search an entire directory<br>
+of files. In fact, <em>recursively</em> searching your current working directory is<br>
+the default mode of operation for ripgrep, which means doing this is very<br>
+simple.</p>
+<p>Using our unzipped archive of ripgrep source code, here&apos;s how to find all<br>
+function definitions whose name is <code>write</code>:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;fn write\(&apos;
+src/printer.rs
+469:    fn write(&amp;mut self, buf: &amp;[u8]) {
+
+termcolor/src/lib.rs
+227:    fn write(&amp;mut self, b: &amp;[u8]) -&gt; io::Result&lt;usize&gt; {
+250:    fn write(&amp;mut self, b: &amp;[u8]) -&gt; io::Result&lt;usize&gt; {
+428:    fn write(&amp;mut self, b: &amp;[u8]) -&gt; io::Result&lt;usize&gt; { self.wtr.write(b) }
+441:    fn write(&amp;mut self, b: &amp;[u8]) -&gt; io::Result&lt;usize&gt; { self.wtr.write(b) }
+454:    fn write(&amp;mut self, buf: &amp;[u8]) -&gt; io::Result&lt;usize&gt; {
+511:    fn write(&amp;mut self, buf: &amp;[u8]) -&gt; io::Result&lt;usize&gt; {
+848:    fn write(&amp;mut self, buf: &amp;[u8]) -&gt; io::Result&lt;usize&gt; {
+915:    fn write(&amp;mut self, buf: &amp;[u8]) -&gt; io::Result&lt;usize&gt; {
+949:    fn write(&amp;mut self, buf: &amp;[u8]) -&gt; io::Result&lt;usize&gt; {
+1114:    fn write(&amp;mut self, buf: &amp;[u8]) -&gt; io::Result&lt;usize&gt; {
+1348:    fn write(&amp;mut self, buf: &amp;[u8]) -&gt; io::Result&lt;usize&gt; {
+1353:    fn write(&amp;mut self, buf: &amp;[u8]) -&gt; io::Result&lt;usize&gt; {
+</code></pre><p>(<strong>Note:</strong> We escape the <code>(</code> here because <code>(</code> has special significance inside<br>
+regular expressions. You could also use <code>rg -F &apos;fn write(&apos;</code> to achieve the<br>
+same thing, where <code>-F</code> interprets your pattern as a literal string instead of<br>
+a regular expression.)</p>
+<p>In this example, we didn&apos;t specify a file at all. Instead, ripgrep defaulted<br>
+to searching your current directory in the absence of a path. In general,<br>
+<code>rg foo</code> is equivalent to <code>rg foo ./</code>.</p>
+<p>This particular search showed us results in both the <code>src</code> and <code>termcolor</code><br>
+directories. The <code>src</code> directory is the core ripgrep code where as <code>termcolor</code><br>
+is a dependency of ripgrep (and is used by other tools). What if we only wanted<br>
+to search core ripgrep code? Well, that&apos;s easy, just specify the directory you<br>
+want:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;fn write\(&apos; src
+src/printer.rs
+469:    fn write(&amp;mut self, buf: &amp;[u8]) {
+</code></pre><p>Here, ripgrep limited its search to the <code>src</code> directory. Another way of doing<br>
+this search would be to <code>cd</code> into the <code>src</code> directory and simply use <code>rg &apos;fn write\(&apos;</code> again.</p>
+<h3 class="mume-header" id="automatic-filtering" ebook-toc-level-3 heading="Automatic filtering">Automatic filtering</h3>
+
+<p>After recursive search, ripgrep&apos;s most important feature is what it <em>doesn&apos;t</em><br>
+search. By default, when you search a directory, ripgrep will ignore all of<br>
+the following:</p>
+<ol>
+<li>Files and directories that match glob patterns in these three categories:
+<ol>
+<li>gitignore globs (including global and repo-specific globs).</li>
+<li><code>.ignore</code> globs, which take precedence over all gitignore globs<br>
+when there&apos;s a conflict.</li>
+<li><code>.rgignore</code> globs, which take precedence over all <code>.ignore</code> globs<br>
+when there&apos;s a conflict.</li>
+</ol>
+</li>
+<li>Hidden files and directories.</li>
+<li>Binary files. (ripgrep considers any file with a <code>NUL</code> byte to be binary.)</li>
+<li>Symbolic links aren&apos;t followed.</li>
+</ol>
+<p>All of these things can be toggled using various flags provided by ripgrep:</p>
+<ol>
+<li>You can disable all ignore-related filtering with the <code>--no-ignore</code> flag.</li>
+<li>Hidden files and directories can be searched with the <code>--hidden</code> (<code>-.</code> for<br>
+short) flag.</li>
+<li>Binary files can be searched via the <code>--text</code> (<code>-a</code> for short) flag.<br>
+Be careful with this flag! Binary files may emit control characters to your<br>
+terminal, which might cause strange behavior.</li>
+<li>ripgrep can follow symlinks with the <code>--follow</code> (<code>-L</code> for short) flag.</li>
+</ol>
+<p>As a special convenience, ripgrep also provides a flag called <code>--unrestricted</code><br>
+(<code>-u</code> for short). Repeated uses of this flag will cause ripgrep to disable<br>
+more and more of its filtering. That is, <code>-u</code> will disable <code>.gitignore</code><br>
+handling, <code>-uu</code> will search hidden files and directories and <code>-uuu</code> will search<br>
+binary files. This is useful when you&apos;re using ripgrep and you aren&apos;t sure<br>
+whether its filtering is hiding results from you. Tacking on a couple <code>-u</code><br>
+flags is a quick way to find out. (Use the <code>--debug</code> flag if you&apos;re still<br>
+perplexed, and if that doesn&apos;t help,<br>
+<a href="https://github.com/BurntSushi/ripgrep/issues/new">file an issue</a>.)</p>
+<p>ripgrep&apos;s <code>.gitignore</code> handling actually goes a bit beyond just <code>.gitignore</code><br>
+files. ripgrep will also respect repository specific rules found in<br>
+<code>$GIT_DIR/info/exclude</code>, as well as any global ignore rules in your<br>
+<code>core.excludesFile</code> (which is usually <code>$XDG_CONFIG_HOME/git/ignore</code> on<br>
+Unix-like systems).</p>
+<p>Sometimes you want to search files that are in your <code>.gitignore</code>, so it is<br>
+possible to specify additional ignore rules or overrides in a <code>.ignore</code><br>
+(application agnostic) or <code>.rgignore</code> (ripgrep specific) file.</p>
+<p>For example, let&apos;s say you have a <code>.gitignore</code> file that looks like this:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>log/
+</code></pre><p>This generally means that any <code>log</code> directory won&apos;t be tracked by <code>git</code>.<br>
+However, perhaps it contains useful output that you&apos;d like to include in your<br>
+searches, but you still don&apos;t want to track it in <code>git</code>. You can achieve this<br>
+by creating a <code>.ignore</code> file in the same directory as the <code>.gitignore</code> file<br>
+with the following contents:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>!log/
+</code></pre><p>ripgrep treats <code>.ignore</code> files with higher precedence than <code>.gitignore</code> files<br>
+(and treats <code>.rgignore</code> files with higher precedence than <code>.ignore</code> files).<br>
+This means ripgrep will see the <code>!log/</code> whitelist rule first and search that<br>
+directory.</p>
+<p>Like <code>.gitignore</code>, a <code>.ignore</code> file can be placed in any directory. Its rules<br>
+will be processed with respect to the directory it resides in, just like<br>
+<code>.gitignore</code>.</p>
+<p>To process <code>.gitignore</code> and <code>.ignore</code> files case insensitively, use the flag<br>
+<code>--ignore-file-case-insensitive</code>. This is especially useful on case insensitive<br>
+file systems like those on Windows and macOS. Note though that this can come<br>
+with a significant performance penalty, and is therefore disabled by default.</p>
+<p>For a more in depth description of how glob patterns in a <code>.gitignore</code> file<br>
+are interpreted, please see <code>man gitignore</code>.</p>
+<h3 class="mume-header" id="manual-filtering-globs" ebook-toc-level-3 heading="Manual filtering: globs">Manual filtering: globs</h3>
+
+<p>In the previous section, we talked about ripgrep&apos;s filtering that it does by<br>
+default. It is &quot;automatic&quot; because it reacts to your environment. That is, it<br>
+uses already existing <code>.gitignore</code> files to produce more relevant search<br>
+results.</p>
+<p>In addition to automatic filtering, ripgrep also provides more manual or ad hoc<br>
+filtering. This comes in two varieties: additional glob patterns specified in<br>
+your ripgrep commands and file type filtering. This section covers glob<br>
+patterns while the next section covers file type filtering.</p>
+<p>In our ripgrep source code (see <a href="#basics">Basics</a> for instructions on how to<br>
+get a source archive to search), let&apos;s say we wanted to see which things depend<br>
+on <code>clap</code>, our argument parser.</p>
+<p>We could do this:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg clap
+[lots of results]
+</code></pre><p>But this shows us many things, and we&apos;re only interested in where we wrote<br>
+<code>clap</code> as a dependency. Instead, we could limit ourselves to TOML files, which<br>
+is how dependencies are communicated to Rust&apos;s build tool, Cargo:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg clap -g &apos;*.toml&apos;
+Cargo.toml
+35:clap = &quot;2.26&quot;
+51:clap = &quot;2.26&quot;
+</code></pre><p>The <code>-g &apos;*.toml&apos;</code> syntax says, &quot;make sure every file searched matches this<br>
+glob pattern.&quot; Note that we put <code>&apos;*.toml&apos;</code> in single quotes to prevent our<br>
+shell from expanding the <code>*</code>.</p>
+<p>If we wanted, we could tell ripgrep to search anything <em>but</em> <code>*.toml</code> files:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg clap -g &apos;!*.toml&apos;
+[lots of results]
+</code></pre><p>This will give you a lot of results again as above, but they won&apos;t include<br>
+files ending with <code>.toml</code>. Note that the use of a <code>!</code> here to mean &quot;negation&quot;<br>
+is a bit non-standard, but it was chosen to be consistent with how globs in<br>
+<code>.gitignore</code> files are written. (Although, the meaning is reversed. In<br>
+<code>.gitignore</code> files, a <code>!</code> prefix means whitelist, and on the command line, a<br>
+<code>!</code> means blacklist.)</p>
+<p>Globs are interpreted in exactly the same way as <code>.gitignore</code> patterns. That<br>
+is, later globs will override earlier globs. For example, the following command<br>
+will search only <code>*.toml</code> files:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg clap -g &apos;!*.toml&apos; -g &apos;*.toml&apos;
+</code></pre><p>Interestingly, reversing the order of the globs in this case will match<br>
+nothing, since the presence of at least one non-blacklist glob will institute a<br>
+requirement that every file searched must match at least one glob. In this<br>
+case, the blacklist glob takes precedence over the previous glob and prevents<br>
+any file from being searched at all!</p>
+<h3 class="mume-header" id="manual-filtering-file-types" ebook-toc-level-3 heading="Manual filtering: file types">Manual filtering: file types</h3>
+
+<p>Over time, you might notice that you use the same glob patterns over and over.<br>
+For example, you might find yourself doing a lot of searches where you only<br>
+want to see results for Rust files:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;fn run&apos; -g &apos;*.rs&apos;
+</code></pre><p>Instead of writing out the glob every time, you can use ripgrep&apos;s support for<br>
+file types:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;fn run&apos; --type rust
+</code></pre><p>or, more succinctly,</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;fn run&apos; -trust
+</code></pre><p>The way the <code>--type</code> flag functions is simple. It acts as a name that is<br>
+assigned to one or more globs that match the relevant files. This lets you<br>
+write a single type that might encompass a broad range of file extensions. For<br>
+example, if you wanted to search C files, you&apos;d have to check both C source<br>
+files and C header files:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;int main&apos; -g &apos;*.{c,h}&apos;
+</code></pre><p>or you could just use the C file type:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;int main&apos; -tc
+</code></pre><p>Just as you can write blacklist globs, you can blacklist file types too:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg clap --type-not rust
+</code></pre><p>or, more succinctly,</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg clap -Trust
+</code></pre><p>That is, <code>-t</code> means &quot;include files of this type&quot; where as <code>-T</code> means &quot;exclude<br>
+files of this type.&quot;</p>
+<p>To see the globs that make up a type, run <code>rg --type-list</code>:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg --type-list | rg &apos;^make:&apos;
+make: *.mak, *.mk, GNUmakefile, Gnumakefile, Makefile, gnumakefile, makefile
+</code></pre><p>By default, ripgrep comes with a bunch of pre-defined types. Generally, these<br>
+types correspond to well known public formats. But you can define your own<br>
+types as well. For example, perhaps you frequently search &quot;web&quot; files, which<br>
+consist of JavaScript, HTML and CSS:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg --type-add &apos;web:*.html&apos; --type-add &apos;web:*.css&apos; --type-add &apos;web:*.js&apos; -tweb title
+</code></pre><p>or, more succinctly,</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg --type-add &apos;web:*.{html,css,js}&apos; -tweb title
+</code></pre><p>The above command defines a new type, <code>web</code>, corresponding to the glob<br>
+<code>*.{html,css,js}</code>. It then applies the new filter with <code>-tweb</code> and searches for<br>
+the pattern <code>title</code>. If you ran</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg --type-add &apos;web:*.{html,css,js}&apos; --type-list
+</code></pre><p>Then you would see your <code>web</code> type show up in the list, even though it is not<br>
+part of ripgrep&apos;s built-in types.</p>
+<p>It is important to stress here that the <code>--type-add</code> flag only applies to the<br>
+current command. It does not add a new file type and save it somewhere in a<br>
+persistent form. If you want a type to be available in every ripgrep command,<br>
+then you should either create a shell alias:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>alias rg=&quot;rg --type-add &apos;web:*.{html,css,js}&apos;&quot;
+</code></pre><p>or add <code>--type-add=web:*.{html,css,js}</code> to your ripgrep configuration file.<br>
+(<a href="#configuration-file">Configuration files</a> are covered in more detail later.)</p>
+<h4 class="mume-header" id="the-special-all-file-type" ebook-toc-level-4 heading="The special &lt;code&gt;all&lt;/code&gt; file type">The special <code>all</code> file type</h4>
+
+<p>A special option supported by the <code>--type</code> flag is <code>all</code>. <code>--type all</code> looks<br>
+for a match in any of the supported file types listed by <code>--type-list</code>,<br>
+including those added on the command line using <code>--type-add</code>. It&apos;s equivalent<br>
+to the command <code>rg --type agda --type asciidoc --type asm ...</code>, where <code>...</code><br>
+stands for a list of <code>--type</code> flags for the rest of the types in <code>--type-list</code>.</p>
+<p>As an example, let&apos;s suppose you have a shell script in your current directory,<br>
+<code>my-shell-script</code>, which includes a shell library, <code>my-shell-library.bash</code>.<br>
+Both <code>rg --type sh</code> and <code>rg --type all</code> would only search for matches in<br>
+<code>my-shell-library.bash</code>, not <code>my-shell-script</code>, because the globs matched<br>
+by the <code>sh</code> file type don&apos;t include files without an extension. On the<br>
+other hand, <code>rg --type-not all</code> would search <code>my-shell-script</code> but not<br>
+<code>my-shell-library.bash</code>.</p>
+<h3 class="mume-header" id="replacements" ebook-toc-level-3 heading="Replacements">Replacements</h3>
+
+<p>ripgrep provides a limited ability to modify its output by replacing matched<br>
+text with some other text. This is easiest to explain with an example. Remember<br>
+when we searched for the word <code>fast</code> in ripgrep&apos;s README?</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg fast README.md
+75:  faster than both. (N.B. It is not, strictly speaking, a &quot;drop-in&quot; replacement
+88:  color and full Unicode support. Unlike GNU grep, `ripgrep` stays fast while
+119:### Is it really faster than everything else?
+124:Summarizing, `ripgrep` is fast because:
+129:  optimizations to make searching very fast.
+</code></pre><p>What if we wanted to <em>replace</em> all occurrences of <code>fast</code> with <code>FAST</code>? That&apos;s<br>
+easy with ripgrep&apos;s <code>--replace</code> flag:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg fast README.md --replace FAST
+75:  FASTer than both. (N.B. It is not, strictly speaking, a &quot;drop-in&quot; replacement
+88:  color and full Unicode support. Unlike GNU grep, `ripgrep` stays FAST while
+119:### Is it really FASTer than everything else?
+124:Summarizing, `ripgrep` is FAST because:
+129:  optimizations to make searching very FAST.
+</code></pre><p>or, more succinctly,</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg fast README.md -r FAST
+[snip]
+</code></pre><p>In essence, the <code>--replace</code> flag applies <em>only</em> to the matching portion of text<br>
+in the output. If you instead wanted to replace an entire line of text, then<br>
+you need to include the entire line in your match. For example:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;^.*fast.*$&apos; README.md -r FAST
+75:FAST
+88:FAST
+119:FAST
+124:FAST
+129:FAST
+</code></pre><p>Alternatively, you can combine the <code>--only-matching</code> (or <code>-o</code> for short) with<br>
+the <code>--replace</code> flag to achieve the same result:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg fast README.md --only-matching --replace FAST
+75:FAST
+88:FAST
+119:FAST
+124:FAST
+129:FAST
+</code></pre><p>or, more succinctly,</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg fast README.md -or FAST
+[snip]
+</code></pre><p>Finally, replacements can include capturing groups. For example, let&apos;s say<br>
+we wanted to find all occurrences of <code>fast</code> followed by another word and<br>
+join them together with a dash. The pattern we might use for that is<br>
+<code>fast\s+(\w+)</code>, which matches <code>fast</code>, followed by any amount of whitespace,<br>
+followed by any number of &quot;word&quot; characters. We put the <code>\w+</code> in a &quot;capturing<br>
+group&quot; (indicated by parentheses) so that we can reference it later in our<br>
+replacement string. For example:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;fast\s+(\w+)&apos; README.md -r &apos;fast-$1&apos;
+88:  color and full Unicode support. Unlike GNU grep, `ripgrep` stays fast-while
+124:Summarizing, `ripgrep` is fast-because:
+</code></pre><p>Our replacement string here, <code>fast-$1</code>, consists of <code>fast-</code> followed by the<br>
+contents of the capturing group at index <code>1</code>. (Capturing groups actually start<br>
+at index 0, but the <code>0</code>th capturing group always corresponds to the entire<br>
+match. The capturing group at index <code>1</code> always corresponds to the first<br>
+explicit capturing group found in the regex pattern.)</p>
+<p>Capturing groups can also be named, which is sometimes more convenient than<br>
+using the indices. For example, the following command is equivalent to the<br>
+above command:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;fast\s+(?P&lt;word&gt;\w+)&apos; README.md -r &apos;fast-$word&apos;
+88:  color and full Unicode support. Unlike GNU grep, `ripgrep` stays fast-while
+124:Summarizing, `ripgrep` is fast-because:
+</code></pre><p>It is important to note that ripgrep <strong>will never modify your files</strong>. The<br>
+<code>--replace</code> flag only controls ripgrep&apos;s output. (And there is no flag to let<br>
+you do a replacement in a file.)</p>
+<h3 class="mume-header" id="configuration-file" ebook-toc-level-3 heading="Configuration file">Configuration file</h3>
+
+<p>It is possible that ripgrep&apos;s default options aren&apos;t suitable in every case.<br>
+For that reason, and because shell aliases aren&apos;t always convenient, ripgrep<br>
+supports configuration files.</p>
+<p>Setting up a configuration file is simple. ripgrep will not look in any<br>
+predetermined directory for a config file automatically. Instead, you need to<br>
+set the <code>RIPGREP_CONFIG_PATH</code> environment variable to the file path of your<br>
+config file. Once the environment variable is set, open the file and just type<br>
+in the flags you want set automatically. There are only two rules for<br>
+describing the format of the config file:</p>
+<ol>
+<li>Every line is a shell argument, after trimming whitespace.</li>
+<li>Lines starting with <code>#</code> (optionally preceded by any amount of whitespace)<br>
+are ignored.</li>
+</ol>
+<p>In particular, there is no escaping. Each line is given to ripgrep as a single<br>
+command line argument verbatim.</p>
+<p>Here&apos;s an example of a configuration file, which demonstrates some of the<br>
+formatting peculiarities:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ cat $HOME/.ripgreprc
+# Don&apos;t let ripgrep vomit really long lines to my terminal, and show a preview.
+--max-columns=150
+--max-columns-preview
+
+# Add my &apos;web&apos; type.
+--type-add
+web:*.{html,css,js}*
+
+# Search hidden files / directories (e.g. dotfiles) by default
+--hidden
+
+# Using glob patterns to include/exclude files or folders
+--glob=!.git/*
+
+# or
+--glob
+!.git/*
+
+# Set the colors.
+--colors=line:none
+--colors=line:style:bold
+
+# Because who cares about case!?
+--smart-case
+</code></pre><p>When we use a flag that has a value, we either put the flag and the value on<br>
+the same line but delimited by an <code>=</code> sign (e.g., <code>--max-columns=150</code>), or we<br>
+put the flag and the value on two different lines. This is because ripgrep&apos;s<br>
+argument parser knows to treat the single argument <code>--max-columns=150</code> as a<br>
+flag with a value, but if we had written <code>--max-columns 150</code> in our<br>
+configuration file, then ripgrep&apos;s argument parser wouldn&apos;t know what to do<br>
+with it.</p>
+<p>Putting the flag and value on different lines is exactly equivalent and is a<br>
+matter of style.</p>
+<p>Comments are encouraged so that you remember what the config is doing. Empty<br>
+lines are OK too.</p>
+<p>So let&apos;s say you&apos;re using the above configuration file, but while you&apos;re at a<br>
+terminal, you really want to be able to see lines longer than 150 columns. What<br>
+do you do? Thankfully, all you need to do is pass <code>--max-columns 0</code> (or <code>-M0</code><br>
+for short) on the command line, which will override your configuration file&apos;s<br>
+setting. This works because ripgrep&apos;s configuration file is <em>prepended</em> to the<br>
+explicit arguments you give it on the command line. Since flags given later<br>
+override flags given earlier, everything works as expected. This works for most<br>
+other flags as well, and each flag&apos;s documentation states which other flags<br>
+override it.</p>
+<p>If you&apos;re confused about what configuration file ripgrep is reading arguments<br>
+from, then running ripgrep with the <code>--debug</code> flag should help clarify things.<br>
+The debug output should note what config file is being loaded and the arguments<br>
+that have been read from the configuration.</p>
+<p>Finally, if you want to make absolutely sure that ripgrep <em>isn&apos;t</em> reading a<br>
+configuration file, then you can pass the <code>--no-config</code> flag, which will always<br>
+prevent ripgrep from reading extraneous configuration from the environment,<br>
+regardless of what other methods of configuration are added to ripgrep in the<br>
+future.</p>
+<h3 class="mume-header" id="file-encoding" ebook-toc-level-3 heading="File encoding">File encoding</h3>
+
+<p><a href="https://en.wikipedia.org/wiki/Character_encoding">Text encoding</a> is a complex<br>
+topic, but we can try to summarize its relevancy to ripgrep:</p>
+<ul>
+<li>Files are generally just a bundle of bytes. There is no reliable way to know<br>
+their encoding.</li>
+<li>Either the encoding of the pattern must match the encoding of the files being<br>
+searched, or a form of transcoding must be performed that converts either the<br>
+pattern or the file to the same encoding as the other.</li>
+<li>ripgrep tends to work best on plain text files, and among plain text files,<br>
+the most popular encodings likely consist of ASCII, latin1 or UTF-8. As<br>
+a special exception, UTF-16 is prevalent in Windows environments</li>
+</ul>
+<p>In light of the above, here is how ripgrep behaves when <code>--encoding auto</code> is<br>
+given, which is the default:</p>
+<ul>
+<li>All input is assumed to be ASCII compatible (which means every byte that<br>
+corresponds to an ASCII codepoint actually is an ASCII codepoint). This<br>
+includes ASCII itself, latin1 and UTF-8.</li>
+<li>ripgrep works best with UTF-8. For example, ripgrep&apos;s regular expression<br>
+engine supports Unicode features. Namely, character classes like <code>\w</code> will<br>
+match all word characters by Unicode&apos;s definition and <code>.</code> will match any<br>
+Unicode codepoint instead of any byte. These constructions assume UTF-8,<br>
+so they simply won&apos;t match when they come across bytes in a file that aren&apos;t<br>
+UTF-8.</li>
+<li>To handle the UTF-16 case, ripgrep will do something called &quot;BOM sniffing&quot;<br>
+by default. That is, the first three bytes of a file will be read, and if<br>
+they correspond to a UTF-16 BOM, then ripgrep will transcode the contents of<br>
+the file from UTF-16 to UTF-8, and then execute the search on the transcoded<br>
+version of the file. (This incurs a performance penalty since transcoding<br>
+is needed in addition to regex searching.) If the file contains invalid<br>
+UTF-16, then the Unicode replacement codepoint is substituted in place of<br>
+invalid code units.</li>
+<li>To handle other cases, ripgrep provides a <code>-E/--encoding</code> flag, which permits<br>
+you to specify an encoding from the<br>
+<a href="https://encoding.spec.whatwg.org/#concept-encoding-get">Encoding Standard</a>.<br>
+ripgrep will assume <em>all</em> files searched are the encoding specified (unless<br>
+the file has a BOM) and will perform a transcoding step just like in the<br>
+UTF-16 case described above.</li>
+</ul>
+<p>By default, ripgrep will not require its input be valid UTF-8. That is, ripgrep<br>
+can and will search arbitrary bytes. The key here is that if you&apos;re searching<br>
+content that isn&apos;t UTF-8, then the usefulness of your pattern will degrade. If<br>
+you&apos;re searching bytes that aren&apos;t ASCII compatible, then it&apos;s likely the<br>
+pattern won&apos;t find anything. With all that said, this mode of operation is<br>
+important, because it lets you find ASCII or UTF-8 <em>within</em> files that are<br>
+otherwise arbitrary bytes.</p>
+<p>As a special case, the <code>-E/--encoding</code> flag supports the value <code>none</code>, which<br>
+will completely disable all encoding related logic, including BOM sniffing.<br>
+When <code>-E/--encoding</code> is set to <code>none</code>, ripgrep will search the raw bytes of<br>
+the underlying file with no transcoding step. For example, here&apos;s how you might<br>
+search the raw UTF-16 encoding of the string <code>&#x428;&#x435;&#x440;&#x43B;&#x43E;&#x43A;</code>:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;(?-u)\(\x045\x04@\x04;\x04&gt;\x04:\x04&apos; -E none -a some-utf16-file
+</code></pre><p>Of course, that&apos;s just an example meant to show how one can drop down into<br>
+raw bytes. Namely, the simpler command works as you might expect automatically:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;&#x428;&#x435;&#x440;&#x43B;&#x43E;&#x43A;&apos; some-utf16-file
+</code></pre><p>Finally, it is possible to disable ripgrep&apos;s Unicode support from within the<br>
+regular expression. For example, let&apos;s say you wanted <code>.</code> to match any byte<br>
+rather than any Unicode codepoint. (You might want this while searching a<br>
+binary file, since <code>.</code> by default will not match invalid UTF-8.) You could do<br>
+this by disabling Unicode via a regular expression flag:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;(?-u:.)&apos;
+</code></pre><p>This works for any part of the pattern. For example, the following will find<br>
+any Unicode word character followed by any ASCII word character followed by<br>
+another Unicode word character:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;\w(?-u:\w)\w&apos;
+</code></pre><h3 class="mume-header" id="binary-data" ebook-toc-level-3 heading="Binary data">Binary data</h3>
+
+<p>In addition to skipping hidden files and files in your <code>.gitignore</code> by default,<br>
+ripgrep also attempts to skip binary files. ripgrep does this by default<br>
+because binary files (like PDFs or images) are typically not things you want to<br>
+search when searching for regex matches. Moreover, if content in a binary file<br>
+did match, then it&apos;s possible for undesirable binary data to be printed to your<br>
+terminal and wreak havoc.</p>
+<p>Unfortunately, unlike skipping hidden files and respecting your <code>.gitignore</code><br>
+rules, a file cannot as easily be classified as binary. In order to figure out<br>
+whether a file is binary, the most effective heuristic that balances<br>
+correctness with performance is to simply look for <code>NUL</code> bytes. At that point,<br>
+the determination is simple: a file is considered &quot;binary&quot; if and only if it<br>
+contains a <code>NUL</code> byte somewhere in its contents.</p>
+<p>The issue is that while most binary files will have a <code>NUL</code> byte toward the<br>
+beginning of its contents, this is not necessarily true. The <code>NUL</code> byte might<br>
+be the very last byte in a large file, but that file is still considered<br>
+binary. While this leads to a fair amount of complexity inside ripgrep&apos;s<br>
+implementation, it also results in some unintuitive user experiences.</p>
+<p>At a high level, ripgrep operates in three different modes with respect to<br>
+binary files:</p>
+<ol>
+<li>The default mode is to attempt to remove binary files from a search<br>
+completely. This is meant to mirror how ripgrep removes hidden files and<br>
+files in your <code>.gitignore</code> automatically. That is, as soon as a file is<br>
+detected as binary, searching stops. If a match was already printed (because<br>
+it was detected long before a <code>NUL</code> byte), then ripgrep will print a warning<br>
+message indicating that the search stopped prematurely. This default mode<br>
+<strong>only applies to files searched by ripgrep as a result of recursive<br>
+directory traversal</strong>, which is consistent with ripgrep&apos;s other automatic<br>
+filtering. For example, <code>rg foo .file</code> will search <code>.file</code> even though it<br>
+is hidden. Similarly, <code>rg foo binary-file</code> will search <code>binary-file</code> in<br>
+&quot;binary&quot; mode automatically.</li>
+<li>Binary mode is similar to the default mode, except it will not always<br>
+stop searching after it sees a <code>NUL</code> byte. Namely, in this mode, ripgrep<br>
+will continue searching a file that is known to be binary until the first<br>
+of two conditions is met: 1) the end of the file has been reached or 2) a<br>
+match is or has been seen. This means that in binary mode, if ripgrep<br>
+reports no matches, then there are no matches in the file. When a match does<br>
+occur, ripgrep prints a message similar to one it prints when in its default<br>
+mode indicating that the search has stopped prematurely. This mode can be<br>
+forcefully enabled for all files with the <code>--binary</code> flag. The purpose of<br>
+binary mode is to provide a way to discover matches in all files, but to<br>
+avoid having binary data dumped into your terminal.</li>
+<li>Text mode completely disables all binary detection and searches all files<br>
+as if they were text. This is useful when searching a file that is<br>
+predominantly text but contains a <code>NUL</code> byte, or if you are specifically<br>
+trying to search binary data. This mode can be enabled with the <code>-a/--text</code><br>
+flag. Note that when using this mode on very large binary files, it is<br>
+possible for ripgrep to use a lot of memory.</li>
+</ol>
+<p>Unfortunately, there is one additional complexity in ripgrep that can make it<br>
+difficult to reason about binary files. That is, the way binary detection works<br>
+depends on the way that ripgrep searches your files. Specifically:</p>
+<ul>
+<li>When ripgrep uses memory maps, then binary detection is only performed on the<br>
+first few kilobytes of the file in addition to every matching line.</li>
+<li>When ripgrep doesn&apos;t use memory maps, then binary detection is performed on<br>
+all bytes searched.</li>
+</ul>
+<p>This means that whether a file is detected as binary or not can change based<br>
+on the internal search strategy used by ripgrep. If you prefer to keep<br>
+ripgrep&apos;s binary file detection consistent, then you can disable memory maps<br>
+via the <code>--no-mmap</code> flag. (The cost will be a small performance regression when<br>
+searching very large files on some platforms.)</p>
+<h3 class="mume-header" id="preprocessor" ebook-toc-level-3 heading="Preprocessor">Preprocessor</h3>
+
+<p>In ripgrep, a preprocessor is any type of command that can be run to transform<br>
+the input of every file before ripgrep searches it. This makes it possible to<br>
+search virtually any kind of content that can be automatically converted to<br>
+text without having to teach ripgrep how to read said content.</p>
+<p>One common example is searching PDFs. PDFs are first and foremost meant to be<br>
+displayed to users. But PDFs often have text streams in them that can be useful<br>
+to search. In our case, we want to search Bruce Watson&apos;s excellent<br>
+dissertation,<br>
+<a href="https://burntsushi.net/stuff/1995-watson.pdf">Taxonomies and Toolkits of Regular Language Algorithms</a>.<br>
+After downloading it, let&apos;s try searching it:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg &apos;The Commentz-Walter algorithm&apos; 1995-watson.pdf
+$
+</code></pre><p>Surely, a dissertation on regular language algorithms would mention<br>
+Commentz-Walter. Indeed it does, but our search isn&apos;t picking it up because<br>
+PDFs are a binary format, and the text shown in the PDF may not be encoded as<br>
+simple contiguous UTF-8. Namely, even passing the <code>-a/--text</code> flag to ripgrep<br>
+will not make our search work.</p>
+<p>One way to fix this is to convert the PDF to plain text first. This won&apos;t work<br>
+well for all PDFs, but does great in a lot of cases. (Note that the tool we<br>
+use, <code>pdftotext</code>, is part of the <a href="https://poppler.freedesktop.org">poppler</a><br>
+PDF rendering library.)</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ pdftotext 1995-watson.pdf &gt; 1995-watson.txt
+$ rg &apos;The Commentz-Walter algorithm&apos; 1995-watson.txt
+316:The Commentz-Walter algorithms : : : : : : : : : : : : : : :
+7165:4.4 The Commentz-Walter algorithms
+10062:in input string S , we obtain the Boyer-Moore algorithm. The Commentz-Walter algorithm
+17218:The Commentz-Walter algorithm (and its variants) displayed more interesting behaviour,
+17249:Aho-Corasick algorithms are used extensively. The Commentz-Walter algorithms are used
+17297: The Commentz-Walter algorithms (CW). In all versions of the CW algorithms, a common program skeleton is used with di erent shift functions. The CW algorithms are
+</code></pre><p>But having to explicitly convert every file can be a pain, especially when you<br>
+have a directory full of PDF files. Instead, we can use ripgrep&apos;s preprocessor<br>
+feature to search the PDF. ripgrep&apos;s <code>--pre</code> flag works by taking a single<br>
+command name and then executing that command for every file that it searches.<br>
+ripgrep passes the file path as the first and only argument to the command and<br>
+also sends the contents of the file to stdin. So let&apos;s write a simple shell<br>
+script that wraps <code>pdftotext</code> in a way that conforms to this interface:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ cat preprocess
+#!/bin/sh
+
+exec pdftotext - -
+</code></pre><p>With <code>preprocess</code> in the same directory as <code>1995-watson.pdf</code>, we can now use it<br>
+to search the PDF:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rg --pre ./preprocess &apos;The Commentz-Walter algorithm&apos; 1995-watson.pdf
+316:The Commentz-Walter algorithms : : : : : : : : : : : : : : :
+7165:4.4 The Commentz-Walter algorithms
+10062:in input string S , we obtain the Boyer-Moore algorithm. The Commentz-Walter algorithm
+17218:The Commentz-Walter algorithm (and its variants) displayed more interesting behaviour,
+17249:Aho-Corasick algorithms are used extensively. The Commentz-Walter algorithms are used
+17297: The Commentz-Walter algorithms (CW). In all versions of the CW algorithms, a common program skeleton is used with di erent shift functions. The CW algorithms are
+</code></pre><p>Note that <code>preprocess</code> must be resolvable to a command that ripgrep can read.<br>
+The simplest way to do this is to put your preprocessor command in a directory<br>
+that is in your <code>PATH</code> (or equivalent), or otherwise use an absolute path.</p>
+<p>As a bonus, this turns out to be quite a bit faster than other specialized PDF<br>
+grepping tools:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ time rg --pre ./preprocess &apos;The Commentz-Walter algorithm&apos; 1995-watson.pdf -c
+6
+
+real    0.697
+user    0.684
+sys     0.007
+maxmem  16 MB
+faults  0
+
+$ time pdfgrep &apos;The Commentz-Walter algorithm&apos; 1995-watson.pdf -c
+6
+
+real    1.336
+user    1.310
+sys     0.023
+maxmem  16 MB
+faults  0
+</code></pre><p>If you wind up needing to search a lot of PDFs, then ripgrep&apos;s parallelism can<br>
+make the speed difference even greater.</p>
+<h4 class="mume-header" id="a-more-robust-preprocessor" ebook-toc-level-4 heading="A more robust preprocessor">A more robust preprocessor</h4>
+
+<p>One of the problems with the aforementioned preprocessor is that it will fail<br>
+if you try to search a file that isn&apos;t a PDF:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ echo foo &gt; not-a-pdf
+$ rg --pre ./preprocess &apos;The Commentz-Walter algorithm&apos; not-a-pdf
+not-a-pdf: preprocessor command failed: &apos;&quot;./preprocess&quot; &quot;not-a-pdf&quot;&apos;:
+-------------------------------------------------------------------------------
+Syntax Warning: May not be a PDF file (continuing anyway)
+Syntax Error: Couldn&apos;t find trailer dictionary
+Syntax Error: Couldn&apos;t find trailer dictionary
+Syntax Error: Couldn&apos;t read xref table
+</code></pre><p>To fix this, we can make our preprocessor script a bit more robust by only<br>
+running <code>pdftotext</code> when we think the input is a non-empty PDF:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ cat preprocessor
+#!/bin/sh
+
+case &quot;$1&quot; in
+*.pdf)
+  # The -s flag ensures that the file is non-empty.
+  if [ -s &quot;$1&quot; ]; then
+    exec pdftotext - -
+  else
+    exec cat
+  fi
+  ;;
+*)
+  exec cat
+  ;;
+esac
+</code></pre><p>We can even extend our preprocessor to search other kinds of files. Sometimes<br>
+we don&apos;t always know the file type from the file name, so we can use the <code>file</code><br>
+utility to &quot;sniff&quot; the type of the file based on its contents:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ cat processor
+#!/bin/sh
+
+case &quot;$1&quot; in
+*.pdf)
+  # The -s flag ensures that the file is non-empty.
+  if [ -s &quot;$1&quot; ]; then
+    exec pdftotext - -
+  else
+    exec cat
+  fi
+  ;;
+*)
+  case $(file &quot;$1&quot;) in
+  *Zstandard*)
+    exec pzstd -cdq
+    ;;
+  *)
+    exec cat
+    ;;
+  esac
+  ;;
+esac
+</code></pre><h4 class="mume-header" id="reducing-preprocessor-overhead" ebook-toc-level-4 heading="Reducing preprocessor overhead">Reducing preprocessor overhead</h4>
+
+<p>There is one more problem with the above approach: it requires running a<br>
+preprocessor for every single file that ripgrep searches. If every file needs<br>
+a preprocessor, then this is OK. But if most don&apos;t, then this can substantially<br>
+slow down searches because of the overhead of launching new processors. You<br>
+can avoid this by telling ripgrep to only invoke the preprocessor when the file<br>
+path matches a glob. For example, consider the performance difference even when<br>
+searching a repository as small as ripgrep&apos;s:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ time rg --pre pre-rg &apos;fn is_empty&apos; -c
+crates/globset/src/lib.rs:1
+crates/matcher/src/lib.rs:2
+crates/ignore/src/overrides.rs:1
+crates/ignore/src/gitignore.rs:1
+crates/ignore/src/types.rs:1
+
+real    0.138
+user    0.485
+sys     0.209
+maxmem  7 MB
+faults  0
+
+$ time rg --pre pre-rg --pre-glob &apos;*.pdf&apos; &apos;fn is_empty&apos; -c
+crates/globset/src/lib.rs:1
+crates/ignore/src/types.rs:1
+crates/ignore/src/gitignore.rs:1
+crates/ignore/src/overrides.rs:1
+crates/matcher/src/lib.rs:2
+
+real    0.008
+user    0.010
+sys     0.002
+maxmem  7 MB
+faults  0
+</code></pre><h3 class="mume-header" id="common-options" ebook-toc-level-3 heading="Common options">Common options</h3>
+
+<p>ripgrep has a lot of flags. Too many to keep in your head at once. This section<br>
+is intended to give you a sampling of some of the most important and frequently<br>
+used options that will likely impact how you use ripgrep on a regular basis.</p>
+<ul>
+<li><code>-h</code>: Show ripgrep&apos;s condensed help output.</li>
+<li><code>--help</code>: Show ripgrep&apos;s longer form help output. (Nearly what you&apos;d find in<br>
+ripgrep&apos;s man page, so pipe it into a pager!)</li>
+<li><code>-i/--ignore-case</code>: When searching for a pattern, ignore case differences.<br>
+That is <code>rg -i fast</code> matches <code>fast</code>, <code>fASt</code>, <code>FAST</code>, etc.</li>
+<li><code>-S/--smart-case</code>: This is similar to <code>--ignore-case</code>, but disables itself<br>
+if the pattern contains any uppercase letters. Usually this flag is put into<br>
+alias or a config file.</li>
+<li><code>-F/--fixed-strings</code>: Disable regular expression matching and treat the pattern<br>
+as a literal string.</li>
+<li><code>-w/--word-regexp</code>: Require that all matches of the pattern be surrounded<br>
+by word boundaries. That is, given <code>pattern</code>, the <code>--word-regexp</code> flag will<br>
+cause ripgrep to behave as if <code>pattern</code> were actually <code>\b(?:pattern)\b</code>.</li>
+<li><code>-c/--count</code>: Report a count of total matched lines.</li>
+<li><code>--files</code>: Print the files that ripgrep <em>would</em> search, but don&apos;t actually<br>
+search them.</li>
+<li><code>-a/--text</code>: Search binary files as if they were plain text.</li>
+<li><code>-U/--multiline</code>: Permit matches to span multiple lines.</li>
+<li><code>-z/--search-zip</code>: Search compressed files (gzip, bzip2, lzma, xz, lz4,<br>
+brotli, zstd). This is disabled by default.</li>
+<li><code>-C/--context</code>: Show the lines surrounding a match.</li>
+<li><code>--sort path</code>: Force ripgrep to sort its output by file name. (This disables<br>
+parallelism, so it might be slower.)</li>
+<li><code>-L/--follow</code>: Follow symbolic links while recursively searching.</li>
+<li><code>-M/--max-columns</code>: Limit the length of lines printed by ripgrep.</li>
+<li><code>--debug</code>: Shows ripgrep&apos;s debug output. This is useful for understanding<br>
+why a particular file might be ignored from search, or what kinds of<br>
+configuration ripgrep is loading from the environment.</li>
+</ul>
+</div></body></html>
+    </div>
+  </body>
+</html>

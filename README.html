@@ -1,0 +1,683 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>no title</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+    .markdown-preview{width:100%;height:100%;box-sizing:border-box}.markdown-preview .pagebreak,.markdown-preview .newpage{page-break-before:always}.markdown-preview pre.line-numbers{position:relative;padding-left:3.8em;counter-reset:linenumber}.markdown-preview pre.line-numbers>code{position:relative}.markdown-preview pre.line-numbers .line-numbers-rows{position:absolute;pointer-events:none;top:1em;font-size:100%;left:0;width:3em;letter-spacing:-1px;border-right:1px solid #999;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.markdown-preview pre.line-numbers .line-numbers-rows>span{pointer-events:none;display:block;counter-increment:linenumber}.markdown-preview pre.line-numbers .line-numbers-rows>span:before{content:counter(linenumber);color:#999;display:block;padding-right:.8em;text-align:right}.markdown-preview .mathjax-exps .MathJax_Display{text-align:center !important}.markdown-preview:not([for="preview"]) .code-chunk .btn-group{display:none}.markdown-preview:not([for="preview"]) .code-chunk .status{display:none}.markdown-preview:not([for="preview"]) .code-chunk .output-div{margin-bottom:16px}.markdown-preview .md-toc{padding:0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link p,.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link div{display:inline}.markdown-preview .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}.scrollbar-style::-webkit-scrollbar{width:8px}.scrollbar-style::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}.scrollbar-style::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,0.66);border:4px solid rgba(150,150,150,0.66);background-clip:content-box}html body[for="html-export"]:not([data-presentation-mode]){position:relative;width:100%;height:100%;top:0;left:0;margin:0;padding:0;overflow:auto}html body[for="html-export"]:not([data-presentation-mode]) .markdown-preview{position:relative;top:0}@media screen and (min-width:914px){html body[for="html-export"]:not([data-presentation-mode]) .markdown-preview{padding:2em calc(50% - 457px + 2em)}}@media screen and (max-width:914px){html body[for="html-export"]:not([data-presentation-mode]) .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for="html-export"]:not([data-presentation-mode]) .markdown-preview{font-size:14px !important;padding:1em}}@media print{html body[for="html-export"]:not([data-presentation-mode]) #sidebar-toc-btn{display:none}}html body[for="html-export"]:not([data-presentation-mode]) #sidebar-toc-btn{position:fixed;bottom:8px;left:8px;font-size:28px;cursor:pointer;color:inherit;z-index:99;width:32px;text-align:center;opacity:.4}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] #sidebar-toc-btn{opacity:1}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc{position:fixed;top:0;left:0;width:300px;height:100%;padding:32px 0 48px 0;font-size:14px;box-shadow:0 0 4px rgba(150,150,150,0.33);box-sizing:border-box;overflow:auto;background-color:inherit}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar{width:8px}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,0.66);border:4px solid rgba(150,150,150,0.66);background-clip:content-box}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc a{text-decoration:none}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc{padding:0 16px}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link p,html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link div{display:inline}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{left:300px;width:calc(100% -  300px);padding:2em calc(50% - 457px -  300px/2);margin:0;box-sizing:border-box}@media screen and (max-width:1274px){html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for="html-export"]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{width:100%}}html body[for="html-export"]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .markdown-preview{left:50%;transform:translateX(-50%)}html body[for="html-export"]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .md-sidebar-toc{display:none}/**
+ * prism.js Github theme based on GitHub's theme.
+ * @author Sam Clarke
+ */
+code[class*="language-"],
+pre[class*="language-"] {
+  color: #333;
+  background: none;
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  word-wrap: normal;
+  line-height: 1.4;
+
+  -moz-tab-size: 8;
+  -o-tab-size: 8;
+  tab-size: 8;
+
+  -webkit-hyphens: none;
+  -moz-hyphens: none;
+  -ms-hyphens: none;
+  hyphens: none;
+}
+
+/* Code blocks */
+pre[class*="language-"] {
+  padding: .8em;
+  overflow: auto;
+  /* border: 1px solid #ddd; */
+  border-radius: 3px;
+  /* background: #fff; */
+  background: #f5f5f5;
+}
+
+/* Inline code */
+:not(pre) > code[class*="language-"] {
+  padding: .1em;
+  border-radius: .3em;
+  white-space: normal;
+  background: #f5f5f5;
+}
+
+.token.comment,
+.token.blockquote {
+  color: #969896;
+}
+
+.token.cdata {
+  color: #183691;
+}
+
+.token.doctype,
+.token.punctuation,
+.token.variable,
+.token.macro.property {
+  color: #333;
+}
+
+.token.operator,
+.token.important,
+.token.keyword,
+.token.rule,
+.token.builtin {
+  color: #a71d5d;
+}
+
+.token.string,
+.token.url,
+.token.regex,
+.token.attr-value {
+  color: #183691;
+}
+
+.token.property,
+.token.number,
+.token.boolean,
+.token.entity,
+.token.atrule,
+.token.constant,
+.token.symbol,
+.token.command,
+.token.code {
+  color: #0086b3;
+}
+
+.token.tag,
+.token.selector,
+.token.prolog {
+  color: #63a35c;
+}
+
+.token.function,
+.token.namespace,
+.token.pseudo-element,
+.token.class,
+.token.class-name,
+.token.pseudo-class,
+.token.id,
+.token.url-reference .token.variable,
+.token.attr-name {
+  color: #795da3;
+}
+
+.token.entity {
+  cursor: help;
+}
+
+.token.title,
+.token.title .token.punctuation {
+  font-weight: bold;
+  color: #1d3e81;
+}
+
+.token.list {
+  color: #ed6a43;
+}
+
+.token.inserted {
+  background-color: #eaffea;
+  color: #55a532;
+}
+
+.token.deleted {
+  background-color: #ffecec;
+  color: #bd2c00;
+}
+
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+
+/* JSON */
+.language-json .token.property {
+  color: #183691;
+}
+
+.language-markup .token.tag .token.punctuation {
+  color: #333;
+}
+
+/* CSS */
+code.language-css,
+.language-css .token.function {
+  color: #0086b3;
+}
+
+/* YAML */
+.language-yaml .token.atrule {
+  color: #63a35c;
+}
+
+code.language-yaml {
+  color: #183691;
+}
+
+/* Ruby */
+.language-ruby .token.function {
+  color: #333;
+}
+
+/* Markdown */
+.language-markdown .token.url {
+  color: #795da3;
+}
+
+/* Makefile */
+.language-makefile .token.symbol {
+  color: #795da3;
+}
+
+.language-makefile .token.variable {
+  color: #183691;
+}
+
+.language-makefile .token.builtin {
+  color: #0086b3;
+}
+
+/* Bash */
+.language-bash .token.keyword {
+  color: #0086b3;
+}
+
+/* highlight */
+pre[data-line] {
+  position: relative;
+  padding: 1em 0 1em 3em;
+}
+pre[data-line] .line-highlight-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: transparent;
+  display: block;
+  width: 100%;
+}
+
+pre[data-line] .line-highlight {
+  position: absolute;
+  left: 0;
+  right: 0;
+  padding: inherit 0;
+  margin-top: 1em;
+  background: hsla(24, 20%, 50%,.08);
+  background: linear-gradient(to right, hsla(24, 20%, 50%,.1) 70%, hsla(24, 20%, 50%,0));
+  pointer-events: none;
+  line-height: inherit;
+  white-space: pre;
+}
+
+pre[data-line] .line-highlight:before, 
+pre[data-line] .line-highlight[data-end]:after {
+  content: attr(data-start);
+  position: absolute;
+  top: .4em;
+  left: .6em;
+  min-width: 1em;
+  padding: 0 .5em;
+  background-color: hsla(24, 20%, 50%,.4);
+  color: hsl(24, 20%, 95%);
+  font: bold 65%/1.5 sans-serif;
+  text-align: center;
+  vertical-align: .3em;
+  border-radius: 999px;
+  text-shadow: none;
+  box-shadow: 0 1px white;
+}
+
+pre[data-line] .line-highlight[data-end]:after {
+  content: attr(data-end);
+  top: auto;
+  bottom: .4em;
+}.emoji {
+  height: 0.8em;
+}html body{font-family:"Helvetica Neue",Helvetica,"Segoe UI",Arial,freesans,sans-serif;font-size:16px;line-height:1.6;color:#333;background-color:#fff;overflow:initial;box-sizing:border-box;word-wrap:break-word}html body>:first-child{margin-top:0}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{line-height:1.2;margin-top:1em;margin-bottom:16px;color:#000}html body h1{font-size:2.25em;font-weight:300;padding-bottom:.3em}html body h2{font-size:1.75em;font-weight:400;padding-bottom:.3em}html body h3{font-size:1.5em;font-weight:500}html body h4{font-size:1.25em;font-weight:600}html body h5{font-size:1.1em;font-weight:600}html body h6{font-size:1em;font-weight:600}html body h1,html body h2,html body h3,html body h4,html body h5{font-weight:600}html body h5{font-size:1em}html body h6{color:#5c5c5c}html body strong{color:#000}html body del{color:#5c5c5c}html body a:not([href]){color:inherit;text-decoration:none}html body a{color:#08c;text-decoration:none}html body a:hover{color:#00a3f5;text-decoration:none}html body img{max-width:100%}html body>p{margin-top:0;margin-bottom:16px;word-wrap:break-word}html body>ul,html body>ol{margin-bottom:16px}html body ul,html body ol{padding-left:2em}html body ul.no-list,html body ol.no-list{padding:0;list-style-type:none}html body ul ul,html body ul ol,html body ol ol,html body ol ul{margin-top:0;margin-bottom:0}html body li{margin-bottom:0}html body li.task-list-item{list-style:none}html body li>p{margin-top:0;margin-bottom:0}html body .task-list-item-checkbox{margin:0 .2em .25em -1.8em;vertical-align:middle}html body .task-list-item-checkbox:hover{cursor:pointer}html body blockquote{margin:16px 0;font-size:inherit;padding:0 15px;color:#5c5c5c;background-color:#f0f0f0;border-left:4px solid #d6d6d6}html body blockquote>:first-child{margin-top:0}html body blockquote>:last-child{margin-bottom:0}html body hr{height:4px;margin:32px 0;background-color:#d6d6d6;border:0 none}html body table{margin:10px 0 15px 0;border-collapse:collapse;border-spacing:0;display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all}html body table th{font-weight:bold;color:#000}html body table td,html body table th{border:1px solid #d6d6d6;padding:6px 13px}html body dl{padding:0}html body dl dt{padding:0;margin-top:16px;font-size:1em;font-style:italic;font-weight:bold}html body dl dd{padding:0 16px;margin-bottom:16px}html body code{font-family:Menlo,Monaco,Consolas,'Courier New',monospace;font-size:.85em !important;color:#000;background-color:#f0f0f0;border-radius:3px;padding:.2em 0}html body code::before,html body code::after{letter-spacing:-0.2em;content:"\00a0"}html body pre>code{padding:0;margin:0;font-size:.85em !important;word-break:normal;white-space:pre;background:transparent;border:0}html body .highlight{margin-bottom:16px}html body .highlight pre,html body pre{padding:1em;overflow:auto;font-size:.85em !important;line-height:1.45;border:#d6d6d6;border-radius:3px}html body .highlight pre{margin-bottom:0;word-break:normal}html body pre code,html body pre tt{display:inline;max-width:initial;padding:0;margin:0;overflow:initial;line-height:inherit;word-wrap:normal;background-color:transparent;border:0}html body pre code:before,html body pre tt:before,html body pre code:after,html body pre tt:after{content:normal}html body p,html body blockquote,html body ul,html body ol,html body dl,html body pre{margin-top:0;margin-bottom:16px}html body kbd{color:#000;border:1px solid #d6d6d6;border-bottom:2px solid #c7c7c7;padding:2px 4px;background-color:#f0f0f0;border-radius:3px}@media print{html body{background-color:#fff}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{color:#000;page-break-after:avoid}html body blockquote{color:#5c5c5c}html body pre{page-break-inside:avoid}html body table{display:table}html body img{display:block;max-width:100%;max-height:100%}html body pre,html body code{word-wrap:break-word;white-space:pre}}
+    /* Please visit the URL below for more information: */
+/*   https://shd101wyy.github.io/markdown-preview-enhanced/#/customize-css */
+
+    </style>
+    
+  </head>
+  <body for="html-export">
+    <div class="mume markdown-preview">
+    <html><head></head><body><div><h2 ebook-toc-level-2 heading="ripgrep (rg)">ripgrep (rg)</h2>
+<p>ripgrep is a line-oriented search tool that recursively searches the current<br>
+directory for a regex pattern. By default, ripgrep will respect gitignore rules<br>
+and automatically skip hidden files/directories and binary files. (To disable<br>
+all automatic filtering by default, use <code>rg -uuu</code>.) ripgrep has first class<br>
+support on Windows, macOS and Linux, with binary downloads available for <a href="https://github.com/BurntSushi/ripgrep/releases">every<br>
+release</a>. ripgrep is similar to<br>
+other popular search tools like The Silver Searcher, ack and grep.</p>
+<p><a href="https://github.com/BurntSushi/ripgrep/actions"><img src="https://github.com/BurntSushi/ripgrep/workflows/ci/badge.svg" alt="Build status"></a><br>
+<a href="https://crates.io/crates/ripgrep"><img src="https://img.shields.io/crates/v/ripgrep.svg" alt="Crates.io"></a><br>
+<a href="https://repology.org/project/ripgrep/badges"><img src="https://repology.org/badge/tiny-repos/ripgrep.svg" alt="Packaging status"></a></p>
+<p>Dual-licensed under MIT or the <a href="https://unlicense.org">UNLICENSE</a>.</p>
+<h3 class="mume-header" id="changelog" ebook-toc-level-3 heading="CHANGELOG">CHANGELOG</h3>
+
+<p>Please see the <a href="file:///Users/yangluchao/Documents/rust/ripgrep/CHANGELOG.md">CHANGELOG</a> for a release history.</p>
+<h3 class="mume-header" id="documentation-quick-links" ebook-toc-level-3 heading="Documentation quick links">Documentation quick links</h3>
+
+<ul>
+<li><a href="#installation">Installation</a></li>
+<li><a href="file:///Users/yangluchao/Documents/rust/ripgrep/GUIDE.md">User Guide</a></li>
+<li><a href="file:///Users/yangluchao/Documents/rust/ripgrep/FAQ.md">Frequently Asked Questions</a></li>
+<li><a href="https://docs.rs/regex/1/regex/#syntax">Regex syntax</a></li>
+<li><a href="file:///Users/yangluchao/Documents/rust/ripgrep/GUIDE.md#configuration-file">Configuration files</a></li>
+<li><a href="file:///Users/yangluchao/Documents/rust/ripgrep/FAQ.md#complete">Shell completions</a></li>
+<li><a href="#building">Building</a></li>
+<li><a href="#translations">Translations</a></li>
+</ul>
+<h3 class="mume-header" id="screenshot-of-search-results" ebook-toc-level-3 heading="Screenshot of search results">Screenshot of search results</h3>
+
+<p><a href="https://burntsushi.net/stuff/ripgrep1.png"><img src="https://burntsushi.net/stuff/ripgrep1.png" alt="A screenshot of a sample search with ripgrep"></a></p>
+<h3 class="mume-header" id="quick-examples-comparing-tools" ebook-toc-level-3 heading="Quick examples comparing tools">Quick examples comparing tools</h3>
+
+<p>This example searches the entire<br>
+<a href="https://github.com/BurntSushi/linux">Linux kernel source tree</a><br>
+(after running <code>make defconfig &amp;&amp; make -j8</code>) for <code>[A-Z]+_SUSPEND</code>, where<br>
+all matches must be words. Timings were collected on a system with an Intel<br>
+i7-6900K 3.2 GHz.</p>
+<p>Please remember that a single benchmark is never enough! See my<br>
+<a href="https://blog.burntsushi.net/ripgrep/">blog post on ripgrep</a><br>
+for a very detailed comparison with more benchmarks and analysis.</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Command</th>
+<th>Line count</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ripgrep (Unicode)</td>
+<td><code>rg -n -w &apos;[A-Z]+_SUSPEND&apos;</code></td>
+<td>452</td>
+<td><strong>0.136s</strong></td>
+</tr>
+<tr>
+<td><a href="https://www.kernel.org/pub/software/scm/git/docs/git-grep.html">git grep</a></td>
+<td><code>git grep -P -n -w &apos;[A-Z]+_SUSPEND&apos;</code></td>
+<td>452</td>
+<td>0.348s</td>
+</tr>
+<tr>
+<td><a href="https://github.com/Genivia/ugrep">ugrep (Unicode)</a></td>
+<td><code>ugrep -r --ignore-files --no-hidden -I -w &apos;[A-Z]+_SUSPEND&apos;</code></td>
+<td>452</td>
+<td>0.506s</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ggreer/the_silver_searcher">The Silver Searcher</a></td>
+<td><code>ag -w &apos;[A-Z]+_SUSPEND&apos;</code></td>
+<td>452</td>
+<td>0.654s</td>
+</tr>
+<tr>
+<td><a href="https://www.kernel.org/pub/software/scm/git/docs/git-grep.html">git grep</a></td>
+<td><code>LC_ALL=C git grep -E -n -w &apos;[A-Z]+_SUSPEND&apos;</code></td>
+<td>452</td>
+<td>1.150s</td>
+</tr>
+<tr>
+<td><a href="https://github.com/beyondgrep/ack3">ack</a></td>
+<td><code>ack -w &apos;[A-Z]+_SUSPEND&apos;</code></td>
+<td>452</td>
+<td>4.054s</td>
+</tr>
+<tr>
+<td><a href="https://www.kernel.org/pub/software/scm/git/docs/git-grep.html">git grep (Unicode)</a></td>
+<td><code>LC_ALL=en_US.UTF-8 git grep -E -n -w &apos;[A-Z]+_SUSPEND&apos;</code></td>
+<td>452</td>
+<td>4.205s</td>
+</tr>
+</tbody>
+</table>
+<p>Here&apos;s another benchmark on the same corpus as above that disregards gitignore<br>
+files and searches with a whitelist instead. The corpus is the same as in the<br>
+previous benchmark, and the flags passed to each command ensure that they are<br>
+doing equivalent work:</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Command</th>
+<th>Line count</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ripgrep</td>
+<td><code>rg -uuu -tc -n -w &apos;[A-Z]+_SUSPEND&apos;</code></td>
+<td>388</td>
+<td><strong>0.096s</strong></td>
+</tr>
+<tr>
+<td><a href="https://github.com/Genivia/ugrep">ugrep</a></td>
+<td><code>ugrep -r -n --include=&apos;*.c&apos; --include=&apos;*.h&apos; -w &apos;[A-Z]+_SUSPEND&apos;</code></td>
+<td>388</td>
+<td>0.493s</td>
+</tr>
+<tr>
+<td><a href="https://www.gnu.org/software/grep/">GNU grep</a></td>
+<td><code>egrep -r -n --include=&apos;*.c&apos; --include=&apos;*.h&apos; -w &apos;[A-Z]+_SUSPEND&apos;</code></td>
+<td>388</td>
+<td>0.806s</td>
+</tr>
+</tbody>
+</table>
+<p>And finally, a straight-up comparison between ripgrep, ugrep and GNU grep on a<br>
+single large file cached in memory<br>
+(~13GB, <a href="http://opus.nlpl.eu/download.php?f=OpenSubtitles/v2018/mono/OpenSubtitles.raw.en.gz"><code>OpenSubtitles.raw.en.gz</code></a>):</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Command</th>
+<th>Line count</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ripgrep</td>
+<td><code>rg -w &apos;Sherlock [A-Z]\w+&apos;</code></td>
+<td>7882</td>
+<td><strong>2.769s</strong></td>
+</tr>
+<tr>
+<td><a href="https://github.com/Genivia/ugrep">ugrep</a></td>
+<td><code>ugrep -w &apos;Sherlock [A-Z]\w+&apos;</code></td>
+<td>7882</td>
+<td>6.802s</td>
+</tr>
+<tr>
+<td><a href="https://www.gnu.org/software/grep/">GNU grep</a></td>
+<td><code>LC_ALL=en_US.UTF-8 egrep -w &apos;Sherlock [A-Z]\w+&apos;</code></td>
+<td>7882</td>
+<td>9.027s</td>
+</tr>
+</tbody>
+</table>
+<p>In the above benchmark, passing the <code>-n</code> flag (for showing line numbers)<br>
+increases the times to <code>3.423s</code> for ripgrep and <code>13.031s</code> for GNU grep. ugrep<br>
+times are unaffected by the presence or absence of <code>-n</code>.</p>
+<h3 class="mume-header" id="why-should-i-use-ripgrep" ebook-toc-level-3 heading="Why should I use ripgrep?">Why should I use ripgrep?</h3>
+
+<ul>
+<li>It can replace many use cases served by other search tools<br>
+because it contains most of their features and is generally faster. (See<br>
+<a href="file:///Users/yangluchao/Documents/rust/ripgrep/FAQ.md#posix4ever">the FAQ</a> for more details on whether ripgrep can truly<br>
+replace grep.)</li>
+<li>Like other tools specialized to code search, ripgrep defaults to<br>
+<a href="file:///Users/yangluchao/Documents/rust/ripgrep/GUIDE.md#recursive-search">recursive search</a> and does <a href="file:///Users/yangluchao/Documents/rust/ripgrep/GUIDE.md#automatic-filtering">automatic<br>
+filtering</a>. Namely, ripgrep won&apos;t search files<br>
+ignored by your <code>.gitignore</code>/<code>.ignore</code>/<code>.rgignore</code> files, it won&apos;t search<br>
+hidden files and it won&apos;t search binary files. Automatic filtering can be<br>
+disabled with <code>rg -uuu</code>.</li>
+<li>ripgrep can <a href="file:///Users/yangluchao/Documents/rust/ripgrep/GUIDE.md#manual-filtering-file-types">search specific types of files</a>.<br>
+For example, <code>rg -tpy foo</code> limits your search to Python files and <code>rg -Tjs foo</code> excludes JavaScript files from your search. ripgrep can be taught about<br>
+new file types with custom matching rules.</li>
+<li>ripgrep supports many features found in <code>grep</code>, such as showing the context<br>
+of search results, searching multiple patterns, highlighting matches with<br>
+color and full Unicode support. Unlike GNU grep, ripgrep stays fast while<br>
+supporting Unicode (which is always on).</li>
+<li>ripgrep has optional support for switching its regex engine to use PCRE2.<br>
+Among other things, this makes it possible to use look-around and<br>
+backreferences in your patterns, which are not supported in ripgrep&apos;s default<br>
+regex engine. PCRE2 support can be enabled with <code>-P/--pcre2</code> (use PCRE2<br>
+always) or <code>--auto-hybrid-regex</code> (use PCRE2 only if needed). An alternative<br>
+syntax is provided via the <code>--engine (default|pcre2|auto-hybrid)</code> option.</li>
+<li>ripgrep has <a href="file:///Users/yangluchao/Documents/rust/ripgrep/GUIDE.md#replacements">rudimentary support for replacements</a>,<br>
+which permit rewriting output based on what was matched.</li>
+<li>ripgrep supports <a href="file:///Users/yangluchao/Documents/rust/ripgrep/GUIDE.md#file-encoding">searching files in text encodings</a><br>
+other than UTF-8, such as UTF-16, latin-1, GBK, EUC-JP, Shift_JIS and more.<br>
+(Some support for automatically detecting UTF-16 is provided. Other text<br>
+encodings must be specifically specified with the <code>-E/--encoding</code> flag.)</li>
+<li>ripgrep supports searching files compressed in a common format (brotli,<br>
+bzip2, gzip, lz4, lzma, xz, or zstandard) with the <code>-z/--search-zip</code> flag.</li>
+<li>ripgrep supports<br>
+<a href="file:///Users/yangluchao/Documents/rust/ripgrep/GUIDE.md#preprocessor">arbitrary input preprocessing filters</a><br>
+which could be PDF text extraction, less supported decompression, decrypting,<br>
+automatic encoding detection and so on.</li>
+<li>ripgrep can be configured via a<br>
+<a href="file:///Users/yangluchao/Documents/rust/ripgrep/GUIDE.md#configuration-file">configuration file</a>.</li>
+</ul>
+<p>In other words, use ripgrep if you like speed, filtering by default, fewer<br>
+bugs and Unicode support.</p>
+<h3 class="mume-header" id="why-shouldnt-i-use-ripgrep" ebook-toc-level-3 heading="Why shouldn&amp;apos;t I use ripgrep?">Why shouldn&apos;t I use ripgrep?</h3>
+
+<p>Despite initially not wanting to add every feature under the sun to ripgrep,<br>
+over time, ripgrep has grown support for most features found in other file<br>
+searching tools. This includes searching for results spanning across multiple<br>
+lines, and opt-in support for PCRE2, which provides look-around and<br>
+backreference support.</p>
+<p>At this point, the primary reasons not to use ripgrep probably consist of one<br>
+or more of the following:</p>
+<ul>
+<li>You need a portable and ubiquitous tool. While ripgrep works on Windows,<br>
+macOS and Linux, it is not ubiquitous and it does not conform to any<br>
+standard such as POSIX. The best tool for this job is good old grep.</li>
+<li>There still exists some other feature (or bug) not listed in this README that<br>
+you rely on that&apos;s in another tool that isn&apos;t in ripgrep.</li>
+<li>There is a performance edge case where ripgrep doesn&apos;t do well where another<br>
+tool does do well. (Please file a bug report!)</li>
+<li>ripgrep isn&apos;t possible to install on your machine or isn&apos;t available for your<br>
+platform. (Please file a bug report!)</li>
+</ul>
+<h3 class="mume-header" id="is-it-really-faster-than-everything-else" ebook-toc-level-3 heading="Is it really faster than everything else?">Is it really faster than everything else?</h3>
+
+<p>Generally, yes. A large number of benchmarks with detailed analysis for each is<br>
+<a href="https://blog.burntsushi.net/ripgrep/">available on my blog</a>.</p>
+<p>Summarizing, ripgrep is fast because:</p>
+<ul>
+<li>It is built on top of<br>
+<a href="https://github.com/rust-lang/regex">Rust&apos;s regex engine</a>.<br>
+Rust&apos;s regex engine uses finite automata, SIMD and aggressive literal<br>
+optimizations to make searching very fast. (PCRE2 support can be opted into<br>
+with the <code>-P/--pcre2</code> flag.)</li>
+<li>Rust&apos;s regex library maintains performance with full Unicode support by<br>
+building UTF-8 decoding directly into its deterministic finite automaton<br>
+engine.</li>
+<li>It supports searching with either memory maps or by searching incrementally<br>
+with an intermediate buffer. The former is better for single files and the<br>
+latter is better for large directories. ripgrep chooses the best searching<br>
+strategy for you automatically.</li>
+<li>Applies your ignore patterns in <code>.gitignore</code> files using a<br>
+<a href="https://docs.rs/regex/1/regex/struct.RegexSet.html"><code>RegexSet</code></a>.<br>
+That means a single file path can be matched against multiple glob patterns<br>
+simultaneously.</li>
+<li>It uses a lock-free parallel recursive directory iterator, courtesy of<br>
+<a href="https://docs.rs/crossbeam"><code>crossbeam</code></a> and<br>
+<a href="https://docs.rs/ignore"><code>ignore</code></a>.</li>
+</ul>
+<h3 class="mume-header" id="feature-comparison" ebook-toc-level-3 heading="Feature comparison">Feature comparison</h3>
+
+<p>Andy Lester, author of <a href="https://beyondgrep.com/">ack</a>, has published an<br>
+excellent table comparing the features of ack, ag, git-grep, GNU grep and<br>
+ripgrep: <a href="https://beyondgrep.com/feature-comparison/">https://beyondgrep.com/feature-comparison/</a></p>
+<p>Note that ripgrep has grown a few significant new features recently that<br>
+are not yet present in Andy&apos;s table. This includes, but is not limited to,<br>
+configuration files, passthru, support for searching compressed files,<br>
+multiline search and opt-in fancy regex support via PCRE2.</p>
+<h3 class="mume-header" id="installation" ebook-toc-level-3 heading="Installation">Installation</h3>
+
+<p>The binary name for ripgrep is <code>rg</code>.</p>
+<p><strong><a href="https://github.com/BurntSushi/ripgrep/releases">Archives of precompiled binaries for ripgrep are available for Windows,<br>
+macOS and Linux.</a></strong> Linux and<br>
+Windows binaries are static executables. Users of platforms not explicitly<br>
+mentioned below are advised to download one of these archives.</p>
+<p>If you&apos;re a <strong>macOS Homebrew</strong> or a <strong>Linuxbrew</strong> user, then you can install<br>
+ripgrep from homebrew-core:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ brew install ripgrep
+</code></pre><p>If you&apos;re a <strong>MacPorts</strong> user, then you can install ripgrep from the<br>
+<a href="https://www.macports.org/ports.php?by=name&amp;substr=ripgrep">official ports</a>:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ sudo port install ripgrep
+</code></pre><p>If you&apos;re a <strong>Windows Chocolatey</strong> user, then you can install ripgrep from the<br>
+<a href="https://chocolatey.org/packages/ripgrep">official repo</a>:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ choco install ripgrep
+</code></pre><p>If you&apos;re a <strong>Windows Scoop</strong> user, then you can install ripgrep from the<br>
+<a href="https://github.com/ScoopInstaller/Main/blob/master/bucket/ripgrep.json">official bucket</a>:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ scoop install ripgrep
+</code></pre><p>If you&apos;re a <strong>Windows Winget</strong> user, then you can install ripgrep from the<br>
+<a href="https://github.com/microsoft/winget-pkgs/tree/master/manifests/b/BurntSushi/ripgrep">winget-pkgs</a><br>
+repository:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ winget install BurntSushi.ripgrep.MSVC
+</code></pre><p>If you&apos;re an <strong>Arch Linux</strong> user, then you can install ripgrep from the official repos:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ sudo pacman -S ripgrep
+</code></pre><p>If you&apos;re a <strong>Gentoo</strong> user, you can install ripgrep from the<br>
+<a href="https://packages.gentoo.org/packages/sys-apps/ripgrep">official repo</a>:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ sudo emerge sys-apps/ripgrep
+</code></pre><p>If you&apos;re a <strong>Fedora</strong> user, you can install ripgrep from official<br>
+repositories.</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ sudo dnf install ripgrep
+</code></pre><p>If you&apos;re an <strong>openSUSE</strong> user, ripgrep is included in <strong>openSUSE Tumbleweed</strong><br>
+and <strong>openSUSE Leap</strong> since 15.1.</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ sudo zypper install ripgrep
+</code></pre><p>If you&apos;re a <strong>RHEL/CentOS 7/8</strong> user, you can install ripgrep from<br>
+<a href="https://copr.fedorainfracloud.org/coprs/carlwgeorge/ripgrep/">copr</a>:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ sudo yum install -y yum-utils
+$ sudo yum-config-manager --add-repo=https://copr.fedorainfracloud.org/coprs/carlwgeorge/ripgrep/repo/epel-7/carlwgeorge-ripgrep-epel-7.repo
+$ sudo yum install ripgrep
+</code></pre><p>If you&apos;re a <strong>Nix</strong> user, you can install ripgrep from<br>
+<a href="https://github.com/NixOS/nixpkgs/blob/master/pkgs/tools/text/ripgrep/default.nix">nixpkgs</a>:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ nix-env --install ripgrep
+</code></pre><p>If you&apos;re a <strong>Guix</strong> user, you can install ripgrep from the official<br>
+package collection:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ sudo guix install ripgrep
+</code></pre><p>If you&apos;re a <strong>Debian</strong> user (or a user of a Debian derivative like <strong>Ubuntu</strong>),<br>
+then ripgrep can be installed using a binary <code>.deb</code> file provided in each<br>
+<a href="https://github.com/BurntSushi/ripgrep/releases">ripgrep release</a>.</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ curl -LO https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgrep_13.0.0_amd64.deb
+$ sudo dpkg -i ripgrep_13.0.0_amd64.deb
+</code></pre><p>If you run Debian stable, ripgrep is <a href="https://tracker.debian.org/pkg/rust-ripgrep">officially maintained by<br>
+Debian</a>, although its version may<br>
+be older than the <code>deb</code> package available in the previous step.</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ sudo apt-get install ripgrep
+</code></pre><p>If you&apos;re an <strong>Ubuntu Cosmic (18.10)</strong> (or newer) user, ripgrep is<br>
+<a href="https://launchpad.net/ubuntu/+source/rust-ripgrep">available</a> using the same<br>
+packaging as Debian:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ sudo apt-get install ripgrep
+</code></pre><p>(N.B. Various snaps for ripgrep on Ubuntu are also available, but none of them<br>
+seem to work right and generate a number of very strange bug reports that I<br>
+don&apos;t know how to fix and don&apos;t have the time to fix. Therefore, it is no<br>
+longer a recommended installation option.)</p>
+<p>If you&apos;re an <strong>ALT</strong> user, you can install ripgrep from the<br>
+<a href="https://packages.altlinux.org/en/search?name=ripgrep">official repo</a>:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ sudo apt-get install ripgrep
+</code></pre><p>If you&apos;re a <strong>FreeBSD</strong> user, then you can install ripgrep from the<br>
+<a href="https://www.freshports.org/textproc/ripgrep/">official ports</a>:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ sudo pkg install ripgrep
+</code></pre><p>If you&apos;re an <strong>OpenBSD</strong> user, then you can install ripgrep from the<br>
+<a href="https://openports.se/textproc/ripgrep">official ports</a>:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ doas pkg_add ripgrep
+</code></pre><p>If you&apos;re a <strong>NetBSD</strong> user, then you can install ripgrep from<br>
+<a href="https://pkgsrc.se/textproc/ripgrep">pkgsrc</a>:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ sudo pkgin install ripgrep
+</code></pre><p>If you&apos;re a <strong>Haiku x86_64</strong> user, then you can install ripgrep from the<br>
+<a href="https://github.com/haikuports/haikuports/tree/master/sys-apps/ripgrep">official ports</a>:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ sudo pkgman install ripgrep
+</code></pre><p>If you&apos;re a <strong>Haiku x86_gcc2</strong> user, then you can install ripgrep from the<br>
+same port as Haiku x86_64 using the x86 secondary architecture build:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ sudo pkgman install ripgrep_x86
+</code></pre><p>If you&apos;re a <strong>Rust programmer</strong>, ripgrep can be installed with <code>cargo</code>.</p>
+<ul>
+<li>Note that the minimum supported version of Rust for ripgrep is <strong>1.70.0</strong>,<br>
+although ripgrep may work with older versions.</li>
+<li>Note that the binary may be bigger than expected because it contains debug<br>
+symbols. This is intentional. To remove debug symbols and therefore reduce<br>
+the file size, run <code>strip</code> on the binary.</li>
+</ul>
+<pre data-role="codeBlock" data-info class="language-"><code>$ cargo install ripgrep
+</code></pre><h3 class="mume-header" id="building" ebook-toc-level-3 heading="Building">Building</h3>
+
+<p>ripgrep is written in Rust, so you&apos;ll need to grab a<br>
+<a href="https://www.rust-lang.org/">Rust installation</a> in order to compile it.<br>
+ripgrep compiles with Rust 1.70.0 (stable) or newer. In general, ripgrep tracks<br>
+the latest stable release of the Rust compiler.</p>
+<p>To build ripgrep:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ git clone https://github.com/BurntSushi/ripgrep
+$ cd ripgrep
+$ cargo build --release
+$ ./target/release/rg --version
+0.1.3
+</code></pre><p>If you have a Rust nightly compiler and a recent Intel CPU, then you can enable<br>
+additional optional SIMD acceleration like so:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>RUSTFLAGS=&quot;-C target-cpu=native&quot; cargo build --release --features &apos;simd-accel&apos;
+</code></pre><p>The <code>simd-accel</code> feature enables SIMD support in certain ripgrep dependencies<br>
+(responsible for transcoding). They are not necessary to get SIMD optimizations<br>
+for search; those are enabled automatically. Hopefully, some day, the<br>
+<code>simd-accel</code> feature will similarly become unnecessary. <strong>WARNING:</strong> Currently,<br>
+enabling this option can increase compilation times dramatically.</p>
+<p>Finally, optional PCRE2 support can be built with ripgrep by enabling the<br>
+<code>pcre2</code> feature:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ cargo build --release --features &apos;pcre2&apos;
+</code></pre><p>(Tip: use <code>--features &apos;pcre2 simd-accel&apos;</code> to also include compile time SIMD<br>
+optimizations, which will only work with a nightly compiler.)</p>
+<p>Enabling the PCRE2 feature works with a stable Rust compiler and will<br>
+attempt to automatically find and link with your system&apos;s PCRE2 library via<br>
+<code>pkg-config</code>. If one doesn&apos;t exist, then ripgrep will build PCRE2 from source<br>
+using your system&apos;s C compiler and then statically link it into the final<br>
+executable. Static linking can be forced even when there is an available PCRE2<br>
+system library by either building ripgrep with the MUSL target or by setting<br>
+<code>PCRE2_SYS_STATIC=1</code>.</p>
+<p>ripgrep can be built with the MUSL target on Linux by first installing the MUSL<br>
+library on your system (consult your friendly neighborhood package manager).<br>
+Then you just need to add MUSL support to your Rust toolchain and rebuild<br>
+ripgrep, which yields a fully static executable:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ rustup target add x86_64-unknown-linux-musl
+$ cargo build --release --target x86_64-unknown-linux-musl
+</code></pre><p>Applying the <code>--features</code> flag from above works as expected. If you want to<br>
+build a static executable with MUSL and with PCRE2, then you will need to have<br>
+<code>musl-gcc</code> installed, which might be in a separate package from the actual<br>
+MUSL library, depending on your Linux distribution.</p>
+<h3 class="mume-header" id="running-tests" ebook-toc-level-3 heading="Running tests">Running tests</h3>
+
+<p>ripgrep is relatively well-tested, including both unit tests and integration<br>
+tests. To run the full test suite, use:</p>
+<pre data-role="codeBlock" data-info class="language-"><code>$ cargo test --all
+</code></pre><p>from the repository root.</p>
+<h3 class="mume-header" id="related-tools" ebook-toc-level-3 heading="Related tools">Related tools</h3>
+
+<ul>
+<li><a href="https://github.com/dandavison/delta">delta</a> is a syntax highlighting<br>
+pager that supports the <code>rg --json</code> output format. So all you need to do to<br>
+make it work is <code>rg --json pattern | delta</code>. See <a href="https://dandavison.github.io/delta/grep.html">delta&apos;s manual section on<br>
+grep</a> for more details.</li>
+</ul>
+<h3 class="mume-header" id="vulnerability-reporting" ebook-toc-level-3 heading="Vulnerability reporting">Vulnerability reporting</h3>
+
+<p>For reporting a security vulnerability, please<br>
+<a href="https://blog.burntsushi.net/about/">contact Andrew Gallant</a>.<br>
+The contact page has my email address and PGP public key if you wish to send an<br>
+encrypted message.</p>
+<h3 class="mume-header" id="translations" ebook-toc-level-3 heading="Translations">Translations</h3>
+
+<p>The following is a list of known translations of ripgrep&apos;s documentation. These<br>
+are unofficially maintained and may not be up to date.</p>
+<ul>
+<li><a href="#ebook-heading-chinese">Chinese</a></li>
+<li><a href="#ebook-heading-spanish">Spanish</a></li>
+</ul>
+</div><div id="ebook-heading-chinese" ebook-toc-level-1 heading="Chinese"><div></div></div><div id="ebook-heading-spanish" ebook-toc-level-1 heading="Spanish"><div></div></div></body></html>
+    </div>
+  </body>
+</html>
