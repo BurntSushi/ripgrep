@@ -204,28 +204,28 @@ If you're a **macOS Homebrew** or a **Linuxbrew** user, then you can install
 ripgrep from homebrew-core:
 
 ```
-$ brew install ripgrep
+brew install ripgrep
 ```
 
 If you're a **MacPorts** user, then you can install ripgrep from the
 [official ports](https://www.macports.org/ports.php?by=name&substr=ripgrep):
 
 ```
-$ sudo port install ripgrep
+sudo port install ripgrep
 ```
 
 If you're a **Windows Chocolatey** user, then you can install ripgrep from the
 [official repo](https://chocolatey.org/packages/ripgrep):
 
 ```
-$ choco install ripgrep
+choco install ripgrep
 ```
 
 If you're a **Windows Scoop** user, then you can install ripgrep from the
 [official bucket](https://github.com/ScoopInstaller/Main/blob/master/bucket/ripgrep.json):
 
 ```
-$ scoop install ripgrep
+scoop install ripgrep
 ```
 
 If you're a **Windows Winget** user, then you can install ripgrep from the
@@ -233,57 +233,57 @@ If you're a **Windows Winget** user, then you can install ripgrep from the
 repository:
 
 ```
-$ winget install BurntSushi.ripgrep.MSVC
+winget install BurntSushi.ripgrep.MSVC
 ```
 
 If you're an **Arch Linux** user, then you can install ripgrep from the official repos:
 
 ```
-$ sudo pacman -S ripgrep
+sudo pacman -S ripgrep
 ```
 
 If you're a **Gentoo** user, you can install ripgrep from the
 [official repo](https://packages.gentoo.org/packages/sys-apps/ripgrep):
 
 ```
-$ sudo emerge sys-apps/ripgrep
+sudo emerge sys-apps/ripgrep
 ```
 
 If you're a **Fedora** user, you can install ripgrep from official
 repositories.
 
 ```
-$ sudo dnf install ripgrep
+sudo dnf install ripgrep
 ```
 
 If you're an **openSUSE** user, ripgrep is included in **openSUSE Tumbleweed**
 and **openSUSE Leap** since 15.1.
 
 ```
-$ sudo zypper install ripgrep
+sudo zypper install ripgrep
 ```
 
 If you're a **RHEL/CentOS 7/8** user, you can install ripgrep from
 [copr](https://copr.fedorainfracloud.org/coprs/carlwgeorge/ripgrep/):
 
 ```
-$ sudo yum install -y yum-utils
-$ sudo yum-config-manager --add-repo=https://copr.fedorainfracloud.org/coprs/carlwgeorge/ripgrep/repo/epel-7/carlwgeorge-ripgrep-epel-7.repo
-$ sudo yum install ripgrep
+sudo yum install -y yum-utils &&
+sudo yum-config-manager --add-repo=https://copr.fedorainfracloud.org/coprs/carlwgeorge/ripgrep/repo/epel-7/carlwgeorge-ripgrep-epel-7.repo &&
+sudo yum install ripgrep
 ```
 
 If you're a **Nix** user, you can install ripgrep from
 [nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/tools/text/ripgrep/default.nix):
 
 ```
-$ nix-env --install ripgrep
+nix-env --install ripgrep
 ```
 
 If you're a **Guix** user, you can install ripgrep from the official
 package collection:
 
 ```
-$ sudo guix install ripgrep
+sudo guix install ripgrep
 ```
 
 If you're a **Debian** user (or a user of a Debian derivative like **Ubuntu**),
@@ -291,8 +291,8 @@ then ripgrep can be installed using a binary `.deb` file provided in each
 [ripgrep release](https://github.com/BurntSushi/ripgrep/releases).
 
 ```
-$ curl -LO https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgrep_13.0.0_amd64.deb
-$ sudo dpkg -i ripgrep_13.0.0_amd64.deb
+curl -LO https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgrep_13.0.0_amd64.deb
+sudo dpkg -i ripgrep_13.0.0_amd64.deb
 ```
 
 If you run Debian stable, ripgrep is [officially maintained by
@@ -300,7 +300,7 @@ Debian](https://tracker.debian.org/pkg/rust-ripgrep), although its version may
 be older than the `deb` package available in the previous step.
 
 ```
-$ sudo apt-get install ripgrep
+sudo apt-get install ripgrep
 ```
 
 If you're an **Ubuntu Cosmic (18.10)** (or newer) user, ripgrep is
@@ -308,7 +308,7 @@ If you're an **Ubuntu Cosmic (18.10)** (or newer) user, ripgrep is
 packaging as Debian:
 
 ```
-$ sudo apt-get install ripgrep
+sudo apt-get install ripgrep
 ```
 
 (N.B. Various snaps for ripgrep on Ubuntu are also available, but none of them
@@ -320,42 +320,42 @@ If you're an **ALT** user, you can install ripgrep from the
 [official repo](https://packages.altlinux.org/en/search?name=ripgrep):
 
 ```
-$ sudo apt-get install ripgrep
+sudo apt-get install ripgrep
 ```
 
 If you're a **FreeBSD** user, then you can install ripgrep from the
 [official ports](https://www.freshports.org/textproc/ripgrep/):
 
 ```
-$ sudo pkg install ripgrep
+sudo pkg install ripgrep
 ```
 
 If you're an **OpenBSD** user, then you can install ripgrep from the
 [official ports](https://openports.se/textproc/ripgrep):
 
 ```
-$ doas pkg_add ripgrep
+doas pkg_add ripgrep
 ```
 
 If you're a **NetBSD** user, then you can install ripgrep from
 [pkgsrc](https://pkgsrc.se/textproc/ripgrep):
 
 ```
-$ sudo pkgin install ripgrep
+sudo pkgin install ripgrep
 ```
 
 If you're a **Haiku x86_64** user, then you can install ripgrep from the
 [official ports](https://github.com/haikuports/haikuports/tree/master/sys-apps/ripgrep):
 
 ```
-$ sudo pkgman install ripgrep
+sudo pkgman install ripgrep
 ```
 
 If you're a **Haiku x86_gcc2** user, then you can install ripgrep from the
 same port as Haiku x86_64 using the x86 secondary architecture build:
 
 ```
-$ sudo pkgman install ripgrep_x86
+sudo pkgman install ripgrep_x86
 ```
 
 If you're a **Rust programmer**, ripgrep can be installed with `cargo`.
@@ -367,7 +367,7 @@ If you're a **Rust programmer**, ripgrep can be installed with `cargo`.
   the file size, run `strip` on the binary.
 
 ```
-$ cargo install ripgrep
+cargo install ripgrep
 ```
 
 
@@ -381,10 +381,13 @@ the latest stable release of the Rust compiler.
 To build ripgrep:
 
 ```
-$ git clone https://github.com/BurntSushi/ripgrep
-$ cd ripgrep
-$ cargo build --release
-$ ./target/release/rg --version
+git clone https://github.com/BurntSushi/ripgrep &&
+cd ripgrep &&
+cargo build --release &&
+./target/release/rg --version &&
+```
+
+```
 0.1.3
 ```
 
@@ -405,7 +408,7 @@ Finally, optional PCRE2 support can be built with ripgrep by enabling the
 `pcre2` feature:
 
 ```
-$ cargo build --release --features 'pcre2'
+cargo build --release --features 'pcre2'
 ```
 
 (Tip: use `--features 'pcre2 simd-accel'` to also include compile time SIMD
@@ -425,8 +428,8 @@ Then you just need to add MUSL support to your Rust toolchain and rebuild
 ripgrep, which yields a fully static executable:
 
 ```
-$ rustup target add x86_64-unknown-linux-musl
-$ cargo build --release --target x86_64-unknown-linux-musl
+rustup target add x86_64-unknown-linux-musl &&
+cargo build --release --target x86_64-unknown-linux-musl
 ```
 
 Applying the `--features` flag from above works as expected. If you want to
@@ -441,7 +444,7 @@ ripgrep is relatively well-tested, including both unit tests and integration
 tests. To run the full test suite, use:
 
 ```
-$ cargo test --all
+cargo test --all
 ```
 
 from the repository root.
