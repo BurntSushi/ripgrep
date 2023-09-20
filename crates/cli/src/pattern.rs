@@ -1,10 +1,4 @@
-use std::error;
-use std::ffi::OsStr;
-use std::fmt;
-use std::fs::File;
-use std::io;
-use std::path::Path;
-use std::str;
+use std::{ffi::OsStr, io, path::Path};
 
 use bstr::io::BufReadExt;
 
@@ -28,14 +22,10 @@ impl InvalidPatternError {
     }
 }
 
-impl error::Error for InvalidPatternError {
-    fn description(&self) -> &str {
-        "invalid pattern"
-    }
-}
+impl std::error::Error for InvalidPatternError {}
 
-impl fmt::Display for InvalidPatternError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for InvalidPatternError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "found invalid UTF-8 in pattern at byte offset {}: {} \
@@ -77,7 +67,7 @@ pub fn pattern_from_os(pattern: &OsStr) -> Result<&str, InvalidPatternError> {
 pub fn pattern_from_bytes(
     pattern: &[u8],
 ) -> Result<&str, InvalidPatternError> {
-    str::from_utf8(pattern).map_err(|err| InvalidPatternError {
+    std::str::from_utf8(pattern).map_err(|err| InvalidPatternError {
         original: escape(pattern),
         valid_up_to: err.valid_up_to(),
     })
@@ -91,7 +81,7 @@ pub fn pattern_from_bytes(
 /// path.
 pub fn patterns_from_path<P: AsRef<Path>>(path: P) -> io::Result<Vec<String>> {
     let path = path.as_ref();
-    let file = File::open(path).map_err(|err| {
+    let file = std::fs::File::open(path).map_err(|err| {
         io::Error::new(
             io::ErrorKind::Other,
             format!("{}: {}", path.display(), err),
@@ -135,7 +125,6 @@ pub fn patterns_from_stdin() -> io::Result<Vec<String>> {
 /// ```
 /// use grep_cli::patterns_from_reader;
 ///
-/// # fn example() -> Result<(), Box<::std::error::Error>> {
 /// let patterns = "\
 /// foo
 /// bar\\s+foo
@@ -147,7 +136,7 @@ pub fn patterns_from_stdin() -> io::Result<Vec<String>> {
 ///     r"bar\s+foo",
 ///     r"[a-z]{3}",
 /// ]);
-/// # Ok(()) }
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn patterns_from_reader<R: io::Read>(rdr: R) -> io::Result<Vec<String>> {
     let mut patterns = vec![];

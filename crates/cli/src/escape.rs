@@ -1,20 +1,6 @@
 use std::ffi::OsStr;
-use std::str;
 
 use bstr::{ByteSlice, ByteVec};
-
-/// A single state in the state machine used by `unescape`.
-#[derive(Clone, Copy, Eq, PartialEq)]
-enum State {
-    /// The state after seeing a `\`.
-    Escape,
-    /// The state after seeing a `\x`.
-    HexFirst,
-    /// The state after seeing a `\x[0-9A-Fa-f]`.
-    HexSecond(char),
-    /// Default state.
-    Literal,
-}
 
 /// Escapes arbitrary bytes into a human readable string.
 ///
@@ -38,17 +24,7 @@ enum State {
 /// assert_eq!(r"foo\nbar\xFFbaz", escape(b"foo\nbar\xFFbaz"));
 /// ```
 pub fn escape(bytes: &[u8]) -> String {
-    let mut escaped = String::new();
-    for (s, e, ch) in bytes.char_indices() {
-        if ch == '\u{FFFD}' {
-            for b in bytes[s..e].bytes() {
-                escape_byte(b, &mut escaped);
-            }
-        } else {
-            escape_char(ch, &mut escaped);
-        }
-    }
-    escaped
+    bytes.escape_bytes().to_string()
 }
 
 /// Escapes an OS string into a human readable string.
@@ -89,76 +65,7 @@ pub fn escape_os(string: &OsStr) -> String {
 /// assert_eq!(&b"foo\nbar\xFFbaz"[..], &*unescape(r"foo\nbar\xFFbaz"));
 /// ```
 pub fn unescape(s: &str) -> Vec<u8> {
-    use self::State::*;
-
-    let mut bytes = vec![];
-    let mut state = Literal;
-    for c in s.chars() {
-        match state {
-            Escape => match c {
-                '\\' => {
-                    bytes.push(b'\\');
-                    state = Literal;
-                }
-                'n' => {
-                    bytes.push(b'\n');
-                    state = Literal;
-                }
-                'r' => {
-                    bytes.push(b'\r');
-                    state = Literal;
-                }
-                't' => {
-                    bytes.push(b'\t');
-                    state = Literal;
-                }
-                'x' => {
-                    state = HexFirst;
-                }
-                c => {
-                    bytes.extend(format!(r"\{}", c).into_bytes());
-                    state = Literal;
-                }
-            },
-            HexFirst => match c {
-                '0'..='9' | 'A'..='F' | 'a'..='f' => {
-                    state = HexSecond(c);
-                }
-                c => {
-                    bytes.extend(format!(r"\x{}", c).into_bytes());
-                    state = Literal;
-                }
-            },
-            HexSecond(first) => match c {
-                '0'..='9' | 'A'..='F' | 'a'..='f' => {
-                    let ordinal = format!("{}{}", first, c);
-                    let byte = u8::from_str_radix(&ordinal, 16).unwrap();
-                    bytes.push(byte);
-                    state = Literal;
-                }
-                c => {
-                    let original = format!(r"\x{}{}", first, c);
-                    bytes.extend(original.into_bytes());
-                    state = Literal;
-                }
-            },
-            Literal => match c {
-                '\\' => {
-                    state = Escape;
-                }
-                c => {
-                    bytes.extend(c.to_string().as_bytes());
-                }
-            },
-        }
-    }
-    match state {
-        Escape => bytes.push(b'\\'),
-        HexFirst => bytes.extend(b"\\x"),
-        HexSecond(c) => bytes.extend(format!("\\x{}", c).into_bytes()),
-        Literal => {}
-    }
-    bytes
+    Vec::unescape_bytes(s)
 }
 
 /// Unescapes an OS string.
@@ -169,27 +76,6 @@ pub fn unescape(s: &str) -> Vec<u8> {
 /// is, an escaped string (the thing given) should be valid UTF-8.
 pub fn unescape_os(string: &OsStr) -> Vec<u8> {
     unescape(&string.to_string_lossy())
-}
-
-/// Adds the given codepoint to the given string, escaping it if necessary.
-fn escape_char(cp: char, into: &mut String) {
-    if cp.is_ascii() {
-        escape_byte(cp as u8, into);
-    } else {
-        into.push(cp);
-    }
-}
-
-/// Adds the given byte to the given string, escaping it if necessary.
-fn escape_byte(byte: u8, into: &mut String) {
-    match byte {
-        0x21..=0x5B | 0x5D..=0x7D => into.push(byte as char),
-        b'\n' => into.push_str(r"\n"),
-        b'\r' => into.push_str(r"\r"),
-        b'\t' => into.push_str(r"\t"),
-        b'\\' => into.push_str(r"\\"),
-        _ => into.push_str(&format!(r"\x{:02X}", byte)),
-    }
 }
 
 #[cfg(test)]
@@ -215,7 +101,8 @@ mod tests {
     #[test]
     fn nul() {
         assert_eq!(b(b"\x00"), unescape(r"\x00"));
-        assert_eq!(r"\x00", escape(b"\x00"));
+        assert_eq!(b(b"\x00"), unescape(r"\0"));
+        assert_eq!(r"\0", escape(b"\x00"));
     }
 
     #[test]

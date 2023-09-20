@@ -1,9 +1,6 @@
-use std::io;
+use std::io::{self, IsTerminal};
 
-use termcolor;
-use termcolor::HyperlinkSpec;
-
-use crate::is_tty_stdout;
+use termcolor::{self, HyperlinkSpec};
 
 /// A writer that supports coloring with either line or block buffering.
 pub struct StandardStream(StandardStreamKind);
@@ -23,7 +20,7 @@ pub struct StandardStream(StandardStreamKind);
 /// The color choice given is passed along to the underlying writer. To
 /// completely disable colors in all cases, use `ColorChoice::Never`.
 pub fn stdout(color_choice: termcolor::ColorChoice) -> StandardStream {
-    if is_tty_stdout() {
+    if std::io::stdout().is_terminal() {
         stdout_buffered_line(color_choice)
     } else {
         stdout_buffered_block(color_choice)

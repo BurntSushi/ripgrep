@@ -1,10 +1,3 @@
-use std::error;
-use std::fmt;
-use std::io;
-use std::num::ParseIntError;
-
-use regex::Regex;
-
 /// An error that occurs when parsing a human readable size description.
 ///
 /// This error provides an end user friendly message describing why the
@@ -18,7 +11,7 @@ pub struct ParseSizeError {
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum ParseSizeErrorKind {
     InvalidFormat,
-    InvalidInt(ParseIntError),
+    InvalidInt(std::num::ParseIntError),
     Overflow,
 }
 
@@ -30,7 +23,7 @@ impl ParseSizeError {
         }
     }
 
-    fn int(original: &str, err: ParseIntError) -> ParseSizeError {
+    fn int(original: &str, err: std::num::ParseIntError) -> ParseSizeError {
         ParseSizeError {
             original: original.to_string(),
             kind: ParseSizeErrorKind::InvalidInt(err),
@@ -45,22 +38,18 @@ impl ParseSizeError {
     }
 }
 
-impl error::Error for ParseSizeError {
-    fn description(&self) -> &str {
-        "invalid size"
-    }
-}
+impl std::error::Error for ParseSizeError {}
 
-impl fmt::Display for ParseSizeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for ParseSizeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use self::ParseSizeErrorKind::*;
 
         match self.kind {
             InvalidFormat => write!(
                 f,
-                "invalid format for size '{}', which should be a sequence \
-                     of digits followed by an optional 'K', 'M' or 'G' \
-                     suffix",
+                "invalid format for size '{}', which should be a non-empty \
+                 sequence of digits followed by an optional 'K', 'M' or 'G' \
+                 suffix",
                 self.original
             ),
             InvalidInt(ref err) => write!(
@@ -73,9 +62,9 @@ impl fmt::Display for ParseSizeError {
     }
 }
 
-impl From<ParseSizeError> for io::Error {
-    fn from(size_err: ParseSizeError) -> io::Error {
-        io::Error::new(io::ErrorKind::Other, size_err)
+impl From<ParseSizeError> for std::io::Error {
+    fn from(size_err: ParseSizeError) -> std::io::Error {
+        std::io::Error::new(std::io::ErrorKind::Other, size_err)
     }
 }
 
@@ -88,29 +77,24 @@ impl From<ParseSizeError> for io::Error {
 ///
 /// Additional suffixes may be added over time.
 pub fn parse_human_readable_size(size: &str) -> Result<u64, ParseSizeError> {
-    lazy_static::lazy_static! {
-        // Normally I'd just parse something this simple by hand to avoid the
-        // regex dep, but we bring regex in any way for glob matching, so might
-        // as well use it.
-        static ref RE: Regex = Regex::new(r"^([0-9]+)([KMG])?$").unwrap();
+    let digits_end =
+        size.as_bytes().iter().take_while(|&b| b.is_ascii_digit()).count();
+    let digits = &size[..digits_end];
+    if digits.is_empty() {
+        return Err(ParseSizeError::format(size));
     }
+    let value =
+        digits.parse::<u64>().map_err(|e| ParseSizeError::int(size, e))?;
 
-    let caps = match RE.captures(size) {
-        Some(caps) => caps,
-        None => return Err(ParseSizeError::format(size)),
-    };
-    let value: u64 =
-        caps[1].parse().map_err(|err| ParseSizeError::int(size, err))?;
-    let suffix = match caps.get(2) {
-        None => return Ok(value),
-        Some(cap) => cap.as_str(),
-    };
+    let suffix = &size[digits_end..];
+    if suffix.is_empty() {
+        return Ok(value);
+    }
     let bytes = match suffix {
         "K" => value.checked_mul(1 << 10),
         "M" => value.checked_mul(1 << 20),
         "G" => value.checked_mul(1 << 30),
-        // Because if the regex matches this group, it must be [KMG].
-        _ => unreachable!(),
+        _ => return Err(ParseSizeError::format(size)),
     };
     bytes.ok_or_else(|| ParseSizeError::overflow(size))
 }

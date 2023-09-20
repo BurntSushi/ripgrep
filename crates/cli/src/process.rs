@@ -1,9 +1,7 @@
-use std::error;
-use std::fmt;
-use std::io::{self, Read};
-use std::iter;
-use std::process;
-use std::thread::{self, JoinHandle};
+use std::{
+    io::{self, Read},
+    process,
+};
 
 /// An error that can occur while running a command and reading its output.
 ///
@@ -40,14 +38,10 @@ impl CommandError {
     }
 }
 
-impl error::Error for CommandError {
-    fn description(&self) -> &str {
-        "command error"
-    }
-}
+impl std::error::Error for CommandError {}
 
-impl fmt::Display for CommandError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for CommandError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.kind {
             CommandErrorKind::Io(ref e) => e.fmt(f),
             CommandErrorKind::Stderr(ref bytes) => {
@@ -55,7 +49,7 @@ impl fmt::Display for CommandError {
                 if msg.trim().is_empty() {
                     write!(f, "<stderr is empty>")
                 } else {
-                    let div = iter::repeat('-').take(79).collect::<String>();
+                    let div = "-".repeat(79);
                     write!(
                         f,
                         "\n{div}\n{msg}\n{div}",
@@ -161,18 +155,17 @@ impl CommandReaderBuilder {
 /// is returned as an error.
 ///
 /// ```no_run
-/// use std::io::Read;
-/// use std::process::Command;
+/// use std::{io::Read, process::Command};
+///
 /// use grep_cli::CommandReader;
 ///
-/// # fn example() -> Result<(), Box<::std::error::Error>> {
 /// let mut cmd = Command::new("gzip");
 /// cmd.arg("-d").arg("-c").arg("/usr/share/man/man1/ls.1.gz");
 ///
 /// let mut rdr = CommandReader::new(&mut cmd)?;
 /// let mut contents = vec![];
 /// rdr.read_to_end(&mut contents)?;
-/// # Ok(()) }
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug)]
 pub struct CommandReader {
@@ -279,7 +272,7 @@ impl io::Read for CommandReader {
 /// stderr.
 #[derive(Debug)]
 enum StderrReader {
-    Async(Option<JoinHandle<CommandError>>),
+    Async(Option<std::thread::JoinHandle<CommandError>>),
     Sync(process::ChildStderr),
 }
 
@@ -287,7 +280,7 @@ impl StderrReader {
     /// Create a reader for stderr that reads contents asynchronously.
     fn r#async(mut stderr: process::ChildStderr) -> StderrReader {
         let handle =
-            thread::spawn(move || stderr_to_command_error(&mut stderr));
+            std::thread::spawn(move || stderr_to_command_error(&mut stderr));
         StderrReader::Async(Some(handle))
     }
 

@@ -2,7 +2,7 @@ use std::cmp;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
-use std::io::{self, Write};
+use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 use std::str::FromStr;
@@ -976,7 +976,7 @@ impl ArgMatches {
         } else if preference == "ansi" {
             ColorChoice::AlwaysAnsi
         } else if preference == "auto" {
-            if cli::is_tty_stdout() || self.is_present("pretty") {
+            if std::io::stdout().is_terminal() || self.is_present("pretty") {
                 ColorChoice::Auto
             } else {
                 ColorChoice::Never
@@ -1110,7 +1110,7 @@ impl ArgMatches {
         if self.is_present("no-heading") || self.is_present("vimgrep") {
             false
         } else {
-            cli::is_tty_stdout()
+            std::io::stdout().is_terminal()
                 || self.is_present("heading")
                 || self.is_present("pretty")
         }
@@ -1178,7 +1178,7 @@ impl ArgMatches {
         // generally want to show line numbers by default when printing to a
         // tty for human consumption, except for one interesting case: when
         // we're only searching stdin. This makes pipelines work as expected.
-        (cli::is_tty_stdout() && !self.is_only_stdin(paths))
+        (std::io::stdout().is_terminal() && !self.is_only_stdin(paths))
             || self.is_present("line-number")
             || self.is_present("column")
             || self.is_present("pretty")

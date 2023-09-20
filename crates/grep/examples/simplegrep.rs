@@ -1,14 +1,15 @@
-use std::env;
-use std::error::Error;
-use std::ffi::OsString;
-use std::process;
+use std::{env, error::Error, ffi::OsString, io::IsTerminal, process};
 
-use grep::cli;
-use grep::printer::{ColorSpecs, StandardBuilder};
-use grep::regex::RegexMatcher;
-use grep::searcher::{BinaryDetection, SearcherBuilder};
-use termcolor::ColorChoice;
-use walkdir::WalkDir;
+use {
+    grep::{
+        cli,
+        printer::{ColorSpecs, StandardBuilder},
+        regex::RegexMatcher,
+        searcher::{BinaryDetection, SearcherBuilder},
+    },
+    termcolor::ColorChoice,
+    walkdir::WalkDir,
+};
 
 fn main() {
     if let Err(err) = try_main() {
@@ -36,7 +37,7 @@ fn search(pattern: &str, paths: &[OsString]) -> Result<(), Box<dyn Error>> {
         .build();
     let mut printer = StandardBuilder::new()
         .color_specs(ColorSpecs::default_with_color())
-        .build(cli::stdout(if cli::is_tty_stdout() {
+        .build(cli::stdout(if std::io::stdout().is_terminal() {
             ColorChoice::Auto
         } else {
             ColorChoice::Never
