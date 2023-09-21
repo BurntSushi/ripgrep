@@ -16,7 +16,6 @@ mod app;
 mod args;
 mod config;
 mod logger;
-mod path_printer;
 mod search;
 mod subject;
 
@@ -248,7 +247,7 @@ fn files(args: &Args) -> Result<bool> {
             if quit_after_match {
                 break;
             }
-            if let Err(err) = path_printer.write_path(subject.path()) {
+            if let Err(err) = path_printer.write(subject.path()) {
                 // A broken pipe means graceful termination.
                 if err.kind() == io::ErrorKind::BrokenPipe {
                     break;
@@ -293,7 +292,7 @@ fn files_parallel(args: &Args) -> Result<bool> {
 
     let print_thread = thread::spawn(move || -> io::Result<()> {
         for subject in rx.iter() {
-            path_printer.write_path(subject.path())?;
+            path_printer.write(subject.path())?;
         }
         Ok(())
     });

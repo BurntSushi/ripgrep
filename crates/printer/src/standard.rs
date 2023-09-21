@@ -172,7 +172,15 @@ impl StandardBuilder {
 
     /// Set the hyperlink pattern to use for hyperlinks output by this printer.
     ///
-    /// Colors need to be enabled for hyperlinks to be output.
+    /// Regardless of the hyperlink format provided here, whether hyperlinks
+    /// are actually used or not is determined by the implementation of
+    /// `WriteColor` provided to `build`. For example, if `termcolor::NoColor`
+    /// is provided to `build`, then no hyperlinks will ever be printed
+    /// regardless of the format provided here.
+    ///
+    /// This completely overrides any previous hyperlink format.
+    ///
+    /// The default pattern format results in not emitting any hyperlinks.
     pub fn hyperlink_pattern(
         &mut self,
         pattern: HyperlinkPattern,

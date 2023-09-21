@@ -280,7 +280,7 @@ impl<'a> Sunk<'a> {
 /// portability with a small cost: on Windows, paths that are not valid UTF-16
 /// will not roundtrip correctly.
 #[derive(Clone, Debug)]
-pub struct PrinterPath<'a> {
+pub(crate) struct PrinterPath<'a> {
     path: &'a Path,
     bytes: Cow<'a, [u8]>,
     hyperlink_path: std::cell::OnceCell<Option<HyperlinkPath>>,
@@ -288,7 +288,7 @@ pub struct PrinterPath<'a> {
 
 impl<'a> PrinterPath<'a> {
     /// Create a new path suitable for printing.
-    pub fn new(path: &'a Path) -> PrinterPath<'a> {
+    pub(crate) fn new(path: &'a Path) -> PrinterPath<'a> {
         PrinterPath {
             path,
             bytes: Vec::from_path_lossy(path),
@@ -301,7 +301,10 @@ impl<'a> PrinterPath<'a> {
     ///
     /// If the given separator is present, then any separators in `path` are
     /// replaced with it.
-    pub fn with_separator(path: &'a Path, sep: Option<u8>) -> PrinterPath<'a> {
+    pub(crate) fn with_separator(
+        path: &'a Path,
+        sep: Option<u8>,
+    ) -> PrinterPath<'a> {
         let mut ppath = PrinterPath::new(path);
         if let Some(sep) = sep {
             ppath.replace_separator(sep);
@@ -329,13 +332,13 @@ impl<'a> PrinterPath<'a> {
     }
 
     /// Return the raw bytes for this path.
-    pub fn as_bytes(&self) -> &[u8] {
+    pub(crate) fn as_bytes(&self) -> &[u8] {
         &self.bytes
     }
 
     /// Creates a hyperlink for this path and the given line and column, using
     /// the specified pattern. Uses the given buffer to store the hyperlink.
-    pub fn create_hyperlink_spec<'b>(
+    pub(crate) fn create_hyperlink_spec<'b>(
         &self,
         pattern: &HyperlinkPattern,
         line_number: Option<u64>,

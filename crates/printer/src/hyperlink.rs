@@ -59,7 +59,7 @@ pub enum HyperlinkPatternError {
 
 /// The values to replace the pattern placeholders with.
 #[derive(Clone, Debug)]
-pub struct HyperlinkValues<'a> {
+pub(crate) struct HyperlinkValues<'a> {
     file: &'a HyperlinkPath,
     line: u64,
     column: u64,
@@ -70,7 +70,7 @@ pub struct HyperlinkValues<'a> {
 /// This is the value to use as-is in the hyperlink, converted from an OS file
 /// path.
 #[derive(Clone, Debug)]
-pub struct HyperlinkPath(Vec<u8>);
+pub(crate) struct HyperlinkPath(Vec<u8>);
 
 impl HyperlinkPatternBuilder {
     /// Creates a new hyperlink pattern builder.
@@ -222,7 +222,7 @@ impl HyperlinkPattern {
     }
 
     /// Renders this pattern with the given values to the given output.
-    pub fn render(
+    pub(crate) fn render(
         &self,
         values: &HyperlinkValues,
         output: &mut impl Write,
@@ -353,7 +353,7 @@ impl std::error::Error for HyperlinkPatternError {}
 
 impl<'a> HyperlinkValues<'a> {
     /// Creates a new set of hyperlink values.
-    pub fn new(
+    pub(crate) fn new(
         file: &'a HyperlinkPath,
         line: Option<u64>,
         column: Option<u64>,
@@ -369,7 +369,7 @@ impl<'a> HyperlinkValues<'a> {
 impl HyperlinkPath {
     /// Returns a hyperlink path from an OS path.
     #[cfg(unix)]
-    pub fn from_path(path: &Path) -> Option<Self> {
+    pub(crate) fn from_path(path: &Path) -> Option<Self> {
         // On Unix, this function returns the absolute file path without the
         // leading slash, as it makes for more natural hyperlink patterns, for
         // instance:
@@ -506,14 +506,14 @@ impl std::fmt::Display for HyperlinkPath {
 /// A simple abstraction over a hyperlink span written to the terminal. This
 /// helps tracking whether a hyperlink has been started, and should be ended.
 #[derive(Debug, Default)]
-pub struct HyperlinkSpan {
+pub(crate) struct HyperlinkSpan {
     active: bool,
 }
 
 impl HyperlinkSpan {
     /// Starts a hyperlink and returns a span which tracks whether it is still
     /// in effect.
-    pub fn start(
+    pub(crate) fn start(
         wtr: &mut impl WriteColor,
         hyperlink: &HyperlinkSpec,
     ) -> io::Result<Self> {
@@ -526,7 +526,7 @@ impl HyperlinkSpan {
     }
 
     /// Ends the hyperlink span if it is active.
-    pub fn end(&mut self, wtr: &mut impl WriteColor) -> io::Result<()> {
+    pub(crate) fn end(&mut self, wtr: &mut impl WriteColor) -> io::Result<()> {
         if self.is_active() {
             wtr.set_hyperlink(&HyperlinkSpec::close())?;
             self.active = false;
@@ -535,7 +535,7 @@ impl HyperlinkSpan {
     }
 
     /// Returns true if there is currently an active hyperlink.
-    pub fn is_active(&self) -> bool {
+    pub(crate) fn is_active(&self) -> bool {
         self.active
     }
 }

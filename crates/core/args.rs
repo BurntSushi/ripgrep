@@ -18,8 +18,9 @@ use grep::pcre2::{
     RegexMatcherBuilder as PCRE2RegexMatcherBuilder,
 };
 use grep::printer::{
-    default_color_specs, ColorSpecs, HyperlinkPattern, JSONBuilder, Standard,
-    StandardBuilder, Stats, Summary, SummaryBuilder, SummaryKind, JSON,
+    default_color_specs, ColorSpecs, HyperlinkPattern, JSONBuilder,
+    PathPrinter, PathPrinterBuilder, Standard, StandardBuilder, Stats,
+    Summary, SummaryBuilder, SummaryKind, JSON,
 };
 use grep::regex::{
     RegexMatcher as RustRegexMatcher,
@@ -38,7 +39,6 @@ use crate::app;
 use crate::config;
 use crate::logger::Logger;
 use crate::messages::{set_ignore_messages, set_messages};
-use crate::path_printer::{PathPrinter, PathPrinterBuilder};
 use crate::search::{
     PatternMatcher, Printer, SearchWorker, SearchWorkerBuilder,
 };
