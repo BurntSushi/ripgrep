@@ -6,19 +6,19 @@
 // convenient for deserialization however, so these types would become a bit
 // more complex.
 
-use std::borrow::Cow;
-use std::path::Path;
-use std::str;
+use std::{borrow::Cow, path::Path};
 
-use base64;
-use serde::{Serialize, Serializer};
+use {
+    base64,
+    serde::{Serialize, Serializer},
+};
 
 use crate::stats::Stats;
 
 #[derive(Serialize)]
 #[serde(tag = "type", content = "data")]
 #[serde(rename_all = "snake_case")]
-pub enum Message<'a> {
+pub(crate) enum Message<'a> {
     Begin(Begin<'a>),
     End(End<'a>),
     Match(Match<'a>),
@@ -26,48 +26,48 @@ pub enum Message<'a> {
 }
 
 #[derive(Serialize)]
-pub struct Begin<'a> {
+pub(crate) struct Begin<'a> {
     #[serde(serialize_with = "ser_path")]
-    pub path: Option<&'a Path>,
+    pub(crate) path: Option<&'a Path>,
 }
 
 #[derive(Serialize)]
-pub struct End<'a> {
+pub(crate) struct End<'a> {
     #[serde(serialize_with = "ser_path")]
-    pub path: Option<&'a Path>,
-    pub binary_offset: Option<u64>,
-    pub stats: Stats,
+    pub(crate) path: Option<&'a Path>,
+    pub(crate) binary_offset: Option<u64>,
+    pub(crate) stats: Stats,
 }
 
 #[derive(Serialize)]
-pub struct Match<'a> {
+pub(crate) struct Match<'a> {
     #[serde(serialize_with = "ser_path")]
-    pub path: Option<&'a Path>,
+    pub(crate) path: Option<&'a Path>,
     #[serde(serialize_with = "ser_bytes")]
-    pub lines: &'a [u8],
-    pub line_number: Option<u64>,
-    pub absolute_offset: u64,
-    pub submatches: &'a [SubMatch<'a>],
+    pub(crate) lines: &'a [u8],
+    pub(crate) line_number: Option<u64>,
+    pub(crate) absolute_offset: u64,
+    pub(crate) submatches: &'a [SubMatch<'a>],
 }
 
 #[derive(Serialize)]
-pub struct Context<'a> {
+pub(crate) struct Context<'a> {
     #[serde(serialize_with = "ser_path")]
-    pub path: Option<&'a Path>,
+    pub(crate) path: Option<&'a Path>,
     #[serde(serialize_with = "ser_bytes")]
-    pub lines: &'a [u8],
-    pub line_number: Option<u64>,
-    pub absolute_offset: u64,
-    pub submatches: &'a [SubMatch<'a>],
+    pub(crate) lines: &'a [u8],
+    pub(crate) line_number: Option<u64>,
+    pub(crate) absolute_offset: u64,
+    pub(crate) submatches: &'a [SubMatch<'a>],
 }
 
 #[derive(Serialize)]
-pub struct SubMatch<'a> {
+pub(crate) struct SubMatch<'a> {
     #[serde(rename = "match")]
     #[serde(serialize_with = "ser_bytes")]
-    pub m: &'a [u8],
-    pub start: usize,
-    pub end: usize,
+    pub(crate) m: &'a [u8],
+    pub(crate) start: usize,
+    pub(crate) end: usize,
 }
 
 /// Data represents things that look like strings, but may actually not be
@@ -91,7 +91,7 @@ enum Data<'a> {
 
 impl<'a> Data<'a> {
     fn from_bytes(bytes: &[u8]) -> Data<'_> {
-        match str::from_utf8(bytes) {
+        match std::str::from_utf8(bytes) {
             Ok(text) => Data::Text { text: Cow::Borrowed(text) },
             Err(_) => Data::Bytes { bytes },
         }
@@ -123,7 +123,8 @@ where
     T: AsRef<[u8]>,
     S: Serializer,
 {
-    ser.serialize_str(&base64::encode(&bytes))
+    use base64::engine::{general_purpose::STANDARD, Engine};
+    ser.serialize_str(&STANDARD.encode(&bytes))
 }
 
 fn ser_bytes<T, S>(bytes: T, ser: S) -> Result<S::Ok, S::Error>

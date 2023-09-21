@@ -1,7 +1,3 @@
-use std::error;
-use std::fmt;
-use std::str::FromStr;
-
 use termcolor::{Color, ColorSpec, ParseColorError};
 
 /// Returns a default set of color specifications.
@@ -38,17 +34,7 @@ pub enum ColorError {
     InvalidFormat(String),
 }
 
-impl error::Error for ColorError {
-    fn description(&self) -> &str {
-        match *self {
-            ColorError::UnrecognizedOutType(_) => "unrecognized output type",
-            ColorError::UnrecognizedSpecType(_) => "unrecognized spec type",
-            ColorError::UnrecognizedColor(_, _) => "unrecognized color name",
-            ColorError::UnrecognizedStyle(_) => "unrecognized style attribute",
-            ColorError::InvalidFormat(_) => "invalid color spec",
-        }
-    }
-}
+impl std::error::Error for ColorError {}
 
 impl ColorError {
     fn from_parse_error(err: ParseColorError) -> ColorError {
@@ -59,33 +45,33 @@ impl ColorError {
     }
 }
 
-impl fmt::Display for ColorError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for ColorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             ColorError::UnrecognizedOutType(ref name) => write!(
                 f,
                 "unrecognized output type '{}'. Choose from: \
-                     path, line, column, match.",
+                 path, line, column, match.",
                 name,
             ),
             ColorError::UnrecognizedSpecType(ref name) => write!(
                 f,
                 "unrecognized spec type '{}'. Choose from: \
-                     fg, bg, style, none.",
+                fg, bg, style, none.",
                 name,
             ),
             ColorError::UnrecognizedColor(_, ref msg) => write!(f, "{}", msg),
             ColorError::UnrecognizedStyle(ref name) => write!(
                 f,
                 "unrecognized style attribute '{}'. Choose from: \
-                     nobold, bold, nointense, intense, nounderline, \
-                     underline.",
+                 nobold, bold, nointense, intense, nounderline, \
+                 underline.",
                 name,
             ),
             ColorError::InvalidFormat(ref original) => write!(
                 f,
                 "invalid color spec format: '{}'. Valid format \
-                     is '(path|line|column|match):(fg|bg|style):(value)'.",
+                 is '(path|line|column|match):(fg|bg|style):(value)'.",
                 original,
             ),
         }
@@ -305,7 +291,7 @@ impl SpecValue {
     }
 }
 
-impl FromStr for UserColorSpec {
+impl std::str::FromStr for UserColorSpec {
     type Err = ColorError;
 
     fn from_str(s: &str) -> Result<UserColorSpec, ColorError> {
@@ -345,7 +331,7 @@ impl FromStr for UserColorSpec {
     }
 }
 
-impl FromStr for OutType {
+impl std::str::FromStr for OutType {
     type Err = ColorError;
 
     fn from_str(s: &str) -> Result<OutType, ColorError> {
@@ -359,7 +345,7 @@ impl FromStr for OutType {
     }
 }
 
-impl FromStr for SpecType {
+impl std::str::FromStr for SpecType {
     type Err = ColorError;
 
     fn from_str(s: &str) -> Result<SpecType, ColorError> {
@@ -373,7 +359,7 @@ impl FromStr for SpecType {
     }
 }
 
-impl FromStr for Style {
+impl std::str::FromStr for Style {
     type Err = ColorError;
 
     fn from_str(s: &str) -> Result<Style, ColorError> {

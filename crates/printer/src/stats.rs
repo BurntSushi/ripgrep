@@ -1,5 +1,7 @@
-use std::ops::{Add, AddAssign};
-use std::time::Duration;
+use std::{
+    ops::{Add, AddAssign},
+    time::Duration,
+};
 
 use crate::util::NiceDuration;
 
@@ -8,7 +10,7 @@ use crate::util::NiceDuration;
 /// When statistics are reported by a printer, they correspond to all searches
 /// executed with that printer.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-#[cfg_attr(feature = "serde1", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Stats {
     elapsed: NiceDuration,
     searches: u64,

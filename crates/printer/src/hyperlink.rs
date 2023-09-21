@@ -1,12 +1,14 @@
+use std::{
+    io::{self, Write},
+    path::Path,
+};
+
+use {
+    bstr::ByteSlice,
+    termcolor::{HyperlinkSpec, WriteColor},
+};
+
 use crate::hyperlink_aliases::HYPERLINK_PATTERN_ALIASES;
-use bstr::ByteSlice;
-use std::error::Error;
-use std::fmt::Display;
-use std::io;
-use std::io::Write;
-use std::path::Path;
-use std::str::FromStr;
-use termcolor::{HyperlinkSpec, WriteColor};
 
 /// A builder for `HyperlinkPattern`.
 ///
@@ -65,7 +67,8 @@ pub struct HyperlinkValues<'a> {
 
 /// Represents the {file} part of a hyperlink.
 ///
-/// This is the value to use as-is in the hyperlink, converted from an OS file path.
+/// This is the value to use as-is in the hyperlink, converted from an OS file
+/// path.
 #[derive(Clone, Debug)]
 pub struct HyperlinkPath(Vec<u8>);
 
@@ -231,7 +234,7 @@ impl HyperlinkPattern {
     }
 }
 
-impl FromStr for HyperlinkPattern {
+impl std::str::FromStr for HyperlinkPattern {
     type Err = HyperlinkPatternError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -308,24 +311,31 @@ impl ToString for Part {
     }
 }
 
-impl Display for HyperlinkPatternError {
+impl std::fmt::Display for HyperlinkPatternError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             HyperlinkPatternError::InvalidSyntax => {
                 write!(f, "invalid hyperlink pattern syntax")
             }
             HyperlinkPatternError::NoFilePlaceholder => {
-                write!(f, "the {{file}} placeholder is required in hyperlink patterns")
+                write!(
+                    f,
+                    "the {{file}} placeholder is required in hyperlink \
+                     patterns",
+                )
             }
             HyperlinkPatternError::NoLinePlaceholder => {
-                write!(f, "the hyperlink pattern contains a {{column}} placeholder, \
-                    but no {{line}} placeholder is present")
+                write!(
+                    f,
+                    "the hyperlink pattern contains a {{column}} placeholder, \
+                     but no {{line}} placeholder is present",
+                )
             }
             HyperlinkPatternError::InvalidPlaceholder(name) => {
                 write!(
                     f,
-                    "invalid hyperlink pattern placeholder: '{}', choose from: \
-                        file, line, column, host",
+                    "invalid hyperlink pattern placeholder: '{}', choose \
+                     from: file, line, column, host",
                     name
                 )
             }
@@ -339,7 +349,7 @@ impl Display for HyperlinkPatternError {
     }
 }
 
-impl Error for HyperlinkPatternError {}
+impl std::error::Error for HyperlinkPatternError {}
 
 impl<'a> HyperlinkValues<'a> {
     /// Creates a new set of hyperlink values.
@@ -360,8 +370,9 @@ impl HyperlinkPath {
     /// Returns a hyperlink path from an OS path.
     #[cfg(unix)]
     pub fn from_path(path: &Path) -> Option<Self> {
-        // On Unix, this function returns the absolute file path without the leading slash,
-        // as it makes for more natural hyperlink patterns, for instance:
+        // On Unix, this function returns the absolute file path without the
+        // leading slash, as it makes for more natural hyperlink patterns, for
+        // instance:
         //   file://{host}/{file}   instead of   file://{host}{file}
         //   vscode://file/{file}   instead of   vscode://file{file}
         // It also allows for patterns to be multi-platform.
@@ -410,11 +421,12 @@ impl HyperlinkPath {
         // Also note that the file://C:/dir/file.txt syntax is not correct,
         // even though it often works in practice.
         //
-        // In the end, this choice was confirmed by VSCode, whose pattern
-        // is vscode://file/{file}:{line}:{column} and which correctly understands
+        // In the end, this choice was confirmed by VSCode, whose pattern is
+        // vscode://file/{file}:{line}:{column} and which correctly understands
         // the following URL format for network drives:
         //   vscode://file//server/dir/file.txt:1:1
-        // It doesn't parse any other number of slashes in "file//server" as a network path.
+        // It doesn't parse any other number of slashes in "file//server" as a
+        // network path.
 
         const WIN32_NAMESPACE_PREFIX: &[u8] = br"\\?\";
         const UNC_PREFIX: &[u8] = br"UNC\";
@@ -438,14 +450,15 @@ impl HyperlinkPath {
     /// Percent-encodes a path.
     ///
     /// The alphanumeric ASCII characters and "-", ".", "_", "~" are unreserved
-    /// as per section 2.3 of RFC 3986 (Uniform Resource Identifier (URI): Generic Syntax),
-    /// and are not encoded. The other ASCII characters except "/" and ":" are percent-encoded,
-    /// and "\" is replaced by "/" on Windows.
+    /// as per section 2.3 of RFC 3986 (Uniform Resource Identifier (URI):
+    /// Generic Syntax), and are not encoded. The other ASCII characters except
+    /// "/" and ":" are percent-encoded, and "\" is replaced by "/" on Windows.
     ///
-    /// Section 4 of RFC 8089 (The "file" URI Scheme) does not mandate precise encoding
-    /// requirements for non-ASCII characters, and this implementation leaves them unencoded.
-    /// On Windows, the UrlCreateFromPathW function does not encode non-ASCII characters.
-    /// Doing so with UTF-8 encoded paths creates invalid file:// URLs on that platform.
+    /// Section 4 of RFC 8089 (The "file" URI Scheme) does not mandate precise
+    /// encoding requirements for non-ASCII characters, and this implementation
+    /// leaves them unencoded. On Windows, the UrlCreateFromPathW function does
+    /// not encode non-ASCII characters. Doing so with UTF-8 encoded paths
+    /// creates invalid file:// URLs on that platform.
     fn encode(input: &[u8]) -> HyperlinkPath {
         let mut result = Vec::with_capacity(input.len());
 
@@ -480,7 +493,7 @@ impl HyperlinkPath {
     }
 }
 
-impl Display for HyperlinkPath {
+impl std::fmt::Display for HyperlinkPath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -490,15 +503,16 @@ impl Display for HyperlinkPath {
     }
 }
 
-/// A simple abstraction over a hyperlink span written to the terminal.
-/// This helps tracking whether a hyperlink has been started, and should be ended.
+/// A simple abstraction over a hyperlink span written to the terminal. This
+/// helps tracking whether a hyperlink has been started, and should be ended.
 #[derive(Debug, Default)]
 pub struct HyperlinkSpan {
     active: bool,
 }
 
 impl HyperlinkSpan {
-    /// Starts a hyperlink and returns a span which tracks whether it is still in effect.
+    /// Starts a hyperlink and returns a span which tracks whether it is still
+    /// in effect.
     pub fn start(
         wtr: &mut impl WriteColor,
         hyperlink: &HyperlinkSpec,
@@ -528,6 +542,8 @@ impl HyperlinkSpan {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
 
     #[test]
@@ -653,7 +669,8 @@ mod tests {
         for name in names {
             assert!(
                 name > previous_name,
-                r#""{}" should be sorted before "{}" in `HYPERLINK_PATTERN_ALIASES`"#,
+                "'{}' should be sorted before '{}' \
+                 in HYPERLINK_PATTERN_ALIASES",
                 name,
                 previous_name
             );

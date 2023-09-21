@@ -1,18 +1,24 @@
-use std::cell::RefCell;
-use std::io::{self, Write};
-use std::path::Path;
-use std::sync::Arc;
-use std::time::Instant;
+use std::{
+    cell::RefCell,
+    io::{self, Write},
+    path::Path,
+    sync::Arc,
+    time::Instant,
+};
 
-use grep_matcher::Matcher;
-use grep_searcher::{Searcher, Sink, SinkError, SinkFinish, SinkMatch};
-use termcolor::{ColorSpec, NoColor, WriteColor};
+use {
+    grep_matcher::Matcher,
+    grep_searcher::{Searcher, Sink, SinkError, SinkFinish, SinkMatch},
+    termcolor::{ColorSpec, NoColor, WriteColor},
+};
 
-use crate::color::ColorSpecs;
-use crate::counter::CounterWriter;
-use crate::hyperlink::{HyperlinkPattern, HyperlinkSpan};
-use crate::stats::Stats;
-use crate::util::{find_iter_at_in_context, PrinterPath};
+use crate::{
+    color::ColorSpecs,
+    counter::CounterWriter,
+    hyperlink::{HyperlinkPattern, HyperlinkSpan},
+    stats::Stats,
+    util::{find_iter_at_in_context, PrinterPath},
+};
 
 /// The configuration for the summary printer.
 ///
@@ -392,13 +398,13 @@ impl<W: WriteColor> Summary<W> {
             None
         };
         SummarySink {
-            matcher: matcher,
+            matcher,
             summary: self,
             path: None,
             start_time: Instant::now(),
             match_count: 0,
             binary_byte_offset: None,
-            stats: stats,
+            stats,
         }
     }
 
@@ -428,13 +434,13 @@ impl<W: WriteColor> Summary<W> {
             self.config.separator_path,
         );
         SummarySink {
-            matcher: matcher,
+            matcher,
             summary: self,
             path: Some(ppath),
             start_time: Instant::now(),
             match_count: 0,
             binary_byte_offset: None,
-            stats: stats,
+            stats,
         }
     }
 }

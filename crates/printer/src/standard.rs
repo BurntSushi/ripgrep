@@ -1,25 +1,31 @@
-use std::cell::{Cell, RefCell};
-use std::cmp;
-use std::io::{self, Write};
-use std::path::Path;
-use std::sync::Arc;
-use std::time::Instant;
-
-use bstr::ByteSlice;
-use grep_matcher::{Match, Matcher};
-use grep_searcher::{
-    LineStep, Searcher, Sink, SinkContext, SinkContextKind, SinkFinish,
-    SinkMatch,
+use std::{
+    cell::{Cell, RefCell},
+    cmp,
+    io::{self, Write},
+    path::Path,
+    sync::Arc,
+    time::Instant,
 };
-use termcolor::{ColorSpec, NoColor, WriteColor};
 
-use crate::color::ColorSpecs;
-use crate::counter::CounterWriter;
-use crate::hyperlink::{HyperlinkPattern, HyperlinkSpan};
-use crate::stats::Stats;
-use crate::util::{
-    find_iter_at_in_context, trim_ascii_prefix, trim_line_terminator,
-    PrinterPath, Replacer, Sunk,
+use {
+    bstr::ByteSlice,
+    grep_matcher::{Match, Matcher},
+    grep_searcher::{
+        LineStep, Searcher, Sink, SinkContext, SinkContextKind, SinkFinish,
+        SinkMatch,
+    },
+    termcolor::{ColorSpec, NoColor, WriteColor},
+};
+
+use crate::{
+    color::ColorSpecs,
+    counter::CounterWriter,
+    hyperlink::{HyperlinkPattern, HyperlinkSpan},
+    stats::Stats,
+    util::{
+        find_iter_at_in_context, trim_ascii_prefix, trim_line_terminator,
+        PrinterPath, Replacer, Sunk,
+    },
 };
 
 /// The configuration for the standard printer.
@@ -522,7 +528,7 @@ impl<W: WriteColor> Standard<W> {
         let stats = if self.config.stats { Some(Stats::new()) } else { None };
         let needs_match_granularity = self.needs_match_granularity();
         StandardSink {
-            matcher: matcher,
+            matcher,
             standard: self,
             replacer: Replacer::new(),
             path: None,
@@ -530,8 +536,8 @@ impl<W: WriteColor> Standard<W> {
             match_count: 0,
             after_context_remaining: 0,
             binary_byte_offset: None,
-            stats: stats,
-            needs_match_granularity: needs_match_granularity,
+            stats,
+            needs_match_granularity,
         }
     }
 
@@ -558,7 +564,7 @@ impl<W: WriteColor> Standard<W> {
         );
         let needs_match_granularity = self.needs_match_granularity();
         StandardSink {
-            matcher: matcher,
+            matcher,
             standard: self,
             replacer: Replacer::new(),
             path: Some(ppath),
@@ -566,8 +572,8 @@ impl<W: WriteColor> Standard<W> {
             match_count: 0,
             after_context_remaining: 0,
             binary_byte_offset: None,
-            stats: stats,
-            needs_match_granularity: needs_match_granularity,
+            stats,
+            needs_match_granularity,
         }
     }
 
@@ -935,8 +941,8 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         sink: &'a StandardSink<'_, '_, M, W>,
     ) -> StandardImpl<'a, M, W> {
         StandardImpl {
-            searcher: searcher,
-            sink: sink,
+            searcher,
+            sink,
             sunk: Sunk::empty(),
             in_color_match: Cell::new(false),
         }
@@ -954,7 +960,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
             &sink.standard.matches,
             sink.replacer.replacement(),
         );
-        StandardImpl { sunk: sunk, ..StandardImpl::new(searcher, sink) }
+        StandardImpl { sunk, ..StandardImpl::new(searcher, sink) }
     }
 
     /// Bundle self with a searcher and return the core implementation of Sink
@@ -969,7 +975,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
             &sink.standard.matches,
             sink.replacer.replacement(),
         );
-        StandardImpl { sunk: sunk, ..StandardImpl::new(searcher, sink) }
+        StandardImpl { sunk, ..StandardImpl::new(searcher, sink) }
     }
 
     fn sink(&self) -> io::Result<()> {
@@ -1657,9 +1663,10 @@ impl<'a, M: Matcher, W: WriteColor> PreludeWriter<'a, M, W> {
 
     /// Starts the prelude with a hyperlink when applicable.
     ///
-    /// If a heading was written, and the hyperlink pattern is invariant on the line number,
-    /// then this doesn't hyperlink each line prelude, as it wouldn't point to the line anyway.
-    /// The hyperlink on the heading should be sufficient and less confusing.
+    /// If a heading was written, and the hyperlink pattern is invariant on
+    /// the line number, then this doesn't hyperlink each line prelude, as it
+    /// wouldn't point to the line anyway. The hyperlink on the heading should
+    /// be sufficient and less confusing.
     fn start(
         &mut self,
         line_number: Option<u64>,

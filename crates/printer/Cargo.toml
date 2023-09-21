@@ -12,22 +12,33 @@ repository = "https://github.com/BurntSushi/ripgrep/tree/master/crates/printer"
 readme = "README.md"
 keywords = ["grep", "pattern", "print", "printer", "sink"]
 license = "Unlicense OR MIT"
-edition = "2018"
+edition = "2021"
 
 [features]
-default = ["serde1"]
-serde1 = ["base64", "serde", "serde_json"]
+default = ["serde"]
+serde = ["dep:base64", "dep:serde", "dep:serde_json"]
 
 [dependencies]
-base64 = { version = "0.20.0", optional = true }
-bstr = "1.6.0"
+base64 = { version = "0.21.4", optional = true }
+bstr = "1.6.2"
 gethostname = "0.4.3"
 grep-matcher = { version = "0.1.6", path = "../matcher" }
 grep-searcher = { version = "0.1.11", path = "../searcher" }
-lazy_static = "1.1.0"
-termcolor = "1.0.4"
-serde = { version = "1.0.77", optional = true, features = ["derive"] }
-serde_json = { version = "1.0.27", optional = true }
+termcolor = "1.3.0"
+serde = { version = "1.0.188", optional = true, features = ["derive"] }
+serde_json = { version = "1.0.107", optional = true }
 
 [dev-dependencies]
 grep-regex = { version = "0.1.11", path = "../regex" }
+
+[package.metadata.docs.rs]
+# We want to document all features.
+all-features = true
+# This opts into a nightly unstable option to show the features that need to be
+# enabled for public API items. To do that, we set 'docsrs', and when that's
+# enabled, we enable the 'doc_auto_cfg' feature.
+#
+# To test this locally, run:
+#
+#     RUSTDOCFLAGS="--cfg docsrs" cargo +nightly doc --all-features
+rustdoc-args = ["--cfg", "docsrs"]

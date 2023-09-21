@@ -1,23 +1,24 @@
-use std::borrow::Cow;
-use std::cell::OnceCell;
-use std::path::Path;
-use std::time;
-use std::{fmt, io};
+use std::{borrow::Cow, fmt, io, path::Path, time};
 
-use bstr::{ByteSlice, ByteVec};
-use grep_matcher::{Captures, LineTerminator, Match, Matcher};
-use grep_searcher::{
-    LineIter, Searcher, SinkContext, SinkContextKind, SinkError, SinkMatch,
+use {
+    bstr::{ByteSlice, ByteVec},
+    grep_matcher::{Captures, LineTerminator, Match, Matcher},
+    grep_searcher::{
+        LineIter, Searcher, SinkContext, SinkContextKind, SinkError, SinkMatch,
+    },
+    termcolor::HyperlinkSpec,
 };
-#[cfg(feature = "serde1")]
-use serde::{Serialize, Serializer};
-use termcolor::HyperlinkSpec;
 
-use crate::hyperlink::{HyperlinkPath, HyperlinkPattern, HyperlinkValues};
-use crate::MAX_LOOK_AHEAD;
+#[cfg(feature = "serde")]
+use serde::{Serialize, Serializer};
+
+use crate::{
+    hyperlink::{HyperlinkPath, HyperlinkPattern, HyperlinkValues},
+    MAX_LOOK_AHEAD,
+};
 
 /// A type for handling replacements while amortizing allocation.
-pub struct Replacer<M: Matcher> {
+pub(crate) struct Replacer<M: Matcher> {
     space: Option<Space<M>>,
 }
 
@@ -45,7 +46,7 @@ impl<M: Matcher> Replacer<M> {
     ///
     /// This constructor does not allocate. Instead, space for dealing with
     /// replacements is allocated lazily only when needed.
-    pub fn new() -> Replacer<M> {
+    pub(crate) fn new() -> Replacer<M> {
         Replacer { space: None }
     }
 
@@ -54,7 +55,7 @@ impl<M: Matcher> Replacer<M> {
     /// replacement, use the `replacement` method.
     ///
     /// This can fail if the underlying matcher reports an error.
-    pub fn replace_all<'a>(
+    pub(crate) fn replace_all<'a>(
         &'a mut self,
         searcher: &Searcher,
         matcher: &M,
@@ -112,7 +113,9 @@ impl<M: Matcher> Replacer<M> {
     /// all replacement occurrences within the returned replacement buffer.
     ///
     /// If no replacement has occurred then `None` is returned.
-    pub fn replacement<'a>(&'a self) -> Option<(&'a [u8], &'a [Match])> {
+    pub(crate) fn replacement<'a>(
+        &'a self,
+    ) -> Option<(&'a [u8], &'a [Match])> {
         match self.space {
             None => None,
             Some(ref space) => {
@@ -129,7 +132,7 @@ impl<M: Matcher> Replacer<M> {
     ///
     /// Subsequent calls to `replacement` after calling `clear` (but before
     /// executing another replacement) will always return `None`.
-    pub fn clear(&mut self) {
+    pub(crate) fn clear(&mut self) {
         if let Some(ref mut space) = self.space {
             space.dst.clear();
             space.matches.clear();
@@ -145,8 +148,7 @@ impl<M: Matcher> Replacer<M> {
         if self.space.is_none() {
             let caps =
                 matcher.new_captures().map_err(io::Error::error_message)?;
-            self.space =
-                Some(Space { caps: caps, dst: vec![], matches: vec![] });
+            self.space = Some(Space { caps, dst: vec![], matches: vec![] });
         }
         Ok(self.space.as_mut().unwrap())
     }
@@ -165,7 +167,7 @@ impl<M: Matcher> Replacer<M> {
 /// results of the replacement instead of the bytes reported directly by the
 /// searcher.
 #[derive(Debug)]
-pub struct Sunk<'a> {
+pub(crate) struct Sunk<'a> {
     bytes: &'a [u8],
     absolute_byte_offset: u64,
     line_number: Option<u64>,
@@ -176,7 +178,7 @@ pub struct Sunk<'a> {
 
 impl<'a> Sunk<'a> {
     #[inline]
-    pub fn empty() -> Sunk<'static> {
+    pub(crate) fn empty() -> Sunk<'static> {
         Sunk {
             bytes: &[],
             absolute_byte_offset: 0,
@@ -188,7 +190,7 @@ impl<'a> Sunk<'a> {
     }
 
     #[inline]
-    pub fn from_sink_match(
+    pub(crate) fn from_sink_match(
         sunk: &'a SinkMatch<'a>,
         original_matches: &'a [Match],
         replacement: Option<(&'a [u8], &'a [Match])>,
@@ -196,17 +198,17 @@ impl<'a> Sunk<'a> {
         let (bytes, matches) =
             replacement.unwrap_or_else(|| (sunk.bytes(), original_matches));
         Sunk {
-            bytes: bytes,
+            bytes,
             absolute_byte_offset: sunk.absolute_byte_offset(),
             line_number: sunk.line_number(),
             context_kind: None,
-            matches: matches,
-            original_matches: original_matches,
+            matches,
+            original_matches,
         }
     }
 
     #[inline]
-    pub fn from_sink_context(
+    pub(crate) fn from_sink_context(
         sunk: &'a SinkContext<'a>,
         original_matches: &'a [Match],
         replacement: Option<(&'a [u8], &'a [Match])>,
@@ -214,47 +216,47 @@ impl<'a> Sunk<'a> {
         let (bytes, matches) =
             replacement.unwrap_or_else(|| (sunk.bytes(), original_matches));
         Sunk {
-            bytes: bytes,
+            bytes,
             absolute_byte_offset: sunk.absolute_byte_offset(),
             line_number: sunk.line_number(),
             context_kind: Some(sunk.kind()),
-            matches: matches,
-            original_matches: original_matches,
+            matches,
+            original_matches,
         }
     }
 
     #[inline]
-    pub fn context_kind(&self) -> Option<&'a SinkContextKind> {
+    pub(crate) fn context_kind(&self) -> Option<&'a SinkContextKind> {
         self.context_kind
     }
 
     #[inline]
-    pub fn bytes(&self) -> &'a [u8] {
+    pub(crate) fn bytes(&self) -> &'a [u8] {
         self.bytes
     }
 
     #[inline]
-    pub fn matches(&self) -> &'a [Match] {
+    pub(crate) fn matches(&self) -> &'a [Match] {
         self.matches
     }
 
     #[inline]
-    pub fn original_matches(&self) -> &'a [Match] {
+    pub(crate) fn original_matches(&self) -> &'a [Match] {
         self.original_matches
     }
 
     #[inline]
-    pub fn lines(&self, line_term: u8) -> LineIter<'a> {
+    pub(crate) fn lines(&self, line_term: u8) -> LineIter<'a> {
         LineIter::new(line_term, self.bytes())
     }
 
     #[inline]
-    pub fn absolute_byte_offset(&self) -> u64 {
+    pub(crate) fn absolute_byte_offset(&self) -> u64 {
         self.absolute_byte_offset
     }
 
     #[inline]
-    pub fn line_number(&self) -> Option<u64> {
+    pub(crate) fn line_number(&self) -> Option<u64> {
         self.line_number
     }
 }
@@ -281,7 +283,7 @@ impl<'a> Sunk<'a> {
 pub struct PrinterPath<'a> {
     path: &'a Path,
     bytes: Cow<'a, [u8]>,
-    hyperlink_path: OnceCell<Option<HyperlinkPath>>,
+    hyperlink_path: std::cell::OnceCell<Option<HyperlinkPath>>,
 }
 
 impl<'a> PrinterPath<'a> {
@@ -290,7 +292,7 @@ impl<'a> PrinterPath<'a> {
         PrinterPath {
             path,
             bytes: Vec::from_path_lossy(path),
-            hyperlink_path: OnceCell::new(),
+            hyperlink_path: std::cell::OnceCell::new(),
         }
     }
 
@@ -331,8 +333,8 @@ impl<'a> PrinterPath<'a> {
         &self.bytes
     }
 
-    /// Creates a hyperlink for this path and the given line and column, using the specified
-    /// pattern. Uses the given buffer to store the hyperlink.
+    /// Creates a hyperlink for this path and the given line and column, using
+    /// the specified pattern. Uses the given buffer to store the hyperlink.
     pub fn create_hyperlink_spec<'b>(
         &self,
         pattern: &HyperlinkPattern,
@@ -365,7 +367,7 @@ impl<'a> PrinterPath<'a> {
 /// with the Deserialize impl for std::time::Duration, since this type only
 /// adds new fields.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct NiceDuration(pub time::Duration);
+pub(crate) struct NiceDuration(pub time::Duration);
 
 impl fmt::Display for NiceDuration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -383,7 +385,7 @@ impl NiceDuration {
     }
 }
 
-#[cfg(feature = "serde1")]
+#[cfg(feature = "serde")]
 impl Serialize for NiceDuration {
     fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
         use serde::ser::SerializeStruct;
@@ -401,7 +403,7 @@ impl Serialize for NiceDuration {
 ///
 /// This stops trimming a prefix as soon as it sees non-whitespace or a line
 /// terminator.
-pub fn trim_ascii_prefix(
+pub(crate) fn trim_ascii_prefix(
     line_term: LineTerminator,
     slice: &[u8],
     range: Match,
@@ -422,7 +424,7 @@ pub fn trim_ascii_prefix(
     range.with_start(range.start() + count)
 }
 
-pub fn find_iter_at_in_context<M, F>(
+pub(crate) fn find_iter_at_in_context<M, F>(
     searcher: &Searcher,
     matcher: M,
     mut bytes: &[u8],
@@ -482,7 +484,7 @@ where
 /// Given a buf and some bounds, if there is a line terminator at the end of
 /// the given bounds in buf, then the bounds are trimmed to remove the line
 /// terminator.
-pub fn trim_line_terminator(
+pub(crate) fn trim_line_terminator(
     searcher: &Searcher,
     buf: &[u8],
     line: &mut Match,

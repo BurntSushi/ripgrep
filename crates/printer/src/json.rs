@@ -1,17 +1,20 @@
-use std::io::{self, Write};
-use std::path::Path;
-use std::time::Instant;
-
-use grep_matcher::{Match, Matcher};
-use grep_searcher::{
-    Searcher, Sink, SinkContext, SinkContextKind, SinkFinish, SinkMatch,
+use std::{
+    io::{self, Write},
+    path::Path,
+    time::Instant,
 };
-use serde_json as json;
 
-use crate::counter::CounterWriter;
-use crate::jsont;
-use crate::stats::Stats;
-use crate::util::find_iter_at_in_context;
+use {
+    grep_matcher::{Match, Matcher},
+    grep_searcher::{
+        Searcher, Sink, SinkContext, SinkContextKind, SinkFinish, SinkMatch,
+    },
+    serde_json as json,
+};
+
+use crate::{
+    counter::CounterWriter, jsont, stats::Stats, util::find_iter_at_in_context,
+};
 
 /// The configuration for the JSON printer.
 ///
@@ -467,7 +470,7 @@ impl<W: io::Write> JSON<W> {
         matcher: M,
     ) -> JSONSink<'static, 's, M, W> {
         JSONSink {
-            matcher: matcher,
+            matcher,
             json: self,
             path: None,
             start_time: Instant::now(),
@@ -493,7 +496,7 @@ impl<W: io::Write> JSON<W> {
         P: ?Sized + AsRef<Path>,
     {
         JSONSink {
-            matcher: matcher,
+            matcher,
             json: self,
             path: Some(path.as_ref()),
             start_time: Instant::now(),
