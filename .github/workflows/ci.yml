@@ -193,6 +193,10 @@ jobs:
       shell: bash
       run: ci/test-complete
 
+    - name: Print hostname detected by grep-cli crate
+      shell: bash
+      run: ${{ env.CARGO }} test --manifest-path crates/cli/Cargo.toml ${{ env.TARGET_FLAGS }} --lib print_hostname -- --nocapture
+
   rustfmt:
     runs-on: ubuntu-latest
     steps:

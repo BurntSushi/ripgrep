@@ -21,3 +21,6 @@ termcolor = "1.3.0"
 
 [target.'cfg(windows)'.dependencies.winapi-util]
 version = "0.1.6"
+
+[target.'cfg(unix)'.dependencies.libc]
+version = "0.2.148"

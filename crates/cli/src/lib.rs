@@ -144,6 +144,7 @@ error message is crafted that typically tells the user how to fix the problem.
 
 mod decompress;
 mod escape;
+mod hostname;
 mod human;
 mod pattern;
 mod process;
@@ -155,6 +156,7 @@ pub use crate::{
         DecompressionReader, DecompressionReaderBuilder,
     },
     escape::{escape, escape_os, unescape, unescape_os},
+    hostname::hostname,
     human::{parse_human_readable_size, ParseSizeError},
     pattern::{
         pattern_from_bytes, pattern_from_os, patterns_from_path,
