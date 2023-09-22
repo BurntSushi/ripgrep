@@ -60,12 +60,13 @@ assert_eq!(output, expected);
 */
 
 #![deny(missing_docs)]
-#![cfg_attr(feature = "pattern", feature(pattern))]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 pub use crate::{
     color::{default_color_specs, ColorError, ColorSpecs, UserColorSpec},
     hyperlink::{
-        HyperlinkPattern, HyperlinkPatternBuilder, HyperlinkPatternError,
+        HyperlinkConfig, HyperlinkEnvironment, HyperlinkFormat,
+        HyperlinkFormatError,
     },
     path::{PathPrinter, PathPrinterBuilder},
     standard::{Standard, StandardBuilder, StandardSink},

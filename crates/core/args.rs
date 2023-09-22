@@ -18,9 +18,9 @@ use grep::pcre2::{
     RegexMatcherBuilder as PCRE2RegexMatcherBuilder,
 };
 use grep::printer::{
-    default_color_specs, ColorSpecs, HyperlinkPattern, JSONBuilder,
-    PathPrinter, PathPrinterBuilder, Standard, StandardBuilder, Stats,
-    Summary, SummaryBuilder, SummaryKind, JSON,
+    default_color_specs, ColorSpecs, HyperlinkConfig, HyperlinkEnvironment,
+    HyperlinkFormat, JSONBuilder, PathPrinter, PathPrinterBuilder, Standard,
+    StandardBuilder, Stats, Summary, SummaryBuilder, SummaryKind, JSON,
 };
 use grep::regex::{
     RegexMatcher as RustRegexMatcher,
@@ -236,7 +236,7 @@ impl Args {
         let mut builder = PathPrinterBuilder::new();
         builder
             .color_specs(self.matches().color_specs()?)
-            .hyperlink_pattern(self.matches().hyperlink_pattern()?)
+            .hyperlink(self.matches().hyperlink_config()?)
             .separator(self.matches().path_separator()?)
             .terminator(self.matches().path_terminator().unwrap_or(b'\n'));
         Ok(builder.build(wtr))
@@ -774,7 +774,7 @@ impl ArgMatches {
         let mut builder = StandardBuilder::new();
         builder
             .color_specs(self.color_specs()?)
-            .hyperlink_pattern(self.hyperlink_pattern()?)
+            .hyperlink(self.hyperlink_config()?)
             .stats(self.stats())
             .heading(self.heading())
             .path(self.with_filename(paths))
@@ -814,7 +814,7 @@ impl ArgMatches {
         builder
             .kind(self.summary_kind().expect("summary format"))
             .color_specs(self.color_specs()?)
-            .hyperlink_pattern(self.hyperlink_pattern()?)
+            .hyperlink(self.hyperlink_config()?)
             .stats(self.stats())
             .path(self.with_filename(paths))
             .max_matches(self.max_count()?)
@@ -1126,11 +1126,21 @@ impl ArgMatches {
     /// for the current system is used if the value is not set.
     ///
     /// If an invalid pattern is provided, then an error is returned.
-    fn hyperlink_pattern(&self) -> Result<HyperlinkPattern> {
-        Ok(match self.value_of_lossy("hyperlink-format") {
-            Some(pattern) => HyperlinkPattern::from_str(&pattern)?,
-            None => HyperlinkPattern::default_file_scheme(),
-        })
+    fn hyperlink_config(&self) -> Result<HyperlinkConfig> {
+        let mut env = HyperlinkEnvironment::new();
+        env.host(hostname(self.value_of_os("hostname-bin")))
+            .wsl_prefix(wsl_prefix());
+        let fmt = match self.value_of_lossy("hyperlink-format") {
+            None => HyperlinkFormat::from_str("default").unwrap(),
+            Some(format) => match HyperlinkFormat::from_str(&format) {
+                Ok(format) => format,
+                Err(err) => {
+                    let msg = format!("invalid hyperlink format: {err}");
+                    return Err(msg.into());
+                }
+            },
+        };
+        Ok(HyperlinkConfig::new(env, fmt))
     }
 
     /// Returns true if ignore files should be processed case insensitively.
@@ -1836,6 +1846,107 @@ fn current_dir() -> Result<PathBuf> {
         err,
     )
     .into())
+}
+
+/// Retrieves the hostname that ripgrep should use wherever a hostname is
+/// required. Currently, that's just in the hyperlink format.
+///
+/// This works by first running the given binary program (if present and with
+/// no arguments) to get the hostname after trimming leading and trailing
+/// whitespace. If that fails for any reason, then it falls back to getting
+/// the hostname via platform specific means (e.g., `gethostname` on Unix).
+///
+/// The purpose of `bin` is to make it possible for end users to override how
+/// ripgrep determines the hostname.
+fn hostname(bin: Option<&OsStr>) -> Option<String> {
+    let Some(bin) = bin else { return platform_hostname() };
+    let bin = match grep::cli::resolve_binary(bin) {
+        Ok(bin) => bin,
+        Err(err) => {
+            log::debug!(
+                "failed to run command '{bin:?}' to get hostname \
+                 (falling back to platform hostname): {err}",
+            );
+            return platform_hostname();
+        }
+    };
+    let mut cmd = process::Command::new(&bin);
+    cmd.stdin(process::Stdio::null());
+    let rdr = match grep::cli::CommandReader::new(&mut cmd) {
+        Ok(rdr) => rdr,
+        Err(err) => {
+            log::debug!(
+                "failed to spawn command '{bin:?}' to get \
+                 hostname (falling back to platform hostname): {err}",
+            );
+            return platform_hostname();
+        }
+    };
+    let out = match io::read_to_string(rdr) {
+        Ok(out) => out,
+        Err(err) => {
+            log::debug!(
+                "failed to read output from command '{bin:?}' to get \
+                 hostname (falling back to platform hostname): {err}",
+            );
+            return platform_hostname();
+        }
+    };
+    let hostname = out.trim();
+    if hostname.is_empty() {
+        log::debug!(
+            "output from command '{bin:?}' is empty after trimming \
+             leading and trailing whitespace (falling back to \
+             platform hostname)",
+        );
+        return platform_hostname();
+    }
+    Some(hostname.to_string())
+}
+
+/// Attempts to get the hostname by using platform specific routines. For
+/// example, this will do `gethostname` on Unix and `GetComputerNameExW` on
+/// Windows.
+fn platform_hostname() -> Option<String> {
+    let hostname_os = match grep::cli::hostname() {
+        Ok(x) => x,
+        Err(err) => {
+            log::debug!("could not get hostname: {}", err);
+            return None;
+        }
+    };
+    let Some(hostname) = hostname_os.to_str() else {
+        log::debug!(
+            "got hostname {:?}, but it's not valid UTF-8",
+            hostname_os
+        );
+        return None;
+    };
+    Some(hostname.to_string())
+}
+
+/// Returns a value that is meant to fill in the `{wslprefix}` variable for
+/// a user given hyperlink format. A WSL prefix is a share/network like thing
+/// that is meant to permit Windows applications to open files stored within
+/// a WSL drive.
+///
+/// If a WSL distro name is unavailable, not valid UTF-8 or this isn't running
+/// in a Unix environment, then this returns None.
+///
+/// See: <https://learn.microsoft.com/en-us/windows/wsl/filesystems>
+fn wsl_prefix() -> Option<String> {
+    if !cfg!(unix) {
+        return None;
+    }
+    let distro_os = env::var_os("WSL_DISTRO_NAME")?;
+    let Some(distro) = distro_os.to_str() else {
+        log::debug!(
+            "found WSL_DISTRO_NAME={:?}, but value is not UTF-8",
+            distro_os
+        );
+        return None;
+    };
+    Some(format!("wsl$/{distro}"))
 }
 
 /// Tries to assign a timestamp to every `Subject` in the vector to help with

@@ -580,6 +580,7 @@ pub fn all_args_and_flags() -> Vec<RGArg> {
     flag_glob_case_insensitive(&mut args);
     flag_heading(&mut args);
     flag_hidden(&mut args);
+    flag_hostname_bin(&mut args);
     flag_hyperlink_format(&mut args);
     flag_iglob(&mut args);
     flag_ignore_case(&mut args);
@@ -1495,19 +1496,93 @@ This flag can be disabled with --no-hidden.
     args.push(arg);
 }
 
+fn flag_hostname_bin(args: &mut Vec<RGArg>) {
+    const SHORT: &str = "Run a program to get this system's hostname.";
+    const LONG: &str = long!(
+        "\
+This flag controls how ripgrep determines this system's hostname. The flag's
+value should correspond to an executable (either a path or something that can
+be found via your system's *PATH* environment variable). When set, ripgrep will
+run this executable, with no arguments, and treat its output (with leading and
+trailing whitespace stripped) as your system's hostname.
+
+When not set (the default, or the empty string), ripgrep will try to
+automatically detect your system's hostname. On Unix, this corresponds
+to calling *gethostname*. On Windows, this corresponds to calling
+*GetComputerNameExW* to fetch the system's \"physical DNS hostname.\"
+
+ripgrep uses your system's hostname for producing hyperlinks.
+"
+    );
+    let arg =
+        RGArg::flag("hostname-bin", "COMMAND").help(SHORT).long_help(LONG);
+    args.push(arg);
+}
+
 fn flag_hyperlink_format(args: &mut Vec<RGArg>) {
     const SHORT: &str = "Set the format of hyperlinks to match results.";
     const LONG: &str = long!(
         "\
-Set the format of hyperlinks to match results. This defines a pattern which
-can contain the following placeholders: {file}, {line}, {column}, and {host}.
-An empty pattern or 'none' disables hyperlinks.
+Set the format of hyperlinks to match results. Hyperlinks make certain elements
+of ripgrep's output, such as file paths, clickable. This generally only works
+in terminal emulators that support OSC-8 hyperlinks. For example, the format
+*file://{host}{file}* will emit an RFC 8089 hyperlink.
 
-The {file} placeholder is required, and will be replaced with the absolute
-file path with a few adjustments: The leading '/' on Unix is removed,
-and '\\' is replaced with '/' on Windows.
+The following variables are available in the format string:
 
-As an example, the default pattern on Unix systems is: 'file://{host}/{file}'
+*{path}*: Required. This is replaced with a path to a matching file. The
+path is guaranteed to be absolute and percent encoded such that it is valid to
+put into a URI. Note that a path is guaranteed to start with a */*.
+
+*{host}*: Optional. This is replaced with your system's hostname. On Unix,
+this corresponds to calling *gethostname*. On Windows, this corresponds to
+calling *GetComputerNameExW* to fetch the system's \"physical DNS hostname.\"
+Alternatively, if --hostname-bin was provided, then the hostname returned from
+the output of that program will be returned. If no hostname could be found,
+then this variable is replaced with the empty string.
+
+*{line}*: Optional. If appropriate, this is replaced with the line number of
+a match. If no line number is available (for example, if --no-line-number was
+given), then it is automatically replaced with the value *1*.
+
+*{column}*: Optional, but requires the presence of **{line}**. If appropriate,
+this is replaced with the column number of a match. If no column number is
+available (for example, if --no-column was given), then it is automatically
+replaced with the value *1*.
+
+*{wslprefix}*: Optional. This is a special value that is set to
+*wsl$/WSL_DISTRO_NAME*, where *WSL_DISTRO_NAME* corresponds to the value of
+the equivalent environment variable. If the system is not Unix or if the
+*WSL_DISTRO_NAME* environment variable is not set, then this is replaced with
+the empty string.
+
+Alternatively, a format string may correspond to one of the following
+aliases: default, file, grep+, kitty, macvim, none, subl, textmate, vscode,
+vscode-insiders, vscodium.
+
+A format string may be empty. An empty format string is equivalent to the
+*none* alias. In this case, hyperlinks will be disabled.
+
+At present, the default format when ripgrep detects a tty on stdout all systems
+is *default*. This is an alias that expands to *file://{host}{path}* on Unix
+and *file://{path}* on Windows. When stdout is not a tty, then the default
+format behaves as if it were *none*. That is, hyperlinks are disabled.
+
+Note that hyperlinks are only written when colors are enabled. To write
+hyperlinks without colors, you'll need to configure ripgrep to not colorize
+anything without actually disabling all ANSI escape codes completely:
+
+    --colors 'path:none' --colors 'line:none' --colors 'column:none' --colors 'match:none'
+
+ripgrep works this way because it treats the *--color=(never|always|auto)* flag
+as a proxy for whether ANSI escape codes should be used at all. This means
+that environment variables like *NO_COLOR=1* and *TERM=dumb* not only disable
+colors, but hyperlinks as well. Similarly, colors and hyperlinks are disabled
+when ripgrep is not writing to a tty. (Unless one forces the issue by setting
+*--color=always*.)
+
+For more information on hyperlinks in terminal emulators, see:
+https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda
 "
     );
     let arg =

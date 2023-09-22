@@ -20,7 +20,7 @@ use {
 use crate::{
     color::ColorSpecs,
     counter::CounterWriter,
-    hyperlink::{HyperlinkPattern, HyperlinkSpan},
+    hyperlink::{self, HyperlinkConfig},
     stats::Stats,
     util::{
         find_iter_at_in_context, trim_ascii_prefix, trim_line_terminator,
@@ -36,7 +36,7 @@ use crate::{
 #[derive(Debug, Clone)]
 struct Config {
     colors: ColorSpecs,
-    hyperlink_pattern: HyperlinkPattern,
+    hyperlink: HyperlinkConfig,
     stats: bool,
     heading: bool,
     path: bool,
@@ -62,7 +62,7 @@ impl Default for Config {
     fn default() -> Config {
         Config {
             colors: ColorSpecs::default(),
-            hyperlink_pattern: HyperlinkPattern::default(),
+            hyperlink: HyperlinkConfig::default(),
             stats: false,
             heading: false,
             path: true,
@@ -131,7 +131,6 @@ impl StandardBuilder {
         Standard {
             config: self.config.clone(),
             wtr: RefCell::new(CounterWriter::new(wtr)),
-            buf: RefCell::new(vec![]),
             matches: vec![],
         }
     }
@@ -170,7 +169,7 @@ impl StandardBuilder {
         self
     }
 
-    /// Set the hyperlink pattern to use for hyperlinks output by this printer.
+    /// Set the configuration to use for hyperlinks output by this printer.
     ///
     /// Regardless of the hyperlink format provided here, whether hyperlinks
     /// are actually used or not is determined by the implementation of
@@ -180,12 +179,12 @@ impl StandardBuilder {
     ///
     /// This completely overrides any previous hyperlink format.
     ///
-    /// The default pattern format results in not emitting any hyperlinks.
-    pub fn hyperlink_pattern(
+    /// The default configuration results in not emitting any hyperlinks.
+    pub fn hyperlink(
         &mut self,
-        pattern: HyperlinkPattern,
+        config: HyperlinkConfig,
     ) -> &mut StandardBuilder {
-        self.config.hyperlink_pattern = pattern;
+        self.config.hyperlink = config;
         self
     }
 
@@ -496,7 +495,6 @@ impl StandardBuilder {
 pub struct Standard<W> {
     config: Config,
     wtr: RefCell<CounterWriter<W>>,
-    buf: RefCell<Vec<u8>>,
     matches: Vec<Match>,
 }
 
@@ -533,12 +531,15 @@ impl<W: WriteColor> Standard<W> {
         &'s mut self,
         matcher: M,
     ) -> StandardSink<'static, 's, M, W> {
+        let interpolator =
+            hyperlink::Interpolator::new(&self.config.hyperlink);
         let stats = if self.config.stats { Some(Stats::new()) } else { None };
         let needs_match_granularity = self.needs_match_granularity();
         StandardSink {
             matcher,
             standard: self,
             replacer: Replacer::new(),
+            interpolator,
             path: None,
             start_time: Instant::now(),
             match_count: 0,
@@ -565,16 +566,17 @@ impl<W: WriteColor> Standard<W> {
         if !self.config.path {
             return self.sink(matcher);
         }
+        let interpolator =
+            hyperlink::Interpolator::new(&self.config.hyperlink);
         let stats = if self.config.stats { Some(Stats::new()) } else { None };
-        let ppath = PrinterPath::with_separator(
-            path.as_ref(),
-            self.config.separator_path,
-        );
+        let ppath = PrinterPath::new(path.as_ref())
+            .with_separator(self.config.separator_path);
         let needs_match_granularity = self.needs_match_granularity();
         StandardSink {
             matcher,
             standard: self,
             replacer: Replacer::new(),
+            interpolator,
             path: Some(ppath),
             start_time: Instant::now(),
             match_count: 0,
@@ -659,6 +661,7 @@ pub struct StandardSink<'p, 's, M: Matcher, W> {
     matcher: M,
     standard: &'s mut Standard<W>,
     replacer: Replacer<M>,
+    interpolator: hyperlink::Interpolator,
     path: Option<PrinterPath<'p>>,
     start_time: Instant,
     match_count: u64,
@@ -1241,22 +1244,10 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     ) -> io::Result<()> {
         let mut prelude = PreludeWriter::new(self);
         prelude.start(line_number, column)?;
-
-        if !self.config().heading {
-            prelude.write_path()?;
-        }
-        if let Some(n) = line_number {
-            prelude.write_line_number(n)?;
-        }
-        if let Some(n) = column {
-            if self.config().column {
-                prelude.write_column_number(n)?;
-            }
-        }
-        if self.config().byte_offset {
-            prelude.write_byte_offset(absolute_byte_offset)?;
-        }
-
+        prelude.write_path()?;
+        prelude.write_line_number(line_number)?;
+        prelude.write_column_number(column)?;
+        prelude.write_byte_offset(absolute_byte_offset)?;
         prelude.end()
     }
 
@@ -1507,30 +1498,30 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     }
 
     fn write_path_hyperlink(&self, path: &PrinterPath) -> io::Result<()> {
-        let mut hyperlink = self.start_hyperlink_span(path, None, None)?;
+        let status = self.start_hyperlink(path, None, None)?;
         self.write_path(path)?;
-        hyperlink.end(&mut *self.wtr().borrow_mut())
+        self.end_hyperlink(status)
     }
 
-    fn start_hyperlink_span(
+    fn start_hyperlink(
         &self,
         path: &PrinterPath,
         line_number: Option<u64>,
         column: Option<u64>,
-    ) -> io::Result<HyperlinkSpan> {
-        let mut wtr = self.wtr().borrow_mut();
-        if wtr.supports_hyperlinks() {
-            let mut buf = self.buf().borrow_mut();
-            if let Some(spec) = path.create_hyperlink_spec(
-                &self.config().hyperlink_pattern,
-                line_number,
-                column,
-                &mut buf,
-            ) {
-                return HyperlinkSpan::start(&mut *wtr, &spec);
-            }
-        }
-        Ok(HyperlinkSpan::default())
+    ) -> io::Result<hyperlink::InterpolatorStatus> {
+        let Some(hyperpath) = path.as_hyperlink() else {
+            return Ok(hyperlink::InterpolatorStatus::inactive());
+        };
+        let values =
+            hyperlink::Values::new(hyperpath).line(line_number).column(column);
+        self.sink.interpolator.begin(&values, &mut *self.wtr().borrow_mut())
+    }
+
+    fn end_hyperlink(
+        &self,
+        status: hyperlink::InterpolatorStatus,
+    ) -> io::Result<()> {
+        self.sink.interpolator.finish(status, &mut *self.wtr().borrow_mut())
     }
 
     fn start_color_match(&self) -> io::Result<()> {
@@ -1586,12 +1577,6 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         &self.sink.standard.wtr
     }
 
-    /// Return a temporary buffer, which may be used for anything.
-    /// It is not necessarily empty when returned.
-    fn buf(&self) -> &'a RefCell<Vec<u8>> {
-        &self.sink.standard.buf
-    }
-
     /// Return the path associated with this printer, if one exists.
     fn path(&self) -> Option<&'a PrinterPath<'a>> {
         self.sink.path.as_ref()
@@ -1645,7 +1630,7 @@ struct PreludeWriter<'a, M: Matcher, W> {
     std: &'a StandardImpl<'a, M, W>,
     next_separator: PreludeSeparator,
     field_separator: &'a [u8],
-    hyperlink: HyperlinkSpan,
+    interp_status: hyperlink::InterpolatorStatus,
 }
 
 /// A type of separator used in the prelude
@@ -1660,45 +1645,45 @@ enum PreludeSeparator {
 
 impl<'a, M: Matcher, W: WriteColor> PreludeWriter<'a, M, W> {
     /// Creates a new prelude printer.
+    #[inline(always)]
     fn new(std: &'a StandardImpl<'a, M, W>) -> PreludeWriter<'a, M, W> {
-        Self {
+        PreludeWriter {
             std,
             next_separator: PreludeSeparator::None,
             field_separator: std.separator_field(),
-            hyperlink: HyperlinkSpan::default(),
+            interp_status: hyperlink::InterpolatorStatus::inactive(),
         }
     }
 
     /// Starts the prelude with a hyperlink when applicable.
     ///
-    /// If a heading was written, and the hyperlink pattern is invariant on
+    /// If a heading was written, and the hyperlink format is invariant on
     /// the line number, then this doesn't hyperlink each line prelude, as it
     /// wouldn't point to the line anyway. The hyperlink on the heading should
     /// be sufficient and less confusing.
+    #[inline(always)]
     fn start(
         &mut self,
         line_number: Option<u64>,
         column: Option<u64>,
     ) -> io::Result<()> {
-        if let Some(path) = self.std.path() {
-            if self.config().hyperlink_pattern.is_line_dependent()
-                || !self.config().heading
-            {
-                self.hyperlink = self.std.start_hyperlink_span(
-                    path,
-                    line_number,
-                    column,
-                )?;
-            }
+        let Some(path) = self.std.path() else { return Ok(()) };
+        if self.config().hyperlink.format().is_line_dependent()
+            || !self.config().heading
+        {
+            self.interp_status =
+                self.std.start_hyperlink(path, line_number, column)?;
         }
         Ok(())
     }
 
     /// Ends the prelude and writes the remaining output.
+    #[inline(always)]
     fn end(&mut self) -> io::Result<()> {
-        if self.hyperlink.is_active() {
-            self.hyperlink.end(&mut *self.std.wtr().borrow_mut())?;
-        }
+        self.std.end_hyperlink(std::mem::replace(
+            &mut self.interp_status,
+            hyperlink::InterpolatorStatus::inactive(),
+        ))?;
         self.write_separator()
     }
 
@@ -1706,22 +1691,30 @@ impl<'a, M: Matcher, W: WriteColor> PreludeWriter<'a, M, W> {
     /// write that path to the underlying writer followed by the given field
     /// separator. (If a path terminator is set, then that is used instead of
     /// the field separator.)
+    #[inline(always)]
     fn write_path(&mut self) -> io::Result<()> {
-        if let Some(path) = self.std.path() {
-            self.write_separator()?;
-            self.std.write_path(path)?;
-
-            self.next_separator = if self.config().path_terminator.is_some() {
-                PreludeSeparator::PathTerminator
-            } else {
-                PreludeSeparator::FieldSeparator
-            };
+        // The prelude doesn't handle headings, only what comes before a match
+        // on the same line. So if we are emitting paths in headings, we should
+        // not do it here on each line.
+        if self.config().heading {
+            return Ok(());
         }
+        let Some(path) = self.std.path() else { return Ok(()) };
+        self.write_separator()?;
+        self.std.write_path(path)?;
+
+        self.next_separator = if self.config().path_terminator.is_some() {
+            PreludeSeparator::PathTerminator
+        } else {
+            PreludeSeparator::FieldSeparator
+        };
         Ok(())
     }
 
-    /// Writes the line number field.
-    fn write_line_number(&mut self, line_number: u64) -> io::Result<()> {
+    /// Writes the line number field if present.
+    #[inline(always)]
+    fn write_line_number(&mut self, line: Option<u64>) -> io::Result<()> {
+        let Some(line_number) = line else { return Ok(()) };
         self.write_separator()?;
         let n = line_number.to_string();
         self.std.write_spec(self.config().colors.line(), n.as_bytes())?;
@@ -1729,8 +1722,13 @@ impl<'a, M: Matcher, W: WriteColor> PreludeWriter<'a, M, W> {
         Ok(())
     }
 
-    /// Writes the column number field.
-    fn write_column_number(&mut self, column_number: u64) -> io::Result<()> {
+    /// Writes the column number field if present and configured to do so.
+    #[inline(always)]
+    fn write_column_number(&mut self, column: Option<u64>) -> io::Result<()> {
+        if !self.config().column {
+            return Ok(());
+        }
+        let Some(column_number) = column else { return Ok(()) };
         self.write_separator()?;
         let n = column_number.to_string();
         self.std.write_spec(self.config().colors.column(), n.as_bytes())?;
@@ -1738,8 +1736,12 @@ impl<'a, M: Matcher, W: WriteColor> PreludeWriter<'a, M, W> {
         Ok(())
     }
 
-    /// Writes the byte offset field.
+    /// Writes the byte offset field if configured to do so.
+    #[inline(always)]
     fn write_byte_offset(&mut self, offset: u64) -> io::Result<()> {
+        if !self.config().byte_offset {
+            return Ok(());
+        }
         self.write_separator()?;
         let n = offset.to_string();
         self.std.write_spec(self.config().colors.column(), n.as_bytes())?;
@@ -1751,6 +1753,7 @@ impl<'a, M: Matcher, W: WriteColor> PreludeWriter<'a, M, W> {
     ///
     /// This is called before writing the contents of a field, and at
     /// the end of the prelude.
+    #[inline(always)]
     fn write_separator(&mut self) -> io::Result<()> {
         match self.next_separator {
             PreludeSeparator::None => {}
@@ -1767,6 +1770,7 @@ impl<'a, M: Matcher, W: WriteColor> PreludeWriter<'a, M, W> {
         Ok(())
     }
 
+    #[inline(always)]
     fn config(&self) -> &Config {
         self.std.config()
     }

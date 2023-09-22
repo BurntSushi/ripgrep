@@ -15,7 +15,7 @@ use {
 use crate::{
     color::ColorSpecs,
     counter::CounterWriter,
-    hyperlink::{HyperlinkPattern, HyperlinkSpan},
+    hyperlink::{self, HyperlinkConfig},
     stats::Stats,
     util::{find_iter_at_in_context, PrinterPath},
 };
@@ -29,7 +29,7 @@ use crate::{
 struct Config {
     kind: SummaryKind,
     colors: ColorSpecs,
-    hyperlink_pattern: HyperlinkPattern,
+    hyperlink: HyperlinkConfig,
     stats: bool,
     path: bool,
     max_matches: Option<u64>,
@@ -44,7 +44,7 @@ impl Default for Config {
         Config {
             kind: SummaryKind::Count,
             colors: ColorSpecs::default(),
-            hyperlink_pattern: HyperlinkPattern::default(),
+            hyperlink: HyperlinkConfig::default(),
             stats: false,
             path: true,
             max_matches: None,
@@ -169,7 +169,6 @@ impl SummaryBuilder {
         Summary {
             config: self.config.clone(),
             wtr: RefCell::new(CounterWriter::new(wtr)),
-            buf: vec![],
         }
     }
 
@@ -216,7 +215,7 @@ impl SummaryBuilder {
         self
     }
 
-    /// Set the hyperlink pattern to use for hyperlinks output by this printer.
+    /// Set the configuration to use for hyperlinks output by this printer.
     ///
     /// Regardless of the hyperlink format provided here, whether hyperlinks
     /// are actually used or not is determined by the implementation of
@@ -226,12 +225,12 @@ impl SummaryBuilder {
     ///
     /// This completely overrides any previous hyperlink format.
     ///
-    /// The default pattern format results in not emitting any hyperlinks.
-    pub fn hyperlink_pattern(
+    /// The default configuration results in not emitting any hyperlinks.
+    pub fn hyperlink(
         &mut self,
-        pattern: HyperlinkPattern,
+        config: HyperlinkConfig,
     ) -> &mut SummaryBuilder {
-        self.config.hyperlink_pattern = pattern;
+        self.config.hyperlink = config;
         self
     }
 
@@ -357,7 +356,6 @@ impl SummaryBuilder {
 pub struct Summary<W> {
     config: Config,
     wtr: RefCell<CounterWriter<W>>,
-    buf: Vec<u8>,
 }
 
 impl<W: WriteColor> Summary<W> {
@@ -400,6 +398,8 @@ impl<W: WriteColor> Summary<W> {
         &'s mut self,
         matcher: M,
     ) -> SummarySink<'static, 's, M, W> {
+        let interpolator =
+            hyperlink::Interpolator::new(&self.config.hyperlink);
         let stats = if self.config.stats || self.config.kind.requires_stats() {
             Some(Stats::new())
         } else {
@@ -408,6 +408,7 @@ impl<W: WriteColor> Summary<W> {
         SummarySink {
             matcher,
             summary: self,
+            interpolator,
             path: None,
             start_time: Instant::now(),
             match_count: 0,
@@ -432,18 +433,19 @@ impl<W: WriteColor> Summary<W> {
         if !self.config.path && !self.config.kind.requires_path() {
             return self.sink(matcher);
         }
+        let interpolator =
+            hyperlink::Interpolator::new(&self.config.hyperlink);
         let stats = if self.config.stats || self.config.kind.requires_stats() {
             Some(Stats::new())
         } else {
             None
         };
-        let ppath = PrinterPath::with_separator(
-            path.as_ref(),
-            self.config.separator_path,
-        );
+        let ppath = PrinterPath::new(path.as_ref())
+            .with_separator(self.config.separator_path);
         SummarySink {
             matcher,
             summary: self,
+            interpolator,
             path: Some(ppath),
             start_time: Instant::now(),
             match_count: 0,
@@ -490,6 +492,7 @@ impl<W> Summary<W> {
 pub struct SummarySink<'p, 's, M: Matcher, W> {
     matcher: M,
     summary: &'s mut Summary<W>,
+    interpolator: hyperlink::Interpolator,
     path: Option<PrinterPath<'p>>,
     start_time: Instant,
     match_count: u64,
@@ -595,36 +598,34 @@ impl<'p, 's, M: Matcher, W: WriteColor> SummarySink<'p, 's, M, W> {
     /// (color and hyperlink).
     fn write_path(&mut self) -> io::Result<()> {
         if self.path.is_some() {
-            let mut hyperlink = self.start_hyperlink_span()?;
-
+            let status = self.start_hyperlink()?;
             self.write_spec(
                 self.summary.config.colors.path(),
                 self.path.as_ref().unwrap().as_bytes(),
             )?;
-
-            if hyperlink.is_active() {
-                hyperlink.end(&mut *self.summary.wtr.borrow_mut())?;
-            }
+            self.end_hyperlink(status)?;
         }
         Ok(())
     }
 
     /// Starts a hyperlink span when applicable.
-    fn start_hyperlink_span(&mut self) -> io::Result<HyperlinkSpan> {
-        if let Some(ref path) = self.path {
-            let mut wtr = self.summary.wtr.borrow_mut();
-            if wtr.supports_hyperlinks() {
-                if let Some(spec) = path.create_hyperlink_spec(
-                    &self.summary.config.hyperlink_pattern,
-                    None,
-                    None,
-                    &mut self.summary.buf,
-                ) {
-                    return Ok(HyperlinkSpan::start(&mut *wtr, &spec)?);
-                }
-            }
-        }
-        Ok(HyperlinkSpan::default())
+    fn start_hyperlink(
+        &mut self,
+    ) -> io::Result<hyperlink::InterpolatorStatus> {
+        let Some(hyperpath) =
+            self.path.as_ref().and_then(|p| p.as_hyperlink())
+        else {
+            return Ok(hyperlink::InterpolatorStatus::inactive());
+        };
+        let values = hyperlink::Values::new(hyperpath);
+        self.interpolator.begin(&values, &mut *self.summary.wtr.borrow_mut())
+    }
+
+    fn end_hyperlink(
+        &self,
+        status: hyperlink::InterpolatorStatus,
+    ) -> io::Result<()> {
+        self.interpolator.finish(status, &mut *self.summary.wtr.borrow_mut())
     }
 
     /// Write the line terminator configured on the given searcher.

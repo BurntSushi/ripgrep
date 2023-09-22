@@ -1,21 +1,17 @@
-use std::{borrow::Cow, fmt, io, path::Path, time};
+use std::{borrow::Cow, cell::OnceCell, fmt, io, path::Path, time};
 
 use {
-    bstr::{ByteSlice, ByteVec},
+    bstr::ByteVec,
     grep_matcher::{Captures, LineTerminator, Match, Matcher},
     grep_searcher::{
         LineIter, Searcher, SinkContext, SinkContextKind, SinkError, SinkMatch,
     },
-    termcolor::HyperlinkSpec,
 };
 
 #[cfg(feature = "serde")]
 use serde::{Serialize, Serializer};
 
-use crate::{
-    hyperlink::{HyperlinkPath, HyperlinkPattern, HyperlinkValues},
-    MAX_LOOK_AHEAD,
-};
+use crate::{hyperlink::HyperlinkPath, MAX_LOOK_AHEAD};
 
 /// A type for handling replacements while amortizing allocation.
 pub(crate) struct Replacer<M: Matcher> {
@@ -268,11 +264,12 @@ impl<'a> Sunk<'a> {
 /// something else. This allows us to amortize work if we are printing the
 /// file path for every match.
 ///
-/// In the common case, no transformation is needed, which lets us avoid the
-/// allocation. Typically, only Windows requires a transform, since we can't
-/// access the raw bytes of a path directly and first need to lossily convert
-/// to UTF-8. Windows is also typically where the path separator replacement
-/// is used, e.g., in cygwin environments to use `/` instead of `\`.
+/// In the common case, no transformation is needed, which lets us avoid
+/// the allocation. Typically, only Windows requires a transform, since
+/// it's fraught to access the raw bytes of a path directly and first need
+/// to lossily convert to UTF-8. Windows is also typically where the path
+/// separator replacement is used, e.g., in cygwin environments to use `/`
+/// instead of `\`.
 ///
 /// Users of this type are expected to construct it from a normal `Path`
 /// found in the standard library. It can then be written to any `io::Write`
@@ -281,54 +278,55 @@ impl<'a> Sunk<'a> {
 /// will not roundtrip correctly.
 #[derive(Clone, Debug)]
 pub(crate) struct PrinterPath<'a> {
+    // On Unix, we can re-materialize a `Path` from our `Cow<'a, [u8]>` with
+    // zero cost, so there's no point in storing it. At time of writing,
+    // OsStr::as_os_str_bytes (and its corresponding constructor) are not
+    // stable yet. Those would let us achieve the same end portably. (As long
+    // as we keep our UTF-8 requirement on Windows.)
+    #[cfg(not(unix))]
     path: &'a Path,
     bytes: Cow<'a, [u8]>,
-    hyperlink_path: std::cell::OnceCell<Option<HyperlinkPath>>,
+    hyperlink: OnceCell<Option<HyperlinkPath>>,
 }
 
 impl<'a> PrinterPath<'a> {
     /// Create a new path suitable for printing.
     pub(crate) fn new(path: &'a Path) -> PrinterPath<'a> {
         PrinterPath {
+            #[cfg(not(unix))]
             path,
+            // N.B. This is zero-cost on Unix and requires at least a UTF-8
+            // check on Windows. This doesn't allocate on Windows unless the
+            // path is invalid UTF-8 (which is exceptionally rare).
             bytes: Vec::from_path_lossy(path),
-            hyperlink_path: std::cell::OnceCell::new(),
+            hyperlink: OnceCell::new(),
         }
     }
 
-    /// Create a new printer path from the given path which can be efficiently
-    /// written to a writer without allocation.
+    /// Set the separator on this path.
     ///
-    /// If the given separator is present, then any separators in `path` are
-    /// replaced with it.
+    /// When set, `PrinterPath::as_bytes` will return the path provided but
+    /// with its separator replaced with the one given.
     pub(crate) fn with_separator(
-        path: &'a Path,
+        mut self,
         sep: Option<u8>,
     ) -> PrinterPath<'a> {
-        let mut ppath = PrinterPath::new(path);
-        if let Some(sep) = sep {
-            ppath.replace_separator(sep);
-        }
-        ppath
-    }
-
-    /// Replace the path separator in this path with the given separator
-    /// and do it in place. On Windows, both `/` and `\` are treated as
-    /// path separators that are both replaced by `new_sep`. In all other
-    /// environments, only `/` is treated as a path separator.
-    fn replace_separator(&mut self, new_sep: u8) {
-        let transformed_path: Vec<u8> = self
-            .as_bytes()
-            .bytes()
-            .map(|b| {
-                if b == b'/' || (cfg!(windows) && b == b'\\') {
-                    new_sep
-                } else {
-                    b
+        /// Replace the path separator in this path with the given separator
+        /// and do it in place. On Windows, both `/` and `\` are treated as
+        /// path separators that are both replaced by `new_sep`. In all other
+        /// environments, only `/` is treated as a path separator.
+        fn replace_separator(bytes: &[u8], sep: u8) -> Vec<u8> {
+            let mut bytes = bytes.to_vec();
+            for b in bytes.iter_mut() {
+                if *b == b'/' || (cfg!(windows) && *b == b'\\') {
+                    *b = sep;
                 }
-            })
-            .collect();
-        self.bytes = Cow::Owned(transformed_path);
+            }
+            bytes
+        }
+        let Some(sep) = sep else { return self };
+        self.bytes = Cow::Owned(replace_separator(self.as_bytes(), sep));
+        self
     }
 
     /// Return the raw bytes for this path.
@@ -336,32 +334,30 @@ impl<'a> PrinterPath<'a> {
         &self.bytes
     }
 
-    /// Creates a hyperlink for this path and the given line and column, using
-    /// the specified pattern. Uses the given buffer to store the hyperlink.
-    pub(crate) fn create_hyperlink_spec<'b>(
-        &self,
-        pattern: &HyperlinkPattern,
-        line_number: Option<u64>,
-        column: Option<u64>,
-        buffer: &'b mut Vec<u8>,
-    ) -> Option<HyperlinkSpec<'b>> {
-        if pattern.is_empty() {
-            return None;
-        }
-        let file_path = self.hyperlink_path()?;
-        let values = HyperlinkValues::new(file_path, line_number, column);
-        buffer.clear();
-        pattern.render(&values, buffer).ok()?;
-        Some(HyperlinkSpec::open(buffer))
+    /// Return this path as a hyperlink.
+    ///
+    /// Note that a hyperlink may not be able to be created from a path.
+    /// Namely, computing the hyperlink may require touching the file system
+    /// (e.g., for path canonicalization) and that can fail. This failure is
+    /// silent but is logged.
+    pub(crate) fn as_hyperlink(&self) -> Option<&HyperlinkPath> {
+        self.hyperlink
+            .get_or_init(|| HyperlinkPath::from_path(self.as_path()))
+            .as_ref()
     }
 
-    /// Returns the file path to use in hyperlinks, if any.
-    ///
-    /// This is what the {file} placeholder will be substituted with.
-    fn hyperlink_path(&self) -> Option<&HyperlinkPath> {
-        self.hyperlink_path
-            .get_or_init(|| HyperlinkPath::from_path(self.path))
-            .as_ref()
+    /// Return this path as an actual `Path` type.
+    fn as_path(&self) -> &Path {
+        #[cfg(unix)]
+        fn imp<'p>(p: &'p PrinterPath<'_>) -> &'p Path {
+            use std::{ffi::OsStr, os::unix::ffi::OsStrExt};
+            Path::new(OsStr::from_bytes(p.as_bytes()))
+        }
+        #[cfg(not(unix))]
+        fn imp<'p>(p: &'p PrinterPath<'_>) -> &'p Path {
+            p.path
+        }
+        imp(self)
     }
 }
 

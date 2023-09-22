@@ -4,7 +4,7 @@ use termcolor::WriteColor;
 
 use crate::{
     color::ColorSpecs,
-    hyperlink::{HyperlinkPattern, HyperlinkSpan},
+    hyperlink::{self, HyperlinkConfig},
     util::PrinterPath,
 };
 
@@ -12,7 +12,7 @@ use crate::{
 #[derive(Clone, Debug)]
 struct Config {
     colors: ColorSpecs,
-    hyperlink_pattern: HyperlinkPattern,
+    hyperlink: HyperlinkConfig,
     separator: Option<u8>,
     terminator: u8,
 }
@@ -21,7 +21,7 @@ impl Default for Config {
     fn default() -> Config {
         Config {
             colors: ColorSpecs::default(),
-            hyperlink_pattern: HyperlinkPattern::default(),
+            hyperlink: HyperlinkConfig::default(),
             separator: None,
             terminator: b'\n',
         }
@@ -43,7 +43,9 @@ impl PathPrinterBuilder {
     /// Create a new path printer with the current configuration that writes
     /// paths to the given writer.
     pub fn build<W: WriteColor>(&self, wtr: W) -> PathPrinter<W> {
-        PathPrinter { config: self.config.clone(), wtr, buf: vec![] }
+        let interpolator =
+            hyperlink::Interpolator::new(&self.config.hyperlink);
+        PathPrinter { config: self.config.clone(), wtr, interpolator }
     }
 
     /// Set the user color specifications to use for coloring in this printer.
@@ -73,7 +75,7 @@ impl PathPrinterBuilder {
         self
     }
 
-    /// Set the hyperlink pattern to use for hyperlinks output by this printer.
+    /// Set the configuration to use for hyperlinks output by this printer.
     ///
     /// Regardless of the hyperlink format provided here, whether hyperlinks
     /// are actually used or not is determined by the implementation of
@@ -83,12 +85,12 @@ impl PathPrinterBuilder {
     ///
     /// This completely overrides any previous hyperlink format.
     ///
-    /// The default pattern format results in not emitting any hyperlinks.
-    pub fn hyperlink_pattern(
+    /// The default configuration results in not emitting any hyperlinks.
+    pub fn hyperlink(
         &mut self,
-        pattern: HyperlinkPattern,
+        config: HyperlinkConfig,
     ) -> &mut PathPrinterBuilder {
-        self.config.hyperlink_pattern = pattern;
+        self.config.hyperlink = config;
         self
     }
 
@@ -140,40 +142,35 @@ impl PathPrinterBuilder {
 pub struct PathPrinter<W> {
     config: Config,
     wtr: W,
-    buf: Vec<u8>,
+    interpolator: hyperlink::Interpolator,
 }
 
 impl<W: WriteColor> PathPrinter<W> {
     /// Write the given path to the underlying writer.
     pub fn write(&mut self, path: &Path) -> io::Result<()> {
-        let ppath = PrinterPath::with_separator(path, self.config.separator);
+        let ppath = PrinterPath::new(path.as_ref())
+            .with_separator(self.config.separator);
         if !self.wtr.supports_color() {
             self.wtr.write_all(ppath.as_bytes())?;
         } else {
-            let mut hyperlink = self.start_hyperlink_span(&ppath)?;
+            let status = self.start_hyperlink(&ppath)?;
             self.wtr.set_color(self.config.colors.path())?;
             self.wtr.write_all(ppath.as_bytes())?;
             self.wtr.reset()?;
-            hyperlink.end(&mut self.wtr)?;
+            self.interpolator.finish(status, &mut self.wtr)?;
         }
         self.wtr.write_all(&[self.config.terminator])
     }
 
     /// Starts a hyperlink span when applicable.
-    fn start_hyperlink_span(
+    fn start_hyperlink(
         &mut self,
         path: &PrinterPath,
-    ) -> io::Result<HyperlinkSpan> {
-        if self.wtr.supports_hyperlinks() {
-            if let Some(spec) = path.create_hyperlink_spec(
-                &self.config.hyperlink_pattern,
-                None,
-                None,
-                &mut self.buf,
-            ) {
-                return Ok(HyperlinkSpan::start(&mut self.wtr, &spec)?);
-            }
-        }
-        Ok(HyperlinkSpan::default())
+    ) -> io::Result<hyperlink::InterpolatorStatus> {
+        let Some(hyperpath) = path.as_hyperlink() else {
+            return Ok(hyperlink::InterpolatorStatus::inactive());
+        };
+        let values = hyperlink::Values::new(hyperpath);
+        self.interpolator.begin(&values, &mut self.wtr)
     }
 }
