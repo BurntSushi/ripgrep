@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
-use grep_matcher::{Captures, Match, Matcher};
-use pcre2::bytes::{CaptureLocations, Regex, RegexBuilder};
+use {
+    grep_matcher::{Captures, Match, Matcher},
+    pcre2::bytes::{CaptureLocations, Regex, RegexBuilder},
+};
 
 use crate::error::Error;
 
@@ -426,8 +428,9 @@ fn has_uppercase_literal(pattern: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use grep_matcher::{LineMatchKind, Matcher};
+
+    use super::*;
 
     // Test that enabling word matches does the right thing and demonstrate
     // the difference between it and surrounding the regex in `\b`.

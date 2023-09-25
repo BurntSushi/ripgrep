@@ -15,5 +15,5 @@ edition = "2018"
 
 [dependencies]
 grep-matcher = { version = "0.1.6", path = "../matcher" }
-log = "0.4.19"
+log = "0.4.20"
 pcre2 = "0.2.4"
