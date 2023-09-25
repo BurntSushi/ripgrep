@@ -1526,7 +1526,7 @@ fn flag_hyperlink_format(args: &mut Vec<RGArg>) {
 Set the format of hyperlinks to match results. Hyperlinks make certain elements
 of ripgrep's output, such as file paths, clickable. This generally only works
 in terminal emulators that support OSC-8 hyperlinks. For example, the format
-*file://{host}{file}* will emit an RFC 8089 hyperlink.
+*file://{host}{path}* will emit an RFC 8089 hyperlink.
 
 The following variables are available in the format string:
 

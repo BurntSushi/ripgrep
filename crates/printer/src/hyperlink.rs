@@ -48,7 +48,7 @@ impl HyperlinkConfig {
 
 /// A hyperlink format with variables.
 ///
-/// This can be created by parsing a string using `HyperlinkPattern::from_str`.
+/// This can be created by parsing a string using `HyperlinkFormat::from_str`.
 ///
 /// The default format is empty. An empty format is valid and effectively
 /// disables hyperlinks.
@@ -181,7 +181,7 @@ impl std::fmt::Display for HyperlinkFormat {
 
 /// A static environment for hyperlink interpolation.
 ///
-/// This environment permits setting the values of varibables used in hyperlink
+/// This environment permits setting the values of variables used in hyperlink
 /// interpolation that are not expected to change for the lifetime of a program.
 /// That is, these values are invariant.
 ///
@@ -283,7 +283,7 @@ impl std::fmt::Display for HyperlinkFormatError {
                 write!(
                     f,
                     "invalid hyperlink format variable: '{name}', choose \
-                     from: path, line, column, host",
+                     from: path, line, column, host, wslprefix",
                 )
             }
             InvalidScheme => {
@@ -311,9 +311,9 @@ impl std::fmt::Display for HyperlinkFormatError {
     }
 }
 
-/// A builder for `HyperlinkPattern`.
+/// A builder for `HyperlinkFormat`.
 ///
-/// Once a `HyperlinkPattern` is built, it is immutable.
+/// Once a `HyperlinkFormat` is built, it is immutable.
 #[derive(Debug)]
 struct FormatBuilder {
     parts: Vec<Part>,
@@ -385,7 +385,7 @@ impl FormatBuilder {
             return Ok(());
         }
         // If all parts are just text, then there are no variables. It's
-        // likely a reference to invalid alias.
+        // likely a reference to an invalid alias.
         if self.parts.iter().all(|p| matches!(*p, Part::Text(_))) {
             return Err(err(NoVariables));
         }
@@ -651,7 +651,7 @@ impl HyperlinkPath {
         use std::os::unix::ffi::OsStrExt;
 
         // We canonicalize the path in order to get an absolute version of it
-        // without any `.` or `..` or superflous separators. Unfortunately,
+        // without any `.` or `..` or superfluous separators. Unfortunately,
         // this does also remove symlinks, and in theory, it would be nice to
         // retain them. Perhaps even simpler, we could just join the current
         // working directory with the path and be done with it. There was
