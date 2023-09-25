@@ -83,7 +83,7 @@ impl std::fmt::Display for ColorError {
 /// This set of color specifications represents the various color types that
 /// are supported by the printers in this crate. A set of color specifications
 /// can be created from a sequence of
-/// [`UserColorSpec`s](struct.UserColorSpec.html).
+/// [`UserColorSpec`]s.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ColorSpecs {
     path: ColorSpec,

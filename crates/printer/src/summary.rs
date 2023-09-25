@@ -193,11 +193,11 @@ impl SummaryBuilder {
 
     /// Set the user color specifications to use for coloring in this printer.
     ///
-    /// A [`UserColorSpec`](struct.UserColorSpec.html) can be constructed from
-    /// a string in accordance with the color specification format. See the
-    /// `UserColorSpec` type documentation for more details on the format.
-    /// A [`ColorSpecs`](struct.ColorSpecs.html) can then be generated from
-    /// zero or more `UserColorSpec`s.
+    /// A [`UserColorSpec`](crate::UserColorSpec) can be constructed from
+    /// a string in accordance with the color specification format. See
+    /// the `UserColorSpec` type documentation for more details on the
+    /// format. A [`ColorSpecs`] can then be generated from zero or more
+    /// `UserColorSpec`s.
     ///
     /// Regardless of the color specifications provided here, whether color
     /// is actually used or not is determined by the implementation of
@@ -242,8 +242,7 @@ impl SummaryBuilder {
     /// number of bytes searched and the total number of bytes printed.
     ///
     /// Aggregate statistics can be accessed via the sink's
-    /// [`SummarySink::stats`](struct.SummarySink.html#method.stats)
-    /// method.
+    /// [`SummarySink::stats`] method.
     ///
     /// When this is enabled, this printer may need to do extra work in order
     /// to compute certain statistics, which could cause the search to take
@@ -251,8 +250,7 @@ impl SummaryBuilder {
     /// the first match, but if `stats` is enabled, then the search will
     /// continue after the first match in order to compute statistics.
     ///
-    /// For a complete description of available statistics, see
-    /// [`Stats`](struct.Stats.html).
+    /// For a complete description of available statistics, see [`Stats`].
     ///
     /// Note that some output modes, such as `CountMatches`, automatically
     /// enable this option even if it has been explicitly disabled.
@@ -348,7 +346,7 @@ impl SummaryBuilder {
 /// A default printer can be created with either of the `Summary::new` or
 /// `Summary::new_no_color` constructors. However, there are a number of
 /// options that configure this printer's output. Those options can be
-/// configured using [`SummaryBuilder`](struct.SummaryBuilder.html).
+/// configured using [`SummaryBuilder`].
 ///
 /// This type is generic over `W`, which represents any implementation of
 /// the `termcolor::WriteColor` trait.
@@ -480,14 +478,13 @@ impl<W> Summary<W> {
 /// This type is generic over a few type parameters:
 ///
 /// * `'p` refers to the lifetime of the file path, if one is provided. When
-///   no file path is given, then this is `'static`.
-/// * `'s` refers to the lifetime of the
-///   [`Summary`](struct.Summary.html)
-///   printer that this type borrows.
+/// no file path is given, then this is `'static`.
+/// * `'s` refers to the lifetime of the [`Summary`] printer that this type
+/// borrows.
 /// * `M` refers to the type of matcher used by
-///   `grep_searcher::Searcher` that is reporting results to this sink.
+/// `grep_searcher::Searcher` that is reporting results to this sink.
 /// * `W` refers to the underlying writer that this printer is writing its
-///   output to.
+/// output to.
 #[derive(Debug)]
 pub struct SummarySink<'p, 's, M: Matcher, W> {
     matcher: M,
@@ -531,8 +528,7 @@ impl<'p, 's, M: Matcher, W: WriteColor> SummarySink<'p, 's, M, W> {
     /// searches executed on this sink.
     ///
     /// This only returns stats if they were requested via the
-    /// [`SummaryBuilder`](struct.SummaryBuilder.html)
-    /// configuration.
+    /// [`SummaryBuilder`] configuration.
     pub fn stats(&self) -> Option<&Stats> {
         self.stats.as_ref()
     }

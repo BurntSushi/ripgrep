@@ -191,8 +191,7 @@ impl CommandReader {
     /// returned.
     ///
     /// If the caller requires additional configuration for the reader
-    /// returned, then use
-    /// [`CommandReaderBuilder`](struct.CommandReaderBuilder.html).
+    /// returned, then use [`CommandReaderBuilder`].
     pub fn new(
         cmd: &mut process::Command,
     ) -> Result<CommandReader, CommandError> {

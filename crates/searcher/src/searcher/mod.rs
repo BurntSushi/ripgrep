@@ -114,9 +114,8 @@ impl BinaryDetection {
 
 /// An encoding to use when searching.
 ///
-/// An encoding can be used to configure a
-/// [`SearcherBuilder`](struct.SearchBuilder.html)
-/// to transcode source data from an encoding to UTF-8 before searching.
+/// An encoding can be used to configure a [`SearcherBuilder`] to transcode
+/// source data from an encoding to UTF-8 before searching.
 ///
 /// An `Encoding` will always be cheap to clone.
 #[derive(Clone, Debug)]
@@ -508,8 +507,7 @@ impl SearcherBuilder {
     ///
     /// The binary detection strategy determines not only how the searcher
     /// detects binary data, but how it responds to the presence of binary
-    /// data. See the [`BinaryDetection`](struct.BinaryDetection.html) type
-    /// for more information.
+    /// data. See the [`BinaryDetection`] type for more information.
     ///
     /// By default, binary detection is disabled.
     pub fn binary_detection(
@@ -616,8 +614,7 @@ impl Searcher {
     /// Create a new searcher with a default configuration.
     ///
     /// To configure the searcher (e.g., invert matching, enable memory maps,
-    /// enable contexts, etc.), use the
-    /// [`SearcherBuilder`](struct.SearcherBuilder.html).
+    /// enable contexts, etc.), use the [`SearcherBuilder`].
     pub fn new() -> Searcher {
         SearcherBuilder::new().build()
     }
@@ -817,9 +814,8 @@ impl Searcher {
 }
 
 /// The following methods permit querying the configuration of a searcher.
-/// These can be useful in generic implementations of
-/// [`Sink`](trait.Sink.html),
-/// where the output may be tailored based on how the searcher is configured.
+/// These can be useful in generic implementations of [`Sink`], where the
+/// output may be tailored based on how the searcher is configured.
 impl Searcher {
     /// Returns the line terminator used by this searcher.
     #[inline]

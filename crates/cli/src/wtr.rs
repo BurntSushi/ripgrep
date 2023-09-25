@@ -33,10 +33,8 @@ pub fn stdout(color_choice: termcolor::ColorChoice) -> StandardStream {
 /// users see output as soon as it's written. The downside of this approach
 /// is that it can be slower, especially when there is a lot of output.
 ///
-/// You might consider using
-/// [`stdout`](fn.stdout.html)
-/// instead, which chooses the buffering strategy automatically based on
-/// whether stdout is connected to a tty.
+/// You might consider using [`stdout`] instead, which chooses the buffering
+/// strategy automatically based on whether stdout is connected to a tty.
 pub fn stdout_buffered_line(
     color_choice: termcolor::ColorChoice,
 ) -> StandardStream {
@@ -50,10 +48,8 @@ pub fn stdout_buffered_line(
 /// the cost of writing data. The downside of this approach is that it can
 /// increase the latency of display output when writing to a tty.
 ///
-/// You might consider using
-/// [`stdout`](fn.stdout.html)
-/// instead, which chooses the buffering strategy automatically based on
-/// whether stdout is connected to a tty.
+/// You might consider using [`stdout`] instead, which chooses the buffering
+/// strategy automatically based on whether stdout is connected to a tty.
 pub fn stdout_buffered_block(
     color_choice: termcolor::ColorChoice,
 ) -> StandardStream {

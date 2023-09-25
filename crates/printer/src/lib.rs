@@ -5,22 +5,20 @@ crate.
 
 # Brief overview
 
-The [`Standard`](struct.Standard.html) printer shows results in a human
-readable format, and is modeled after the formats used by standard grep-like
-tools. Features include, but are not limited to, cross platform terminal
-coloring, search & replace, multi-line result handling and reporting summary
-statistics.
+The [`Standard`] printer shows results in a human readable format, and is
+modeled after the formats used by standard grep-like tools. Features include,
+but are not limited to, cross platform terminal coloring, search & replace,
+multi-line result handling and reporting summary statistics.
 
-The [`JSON`](struct.JSON.html) printer shows results in a machine readable
-format. To facilitate a stream of search results, the format uses
-[JSON Lines](https://jsonlines.org/)
-by emitting a series of messages as search results are found.
+The [`JSON`] printer shows results in a machine readable format.
+To facilitate a stream of search results, the format uses [JSON
+Lines](https://jsonlines.org/) by emitting a series of messages as search
+results are found.
 
-The [`Summary`](struct.Summary.html) printer shows *aggregate* results for a
-single search in a human readable format, and is modeled after similar formats
-found in standard grep-like tools. This printer is useful for showing the total
-number of matches and/or printing file paths that either contain or don't
-contain matches.
+The [`Summary`] printer shows *aggregate* results for a single search in a
+human readable format, and is modeled after similar formats found in standard
+grep-like tools. This printer is useful for showing the total number of matches
+and/or printing file paths that either contain or don't contain matches.
 
 # Example
 

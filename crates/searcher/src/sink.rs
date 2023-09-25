@@ -74,8 +74,8 @@ impl SinkError for Box<dyn error::Error> {
 ///
 /// * What to do when a match is found. Callers must provide this.
 /// * What to do when an error occurs. Callers must provide this via the
-///   [`SinkError`](trait.SinkError.html) trait. Generally, callers can just
-///   use `io::Error` for this, which already implements `SinkError`.
+///   [`SinkError`] trait. Generally, callers can just use `io::Error` for
+///   this, which already implements `SinkError`.
 /// * What to do when a contextual line is found. By default, these are
 ///   ignored.
 /// * What to do when a gap between contextual lines has been found. By
@@ -95,7 +95,7 @@ impl SinkError for Box<dyn error::Error> {
 ///
 /// For simpler uses of `Sink`, callers may elect to use one of
 /// the more convenient but less flexible implementations in the
-/// [`sinks`](sinks/index.html) module.
+/// [`sinks`] module.
 pub trait Sink {
     /// The type of an error that should be reported by a searcher.
     ///

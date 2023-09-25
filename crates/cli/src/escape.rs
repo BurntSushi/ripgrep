@@ -8,7 +8,7 @@ use bstr::{ByteSlice, ByteVec};
 /// converts the non-printable subset of ASCII in addition to invalid UTF-8
 /// bytes to hexadecimal escape sequences. Everything else is left as is.
 ///
-/// The dual of this routine is [`unescape`](fn.unescape.html).
+/// The dual of this routine is [`unescape`].
 ///
 /// # Example
 ///
@@ -29,7 +29,7 @@ pub fn escape(bytes: &[u8]) -> String {
 
 /// Escapes an OS string into a human readable string.
 ///
-/// This is like [`escape`](fn.escape.html), but accepts an OS string.
+/// This is like [`escape`], but accepts an OS string.
 pub fn escape_os(string: &OsStr) -> String {
     escape(Vec::from_os_str_lossy(string).as_bytes())
 }
@@ -48,7 +48,7 @@ pub fn escape_os(string: &OsStr) -> String {
 /// capable of specifying arbitrary bytes or otherwise make it easier to
 /// specify non-printable characters.
 ///
-/// The dual of this routine is [`escape`](fn.escape.html).
+/// The dual of this routine is [`escape`].
 ///
 /// # Example
 ///
@@ -70,7 +70,7 @@ pub fn unescape(s: &str) -> Vec<u8> {
 
 /// Unescapes an OS string.
 ///
-/// This is like [`unescape`](fn.unescape.html), but accepts an OS string.
+/// This is like [`unescape`], but accepts an OS string.
 ///
 /// Note that this first lossily decodes the given OS string as UTF-8. That
 /// is, an escaped string (the thing given) should be valid UTF-8.

@@ -38,9 +38,7 @@ impl DirEntry {
     }
 
     /// The full path that this entry represents.
-    /// Analogous to [`path`], but moves ownership of the path.
-    ///
-    /// [`path`]: struct.DirEntry.html#method.path
+    /// Analogous to [`DirEntry::path`], but moves ownership of the path.
     pub fn into_path(self) -> PathBuf {
         self.dent.into_path()
     }
@@ -1127,10 +1125,10 @@ impl WalkState {
     }
 }
 
-/// A builder for constructing a visitor when using
-/// [`WalkParallel::visit`](struct.WalkParallel.html#method.visit). The builder
-/// will be called for each thread started by `WalkParallel`. The visitor
-/// returned from each builder is then called for every directory entry.
+/// A builder for constructing a visitor when using [`WalkParallel::visit`].
+/// The builder will be called for each thread started by `WalkParallel`. The
+/// visitor returned from each builder is then called for every directory
+/// entry.
 pub trait ParallelVisitorBuilder<'s> {
     /// Create per-thread `ParallelVisitor`s for `WalkParallel`.
     fn build(&mut self) -> Box<dyn ParallelVisitor + 's>;
@@ -1147,9 +1145,8 @@ impl<'a, 's, P: ParallelVisitorBuilder<'s>> ParallelVisitorBuilder<'s>
 /// Receives files and directories for the current thread.
 ///
 /// Setup for the traversal can be implemented as part of
-/// [`ParallelVisitorBuilder::build`](trait.ParallelVisitorBuilder.html#tymethod.build).
-/// Teardown when traversal finishes can be implemented by implementing the
-/// `Drop` trait on your traversal type.
+/// [`ParallelVisitorBuilder::build`]. Teardown when traversal finishes can be
+/// implemented by implementing the `Drop` trait on your traversal type.
 pub trait ParallelVisitor: Send {
     /// Receives files and directories for the current thread. This is called
     /// once for every directory entry visited by traversal.

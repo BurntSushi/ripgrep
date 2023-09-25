@@ -6,12 +6,10 @@ the search routines provided by the
 [`grep-searcher`](https://docs.rs/grep-searcher)
 crate.
 
-The primary thing provided by this crate is the
-[`Matcher`](trait.Matcher.html)
-trait. The trait defines an abstract interface for text search. It is robust
-enough to support everything from basic substring search all the way to
-arbitrarily complex regular expression implementations without sacrificing
-performance.
+The primary thing provided by this crate is the [`Matcher`] trait. The trait
+defines an abstract interface for text search. It is robust enough to support
+everything from basic substring search all the way to arbitrarily complex
+regular expression implementations without sacrificing performance.
 
 A key design decision made in this crate is the use of *internal iteration*,
 or otherwise known as the "push" model of searching. In this paradigm,
@@ -513,13 +511,11 @@ pub enum LineMatchKind {
 /// A matcher defines an interface for regular expression implementations.
 ///
 /// While this trait is large, there are only two required methods that
-/// implementors must provide: `find_at` and `new_captures`. If captures
-/// aren't supported by your implementation, then `new_captures` can be
-/// implemented with
-/// [`NoCaptures`](struct.NoCaptures.html). If your implementation does support
-/// capture groups, then you should also implement the other capture related
-/// methods, as dictated by the documentation. Crucially, this includes
-/// `captures_at`.
+/// implementors must provide: `find_at` and `new_captures`. If captures aren't
+/// supported by your implementation, then `new_captures` can be implemented
+/// with [`NoCaptures`]. If your implementation does support capture groups,
+/// then you should also implement the other capture related methods, as
+/// dictated by the documentation. Crucially, this includes `captures_at`.
 ///
 /// The rest of the methods on this trait provide default implementations on
 /// top of `find_at` and `new_captures`. It is not uncommon for implementations

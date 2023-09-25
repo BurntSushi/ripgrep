@@ -4,48 +4,38 @@ support for multi-line search.
 
 # Brief overview
 
-The principle type in this crate is a
-[`Searcher`](struct.Searcher.html),
-which can be configured and built by a
-[`SearcherBuilder`](struct.SearcherBuilder.html).
-A `Searcher` is responsible for reading bytes from a source (e.g., a file),
-executing a search of those bytes using a `Matcher` (e.g., a regex) and then
-reporting the results of that search to a
-[`Sink`](trait.Sink.html)
-(e.g., stdout). The `Searcher` itself is principally responsible for managing
-the consumption of bytes from a source and applying a `Matcher` over those
-bytes in an efficient way. The `Searcher` is also responsible for inverting
-a search, counting lines, reporting contextual lines, detecting binary data
-and even deciding whether or not to use memory maps.
+The principle type in this crate is a [`Searcher`], which can be configured
+and built by a [`SearcherBuilder`]. A `Searcher` is responsible for reading
+bytes from a source (e.g., a file), executing a search of those bytes using
+a `Matcher` (e.g., a regex) and then reporting the results of that search to
+a [`Sink`] (e.g., stdout). The `Searcher` itself is principally responsible
+for managing the consumption of bytes from a source and applying a `Matcher`
+over those bytes in an efficient way. The `Searcher` is also responsible for
+inverting a search, counting lines, reporting contextual lines, detecting
+binary data and even deciding whether or not to use memory maps.
 
 A `Matcher` (which is defined in the
-[`grep-matcher`](https://crates.io/crates/grep-matcher)
-crate) is a trait for describing the lowest levels of pattern search in a
-generic way. The interface itself is very similar to the interface of a regular
-expression. For example, the
-[`grep-regex`](https://crates.io/crates/grep-regex)
+[`grep-matcher`](https://crates.io/crates/grep-matcher) crate) is a trait
+for describing the lowest levels of pattern search in a generic way. The
+interface itself is very similar to the interface of a regular expression.
+For example, the [`grep-regex`](https://crates.io/crates/grep-regex)
 crate provides an implementation of the `Matcher` trait using Rust's
-[`regex`](https://crates.io/crates/regex)
-crate.
+[`regex`](https://crates.io/crates/regex) crate.
 
 Finally, a `Sink` describes how callers receive search results producer by a
 `Searcher`. This includes routines that are called at the beginning and end of
 a search, in addition to routines that are called when matching or contextual
 lines are found by the `Searcher`. Implementations of `Sink` can be trivially
-simple, or extraordinarily complex, such as the
-`Standard` printer found in the
-[`grep-printer`](https://crates.io/crates/grep-printer)
-crate, which effectively implements grep-like output.
-This crate also provides convenience `Sink` implementations in the
-[`sinks`](sinks/index.html)
-sub-module for easy searching with closures.
+simple, or extraordinarily complex, such as the `Standard` printer found in
+the [`grep-printer`](https://crates.io/crates/grep-printer) crate, which
+effectively implements grep-like output. This crate also provides convenience
+`Sink` implementations in the [`sinks`] sub-module for easy searching with
+closures.
 
 # Example
 
 This example shows how to execute the searcher and read the search results
-using the
-[`UTF8`](sinks/struct.UTF8.html)
-implementation of `Sink`.
+using the [`UTF8`](sinks::UTF8) implementation of `Sink`.
 
 ```
 use std::error::Error;

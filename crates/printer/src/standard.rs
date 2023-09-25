@@ -149,11 +149,11 @@ impl StandardBuilder {
 
     /// Set the user color specifications to use for coloring in this printer.
     ///
-    /// A [`UserColorSpec`](struct.UserColorSpec.html) can be constructed from
-    /// a string in accordance with the color specification format. See the
-    /// `UserColorSpec` type documentation for more details on the format.
-    /// A [`ColorSpecs`](struct.ColorSpecs.html) can then be generated from
-    /// zero or more `UserColorSpec`s.
+    /// A [`UserColorSpec`](crate::UserColorSpec) can be constructed from
+    /// a string in accordance with the color specification format. See
+    /// the `UserColorSpec` type documentation for more details on the
+    /// format. A [`ColorSpecs`] can then be generated from zero or more
+    /// `UserColorSpec`s.
     ///
     /// Regardless of the color specifications provided here, whether color
     /// is actually used or not is determined by the implementation of
@@ -196,15 +196,13 @@ impl StandardBuilder {
     /// number of bytes searched and the total number of bytes printed.
     ///
     /// Aggregate statistics can be accessed via the sink's
-    /// [`StandardSink::stats`](struct.StandardSink.html#method.stats)
-    /// method.
+    /// [`StandardSink::stats`] method.
     ///
     /// When this is enabled, this printer may need to do extra work in order
     /// to compute certain statistics, which could cause the search to take
     /// longer.
     ///
-    /// For a complete description of available statistics, see
-    /// [`Stats`](struct.Stats.html).
+    /// For a complete description of available statistics, see [`Stats`].
     pub fn stats(&mut self, yes: bool) -> &mut StandardBuilder {
         self.config.stats = yes;
         self
@@ -484,7 +482,7 @@ impl StandardBuilder {
 /// A default printer can be created with either of the `Standard::new` or
 /// `Standard::new_no_color` constructors. However, there are a considerable
 /// number of options that configure this printer's output. Those options can
-/// be configured using [`StandardBuilder`](struct.StandardBuilder.html).
+/// be configured using [`StandardBuilder`].
 ///
 /// This type is generic over `W`, which represents any implementation
 /// of the `termcolor::WriteColor` trait. If colors are not desired,
@@ -633,12 +631,9 @@ impl<W> Standard<W> {
 /// An implementation of `Sink` associated with a matcher and an optional file
 /// path for the standard printer.
 ///
-/// A `Sink` can be created via the
-/// [`Standard::sink`](struct.Standard.html#method.sink)
-/// or
-/// [`Standard::sink_with_path`](struct.Standard.html#method.sink_with_path)
-/// methods, depending on whether you want to include a file path in the
-/// printer's output.
+/// A `Sink` can be created via the [`Standard::sink`] or
+/// [`Standard::sink_with_path`] methods, depending on whether you want to
+/// include a file path in the printer's output.
 ///
 /// Building a `StandardSink` is cheap, and callers should create a new one
 /// for each thing that is searched. After a search has completed, callers may
@@ -648,14 +643,13 @@ impl<W> Standard<W> {
 /// This type is generic over a few type parameters:
 ///
 /// * `'p` refers to the lifetime of the file path, if one is provided. When
-///   no file path is given, then this is `'static`.
-/// * `'s` refers to the lifetime of the
-///   [`Standard`](struct.Standard.html)
-///   printer that this type borrows.
+/// no file path is given, then this is `'static`.
+/// * `'s` refers to the lifetime of the [`Standard`] printer that this type
+/// borrows.
 /// * `M` refers to the type of matcher used by
-///   `grep_searcher::Searcher` that is reporting results to this sink.
+/// `grep_searcher::Searcher` that is reporting results to this sink.
 /// * `W` refers to the underlying writer that this printer is writing its
-///   output to.
+/// output to.
 #[derive(Debug)]
 pub struct StandardSink<'p, 's, M: Matcher, W> {
     matcher: M,
@@ -710,8 +704,7 @@ impl<'p, 's, M: Matcher, W: WriteColor> StandardSink<'p, 's, M, W> {
     /// searches executed on this sink.
     ///
     /// This only returns stats if they were requested via the
-    /// [`StandardBuilder`](struct.StandardBuilder.html)
-    /// configuration.
+    /// [`StandardBuilder`] configuration.
     pub fn stats(&self) -> Option<&Stats> {
         self.stats.as_ref()
     }

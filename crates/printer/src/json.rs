@@ -549,14 +549,13 @@ impl<W> JSON<W> {
 /// This type is generic over a few type parameters:
 ///
 /// * `'p` refers to the lifetime of the file path, if one is provided. When
-///   no file path is given, then this is `'static`.
-/// * `'s` refers to the lifetime of the
-///   [`JSON`](struct.JSON.html)
-///   printer that this type borrows.
+/// no file path is given, then this is `'static`.
+/// * `'s` refers to the lifetime of the [`JSON`] printer that this type
+/// borrows.
 /// * `M` refers to the type of matcher used by
-///   `grep_searcher::Searcher` that is reporting results to this sink.
+/// `grep_searcher::Searcher` that is reporting results to this sink.
 /// * `W` refers to the underlying writer that this printer is writing its
-///   output to.
+/// output to.
 #[derive(Debug)]
 pub struct JSONSink<'p, 's, M: Matcher, W> {
     matcher: M,
