@@ -1,5 +1,7 @@
-use grep_matcher::{Captures, Match, Matcher};
-use regex::bytes::Regex;
+use {
+    grep_matcher::{Captures, Match, Matcher},
+    regex::bytes::Regex,
+};
 
 use crate::util::{RegexMatcher, RegexMatcherNoCaps};
 

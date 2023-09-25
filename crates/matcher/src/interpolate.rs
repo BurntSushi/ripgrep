@@ -1,5 +1,3 @@
-use std::str;
-
 use memchr::memchr;
 
 /// Interpolate capture references in `replacement` and write the interpolation
@@ -114,7 +112,7 @@ fn find_cap_ref(replacement: &[u8]) -> Option<CaptureRef<'_>> {
     // therefore be valid UTF-8. If we really cared, we could avoid this UTF-8
     // check with an unchecked conversion or by parsing the number straight
     // from &[u8].
-    let cap = str::from_utf8(&replacement[i..cap_end])
+    let cap = std::str::from_utf8(&replacement[i..cap_end])
         .expect("valid UTF-8 capture name");
     if brace {
         if !replacement.get(cap_end).map_or(false, |&b| b == b'}') {

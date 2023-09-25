@@ -12,13 +12,13 @@ readme = "README.md"
 keywords = ["regex", "pattern", "trait"]
 license = "Unlicense OR MIT"
 autotests = false
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-memchr = "2.1"
+memchr = "2.6.3"
 
 [dev-dependencies]
-regex = "1.1"
+regex = "1.9.5"
 
 [[test]]
 name = "integration"

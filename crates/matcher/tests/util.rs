@@ -1,28 +1,29 @@
 use std::collections::HashMap;
-use std::result;
 
-use grep_matcher::{Captures, Match, Matcher, NoCaptures, NoError};
-use regex::bytes::{CaptureLocations, Regex};
+use {
+    grep_matcher::{Captures, Match, Matcher, NoCaptures, NoError},
+    regex::bytes::{CaptureLocations, Regex},
+};
 
 #[derive(Debug)]
-pub struct RegexMatcher {
+pub(crate) struct RegexMatcher {
     pub re: Regex,
     pub names: HashMap<String, usize>,
 }
 
 impl RegexMatcher {
-    pub fn new(re: Regex) -> RegexMatcher {
+    pub(crate) fn new(re: Regex) -> RegexMatcher {
         let mut names = HashMap::new();
         for (i, optional_name) in re.capture_names().enumerate() {
             if let Some(name) = optional_name {
                 names.insert(name.to_string(), i);
             }
         }
-        RegexMatcher { re: re, names: names }
+        RegexMatcher { re, names }
     }
 }
 
-type Result<T> = result::Result<T, NoError>;
+type Result<T> = std::result::Result<T, NoError>;
 
 impl Matcher for RegexMatcher {
     type Captures = RegexCaptures;
@@ -63,7 +64,7 @@ impl Matcher for RegexMatcher {
 }
 
 #[derive(Debug)]
-pub struct RegexMatcherNoCaps(pub Regex);
+pub(crate) struct RegexMatcherNoCaps(pub(crate) Regex);
 
 impl Matcher for RegexMatcherNoCaps {
     type Captures = NoCaptures;
@@ -82,7 +83,7 @@ impl Matcher for RegexMatcherNoCaps {
 }
 
 #[derive(Clone, Debug)]
-pub struct RegexCaptures(CaptureLocations);
+pub(crate) struct RegexCaptures(CaptureLocations);
 
 impl Captures for RegexCaptures {
     fn len(&self) -> usize {

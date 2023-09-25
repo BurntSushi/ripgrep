@@ -38,11 +38,6 @@ implementations.
 
 #![deny(missing_docs)]
 
-use std::fmt;
-use std::io;
-use std::ops;
-use std::u64;
-
 use crate::interpolate::interpolate;
 
 mod interpolate;
@@ -162,7 +157,7 @@ impl Match {
     }
 }
 
-impl ops::Index<Match> for [u8] {
+impl std::ops::Index<Match> for [u8] {
     type Output = [u8];
 
     #[inline]
@@ -171,14 +166,14 @@ impl ops::Index<Match> for [u8] {
     }
 }
 
-impl ops::IndexMut<Match> for [u8] {
+impl std::ops::IndexMut<Match> for [u8] {
     #[inline]
     fn index_mut(&mut self, index: Match) -> &mut [u8] {
         &mut self[index.start..index.end]
     }
 }
 
-impl ops::Index<Match> for str {
+impl std::ops::Index<Match> for str {
     type Output = str;
 
     #[inline]
@@ -204,11 +199,7 @@ pub struct LineTerminator(LineTerminatorImp);
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum LineTerminatorImp {
     /// Any single byte representing a line terminator.
-    ///
-    /// We represent this as an array so we can safely convert it to a slice
-    /// for convenient access. At some point, we can use `std::slice::from_ref`
-    /// instead.
-    Byte([u8; 1]),
+    Byte(u8),
     /// A line terminator represented by `\r\n`.
     ///
     /// When this option is used, consumers may generally treat a lone `\n` as
@@ -220,7 +211,7 @@ impl LineTerminator {
     /// Return a new single-byte line terminator. Any byte is valid.
     #[inline]
     pub fn byte(byte: u8) -> LineTerminator {
-        LineTerminator(LineTerminatorImp::Byte([byte]))
+        LineTerminator(LineTerminatorImp::Byte(byte))
     }
 
     /// Return a new line terminator represented by `\r\n`.
@@ -246,7 +237,7 @@ impl LineTerminator {
     #[inline]
     pub fn as_byte(&self) -> u8 {
         match self.0 {
-            LineTerminatorImp::Byte(array) => array[0],
+            LineTerminatorImp::Byte(byte) => byte,
             LineTerminatorImp::CRLF => b'\n',
         }
     }
@@ -260,7 +251,7 @@ impl LineTerminator {
     #[inline]
     pub fn as_bytes(&self) -> &[u8] {
         match self.0 {
-            LineTerminatorImp::Byte(ref array) => array,
+            LineTerminatorImp::Byte(ref byte) => std::slice::from_ref(byte),
             LineTerminatorImp::CRLF => &[b'\r', b'\n'],
         }
     }
@@ -301,10 +292,10 @@ pub struct ByteSet(BitSet);
 #[derive(Clone, Copy)]
 struct BitSet([u64; 4]);
 
-impl fmt::Debug for BitSet {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Debug for BitSet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut fmtd = f.debug_set();
-        for b in (0..256).map(|b| b as u8) {
+        for b in 0..=255 {
             if ByteSet(*self).contains(b) {
                 fmtd.entry(&b);
             }
@@ -331,12 +322,12 @@ impl ByteSet {
     pub fn add(&mut self, byte: u8) {
         let bucket = byte / 64;
         let bit = byte % 64;
-        (self.0).0[bucket as usize] |= 1 << bit;
+        (self.0).0[usize::from(bucket)] |= 1 << bit;
     }
 
     /// Add an inclusive range of bytes.
     pub fn add_all(&mut self, start: u8, end: u8) {
-        for b in (start as u64..end as u64 + 1).map(|b| b as u8) {
+        for b in start..=end {
             self.add(b);
         }
     }
@@ -347,12 +338,12 @@ impl ByteSet {
     pub fn remove(&mut self, byte: u8) {
         let bucket = byte / 64;
         let bit = byte % 64;
-        (self.0).0[bucket as usize] &= !(1 << bit);
+        (self.0).0[usize::from(bucket)] &= !(1 << bit);
     }
 
     /// Remove an inclusive range of bytes.
     pub fn remove_all(&mut self, start: u8, end: u8) {
-        for b in (start as u64..end as u64 + 1).map(|b| b as u8) {
+        for b in start..=end {
             self.remove(b);
         }
     }
@@ -361,7 +352,7 @@ impl ByteSet {
     pub fn contains(&self, byte: u8) -> bool {
         let bucket = byte / 64;
         let bit = byte % 64;
-        (self.0).0[bucket as usize] & (1 << bit) > 0
+        (self.0).0[usize::from(bucket)] & (1 << bit) > 0
     }
 }
 
@@ -478,27 +469,27 @@ impl Captures for NoCaptures {
 
 /// NoError provides an error type for matchers that never produce errors.
 ///
-/// This error type implements the `std::error::Error` and `fmt::Display`
+/// This error type implements the `std::error::Error` and `std::fmt::Display`
 /// traits for use in matcher implementations that can never produce errors.
 ///
-/// The `fmt::Debug` and `fmt::Display` impls for this type panics.
+/// The `std::fmt::Debug` and `std::fmt::Display` impls for this type panics.
 #[derive(Debug, Eq, PartialEq)]
 pub struct NoError(());
 
-impl ::std::error::Error for NoError {
+impl std::error::Error for NoError {
     fn description(&self) -> &str {
         "no error"
     }
 }
 
-impl fmt::Display for NoError {
-    fn fmt(&self, _: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for NoError {
+    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         panic!("BUG for NoError: an impossible error occurred")
     }
 }
 
-impl From<NoError> for io::Error {
-    fn from(_: NoError) -> io::Error {
+impl From<NoError> for std::io::Error {
+    fn from(_: NoError) -> std::io::Error {
         panic!("BUG for NoError: an impossible error occurred")
     }
 }
@@ -547,7 +538,7 @@ pub trait Matcher {
     /// use the `NoError` type in this crate. In the future, when the "never"
     /// (spelled `!`) type is stabilized, then it should probably be used
     /// instead.
-    type Error: fmt::Display;
+    type Error: std::fmt::Display;
 
     /// Returns the start and end byte range of the first match in `haystack`
     /// after `at`, where the byte offsets are relative to that start of
