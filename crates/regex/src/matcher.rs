@@ -831,8 +831,9 @@ impl RegexCaptures {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use grep_matcher::{LineMatchKind, Matcher};
+
+    use super::*;
 
     // Test that enabling word matches does the right thing and demonstrate
     // the difference between it and surrounding the regex in `\b`.

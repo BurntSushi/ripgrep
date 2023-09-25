@@ -14,9 +14,8 @@ license = "Unlicense OR MIT"
 edition = "2021"
 
 [dependencies]
-aho-corasick = "1.0.2"
-bstr = "1.6.0"
+bstr = "1.6.2"
 grep-matcher = { version = "0.1.6", path = "../matcher" }
-log = "0.4.19"
-regex-automata = { version = "0.3.0" }
-regex-syntax = "0.7.2"
+log = "0.4.20"
+regex-automata = { version = "0.3.8" }
+regex-syntax = "0.7.5"
