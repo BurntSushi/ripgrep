@@ -13,24 +13,32 @@ repository = "https://github.com/BurntSushi/ripgrep/tree/master/crates/globset"
 readme = "README.md"
 keywords = ["regex", "glob", "multiple", "set", "pattern"]
 license = "Unlicense OR MIT"
-edition = "2018"
+edition = "2021"
 
 [lib]
 name = "globset"
 bench = false
 
 [dependencies]
-aho-corasick = "1.0.2"
-bstr = { version = "1.6.0", default-features = false, features = ["std"] }
-fnv = "1.0.6"
-log = { version = "0.4.5", optional = true }
-regex = { version = "1.8.3", default-features = false, features = ["perf", "std"] }
-serde = { version = "1.0.104", optional = true }
+aho-corasick = "1.1.1"
+bstr = { version = "1.6.2", default-features = false, features = ["std"] }
+log = { version = "0.4.20", optional = true }
+serde = { version = "1.0.188", optional = true }
+
+[dependencies.regex-syntax]
+version = "0.7.5"
+default-features = false
+features = ["std"]
+
+[dependencies.regex-automata]
+version = "0.3.8"
+default-features = false
+features = ["std", "perf", "syntax", "meta", "nfa", "hybrid"]
 
 [dev-dependencies]
-glob = "0.3.0"
+glob = "0.3.1"
 lazy_static = "1"
-serde_json = "1.0.45"
+serde_json = "1.0.107"
 
 [features]
 default = ["log"]

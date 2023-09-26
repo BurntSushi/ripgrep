@@ -5,11 +5,9 @@ Glob set matching is the process of matching one or more glob patterns against
 a single candidate path simultaneously, and returning all of the globs that
 matched. For example, given this set of globs:
 
-```ignore
-*.rs
-src/lib.rs
-src/**/foo.rs
-```
+* `*.rs`
+* `src/lib.rs`
+* `src/**/foo.rs`
 
 and a path `src/bar/baz/foo.rs`, then the set would report the first and third
 globs as matching.
@@ -19,7 +17,6 @@ globs as matching.
 This example shows how to match a single glob against a single file path.
 
 ```
-# fn example() -> Result<(), globset::Error> {
 use globset::Glob;
 
 let glob = Glob::new("*.rs")?.compile_matcher();
@@ -27,7 +24,7 @@ let glob = Glob::new("*.rs")?.compile_matcher();
 assert!(glob.is_match("foo.rs"));
 assert!(glob.is_match("foo/bar.rs"));
 assert!(!glob.is_match("Cargo.toml"));
-# Ok(()) } example().unwrap();
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
 # Example: configuring a glob matcher
@@ -36,7 +33,6 @@ This example shows how to use a `GlobBuilder` to configure aspects of match
 semantics. In this example, we prevent wildcards from matching path separators.
 
 ```
-# fn example() -> Result<(), globset::Error> {
 use globset::GlobBuilder;
 
 let glob = GlobBuilder::new("*.rs")
@@ -45,7 +41,7 @@ let glob = GlobBuilder::new("*.rs")
 assert!(glob.is_match("foo.rs"));
 assert!(!glob.is_match("foo/bar.rs")); // no longer matches
 assert!(!glob.is_match("Cargo.toml"));
-# Ok(()) } example().unwrap();
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
 # Example: match multiple globs at once
@@ -53,7 +49,6 @@ assert!(!glob.is_match("Cargo.toml"));
 This example shows how to match multiple glob patterns at once.
 
 ```
-# fn example() -> Result<(), globset::Error> {
 use globset::{Glob, GlobSetBuilder};
 
 let mut builder = GlobSetBuilder::new();
@@ -65,7 +60,7 @@ builder.add(Glob::new("src/**/foo.rs")?);
 let set = builder.build()?;
 
 assert_eq!(set.matches("src/bar/baz/foo.rs"), vec![0, 2]);
-# Ok(()) } example().unwrap();
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
 # Syntax
@@ -103,22 +98,22 @@ or to enable case insensitive matching.
 
 #![deny(missing_docs)]
 
-use std::borrow::Cow;
-use std::collections::{BTreeMap, HashMap};
-use std::error::Error as StdError;
-use std::fmt;
-use std::hash;
-use std::path::Path;
-use std::str;
+use std::{borrow::Cow, path::Path};
 
-use aho_corasick::AhoCorasick;
-use bstr::{ByteSlice, ByteVec, B};
-use regex::bytes::{Regex, RegexBuilder, RegexSet};
+use {
+    aho_corasick::AhoCorasick,
+    bstr::{ByteSlice, ByteVec, B},
+    regex_automata::meta::Regex,
+};
 
-use crate::glob::MatchStrategy;
+use crate::{
+    glob::MatchStrategy,
+    pathutil::{file_name, file_name_ext, normalize_path},
+};
+
 pub use crate::glob::{Glob, GlobBuilder, GlobMatcher};
-use crate::pathutil::{file_name, file_name_ext, normalize_path};
 
+mod fnv;
 mod glob;
 mod pathutil;
 
@@ -181,7 +176,7 @@ pub enum ErrorKind {
     __Nonexhaustive,
 }
 
-impl StdError for Error {
+impl std::error::Error for Error {
     fn description(&self) -> &str {
         self.kind.description()
     }
@@ -227,8 +222,8 @@ impl ErrorKind {
     }
 }
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.glob {
             None => self.kind.fmt(f),
             Some(ref glob) => {
@@ -238,8 +233,8 @@ impl fmt::Display for Error {
     }
 }
 
-impl fmt::Display for ErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for ErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             ErrorKind::InvalidRecursive
             | ErrorKind::UnclosedClass
@@ -257,29 +252,39 @@ impl fmt::Display for ErrorKind {
 }
 
 fn new_regex(pat: &str) -> Result<Regex, Error> {
-    RegexBuilder::new(pat)
-        .dot_matches_new_line(true)
-        .size_limit(10 * (1 << 20))
-        .dfa_size_limit(10 * (1 << 20))
-        .build()
-        .map_err(|err| Error {
+    let syntax = regex_automata::util::syntax::Config::new()
+        .utf8(false)
+        .dot_matches_new_line(true);
+    let config = Regex::config()
+        .utf8_empty(false)
+        .nfa_size_limit(Some(10 * (1 << 20)))
+        .hybrid_cache_capacity(10 * (1 << 20));
+    Regex::builder().syntax(syntax).configure(config).build(pat).map_err(
+        |err| Error {
             glob: Some(pat.to_string()),
+            kind: ErrorKind::Regex(err.to_string()),
+        },
+    )
+}
+
+fn new_regex_set(pats: Vec<String>) -> Result<Regex, Error> {
+    let syntax = regex_automata::util::syntax::Config::new()
+        .utf8(false)
+        .dot_matches_new_line(true);
+    let config = Regex::config()
+        .match_kind(regex_automata::MatchKind::All)
+        .utf8_empty(false)
+        .nfa_size_limit(Some(10 * (1 << 20)))
+        .hybrid_cache_capacity(10 * (1 << 20));
+    Regex::builder()
+        .syntax(syntax)
+        .configure(config)
+        .build_many(&pats)
+        .map_err(|err| Error {
+            glob: None,
             kind: ErrorKind::Regex(err.to_string()),
         })
 }
-
-fn new_regex_set<I, S>(pats: I) -> Result<RegexSet, Error>
-where
-    S: AsRef<str>,
-    I: IntoIterator<Item = S>,
-{
-    RegexSet::new(pats).map_err(|err| Error {
-        glob: None,
-        kind: ErrorKind::Regex(err.to_string()),
-    })
-}
-
-type Fnv = hash::BuildHasherDefault<fnv::FnvHasher>;
 
 /// GlobSet represents a group of globs that can be matched together in a
 /// single pass.
@@ -521,7 +526,7 @@ impl<'a> Candidate<'a> {
         let path = normalize_path(Vec::from_path_lossy(path.as_ref()));
         let basename = file_name(&path).unwrap_or(Cow::Borrowed(B("")));
         let ext = file_name_ext(&basename).unwrap_or(Cow::Borrowed(B("")));
-        Candidate { path: path, basename: basename, ext: ext }
+        Candidate { path, basename, ext }
     }
 
     fn path_prefix(&self, max: usize) -> &[u8] {
@@ -585,11 +590,11 @@ impl GlobSetMatchStrategy {
 }
 
 #[derive(Clone, Debug)]
-struct LiteralStrategy(BTreeMap<Vec<u8>, Vec<usize>>);
+struct LiteralStrategy(fnv::HashMap<Vec<u8>, Vec<usize>>);
 
 impl LiteralStrategy {
     fn new() -> LiteralStrategy {
-        LiteralStrategy(BTreeMap::new())
+        LiteralStrategy(fnv::HashMap::default())
     }
 
     fn add(&mut self, global_index: usize, lit: String) {
@@ -613,11 +618,11 @@ impl LiteralStrategy {
 }
 
 #[derive(Clone, Debug)]
-struct BasenameLiteralStrategy(BTreeMap<Vec<u8>, Vec<usize>>);
+struct BasenameLiteralStrategy(fnv::HashMap<Vec<u8>, Vec<usize>>);
 
 impl BasenameLiteralStrategy {
     fn new() -> BasenameLiteralStrategy {
-        BasenameLiteralStrategy(BTreeMap::new())
+        BasenameLiteralStrategy(fnv::HashMap::default())
     }
 
     fn add(&mut self, global_index: usize, lit: String) {
@@ -647,11 +652,11 @@ impl BasenameLiteralStrategy {
 }
 
 #[derive(Clone, Debug)]
-struct ExtensionStrategy(HashMap<Vec<u8>, Vec<usize>, Fnv>);
+struct ExtensionStrategy(fnv::HashMap<Vec<u8>, Vec<usize>>);
 
 impl ExtensionStrategy {
     fn new() -> ExtensionStrategy {
-        ExtensionStrategy(HashMap::with_hasher(Fnv::default()))
+        ExtensionStrategy(fnv::HashMap::default())
     }
 
     fn add(&mut self, global_index: usize, ext: String) {
@@ -745,7 +750,7 @@ impl SuffixStrategy {
 }
 
 #[derive(Clone, Debug)]
-struct RequiredExtensionStrategy(HashMap<Vec<u8>, Vec<(usize, Regex)>, Fnv>);
+struct RequiredExtensionStrategy(fnv::HashMap<Vec<u8>, Vec<(usize, Regex)>>);
 
 impl RequiredExtensionStrategy {
     fn is_match(&self, candidate: &Candidate<'_>) -> bool {
@@ -786,8 +791,9 @@ impl RequiredExtensionStrategy {
 
 #[derive(Clone, Debug)]
 struct RegexSetStrategy {
-    matcher: RegexSet,
+    matcher: Regex,
     map: Vec<usize>,
+    // patset: regex_automata::PatternSet,
 }
 
 impl RegexSetStrategy {
@@ -800,7 +806,11 @@ impl RegexSetStrategy {
         candidate: &Candidate<'_>,
         matches: &mut Vec<usize>,
     ) {
-        for i in self.matcher.matches(candidate.path.as_bytes()) {
+        let input = regex_automata::Input::new(candidate.path.as_bytes());
+        let mut patset =
+            regex_automata::PatternSet::new(self.matcher.pattern_len());
+        self.matcher.which_overlapping_matches(&input, &mut patset);
+        for i in patset.iter() {
             matches.push(self.map[i]);
         }
     }
@@ -852,12 +862,12 @@ impl MultiStrategyBuilder {
 
 #[derive(Clone, Debug)]
 struct RequiredExtensionStrategyBuilder(
-    HashMap<Vec<u8>, Vec<(usize, String)>>,
+    fnv::HashMap<Vec<u8>, Vec<(usize, String)>>,
 );
 
 impl RequiredExtensionStrategyBuilder {
     fn new() -> RequiredExtensionStrategyBuilder {
-        RequiredExtensionStrategyBuilder(HashMap::new())
+        RequiredExtensionStrategyBuilder(fnv::HashMap::default())
     }
 
     fn add(&mut self, global_index: usize, ext: String, regex: String) {
@@ -868,7 +878,7 @@ impl RequiredExtensionStrategyBuilder {
     }
 
     fn build(self) -> Result<RequiredExtensionStrategy, Error> {
-        let mut exts = HashMap::with_hasher(Fnv::default());
+        let mut exts = fnv::HashMap::default();
         for (ext, regexes) in self.0.into_iter() {
             exts.insert(ext.clone(), vec![]);
             for (global_index, regex) in regexes {
