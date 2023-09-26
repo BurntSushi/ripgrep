@@ -1140,6 +1140,7 @@ impl ArgMatches {
                 }
             },
         };
+        log::debug!("hyperlink format: {:?}", fmt.to_string());
         Ok(HyperlinkConfig::new(env, fmt))
     }
 
