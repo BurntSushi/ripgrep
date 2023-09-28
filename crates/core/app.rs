@@ -1529,10 +1529,10 @@ in terminal emulators that support OSC-8 hyperlinks. For example, the format
 file://{host}{path} will emit an RFC 8089 hyperlink. To see the format that
 ripgrep is using, pass the --debug flag.
 
-Alternatively, a format string may correspond to one of the following
-aliases: default, file, grep+, kitty, macvim, none, subl, textmate, vscode,
-vscode-insiders, vscodium. The alias will be replaced with a format string that
-is intended to work for the corresponding application.
+Alternatively, a format string may correspond to one of the following aliases:
+default, file, grep+, kitty, macvim, none, textmate, vscode, vscode-insiders,
+vscodium. The alias will be replaced with a format string that is intended to
+work for the corresponding application.
 
 The following variables are available in the format string:
 
