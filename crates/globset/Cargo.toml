@@ -42,5 +42,7 @@ serde_json = "1.0.107"
 
 [features]
 default = ["log"]
+# DEPRECATED. It is a no-op. SIMD is done automatically through runtime
+# dispatch.
 simd-accel = []
 serde1 = ["serde"]

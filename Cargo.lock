@@ -239,6 +239,7 @@ dependencies = [
 name = "ignore"
 version = "0.4.20"
 dependencies = [
+ "bstr",
  "crossbeam-channel",
  "crossbeam-deque",
  "globset",

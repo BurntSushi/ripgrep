@@ -1,25 +1,26 @@
-use std::cmp;
-use std::ffi::OsStr;
-use std::fmt;
-use std::fs::{self, FileType, Metadata};
-use std::io;
-use std::iter::{self, FusedIterator};
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
-use std::vec;
+use std::{
+    cmp::Ordering,
+    ffi::OsStr,
+    fs::{self, FileType, Metadata},
+    io,
+    path::{Path, PathBuf},
+    sync::atomic::{AtomicBool, AtomicUsize, Ordering as AtomicOrdering},
+    sync::Arc,
+};
 
-use crossbeam_deque::{Stealer, Worker as Deque};
-use same_file::Handle;
-use walkdir::{self, WalkDir};
+use {
+    crossbeam_deque::{Stealer, Worker as Deque},
+    same_file::Handle,
+    walkdir::{self, WalkDir},
+};
 
-use crate::dir::{Ignore, IgnoreBuilder};
-use crate::gitignore::GitignoreBuilder;
-use crate::overrides::Override;
-use crate::types::Types;
-use crate::{Error, PartialErrorBuilder};
+use crate::{
+    dir::{Ignore, IgnoreBuilder},
+    gitignore::GitignoreBuilder,
+    overrides::Override,
+    types::Types,
+    Error, PartialErrorBuilder,
+};
 
 /// A directory entry with a possible error attached.
 ///
@@ -107,11 +108,11 @@ impl DirEntry {
     }
 
     fn new_walkdir(dent: walkdir::DirEntry, err: Option<Error>) -> DirEntry {
-        DirEntry { dent: DirEntryInner::Walkdir(dent), err: err }
+        DirEntry { dent: DirEntryInner::Walkdir(dent), err }
     }
 
     fn new_raw(dent: DirEntryRaw, err: Option<Error>) -> DirEntry {
-        DirEntry { dent: DirEntryInner::Raw(dent), err: err }
+        DirEntry { dent: DirEntryInner::Raw(dent), err }
     }
 }
 
@@ -251,8 +252,8 @@ struct DirEntryRaw {
     metadata: fs::Metadata,
 }
 
-impl fmt::Debug for DirEntryRaw {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Debug for DirEntryRaw {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Leaving out FileType because it doesn't have a debug impl
         // in Rust 1.9. We could add it if we really wanted to by manually
         // querying each possibly file type. Meh. ---AG
@@ -324,7 +325,7 @@ impl DirEntryRaw {
     ) -> Result<DirEntryRaw, Error> {
         let ty = ent.file_type().map_err(|err| {
             let err = Error::Io(io::Error::from(err)).with_path(ent.path());
-            Error::WithDepth { depth: depth, err: Box::new(err) }
+            Error::WithDepth { depth, err: Box::new(err) }
         })?;
         DirEntryRaw::from_entry_os(depth, ent, ty)
     }
@@ -337,13 +338,13 @@ impl DirEntryRaw {
     ) -> Result<DirEntryRaw, Error> {
         let md = ent.metadata().map_err(|err| {
             let err = Error::Io(io::Error::from(err)).with_path(ent.path());
-            Error::WithDepth { depth: depth, err: Box::new(err) }
+            Error::WithDepth { depth, err: Box::new(err) }
         })?;
         Ok(DirEntryRaw {
             path: ent.path(),
-            ty: ty,
+            ty,
             follow_link: false,
-            depth: depth,
+            depth,
             metadata: md,
         })
     }
@@ -358,9 +359,9 @@ impl DirEntryRaw {
 
         Ok(DirEntryRaw {
             path: ent.path(),
-            ty: ty,
+            ty,
             follow_link: false,
-            depth: depth,
+            depth,
             ino: ent.ino(),
         })
     }
@@ -391,7 +392,7 @@ impl DirEntryRaw {
             path: pb,
             ty: md.file_type(),
             follow_link: link,
-            depth: depth,
+            depth,
             metadata: md,
         })
     }
@@ -410,7 +411,7 @@ impl DirEntryRaw {
             path: pb,
             ty: md.file_type(),
             follow_link: link,
-            depth: depth,
+            depth,
             ino: md.ino(),
         })
     }
@@ -494,17 +495,15 @@ pub struct WalkBuilder {
 
 #[derive(Clone)]
 enum Sorter {
-    ByName(
-        Arc<dyn Fn(&OsStr, &OsStr) -> cmp::Ordering + Send + Sync + 'static>,
-    ),
-    ByPath(Arc<dyn Fn(&Path, &Path) -> cmp::Ordering + Send + Sync + 'static>),
+    ByName(Arc<dyn Fn(&OsStr, &OsStr) -> Ordering + Send + Sync + 'static>),
+    ByPath(Arc<dyn Fn(&Path, &Path) -> Ordering + Send + Sync + 'static>),
 }
 
 #[derive(Clone)]
 struct Filter(Arc<dyn Fn(&DirEntry) -> bool + Send + Sync + 'static>);
 
-impl fmt::Debug for WalkBuilder {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Debug for WalkBuilder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WalkBuilder")
             .field("paths", &self.paths)
             .field("ig_builder", &self.ig_builder)
@@ -578,7 +577,7 @@ impl WalkBuilder {
             .into_iter();
         let ig_root = self.ig_builder.build();
         Walk {
-            its: its,
+            its,
             it: None,
             ig_root: ig_root.clone(),
             ig: ig_root.clone(),
@@ -828,7 +827,7 @@ impl WalkBuilder {
     /// Note that this is not used in the parallel iterator.
     pub fn sort_by_file_path<F>(&mut self, cmp: F) -> &mut WalkBuilder
     where
-        F: Fn(&Path, &Path) -> cmp::Ordering + Send + Sync + 'static,
+        F: Fn(&Path, &Path) -> Ordering + Send + Sync + 'static,
     {
         self.sorter = Some(Sorter::ByPath(Arc::new(cmp)));
         self
@@ -847,7 +846,7 @@ impl WalkBuilder {
     /// Note that this is not used in the parallel iterator.
     pub fn sort_by_file_name<F>(&mut self, cmp: F) -> &mut WalkBuilder
     where
-        F: Fn(&OsStr, &OsStr) -> cmp::Ordering + Send + Sync + 'static,
+        F: Fn(&OsStr, &OsStr) -> Ordering + Send + Sync + 'static,
     {
         self.sorter = Some(Sorter::ByName(Arc::new(cmp)));
         self
@@ -911,7 +910,7 @@ impl WalkBuilder {
 /// ignore files like `.gitignore` are respected. The precise matching rules
 /// and precedence is explained in the documentation for `WalkBuilder`.
 pub struct Walk {
-    its: vec::IntoIter<(PathBuf, Option<WalkEventIter>)>,
+    its: std::vec::IntoIter<(PathBuf, Option<WalkEventIter>)>,
     it: Option<WalkEventIter>,
     ig_root: Ignore,
     ig: Ignore,
@@ -1040,7 +1039,7 @@ impl Iterator for Walk {
     }
 }
 
-impl FusedIterator for Walk {}
+impl std::iter::FusedIterator for Walk {}
 
 /// WalkEventIter transforms a WalkDir iterator into an iterator that more
 /// accurately describes the directory tree. Namely, it emits events that are
@@ -1188,7 +1187,7 @@ impl<'s> ParallelVisitor for FnVisitorImp<'s> {
 ///
 /// Unlike `Walk`, this uses multiple threads for traversing a directory.
 pub struct WalkParallel {
-    paths: vec::IntoIter<PathBuf>,
+    paths: std::vec::IntoIter<PathBuf>,
     ig_root: Ignore,
     max_filesize: Option<u64>,
     max_depth: Option<usize>,
@@ -1268,9 +1267,9 @@ impl WalkParallel {
                     }
                 };
                 stack.push(Message::Work(Work {
-                    dent: dent,
+                    dent,
                     ignore: self.ig_root.clone(),
-                    root_device: root_device,
+                    root_device,
                 }));
             }
             // ... but there's no need to start workers if we don't need them.
@@ -1408,7 +1407,7 @@ impl Stack {
         // on wide directories with a lot of gitignores is disastrous (for
         // example, searching a directory tree containing all of crates.io).
         let deques: Vec<Deque<Message>> =
-            iter::repeat_with(Deque::new_lifo).take(threads).collect();
+            std::iter::repeat_with(Deque::new_lifo).take(threads).collect();
         let stealers = Arc::<[Stealer<Message>]>::from(
             deques.iter().map(Deque::stealer).collect::<Vec<_>>(),
         );
@@ -1707,7 +1706,8 @@ impl<'s> Worker<'s> {
                         // CPU waiting, we let the thread sleep for a bit. In
                         // general, this tends to only occur once the search is
                         // approaching termination.
-                        thread::sleep(Duration::from_millis(1));
+                        let dur = std::time::Duration::from_millis(1);
+                        std::thread::sleep(dur);
                     }
                 }
             }
@@ -1716,22 +1716,22 @@ impl<'s> Worker<'s> {
 
     /// Indicates that all workers should quit immediately.
     fn quit_now(&self) {
-        self.quit_now.store(true, Ordering::SeqCst);
+        self.quit_now.store(true, AtomicOrdering::SeqCst);
     }
 
     /// Returns true if this worker should quit immediately.
     fn is_quit_now(&self) -> bool {
-        self.quit_now.load(Ordering::SeqCst)
+        self.quit_now.load(AtomicOrdering::SeqCst)
     }
 
     /// Returns the number of pending jobs.
     fn num_pending(&self) -> usize {
-        self.num_pending.load(Ordering::SeqCst)
+        self.num_pending.load(AtomicOrdering::SeqCst)
     }
 
     /// Send work.
     fn send(&self, work: Work) {
-        self.num_pending.fetch_add(1, Ordering::SeqCst);
+        self.num_pending.fetch_add(1, AtomicOrdering::SeqCst);
         self.stack.push(Message::Work(work));
     }
 
@@ -1747,7 +1747,7 @@ impl<'s> Worker<'s> {
 
     /// Signal that work has been finished.
     fn work_done(&self) {
-        self.num_pending.fetch_sub(1, Ordering::SeqCst);
+        self.num_pending.fetch_sub(1, AtomicOrdering::SeqCst);
     }
 }
 

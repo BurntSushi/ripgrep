@@ -6,8 +6,10 @@ line tools.
 
 use std::path::Path;
 
-use crate::gitignore::{self, Gitignore, GitignoreBuilder};
-use crate::{Error, Match};
+use crate::{
+    gitignore::{self, Gitignore, GitignoreBuilder},
+    Error, Match,
+};
 
 /// Glob represents a single glob in an override matcher.
 ///

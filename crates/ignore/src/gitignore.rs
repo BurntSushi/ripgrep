@@ -7,20 +7,24 @@ Note that this module implements the specification as described in the
 the `git` command line tool.
 */
 
-use std::cell::RefCell;
-use std::env;
-use std::fs::File;
-use std::io::{self, BufRead, Read};
-use std::path::{Path, PathBuf};
-use std::str;
-use std::sync::Arc;
+use std::{
+    cell::RefCell,
+    fs::File,
+    io::{BufRead, BufReader, Read},
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
-use globset::{Candidate, GlobBuilder, GlobSet, GlobSetBuilder};
-use regex::bytes::Regex;
-use thread_local::ThreadLocal;
+use {
+    globset::{Candidate, GlobBuilder, GlobSet, GlobSetBuilder},
+    regex::bytes::Regex,
+    thread_local::ThreadLocal,
+};
 
-use crate::pathutil::{is_file_name, strip_prefix};
-use crate::{Error, Match, PartialErrorBuilder};
+use crate::{
+    pathutil::{is_file_name, strip_prefix},
+    Error, Match, PartialErrorBuilder,
+};
 
 /// Glob represents a single glob in a gitignore file.
 ///
@@ -337,7 +341,7 @@ impl GitignoreBuilder {
             .build()
             .map_err(|err| Error::Glob { glob: None, err: err.to_string() })?;
         Ok(Gitignore {
-            set: set,
+            set,
             root: self.root.clone(),
             globs: self.globs.clone(),
             num_ignores: nignore as u64,
@@ -389,7 +393,7 @@ impl GitignoreBuilder {
             Err(err) => return Some(Error::Io(err).with_path(path)),
             Ok(file) => file,
         };
-        let rdr = io::BufReader::new(file);
+        let rdr = BufReader::new(file);
         let mut errs = PartialErrorBuilder::default();
         for (i, line) in rdr.lines().enumerate() {
             let lineno = (i + 1) as u64;
@@ -448,7 +452,7 @@ impl GitignoreBuilder {
             return Ok(self);
         }
         let mut glob = Glob {
-            from: from,
+            from,
             original: line.to_string(),
             actual: String::new(),
             is_whitelist: false,
@@ -558,7 +562,7 @@ fn gitconfig_home_contents() -> Option<Vec<u8>> {
     };
     let mut file = match File::open(home.join(".gitconfig")) {
         Err(_) => return None,
-        Ok(file) => io::BufReader::new(file),
+        Ok(file) => BufReader::new(file),
     };
     let mut contents = vec![];
     file.read_to_end(&mut contents).ok().map(|_| contents)
@@ -567,13 +571,13 @@ fn gitconfig_home_contents() -> Option<Vec<u8>> {
 /// Returns the file contents of git's global config file, if one exists, in
 /// the user's XDG_CONFIG_HOME directory.
 fn gitconfig_xdg_contents() -> Option<Vec<u8>> {
-    let path = env::var_os("XDG_CONFIG_HOME")
+    let path = std::env::var_os("XDG_CONFIG_HOME")
         .and_then(|x| if x.is_empty() { None } else { Some(PathBuf::from(x)) })
         .or_else(|| home_dir().map(|p| p.join(".config")))
         .map(|x| x.join("git/config"));
     let mut file = match path.and_then(|p| File::open(p).ok()) {
         None => return None,
-        Some(file) => io::BufReader::new(file),
+        Some(file) => BufReader::new(file),
     };
     let mut contents = vec![];
     file.read_to_end(&mut contents).ok().map(|_| contents)
@@ -583,7 +587,7 @@ fn gitconfig_xdg_contents() -> Option<Vec<u8>> {
 ///
 /// Specifically, this respects XDG_CONFIG_HOME.
 fn excludes_file_default() -> Option<PathBuf> {
-    env::var_os("XDG_CONFIG_HOME")
+    std::env::var_os("XDG_CONFIG_HOME")
         .and_then(|x| if x.is_empty() { None } else { Some(PathBuf::from(x)) })
         .or_else(|| home_dir().map(|p| p.join(".config")))
         .map(|x| x.join("git/ignore"))
@@ -608,7 +612,7 @@ fn parse_excludes_file(data: &[u8]) -> Option<PathBuf> {
         None => return None,
         Some(caps) => caps,
     };
-    str::from_utf8(&caps[1]).ok().map(|s| PathBuf::from(expand_tilde(s)))
+    std::str::from_utf8(&caps[1]).ok().map(|s| PathBuf::from(expand_tilde(s)))
 }
 
 /// Expands ~ in file paths to the value of $HOME.
@@ -622,17 +626,17 @@ fn expand_tilde(path: &str) -> String {
 
 /// Returns the location of the user's home directory.
 fn home_dir() -> Option<PathBuf> {
-    // We're fine with using env::home_dir for now. Its bugs are, IMO, pretty
-    // minor corner cases. We should still probably eventually migrate to
-    // the `dirs` crate to get a proper implementation.
+    // We're fine with using std::env::home_dir for now. Its bugs are, IMO,
+    // pretty minor corner cases.
     #![allow(deprecated)]
-    env::home_dir()
+    std::env::home_dir()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Gitignore, GitignoreBuilder};
     use std::path::Path;
+
+    use super::{Gitignore, GitignoreBuilder};
 
     fn gi_from_str<P: AsRef<Path>>(root: P, s: &str) -> Gitignore {
         let mut builder = GitignoreBuilder::new(root);

@@ -84,18 +84,15 @@ assert!(matcher.matched("y.cpp", false).is_whitelist());
 ```
 */
 
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::path::Path;
-use std::sync::Arc;
+use std::{cell::RefCell, collections::HashMap, path::Path, sync::Arc};
 
-use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
-use regex::Regex;
-use thread_local::ThreadLocal;
+use {
+    globset::{GlobBuilder, GlobSet, GlobSetBuilder},
+    regex::Regex,
+    thread_local::ThreadLocal,
+};
 
-use crate::default_types::DEFAULT_TYPES;
-use crate::pathutil::file_name;
-use crate::{Error, Match};
+use crate::{default_types::DEFAULT_TYPES, pathutil::file_name, Error, Match};
 
 /// Glob represents a single glob in a set of file type definitions.
 ///
@@ -356,11 +353,11 @@ impl TypesBuilder {
             .build()
             .map_err(|err| Error::Glob { glob: None, err: err.to_string() })?;
         Ok(Types {
-            defs: defs,
-            selections: selections,
-            has_selected: has_selected,
-            glob_to_selection: glob_to_selection,
-            set: set,
+            defs,
+            selections,
+            has_selected,
+            glob_to_selection,
+            set,
             matches: Arc::new(ThreadLocal::default()),
         })
     }

@@ -9,7 +9,7 @@
 /// Please try to keep this list sorted lexicographically and wrapped to 79
 /// columns (inclusive).
 #[rustfmt::skip]
-pub const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
+pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["ada"], &["*.adb", "*.ads"]),
     (&["agda"], &["*.agda", "*.lagda"]),
     (&["aidl"], &["*.aidl"]),

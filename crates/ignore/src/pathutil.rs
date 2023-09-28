@@ -1,5 +1,4 @@
-use std::ffi::OsStr;
-use std::path::Path;
+use std::{ffi::OsStr, path::Path};
 
 use crate::walk::DirEntry;
 
@@ -9,7 +8,7 @@ use crate::walk::DirEntry;
 ///
 /// On Unix, this implements a more optimized check.
 #[cfg(unix)]
-pub fn is_hidden(dent: &DirEntry) -> bool {
+pub(crate) fn is_hidden(dent: &DirEntry) -> bool {
     use std::os::unix::ffi::OsStrExt;
 
     if let Some(name) = file_name(dent.path()) {
@@ -26,7 +25,7 @@ pub fn is_hidden(dent: &DirEntry) -> bool {
 /// * The base name of the path starts with a `.`.
 /// * The file attributes have the `HIDDEN` property set.
 #[cfg(windows)]
-pub fn is_hidden(dent: &DirEntry) -> bool {
+pub(crate) fn is_hidden(dent: &DirEntry) -> bool {
     use std::os::windows::fs::MetadataExt;
     use winapi_util::file;
 
@@ -49,7 +48,7 @@ pub fn is_hidden(dent: &DirEntry) -> bool {
 ///
 /// This only returns true if the base name of the path starts with a `.`.
 #[cfg(not(any(unix, windows)))]
-pub fn is_hidden(dent: &DirEntry) -> bool {
+pub(crate) fn is_hidden(dent: &DirEntry) -> bool {
     if let Some(name) = file_name(dent.path()) {
         name.to_str().map(|s| s.starts_with(".")).unwrap_or(false)
     } else {
@@ -61,7 +60,7 @@ pub fn is_hidden(dent: &DirEntry) -> bool {
 ///
 /// If `path` doesn't have a prefix `prefix`, then return `None`.
 #[cfg(unix)]
-pub fn strip_prefix<'a, P: AsRef<Path> + ?Sized>(
+pub(crate) fn strip_prefix<'a, P: AsRef<Path> + ?Sized>(
     prefix: &'a P,
     path: &'a Path,
 ) -> Option<&'a Path> {
@@ -80,7 +79,7 @@ pub fn strip_prefix<'a, P: AsRef<Path> + ?Sized>(
 ///
 /// If `path` doesn't have a prefix `prefix`, then return `None`.
 #[cfg(not(unix))]
-pub fn strip_prefix<'a, P: AsRef<Path> + ?Sized>(
+pub(crate) fn strip_prefix<'a, P: AsRef<Path> + ?Sized>(
     prefix: &'a P,
     path: &'a Path,
 ) -> Option<&'a Path> {
@@ -90,9 +89,10 @@ pub fn strip_prefix<'a, P: AsRef<Path> + ?Sized>(
 /// Returns true if this file path is just a file name. i.e., Its parent is
 /// the empty string.
 #[cfg(unix)]
-pub fn is_file_name<P: AsRef<Path>>(path: P) -> bool {
-    use memchr::memchr;
+pub(crate) fn is_file_name<P: AsRef<Path>>(path: P) -> bool {
     use std::os::unix::ffi::OsStrExt;
+
+    use memchr::memchr;
 
     let path = path.as_ref().as_os_str().as_bytes();
     memchr(b'/', path).is_none()
@@ -101,7 +101,7 @@ pub fn is_file_name<P: AsRef<Path>>(path: P) -> bool {
 /// Returns true if this file path is just a file name. i.e., Its parent is
 /// the empty string.
 #[cfg(not(unix))]
-pub fn is_file_name<P: AsRef<Path>>(path: P) -> bool {
+pub(crate) fn is_file_name<P: AsRef<Path>>(path: P) -> bool {
     path.as_ref().parent().map(|p| p.as_os_str().is_empty()).unwrap_or(false)
 }
 
@@ -110,7 +110,7 @@ pub fn is_file_name<P: AsRef<Path>>(path: P) -> bool {
 /// If the path terminates in ., .., or consists solely of a root of prefix,
 /// file_name will return None.
 #[cfg(unix)]
-pub fn file_name<'a, P: AsRef<Path> + ?Sized>(
+pub(crate) fn file_name<'a, P: AsRef<Path> + ?Sized>(
     path: &'a P,
 ) -> Option<&'a OsStr> {
     use memchr::memrchr;
@@ -135,7 +135,7 @@ pub fn file_name<'a, P: AsRef<Path> + ?Sized>(
 /// If the path terminates in ., .., or consists solely of a root of prefix,
 /// file_name will return None.
 #[cfg(not(unix))]
-pub fn file_name<'a, P: AsRef<Path> + ?Sized>(
+pub(crate) fn file_name<'a, P: AsRef<Path> + ?Sized>(
     path: &'a P,
 ) -> Option<&'a OsStr> {
     path.as_ref().file_name()
