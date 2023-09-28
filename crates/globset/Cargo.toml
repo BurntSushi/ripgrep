@@ -37,7 +37,6 @@ features = ["std", "perf", "syntax", "meta", "nfa", "hybrid"]
 
 [dev-dependencies]
 glob = "0.3.1"
-lazy_static = "1"
 serde_json = "1.0.107"
 
 [features]

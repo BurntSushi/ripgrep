@@ -8,7 +8,6 @@ the `git` command line tool.
 */
 
 use std::{
-    cell::RefCell,
     fs::File,
     io::{BufRead, BufReader, Read},
     path::{Path, PathBuf},
@@ -17,8 +16,7 @@ use std::{
 
 use {
     globset::{Candidate, GlobBuilder, GlobSet, GlobSetBuilder},
-    regex::bytes::Regex,
-    thread_local::ThreadLocal,
+    regex_automata::util::pool::Pool,
 };
 
 use crate::{
@@ -86,7 +84,7 @@ pub struct Gitignore {
     globs: Vec<Glob>,
     num_ignores: u64,
     num_whitelists: u64,
-    matches: Option<Arc<ThreadLocal<RefCell<Vec<usize>>>>>,
+    matches: Option<Arc<Pool<Vec<usize>>>>,
 }
 
 impl Gitignore {
@@ -253,8 +251,7 @@ impl Gitignore {
             return Match::None;
         }
         let path = path.as_ref();
-        let _matches = self.matches.as_ref().unwrap().get_or_default();
-        let mut matches = _matches.borrow_mut();
+        let mut matches = self.matches.as_ref().unwrap().get();
         let candidate = Candidate::new(path);
         self.set.matches_candidate_into(&candidate, &mut *matches);
         for &i in matches.iter().rev() {
@@ -346,7 +343,7 @@ impl GitignoreBuilder {
             globs: self.globs.clone(),
             num_ignores: nignore as u64,
             num_whitelists: nwhite as u64,
-            matches: Some(Arc::new(ThreadLocal::default())),
+            matches: Some(Arc::new(Pool::new(|| vec![]))),
         })
     }
 
@@ -596,23 +593,28 @@ fn excludes_file_default() -> Option<PathBuf> {
 /// Extract git's `core.excludesfile` config setting from the raw file contents
 /// given.
 fn parse_excludes_file(data: &[u8]) -> Option<PathBuf> {
+    use std::sync::OnceLock;
+
+    use regex_automata::{meta::Regex, util::syntax};
+
     // N.B. This is the lazy approach, and isn't technically correct, but
     // probably works in more circumstances. I guess we would ideally have
     // a full INI parser. Yuck.
-    lazy_static::lazy_static! {
-        static ref RE: Regex = Regex::new(
-            r"(?xim-u)
-            ^[[:space:]]*excludesfile[[:space:]]*
-            =
-            [[:space:]]*(.+)[[:space:]]*$
-            "
-        ).unwrap();
-    };
-    let caps = match RE.captures(data) {
-        None => return None,
-        Some(caps) => caps,
-    };
-    std::str::from_utf8(&caps[1]).ok().map(|s| PathBuf::from(expand_tilde(s)))
+    static RE: OnceLock<Regex> = OnceLock::new();
+    let re = RE.get_or_init(|| {
+        Regex::builder()
+            .configure(Regex::config().utf8_empty(false))
+            .syntax(syntax::Config::new().utf8(false))
+            .build(r"(?im-u)^\s*excludesfile\s*=\s*(\S+)\s*$")
+            .unwrap()
+    });
+    // We don't care about amortizing allocs here I think. This should only
+    // be called ~once per traversal or so? (Although it's not guaranteed...)
+    let mut caps = re.create_captures();
+    re.captures(data, &mut caps);
+    let span = caps.get_group(1)?;
+    let candidate = &data[span];
+    std::str::from_utf8(candidate).ok().map(|s| PathBuf::from(expand_tilde(s)))
 }
 
 /// Expands ~ in file paths to the value of $HOME.

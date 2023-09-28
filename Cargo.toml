@@ -52,7 +52,6 @@ members = [
 bstr = "1.6.0"
 grep = { version = "0.2.12", path = "crates/grep" }
 ignore = { version = "0.4.19", path = "crates/ignore" }
-lazy_static = "1.1.0"
 log = "0.4.5"
 serde_json = "1.0.23"
 termcolor = "1.1.0"
@@ -64,9 +63,6 @@ features = ["suggestions"]
 
 [target.'cfg(all(target_env = "musl", target_pointer_width = "64"))'.dependencies.jemallocator]
 version = "0.5.0"
-
-[build-dependencies]
-lazy_static = "1.1.0"
 
 [build-dependencies.clap]
 version = "2.33.0"

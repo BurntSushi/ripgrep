@@ -21,13 +21,15 @@ bench = false
 [dependencies]
 crossbeam-deque = "0.8.3"
 globset = { version = "0.4.10", path = "../globset" }
-lazy_static = "1.1"
 log = "0.4.20"
 memchr = "2.6.3"
-regex = { version = "1.9.5", default-features = false, features = ["perf", "std", "unicode-gencat"] }
 same-file = "1.0.6"
-thread_local = "1"
 walkdir = "2.4.0"
+
+[dependencies.regex-automata]
+version = "0.3.8"
+default-features = false
+features = ["std", "perf", "syntax", "meta", "nfa", "hybrid", "dfa-onepass"]
 
 [target.'cfg(windows)'.dependencies.winapi-util]
 version = "0.1.2"

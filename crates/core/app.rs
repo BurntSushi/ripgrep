@@ -10,7 +10,6 @@
 // it into a ripgrep-specific configuration type that is not coupled with clap.
 
 use clap::{self, crate_authors, crate_version, App, AppSettings};
-use lazy_static::lazy_static;
 
 const ABOUT: &str = "
 ripgrep (rg) recursively searches the current directory for a regex pattern.
@@ -47,18 +46,19 @@ OPTIONS:
 
 /// Build a clap application parameterized by usage strings.
 pub fn app() -> App<'static, 'static> {
+    use std::sync::OnceLock;
+
     // We need to specify our version in a static because we've painted clap
     // into a corner. We've told it that every string we give it will be
     // 'static, but we need to build the version string dynamically. We can
     // fake the 'static lifetime with lazy_static.
-    lazy_static! {
-        static ref LONG_VERSION: String = long_version(None, true);
-    }
+    static LONG_VERSION: OnceLock<String> = OnceLock::new();
+    let long_version = LONG_VERSION.get_or_init(|| long_version(None, true));
 
     let mut app = App::new("ripgrep")
         .author(crate_authors!())
         .version(crate_version!())
-        .long_version(LONG_VERSION.as_str())
+        .long_version(long_version.as_str())
         .about(ABOUT)
         .max_term_width(100)
         .setting(AppSettings::UnifiedHelpMessage)
