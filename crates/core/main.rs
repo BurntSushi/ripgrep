@@ -1,13 +1,11 @@
-use std::error;
-use std::io::{self, Write};
-use std::process;
-use std::sync::Mutex;
-use std::time::Instant;
+use std::{
+    io::{self, Write},
+    time::Instant,
+};
 
 use ignore::WalkState;
 
-use args::Args;
-use subject::Subject;
+use crate::{args::Args, subject::Subject};
 
 #[macro_use]
 mod messages;
@@ -42,12 +40,12 @@ mod subject;
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
-type Result<T> = ::std::result::Result<T, Box<dyn error::Error>>;
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() {
     if let Err(err) = Args::parse().and_then(try_main) {
         eprintln_locked!("{}", err);
-        process::exit(2);
+        std::process::exit(2);
     }
 }
 
@@ -64,11 +62,11 @@ fn try_main(args: Args) -> Result<()> {
         PCRE2Version => pcre2_version(&args),
     }?;
     if matched && (args.quiet() || !messages::errored()) {
-        process::exit(0)
+        std::process::exit(0)
     } else if messages::errored() {
-        process::exit(2)
+        std::process::exit(2)
     } else {
-        process::exit(1)
+        std::process::exit(1)
     }
 }
 
@@ -148,7 +146,7 @@ fn search_parallel(args: &Args) -> Result<bool> {
     let started_at = Instant::now();
     let subject_builder = args.subject_builder();
     let bufwtr = args.buffer_writer()?;
-    let stats = args.stats()?.map(Mutex::new);
+    let stats = args.stats()?.map(std::sync::Mutex::new);
     let matched = AtomicBool::new(false);
     let searched = AtomicBool::new(false);
     let mut searcher_err = None;

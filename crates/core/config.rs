@@ -2,21 +2,16 @@
 // primary output of these routines is a sequence of arguments, where each
 // argument corresponds precisely to one shell argument.
 
-use std::env;
-use std::error::Error;
-use std::ffi::OsString;
-use std::fs::File;
-use std::io;
-use std::path::{Path, PathBuf};
+use std::{
+    ffi::OsString,
+    path::{Path, PathBuf},
+};
 
 use bstr::{io::BufReadExt, ByteSlice};
-use log;
-
-use crate::Result;
 
 /// Return a sequence of arguments derived from ripgrep rc configuration files.
 pub fn args() -> Vec<OsString> {
-    let config_path = match env::var_os("RIPGREP_CONFIG_PATH") {
+    let config_path = match std::env::var_os("RIPGREP_CONFIG_PATH") {
         None => return vec![],
         Some(config_path) => {
             if config_path.is_empty() {
@@ -58,9 +53,9 @@ pub fn args() -> Vec<OsString> {
 /// for each line in addition to successfully parsed arguments.
 fn parse<P: AsRef<Path>>(
     path: P,
-) -> Result<(Vec<OsString>, Vec<Box<dyn Error>>)> {
+) -> crate::Result<(Vec<OsString>, Vec<Box<dyn std::error::Error>>)> {
     let path = path.as_ref();
-    match File::open(&path) {
+    match std::fs::File::open(&path) {
         Ok(file) => parse_reader(file),
         Err(err) => Err(From::from(format!("{}: {}", path.display(), err))),
     }
@@ -77,10 +72,10 @@ fn parse<P: AsRef<Path>>(
 /// If the reader could not be read, then an error is returned. If there was a
 /// problem parsing one or more lines, then errors are returned for each line
 /// in addition to successfully parsed arguments.
-fn parse_reader<R: io::Read>(
+fn parse_reader<R: std::io::Read>(
     rdr: R,
-) -> Result<(Vec<OsString>, Vec<Box<dyn Error>>)> {
-    let mut bufrdr = io::BufReader::new(rdr);
+) -> crate::Result<(Vec<OsString>, Vec<Box<dyn std::error::Error>>)> {
+    let mut bufrdr = std::io::BufReader::new(rdr);
     let (mut args, mut errs) = (vec![], vec![]);
     let mut line_number = 0;
     bufrdr.for_byte_line_with_terminator(|line| {

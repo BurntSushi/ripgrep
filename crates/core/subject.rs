@@ -1,8 +1,5 @@
 use std::path::Path;
 
-use ignore::{self, DirEntry};
-use log;
-
 /// A configuration for describing how subjects should be built.
 #[derive(Clone, Debug)]
 struct Config {
@@ -34,7 +31,7 @@ impl SubjectBuilder {
     /// deemed searchable, then it is returned.
     pub fn build_from_result(
         &self,
-        result: Result<DirEntry, ignore::Error>,
+        result: Result<ignore::DirEntry, ignore::Error>,
     ) -> Option<Subject> {
         match result {
             Ok(dent) => self.build(dent),
@@ -49,7 +46,7 @@ impl SubjectBuilder {
     ///
     /// If a subject could not be created or should otherwise not be searched,
     /// then this returns `None` after emitting any relevant log messages.
-    pub fn build(&self, dent: DirEntry) -> Option<Subject> {
+    pub fn build(&self, dent: ignore::DirEntry) -> Option<Subject> {
         let subj =
             Subject { dent, strip_dot_prefix: self.config.strip_dot_prefix };
         if let Some(ignore_err) = subj.dent.error() {
@@ -96,7 +93,7 @@ impl SubjectBuilder {
 /// file or stdin.
 #[derive(Clone, Debug)]
 pub struct Subject {
-    dent: DirEntry,
+    dent: ignore::DirEntry,
     strip_dot_prefix: bool,
 }
 

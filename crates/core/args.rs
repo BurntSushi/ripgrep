@@ -1,49 +1,52 @@
-use std::cmp;
-use std::env;
-use std::ffi::{OsStr, OsString};
-use std::fs;
-use std::io::{self, IsTerminal, Write};
-use std::path::{Path, PathBuf};
-use std::process;
-use std::str::FromStr;
-use std::sync::Arc;
-use std::time::SystemTime;
+use std::{
+    env,
+    ffi::{OsStr, OsString},
+    io::{self, IsTerminal, Write},
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
-use clap;
-use grep::cli;
-use grep::matcher::LineTerminator;
+use {
+    clap,
+    grep::{
+        cli,
+        matcher::LineTerminator,
+        printer::{
+            default_color_specs, ColorSpecs, HyperlinkConfig,
+            HyperlinkEnvironment, HyperlinkFormat, JSONBuilder, PathPrinter,
+            PathPrinterBuilder, Standard, StandardBuilder, Stats, Summary,
+            SummaryBuilder, SummaryKind, JSON,
+        },
+        regex::{
+            RegexMatcher as RustRegexMatcher,
+            RegexMatcherBuilder as RustRegexMatcherBuilder,
+        },
+        searcher::{
+            BinaryDetection, Encoding, MmapChoice, Searcher, SearcherBuilder,
+        },
+    },
+    ignore::{
+        overrides::{Override, OverrideBuilder},
+        types::{FileTypeDef, Types, TypesBuilder},
+        {Walk, WalkBuilder, WalkParallel},
+    },
+    termcolor::{BufferWriter, ColorChoice, WriteColor},
+};
+
 #[cfg(feature = "pcre2")]
 use grep::pcre2::{
     RegexMatcher as PCRE2RegexMatcher,
     RegexMatcherBuilder as PCRE2RegexMatcherBuilder,
 };
-use grep::printer::{
-    default_color_specs, ColorSpecs, HyperlinkConfig, HyperlinkEnvironment,
-    HyperlinkFormat, JSONBuilder, PathPrinter, PathPrinterBuilder, Standard,
-    StandardBuilder, Stats, Summary, SummaryBuilder, SummaryKind, JSON,
-};
-use grep::regex::{
-    RegexMatcher as RustRegexMatcher,
-    RegexMatcherBuilder as RustRegexMatcherBuilder,
-};
-use grep::searcher::{
-    BinaryDetection, Encoding, MmapChoice, Searcher, SearcherBuilder,
-};
-use ignore::overrides::{Override, OverrideBuilder};
-use ignore::types::{FileTypeDef, Types, TypesBuilder};
-use ignore::{Walk, WalkBuilder, WalkParallel};
-use log;
-use termcolor::{BufferWriter, ColorChoice, WriteColor};
 
-use crate::app;
-use crate::config;
-use crate::logger::Logger;
-use crate::messages::{set_ignore_messages, set_messages};
-use crate::search::{
-    PatternMatcher, Printer, SearchWorker, SearchWorkerBuilder,
+use crate::{
+    app, config,
+    logger::Logger,
+    messages::{set_ignore_messages, set_messages},
+    search::{PatternMatcher, Printer, SearchWorker, SearchWorkerBuilder},
+    subject::{Subject, SubjectBuilder},
+    Result,
 };
-use crate::subject::{Subject, SubjectBuilder};
-use crate::Result;
 
 /// The command that ripgrep should execute based on the command line
 /// configuration.
@@ -1130,16 +1133,17 @@ impl ArgMatches {
         let mut env = HyperlinkEnvironment::new();
         env.host(hostname(self.value_of_os("hostname-bin")))
             .wsl_prefix(wsl_prefix());
-        let fmt = match self.value_of_lossy("hyperlink-format") {
-            None => HyperlinkFormat::from_str("default").unwrap(),
-            Some(format) => match HyperlinkFormat::from_str(&format) {
-                Ok(format) => format,
-                Err(err) => {
-                    let msg = format!("invalid hyperlink format: {err}");
-                    return Err(msg.into());
-                }
-            },
-        };
+        let fmt: HyperlinkFormat =
+            match self.value_of_lossy("hyperlink-format") {
+                None => "default".parse().unwrap(),
+                Some(format) => match format.parse() {
+                    Ok(format) => format,
+                    Err(err) => {
+                        let msg = format!("invalid hyperlink format: {err}");
+                        return Err(msg.into());
+                    }
+                },
+            };
         log::debug!("hyperlink format: {:?}", fmt.to_string());
         Ok(HyperlinkConfig::new(env, fmt))
     }
@@ -1589,7 +1593,7 @@ impl ArgMatches {
         let threads = self.usize_of("threads")?.unwrap_or(0);
         let available =
             std::thread::available_parallelism().map_or(1, |n| n.get());
-        Ok(if threads == 0 { cmp::min(12, available) } else { threads })
+        Ok(if threads == 0 { std::cmp::min(12, available) } else { threads })
     }
 
     /// Builds a file type matcher from the command line flags.
@@ -1790,11 +1794,11 @@ fn sort_by_option<T: Ord>(
     p1: &Option<T>,
     p2: &Option<T>,
     reverse: bool,
-) -> cmp::Ordering {
+) -> std::cmp::Ordering {
     match (p1, p2, reverse) {
         (Some(p1), Some(p2), true) => p1.cmp(&p2).reverse(),
         (Some(p1), Some(p2), false) => p1.cmp(&p2),
-        _ => cmp::Ordering::Equal,
+        _ => std::cmp::Ordering::Equal,
     }
 }
 
@@ -1823,7 +1827,7 @@ where
     // (This is the point of this helper function. clap's functionality for
     // doing this will panic on a broken pipe error.)
     let _ = write!(io::stdout(), "{}", err);
-    process::exit(0);
+    std::process::exit(0);
 }
 
 /// Attempts to discover the current working directory. This mostly just defers
@@ -1871,8 +1875,8 @@ fn hostname(bin: Option<&OsStr>) -> Option<String> {
             return platform_hostname();
         }
     };
-    let mut cmd = process::Command::new(&bin);
-    cmd.stdin(process::Stdio::null());
+    let mut cmd = std::process::Command::new(&bin);
+    cmd.stdin(std::process::Stdio::null());
     let rdr = match grep::cli::CommandReader::new(&mut cmd) {
         Ok(rdr) => rdr,
         Err(err) => {
@@ -1955,9 +1959,9 @@ fn wsl_prefix() -> Option<String> {
 fn load_timestamps<G>(
     subjects: impl Iterator<Item = Subject>,
     get_time: G,
-) -> Vec<(Option<SystemTime>, Subject)>
+) -> Vec<(Option<std::time::SystemTime>, Subject)>
 where
-    G: Fn(&fs::Metadata) -> io::Result<SystemTime>,
+    G: Fn(&std::fs::Metadata) -> io::Result<std::time::SystemTime>,
 {
     subjects
         .map(|s| (s.path().metadata().and_then(|m| get_time(&m)).ok(), s))
