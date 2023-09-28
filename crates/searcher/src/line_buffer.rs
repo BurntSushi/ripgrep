@@ -1,4 +1,3 @@
-use std::cmp;
 use std::io;
 
 use bstr::ByteSlice;
@@ -15,7 +14,7 @@ pub(crate) const DEFAULT_BUFFER_CAPACITY: usize = 64 * (1 << 10); // 64 KB
 ///
 /// The default is to eagerly allocate without a limit.
 #[derive(Clone, Copy, Debug)]
-pub enum BufferAllocation {
+pub(crate) enum BufferAllocation {
     /// Attempt to expand the size of the buffer until either at least the next
     /// line fits into memory or until all available memory is exhausted.
     ///
@@ -35,7 +34,7 @@ impl Default for BufferAllocation {
 
 /// Create a new error to be used when a configured allocation limit has been
 /// reached.
-pub fn alloc_error(limit: usize) -> io::Error {
+pub(crate) fn alloc_error(limit: usize) -> io::Error {
     let msg = format!("configured allocation limit ({}) exceeded", limit);
     io::Error::new(io::ErrorKind::Other, msg)
 }
@@ -49,7 +48,7 @@ pub fn alloc_error(limit: usize) -> io::Error {
 /// using textual patterns. Of course, there are many cases in which this isn't
 /// true, which is why binary detection is disabled by default.
 #[derive(Clone, Copy, Debug)]
-pub enum BinaryDetection {
+pub(crate) enum BinaryDetection {
     /// No binary detection is performed. Data reported by the line buffer may
     /// contain arbitrary bytes.
     None,
@@ -108,18 +107,18 @@ impl Default for Config {
 
 /// A builder for constructing line buffers.
 #[derive(Clone, Debug, Default)]
-pub struct LineBufferBuilder {
+pub(crate) struct LineBufferBuilder {
     config: Config,
 }
 
 impl LineBufferBuilder {
     /// Create a new builder for a buffer.
-    pub fn new() -> LineBufferBuilder {
+    pub(crate) fn new() -> LineBufferBuilder {
         LineBufferBuilder { config: Config::default() }
     }
 
     /// Create a new line buffer from this builder's configuration.
-    pub fn build(&self) -> LineBuffer {
+    pub(crate) fn build(&self) -> LineBuffer {
         LineBuffer {
             config: self.config,
             buf: vec![0; self.config.capacity],
@@ -139,7 +138,10 @@ impl LineBufferBuilder {
     ///
     /// This is set to a reasonable default and probably shouldn't be changed
     /// unless there's a specific reason to do so.
-    pub fn capacity(&mut self, capacity: usize) -> &mut LineBufferBuilder {
+    pub(crate) fn capacity(
+        &mut self,
+        capacity: usize,
+    ) -> &mut LineBufferBuilder {
         self.config.capacity = capacity;
         self
     }
@@ -155,7 +157,10 @@ impl LineBufferBuilder {
     /// is incomplete.
     ///
     /// By default, this is set to `b'\n'`.
-    pub fn line_terminator(&mut self, lineterm: u8) -> &mut LineBufferBuilder {
+    pub(crate) fn line_terminator(
+        &mut self,
+        lineterm: u8,
+    ) -> &mut LineBufferBuilder {
         self.config.lineterm = lineterm;
         self
     }
@@ -174,7 +179,7 @@ impl LineBufferBuilder {
     /// a value of `0` is sensible, and in particular, will guarantee that a
     /// line buffer will never allocate additional memory beyond its initial
     /// capacity.
-    pub fn buffer_alloc(
+    pub(crate) fn buffer_alloc(
         &mut self,
         behavior: BufferAllocation,
     ) -> &mut LineBufferBuilder {
@@ -188,7 +193,7 @@ impl LineBufferBuilder {
     ///
     /// By default, this is disabled. In general, binary detection should be
     /// viewed as an imperfect heuristic.
-    pub fn binary_detection(
+    pub(crate) fn binary_detection(
         &mut self,
         detection: BinaryDetection,
     ) -> &mut LineBufferBuilder {
@@ -200,7 +205,7 @@ impl LineBufferBuilder {
 /// A line buffer reader efficiently reads a line oriented buffer from an
 /// arbitrary reader.
 #[derive(Debug)]
-pub struct LineBufferReader<'b, R> {
+pub(crate) struct LineBufferReader<'b, R> {
     rdr: R,
     line_buffer: &'b mut LineBuffer,
 }
@@ -211,7 +216,7 @@ impl<'b, R: io::Read> LineBufferReader<'b, R> {
     ///
     /// This does not change the binary detection behavior of the given line
     /// buffer.
-    pub fn new(
+    pub(crate) fn new(
         rdr: R,
         line_buffer: &'b mut LineBuffer,
     ) -> LineBufferReader<'b, R> {
@@ -225,13 +230,13 @@ impl<'b, R: io::Read> LineBufferReader<'b, R> {
     /// correspond to an offset in memory. It is typically used for reporting
     /// purposes. It can also be used for counting the number of bytes that
     /// have been searched.
-    pub fn absolute_byte_offset(&self) -> u64 {
+    pub(crate) fn absolute_byte_offset(&self) -> u64 {
         self.line_buffer.absolute_byte_offset()
     }
 
     /// If binary data was detected, then this returns the absolute byte offset
     /// at which binary data was initially found.
-    pub fn binary_byte_offset(&self) -> Option<u64> {
+    pub(crate) fn binary_byte_offset(&self) -> Option<u64> {
         self.line_buffer.binary_byte_offset()
     }
 
@@ -248,25 +253,25 @@ impl<'b, R: io::Read> LineBufferReader<'b, R> {
     /// This forwards any errors returned by the underlying reader, and will
     /// also return an error if the buffer must be expanded past its allocation
     /// limit, as governed by the buffer allocation strategy.
-    pub fn fill(&mut self) -> Result<bool, io::Error> {
+    pub(crate) fn fill(&mut self) -> Result<bool, io::Error> {
         self.line_buffer.fill(&mut self.rdr)
     }
 
     /// Return the contents of this buffer.
-    pub fn buffer(&self) -> &[u8] {
+    pub(crate) fn buffer(&self) -> &[u8] {
         self.line_buffer.buffer()
     }
 
     /// Return the buffer as a BStr, used for convenient equality checking
     /// in tests only.
     #[cfg(test)]
-    fn bstr(&self) -> &::bstr::BStr {
+    fn bstr(&self) -> &bstr::BStr {
         self.buffer().as_bstr()
     }
 
     /// Consume the number of bytes provided. This must be less than or equal
     /// to the number of bytes returned by `buffer`.
-    pub fn consume(&mut self, amt: usize) {
+    pub(crate) fn consume(&mut self, amt: usize) {
         self.line_buffer.consume(amt);
     }
 
@@ -286,7 +291,7 @@ impl<'b, R: io::Read> LineBufferReader<'b, R> {
 /// Line buffers cannot be used directly, but instead must be used via the
 /// LineBufferReader.
 #[derive(Clone, Debug)]
-pub struct LineBuffer {
+pub(crate) struct LineBuffer {
     /// The configuration of this buffer.
     config: Config,
     /// The primary buffer with which to hold data.
@@ -322,7 +327,7 @@ impl LineBuffer {
     ///
     /// This permits dynamically changing the binary detection strategy on
     /// an existing line buffer without needing to create a new one.
-    pub fn set_binary_detection(&mut self, binary: BinaryDetection) {
+    pub(crate) fn set_binary_detection(&mut self, binary: BinaryDetection) {
         self.config.binary = binary;
     }
 
@@ -497,12 +502,12 @@ impl LineBuffer {
         }
         // `len` is used for computing the next allocation size. The capacity
         // is permitted to start at `0`, so we make sure it's at least `1`.
-        let len = cmp::max(1, self.buf.len());
+        let len = std::cmp::max(1, self.buf.len());
         let additional = match self.config.buffer_alloc {
             BufferAllocation::Eager => len * 2,
             BufferAllocation::Error(limit) => {
                 let used = self.buf.len() - self.config.capacity;
-                let n = cmp::min(len * 2, limit - used);
+                let n = std::cmp::min(len * 2, limit - used);
                 if n == 0 {
                     return Err(alloc_error(self.config.capacity + limit));
                 }
@@ -541,9 +546,9 @@ fn replace_bytes(bytes: &mut [u8], src: u8, replacement: u8) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use bstr::{ByteSlice, ByteVec};
-    use std::str;
+
+    use super::*;
 
     const SHERLOCK: &'static str = "\
 For the Doctor Watsons of this world, as opposed to the Sherlock

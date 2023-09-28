@@ -1,14 +1,15 @@
-use std::cmp;
-
 use bstr::ByteSlice;
 
-use crate::line_buffer::BinaryDetection;
-use crate::lines::{self, LineStep};
-use crate::searcher::{Config, Range, Searcher};
-use crate::sink::{
-    Sink, SinkContext, SinkContextKind, SinkError, SinkFinish, SinkMatch,
-};
 use grep_matcher::{LineMatchKind, Matcher};
+
+use crate::{
+    line_buffer::BinaryDetection,
+    lines::{self, LineStep},
+    searcher::{Config, Range, Searcher},
+    sink::{
+        Sink, SinkContext, SinkContextKind, SinkError, SinkFinish, SinkMatch,
+    },
+};
 
 enum FastMatchResult {
     Continue,
@@ -17,7 +18,7 @@ enum FastMatchResult {
 }
 
 #[derive(Debug)]
-pub struct Core<'s, M: 's, S> {
+pub(crate) struct Core<'s, M: 's, S> {
     config: &'s Config,
     matcher: M,
     searcher: &'s Searcher,
@@ -35,7 +36,7 @@ pub struct Core<'s, M: 's, S> {
 }
 
 impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
-    pub fn new(
+    pub(crate) fn new(
         searcher: &'s Searcher,
         matcher: M,
         sink: S,
@@ -45,14 +46,14 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
             if searcher.config.line_number { Some(1) } else { None };
         let core = Core {
             config: &searcher.config,
-            matcher: matcher,
-            searcher: searcher,
-            sink: sink,
-            binary: binary,
+            matcher,
+            searcher,
+            sink,
+            binary,
             pos: 0,
             absolute_byte_offset: 0,
             binary_byte_offset: None,
-            line_number: line_number,
+            line_number,
             last_line_counted: 0,
             last_line_visited: 0,
             after_context_left: 0,
@@ -69,23 +70,23 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
         core
     }
 
-    pub fn pos(&self) -> usize {
+    pub(crate) fn pos(&self) -> usize {
         self.pos
     }
 
-    pub fn set_pos(&mut self, pos: usize) {
+    pub(crate) fn set_pos(&mut self, pos: usize) {
         self.pos = pos;
     }
 
-    pub fn binary_byte_offset(&self) -> Option<u64> {
+    pub(crate) fn binary_byte_offset(&self) -> Option<u64> {
         self.binary_byte_offset.map(|offset| offset as u64)
     }
 
-    pub fn matcher(&self) -> &M {
+    pub(crate) fn matcher(&self) -> &M {
         &self.matcher
     }
 
-    pub fn matched(
+    pub(crate) fn matched(
         &mut self,
         buf: &[u8],
         range: &Range,
@@ -93,18 +94,18 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
         self.sink_matched(buf, range)
     }
 
-    pub fn binary_data(
+    pub(crate) fn binary_data(
         &mut self,
         binary_byte_offset: u64,
     ) -> Result<bool, S::Error> {
         self.sink.binary_data(&self.searcher, binary_byte_offset)
     }
 
-    pub fn begin(&mut self) -> Result<bool, S::Error> {
+    pub(crate) fn begin(&mut self) -> Result<bool, S::Error> {
         self.sink.begin(&self.searcher)
     }
 
-    pub fn finish(
+    pub(crate) fn finish(
         &mut self,
         byte_count: u64,
         binary_byte_offset: Option<u64>,
@@ -115,7 +116,10 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
         )
     }
 
-    pub fn match_by_line(&mut self, buf: &[u8]) -> Result<bool, S::Error> {
+    pub(crate) fn match_by_line(
+        &mut self,
+        buf: &[u8],
+    ) -> Result<bool, S::Error> {
         if self.is_line_by_line_fast() {
             match self.match_by_line_fast(buf)? {
                 FastMatchResult::SwitchToSlow => self.match_by_line_slow(buf),
@@ -127,7 +131,7 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
         }
     }
 
-    pub fn roll(&mut self, buf: &[u8]) -> usize {
+    pub(crate) fn roll(&mut self, buf: &[u8]) -> usize {
         let consumed = if self.config.max_context() == 0 {
             buf.len()
         } else {
@@ -141,7 +145,8 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
                 self.config.line_term.as_byte(),
                 self.config.max_context(),
             );
-            let consumed = cmp::max(context_start, self.last_line_visited);
+            let consumed =
+                std::cmp::max(context_start, self.last_line_visited);
             consumed
         };
         self.count_lines(buf, consumed);
@@ -152,7 +157,7 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
         consumed
     }
 
-    pub fn detect_binary(
+    pub(crate) fn detect_binary(
         &mut self,
         buf: &[u8],
         range: &Range,
@@ -177,7 +182,7 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
         }
     }
 
-    pub fn before_context_by_line(
+    pub(crate) fn before_context_by_line(
         &mut self,
         buf: &[u8],
         upto: usize,
@@ -213,7 +218,7 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
         Ok(true)
     }
 
-    pub fn after_context_by_line(
+    pub(crate) fn after_context_by_line(
         &mut self,
         buf: &[u8],
         upto: usize,
@@ -238,7 +243,7 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
         Ok(true)
     }
 
-    pub fn other_context_by_line(
+    pub(crate) fn other_context_by_line(
         &mut self,
         buf: &[u8],
         upto: usize,

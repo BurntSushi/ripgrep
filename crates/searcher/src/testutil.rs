@@ -1,14 +1,17 @@
 use std::io::{self, Write};
-use std::str;
 
-use bstr::ByteSlice;
-use grep_matcher::{
-    LineMatchKind, LineTerminator, Match, Matcher, NoCaptures, NoError,
+use {
+    bstr::ByteSlice,
+    grep_matcher::{
+        LineMatchKind, LineTerminator, Match, Matcher, NoCaptures, NoError,
+    },
+    regex::bytes::{Regex, RegexBuilder},
 };
-use regex::bytes::{Regex, RegexBuilder};
 
-use crate::searcher::{BinaryDetection, Searcher, SearcherBuilder};
-use crate::sink::{Sink, SinkContext, SinkFinish, SinkMatch};
+use crate::{
+    searcher::{BinaryDetection, Searcher, SearcherBuilder},
+    sink::{Sink, SinkContext, SinkFinish, SinkMatch},
+};
 
 /// A simple regex matcher.
 ///
@@ -18,7 +21,7 @@ use crate::sink::{Sink, SinkContext, SinkFinish, SinkMatch};
 /// this optimization is detected automatically by inspecting and possibly
 /// modifying the regex itself.)
 #[derive(Clone, Debug)]
-pub struct RegexMatcher {
+pub(crate) struct RegexMatcher {
     regex: Regex,
     line_term: Option<LineTerminator>,
     every_line_is_candidate: bool,
@@ -26,22 +29,18 @@ pub struct RegexMatcher {
 
 impl RegexMatcher {
     /// Create a new regex matcher.
-    pub fn new(pattern: &str) -> RegexMatcher {
+    pub(crate) fn new(pattern: &str) -> RegexMatcher {
         let regex = RegexBuilder::new(pattern)
             .multi_line(true) // permits ^ and $ to match at \n boundaries
             .build()
             .unwrap();
-        RegexMatcher {
-            regex: regex,
-            line_term: None,
-            every_line_is_candidate: false,
-        }
+        RegexMatcher { regex, line_term: None, every_line_is_candidate: false }
     }
 
     /// Forcefully set the line terminator of this matcher.
     ///
     /// By default, this matcher has no line terminator set.
-    pub fn set_line_term(
+    pub(crate) fn set_line_term(
         &mut self,
         line_term: Option<LineTerminator>,
     ) -> &mut RegexMatcher {
@@ -52,7 +51,10 @@ impl RegexMatcher {
     /// Whether to return every line as a candidate or not.
     ///
     /// This forces searchers to handle the case of reporting a false positive.
-    pub fn every_line_is_candidate(&mut self, yes: bool) -> &mut RegexMatcher {
+    pub(crate) fn every_line_is_candidate(
+        &mut self,
+        yes: bool,
+    ) -> &mut RegexMatcher {
         self.every_line_is_candidate = yes;
         self
     }
@@ -108,17 +110,17 @@ impl Matcher for RegexMatcher {
 /// This is useful for tests because it lets us easily confirm whether data
 /// is being passed to Sink correctly.
 #[derive(Clone, Debug)]
-pub struct KitchenSink(Vec<u8>);
+pub(crate) struct KitchenSink(Vec<u8>);
 
 impl KitchenSink {
     /// Create a new implementation of Sink that includes everything in the
     /// kitchen.
-    pub fn new() -> KitchenSink {
+    pub(crate) fn new() -> KitchenSink {
         KitchenSink(vec![])
     }
 
     /// Return the data written to this sink.
-    pub fn as_bytes(&self) -> &[u8] {
+    pub(crate) fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 }
@@ -199,7 +201,7 @@ impl Sink for KitchenSink {
 /// The tester works by assuming you want to test all pertinent code paths.
 /// These can be trimmed down as necessary via the various builder methods.
 #[derive(Debug)]
-pub struct SearcherTester {
+pub(crate) struct SearcherTester {
     haystack: String,
     pattern: String,
     filter: Option<::regex::Regex>,
@@ -221,7 +223,7 @@ pub struct SearcherTester {
 
 impl SearcherTester {
     /// Create a new tester for testing searchers.
-    pub fn new(haystack: &str, pattern: &str) -> SearcherTester {
+    pub(crate) fn new(haystack: &str, pattern: &str) -> SearcherTester {
         SearcherTester {
             haystack: haystack.to_string(),
             pattern: pattern.to_string(),
@@ -245,7 +247,7 @@ impl SearcherTester {
 
     /// Execute the test. If the test succeeds, then this returns successfully.
     /// If the test fails, then it panics with an informative message.
-    pub fn test(&self) {
+    pub(crate) fn test(&self) {
         // Check for configuration errors.
         if self.expected_no_line_number.is_none() {
             panic!("an 'expected' string with NO line numbers must be given");
@@ -300,7 +302,7 @@ impl SearcherTester {
     /// printf debugging and only want one particular test configuration to
     /// execute.
     #[allow(dead_code)]
-    pub fn filter(&mut self, pattern: &str) -> &mut SearcherTester {
+    pub(crate) fn filter(&mut self, pattern: &str) -> &mut SearcherTester {
         self.filter = Some(::regex::Regex::new(pattern).unwrap());
         self
     }
@@ -311,13 +313,13 @@ impl SearcherTester {
     /// Note that in order to see these in tests that aren't failing, you'll
     /// want to use `cargo test -- --nocapture`.
     #[allow(dead_code)]
-    pub fn print_labels(&mut self, yes: bool) -> &mut SearcherTester {
+    pub(crate) fn print_labels(&mut self, yes: bool) -> &mut SearcherTester {
         self.print_labels = yes;
         self
     }
 
     /// Set the expected search results, without line numbers.
-    pub fn expected_no_line_number(
+    pub(crate) fn expected_no_line_number(
         &mut self,
         exp: &str,
     ) -> &mut SearcherTester {
@@ -326,7 +328,7 @@ impl SearcherTester {
     }
 
     /// Set the expected search results, with line numbers.
-    pub fn expected_with_line_number(
+    pub(crate) fn expected_with_line_number(
         &mut self,
         exp: &str,
     ) -> &mut SearcherTester {
@@ -337,7 +339,7 @@ impl SearcherTester {
     /// Set the expected search results, without line numbers, when performing
     /// a search on a slice. When not present, `expected_no_line_number` is
     /// used instead.
-    pub fn expected_slice_no_line_number(
+    pub(crate) fn expected_slice_no_line_number(
         &mut self,
         exp: &str,
     ) -> &mut SearcherTester {
@@ -349,7 +351,7 @@ impl SearcherTester {
     /// search on a slice. When not present, `expected_with_line_number` is
     /// used instead.
     #[allow(dead_code)]
-    pub fn expected_slice_with_line_number(
+    pub(crate) fn expected_slice_with_line_number(
         &mut self,
         exp: &str,
     ) -> &mut SearcherTester {
@@ -362,7 +364,7 @@ impl SearcherTester {
     /// This is enabled by default. When enabled, the string that is expected
     /// when line numbers are present must be provided. Otherwise, the expected
     /// string isn't required.
-    pub fn line_number(&mut self, yes: bool) -> &mut SearcherTester {
+    pub(crate) fn line_number(&mut self, yes: bool) -> &mut SearcherTester {
         self.line_number = yes;
         self
     }
@@ -370,7 +372,7 @@ impl SearcherTester {
     /// Whether to test search using the line-by-line searcher or not.
     ///
     /// By default, this is enabled.
-    pub fn by_line(&mut self, yes: bool) -> &mut SearcherTester {
+    pub(crate) fn by_line(&mut self, yes: bool) -> &mut SearcherTester {
         self.by_line = yes;
         self
     }
@@ -379,7 +381,7 @@ impl SearcherTester {
     ///
     /// By default, this is enabled.
     #[allow(dead_code)]
-    pub fn multi_line(&mut self, yes: bool) -> &mut SearcherTester {
+    pub(crate) fn multi_line(&mut self, yes: bool) -> &mut SearcherTester {
         self.multi_line = yes;
         self
     }
@@ -387,7 +389,7 @@ impl SearcherTester {
     /// Whether to perform an inverted search or not.
     ///
     /// By default, this is disabled.
-    pub fn invert_match(&mut self, yes: bool) -> &mut SearcherTester {
+    pub(crate) fn invert_match(&mut self, yes: bool) -> &mut SearcherTester {
         self.invert_match = yes;
         self
     }
@@ -395,7 +397,7 @@ impl SearcherTester {
     /// Whether to enable binary detection on all searches.
     ///
     /// By default, this is disabled.
-    pub fn binary_detection(
+    pub(crate) fn binary_detection(
         &mut self,
         detection: BinaryDetection,
     ) -> &mut SearcherTester {
@@ -412,7 +414,10 @@ impl SearcherTester {
     /// impact the number of bytes searched when performing binary detection.
     /// For convenience, it can be useful to disable the automatic heap limit
     /// test.
-    pub fn auto_heap_limit(&mut self, yes: bool) -> &mut SearcherTester {
+    pub(crate) fn auto_heap_limit(
+        &mut self,
+        yes: bool,
+    ) -> &mut SearcherTester {
         self.auto_heap_limit = yes;
         self
     }
@@ -420,7 +425,10 @@ impl SearcherTester {
     /// Set the number of lines to include in the "after" context.
     ///
     /// The default is `0`, which is equivalent to not printing any context.
-    pub fn after_context(&mut self, lines: usize) -> &mut SearcherTester {
+    pub(crate) fn after_context(
+        &mut self,
+        lines: usize,
+    ) -> &mut SearcherTester {
         self.after_context = lines;
         self
     }
@@ -428,7 +436,10 @@ impl SearcherTester {
     /// Set the number of lines to include in the "before" context.
     ///
     /// The default is `0`, which is equivalent to not printing any context.
-    pub fn before_context(&mut self, lines: usize) -> &mut SearcherTester {
+    pub(crate) fn before_context(
+        &mut self,
+        lines: usize,
+    ) -> &mut SearcherTester {
         self.before_context = lines;
         self
     }
@@ -440,7 +451,7 @@ impl SearcherTester {
     /// requesting an unbounded number of before and after contextual lines.
     ///
     /// This is disabled by default.
-    pub fn passthru(&mut self, yes: bool) -> &mut SearcherTester {
+    pub(crate) fn passthru(&mut self, yes: bool) -> &mut SearcherTester {
         self.passthru = yes;
         self
     }

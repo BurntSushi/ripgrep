@@ -38,12 +38,12 @@ This example shows how to execute the searcher and read the search results
 using the [`UTF8`](sinks::UTF8) implementation of `Sink`.
 
 ```
-use std::error::Error;
-
-use grep_matcher::Matcher;
-use grep_regex::RegexMatcher;
-use grep_searcher::Searcher;
-use grep_searcher::sinks::UTF8;
+use {
+    grep_matcher::Matcher,
+    grep_regex::RegexMatcher,
+    grep_searcher::Searcher,
+    grep_searcher::sinks::UTF8,
+};
 
 const SHERLOCK: &'static [u8] = b"\
 For the Doctor Watsons of this world, as opposed to the Sherlock
@@ -54,28 +54,26 @@ but Doctor Watson has to have it taken out for him and dusted,
 and exhibited clearly, with a label attached.
 ";
 
-# fn main() { example().unwrap() }
-fn example() -> Result<(), Box<Error>> {
-    let matcher = RegexMatcher::new(r"Doctor \w+")?;
-    let mut matches: Vec<(u64, String)> = vec![];
-    Searcher::new().search_slice(&matcher, SHERLOCK, UTF8(|lnum, line| {
-        // We are guaranteed to find a match, so the unwrap is OK.
-        let mymatch = matcher.find(line.as_bytes())?.unwrap();
-        matches.push((lnum, line[mymatch].to_string()));
-        Ok(true)
-    }))?;
+let matcher = RegexMatcher::new(r"Doctor \w+")?;
+let mut matches: Vec<(u64, String)> = vec![];
+Searcher::new().search_slice(&matcher, SHERLOCK, UTF8(|lnum, line| {
+    // We are guaranteed to find a match, so the unwrap is OK.
+    let mymatch = matcher.find(line.as_bytes())?.unwrap();
+    matches.push((lnum, line[mymatch].to_string()));
+    Ok(true)
+}))?;
 
-    assert_eq!(matches.len(), 2);
-    assert_eq!(
-        matches[0],
-        (1, "Doctor Watsons".to_string())
-    );
-    assert_eq!(
-        matches[1],
-        (5, "Doctor Watson".to_string())
-    );
-    Ok(())
-}
+assert_eq!(matches.len(), 2);
+assert_eq!(
+    matches[0],
+    (1, "Doctor Watsons".to_string())
+);
+assert_eq!(
+    matches[1],
+    (5, "Doctor Watson".to_string())
+);
+
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
 See also `examples/search-stdin.rs` from the root of this crate's directory
@@ -85,14 +83,16 @@ searches stdin.
 
 #![deny(missing_docs)]
 
-pub use crate::lines::{LineIter, LineStep};
-pub use crate::searcher::{
-    BinaryDetection, ConfigError, Encoding, MmapChoice, Searcher,
-    SearcherBuilder,
-};
-pub use crate::sink::sinks;
-pub use crate::sink::{
-    Sink, SinkContext, SinkContextKind, SinkError, SinkFinish, SinkMatch,
+pub use crate::{
+    lines::{LineIter, LineStep},
+    searcher::{
+        BinaryDetection, ConfigError, Encoding, MmapChoice, Searcher,
+        SearcherBuilder,
+    },
+    sink::{
+        sinks, Sink, SinkContext, SinkContextKind, SinkError, SinkFinish,
+        SinkMatch,
+    },
 };
 
 #[macro_use]

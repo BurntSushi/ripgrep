@@ -2,8 +2,10 @@
 A collection of routines for performing operations on lines.
 */
 
-use bstr::ByteSlice;
-use grep_matcher::{LineTerminator, Match};
+use {
+    bstr::ByteSlice,
+    grep_matcher::{LineTerminator, Match},
+};
 
 /// An iterator over lines in a particular slice of bytes.
 ///
@@ -21,10 +23,8 @@ impl<'b> LineIter<'b> {
     /// Create a new line iterator that yields lines in the given bytes that
     /// are terminated by `line_term`.
     pub fn new(line_term: u8, bytes: &'b [u8]) -> LineIter<'b> {
-        LineIter {
-            bytes: bytes,
-            stepper: LineStep::new(line_term, 0, bytes.len()),
-        }
+        let stepper = LineStep::new(line_term, 0, bytes.len());
+        LineIter { bytes, stepper }
     }
 }
 
@@ -61,7 +61,7 @@ impl LineStep {
     ///
     /// This panics if `start` is not less than or equal to `end`.
     pub fn new(line_term: u8, start: usize, end: usize) -> LineStep {
-        LineStep { line_term, pos: start, end: end }
+        LineStep { line_term, pos: start, end }
     }
 
     /// Return the start and end position of the next line in the given bytes.
@@ -108,14 +108,17 @@ impl LineStep {
 }
 
 /// Count the number of occurrences of `line_term` in `bytes`.
-pub fn count(bytes: &[u8], line_term: u8) -> u64 {
+pub(crate) fn count(bytes: &[u8], line_term: u8) -> u64 {
     memchr::memchr_iter(line_term, bytes).count() as u64
 }
 
 /// Given a line that possibly ends with a terminator, return that line without
 /// the terminator.
 #[inline(always)]
-pub fn without_terminator(bytes: &[u8], line_term: LineTerminator) -> &[u8] {
+pub(crate) fn without_terminator(
+    bytes: &[u8],
+    line_term: LineTerminator,
+) -> &[u8] {
     let line_term = line_term.as_bytes();
     let start = bytes.len().saturating_sub(line_term.len());
     if bytes.get(start..) == Some(line_term) {
@@ -129,7 +132,7 @@ pub fn without_terminator(bytes: &[u8], line_term: LineTerminator) -> &[u8] {
 ///
 /// Line terminators are considered part of the line they terminate.
 #[inline(always)]
-pub fn locate(bytes: &[u8], line_term: u8, range: Match) -> Match {
+pub(crate) fn locate(bytes: &[u8], line_term: u8, range: Match) -> Match {
     let line_start =
         bytes[..range.start()].rfind_byte(line_term).map_or(0, |i| i + 1);
     let line_end =
@@ -151,7 +154,7 @@ pub fn locate(bytes: &[u8], line_term: u8, range: Match) -> Match {
 ///
 /// If `bytes` ends with a line terminator, then the terminator itself is
 /// considered part of the last line.
-pub fn preceding(bytes: &[u8], line_term: u8, count: usize) -> usize {
+pub(crate) fn preceding(bytes: &[u8], line_term: u8, count: usize) -> usize {
     preceding_by_pos(bytes, bytes.len(), line_term, count)
 }
 
@@ -195,10 +198,9 @@ fn preceding_by_pos(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use grep_matcher::Match;
-    use std::ops::Range;
-    use std::str;
+
+    use super::*;
 
     const SHERLOCK: &'static str = "\
 For the Doctor Watsons of this world, as opposed to the Sherlock
@@ -222,7 +224,7 @@ and exhibited clearly, with a label attached.\
         results
     }
 
-    fn line_ranges(text: &str) -> Vec<Range<usize>> {
+    fn line_ranges(text: &str) -> Vec<std::ops::Range<usize>> {
         let mut results = vec![];
         let mut it = LineStep::new(b'\n', 0, text.len());
         while let Some(m) = it.next_match(text.as_bytes()) {

@@ -1,23 +1,24 @@
-use std::error;
-use std::fmt;
 use std::io;
 
 use grep_matcher::LineTerminator;
 
-use crate::lines::LineIter;
-use crate::searcher::{ConfigError, Searcher};
+use crate::{
+    lines::LineIter,
+    searcher::{ConfigError, Searcher},
+};
 
 /// A trait that describes errors that can be reported by searchers and
 /// implementations of `Sink`.
 ///
 /// Unless you have a specialized use case, you probably don't need to
-/// implement this trait explicitly. It's likely that using `io::Error` (which
-/// implements this trait) for your error type is good enough, largely because
-/// most errors that occur during search will likely be an `io::Error`.
+/// implement this trait explicitly. It's likely that using `std::io::Error`
+/// (which implements this trait) for your error type is good enough,
+/// largely because most errors that occur during search will likely be an
+/// `std::io::Error`.
 pub trait SinkError: Sized {
     /// A constructor for converting any value that satisfies the
-    /// `fmt::Display` trait into an error.
-    fn error_message<T: fmt::Display>(message: T) -> Self;
+    /// `std::fmt::Display` trait into an error.
+    fn error_message<T: std::fmt::Display>(message: T) -> Self;
 
     /// A constructor for converting I/O errors that occur while searching into
     /// an error of this type.
@@ -36,10 +37,10 @@ pub trait SinkError: Sized {
     }
 }
 
-/// An `io::Error` can be used as an error for `Sink` implementations out of
-/// the box.
+/// An `std::io::Error` can be used as an error for `Sink` implementations out
+/// of the box.
 impl SinkError for io::Error {
-    fn error_message<T: fmt::Display>(message: T) -> io::Error {
+    fn error_message<T: std::fmt::Display>(message: T) -> io::Error {
         io::Error::new(io::ErrorKind::Other, message.to_string())
     }
 
@@ -48,11 +49,13 @@ impl SinkError for io::Error {
     }
 }
 
-/// A `Box<std::error::Error>` can be used as an error for `Sink`
+/// A `Box<dyn std::error::Error>` can be used as an error for `Sink`
 /// implementations out of the box.
-impl SinkError for Box<dyn error::Error> {
-    fn error_message<T: fmt::Display>(message: T) -> Box<dyn error::Error> {
-        Box::<dyn error::Error>::from(message.to_string())
+impl SinkError for Box<dyn std::error::Error> {
+    fn error_message<T: std::fmt::Display>(
+        message: T,
+    ) -> Box<dyn std::error::Error> {
+        Box::<dyn std::error::Error>::from(message.to_string())
     }
 }
 
@@ -74,7 +77,7 @@ impl SinkError for Box<dyn error::Error> {
 ///
 /// * What to do when a match is found. Callers must provide this.
 /// * What to do when an error occurs. Callers must provide this via the
-///   [`SinkError`] trait. Generally, callers can just use `io::Error` for
+///   [`SinkError`] trait. Generally, callers can just use `std::io::Error` for
 ///   this, which already implements `SinkError`.
 /// * What to do when a contextual line is found. By default, these are
 ///   ignored.
@@ -408,13 +411,14 @@ impl<'b> SinkMatch<'b> {
         self.line_number
     }
 
-    /// TODO
+    /// Exposes as much of the underlying buffer that was search as possible.
     #[inline]
     pub fn buffer(&self) -> &'b [u8] {
         self.buffer
     }
 
-    /// TODO
+    /// Returns a range that corresponds to where [`SinkMatch::bytes`] appears
+    /// in [`SinkMatch::buffer`].
     #[inline]
     pub fn bytes_range_in_buffer(&self) -> std::ops::Range<usize> {
         self.bytes_range_in_buffer.clone()
@@ -506,16 +510,16 @@ impl<'b> SinkContext<'b> {
 ///   an error is reported at the first match and searching stops.
 /// * Context lines, context breaks and summary data reported at the end of
 ///   a search are all ignored.
-/// * Implementors are forced to use `io::Error` as their error type.
+/// * Implementors are forced to use `std::io::Error` as their error type.
 ///
 /// If you need more flexibility, then you're advised to implement the `Sink`
 /// trait directly.
 pub mod sinks {
     use std::io;
-    use std::str;
+
+    use crate::searcher::Searcher;
 
     use super::{Sink, SinkError, SinkMatch};
-    use crate::searcher::Searcher;
 
     /// A sink that provides line numbers and matches as strings while ignoring
     /// everything else.
@@ -527,8 +531,8 @@ pub mod sinks {
     ///
     /// The closure accepts two parameters: a line number and a UTF-8 string
     /// containing the matched data. The closure returns a
-    /// `Result<bool, io::Error>`. If the `bool` is `false`, then the search
-    /// stops immediately. Otherwise, searching continues.
+    /// `Result<bool, std::io::Error>`. If the `bool` is `false`, then the
+    /// search stops immediately. Otherwise, searching continues.
     ///
     /// If multi line mode was enabled, the line number refers to the line
     /// number of the first line in the match.
@@ -548,7 +552,7 @@ pub mod sinks {
             _searcher: &Searcher,
             mat: &SinkMatch<'_>,
         ) -> Result<bool, io::Error> {
-            let matched = match str::from_utf8(mat.bytes()) {
+            let matched = match std::str::from_utf8(mat.bytes()) {
                 Ok(matched) => matched,
                 Err(err) => return Err(io::Error::error_message(err)),
             };
@@ -575,8 +579,8 @@ pub mod sinks {
     ///
     /// The closure accepts two parameters: a line number and a UTF-8 string
     /// containing the matched data. The closure returns a
-    /// `Result<bool, io::Error>`. If the `bool` is `false`, then the search
-    /// stops immediately. Otherwise, searching continues.
+    /// `Result<bool, std::io::Error>`. If the `bool` is `false`, then the
+    /// search stops immediately. Otherwise, searching continues.
     ///
     /// If multi line mode was enabled, the line number refers to the line
     /// number of the first line in the match.
@@ -598,7 +602,7 @@ pub mod sinks {
         ) -> Result<bool, io::Error> {
             use std::borrow::Cow;
 
-            let matched = match str::from_utf8(mat.bytes()) {
+            let matched = match std::str::from_utf8(mat.bytes()) {
                 Ok(matched) => Cow::Borrowed(matched),
                 // TODO: In theory, it should be possible to amortize
                 // allocation here, but `std` doesn't provide such an API.
@@ -624,9 +628,9 @@ pub mod sinks {
     /// searcher was not configured to count lines.
     ///
     /// The closure accepts two parameters: a line number and a raw byte string
-    /// containing the matched data. The closure returns a `Result<bool,
-    /// io::Error>`. If the `bool` is `false`, then the search stops
-    /// immediately. Otherwise, searching continues.
+    /// containing the matched data. The closure returns a
+    /// `Result<bool, std::io::Error>`. If the `bool` is `false`, then the
+    /// search stops immediately. Otherwise, searching continues.
     ///
     /// If multi line mode was enabled, the line number refers to the line
     /// number of the first line in the match.

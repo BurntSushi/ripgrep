@@ -1,19 +1,25 @@
-use std::cell::RefCell;
-use std::cmp;
-use std::fmt;
-use std::fs::File;
-use std::io::{self, Read};
-use std::path::Path;
-
-use crate::line_buffer::{
-    self, alloc_error, BufferAllocation, LineBuffer, LineBufferBuilder,
-    LineBufferReader, DEFAULT_BUFFER_CAPACITY,
+use std::{
+    cell::RefCell,
+    cmp,
+    fs::File,
+    io::{self, Read},
+    path::Path,
 };
-use crate::searcher::glue::{MultiLine, ReadByLine, SliceByLine};
-use crate::sink::{Sink, SinkError};
-use encoding_rs;
-use encoding_rs_io::DecodeReaderBytesBuilder;
-use grep_matcher::{LineTerminator, Match, Matcher};
+
+use {
+    encoding_rs,
+    encoding_rs_io::DecodeReaderBytesBuilder,
+    grep_matcher::{LineTerminator, Match, Matcher},
+};
+
+use crate::{
+    line_buffer::{
+        self, alloc_error, BufferAllocation, LineBuffer, LineBufferBuilder,
+        LineBufferReader, DEFAULT_BUFFER_CAPACITY,
+    },
+    searcher::glue::{MultiLine, ReadByLine, SliceByLine},
+    sink::{Sink, SinkError},
+};
 
 pub use self::mmap::MmapChoice;
 
@@ -232,6 +238,7 @@ impl Config {
 /// This error occurs when a non-sensical configuration is present when trying
 /// to construct a `Searcher` from a `SearcherBuilder`.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum ConfigError {
     /// Indicates that the heap limit configuration prevents all possible
     /// search strategies from being used. For example, if the heap limit is
@@ -250,23 +257,12 @@ pub enum ConfigError {
         /// The provided encoding label that could not be found.
         label: Vec<u8>,
     },
-    /// Hints that destructuring should not be exhaustive.
-    ///
-    /// This enum may grow additional variants, so this makes sure clients
-    /// don't count on exhaustive matching. (Otherwise, adding a new variant
-    /// could break existing code.)
-    #[doc(hidden)]
-    __Nonexhaustive,
 }
 
-impl ::std::error::Error for ConfigError {
-    fn description(&self) -> &str {
-        "grep-searcher configuration error"
-    }
-}
+impl std::error::Error for ConfigError {}
 
-impl fmt::Display for ConfigError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for ConfigError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             ConfigError::SearchUnavailable => {
                 write!(f, "grep config error: no available searchers")
@@ -284,7 +280,6 @@ impl fmt::Display for ConfigError {
                 "grep config error: unknown encoding: {}",
                 String::from_utf8_lossy(label),
             ),
-            _ => panic!("BUG: unexpected variant found"),
         }
     }
 }
@@ -331,8 +326,8 @@ impl SearcherBuilder {
             .bom_sniffing(self.config.bom_sniffing);
 
         Searcher {
-            config: config,
-            decode_builder: decode_builder,
+            config,
+            decode_builder,
             decode_buffer: RefCell::new(vec![0; 8 * (1 << 10)]),
             line_buffer: RefCell::new(self.config.line_buffer()),
             multi_line_buffer: RefCell::new(vec![]),
@@ -676,9 +671,9 @@ impl Searcher {
             log::trace!("{:?}: searching via memory map", path);
             return self.search_slice(matcher, &mmap, write_to);
         }
-        // Fast path for multi-line searches of files when memory maps are
-        // not enabled. This pre-allocates a buffer roughly the size of the
-        // file, which isn't possible when searching an arbitrary io::Read.
+        // Fast path for multi-line searches of files when memory maps are not
+        // enabled. This pre-allocates a buffer roughly the size of the file,
+        // which isn't possible when searching an arbitrary std::io::Read.
         if self.multi_line_with_matcher(&matcher) {
             log::trace!(
                 "{:?}: reading entire file on to heap for mulitline",
@@ -699,8 +694,8 @@ impl Searcher {
         }
     }
 
-    /// Execute a search over any implementation of `io::Read` and write the
-    /// results to the given sink.
+    /// Execute a search over any implementation of `std::io::Read` and write
+    /// the results to the given sink.
     ///
     /// When possible, this implementation will search the reader incrementally
     /// without reading it into memory. In some cases---for example, if multi
@@ -1016,8 +1011,9 @@ fn slice_has_bom(slice: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::testutil::{KitchenSink, RegexMatcher};
+
+    use super::*;
 
     #[test]
     fn config_error_heap_limit() {
