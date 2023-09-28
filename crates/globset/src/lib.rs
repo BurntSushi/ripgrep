@@ -98,12 +98,21 @@ or to enable case insensitive matching.
 
 #![deny(missing_docs)]
 
-use std::{borrow::Cow, path::Path};
+use std::{
+    borrow::Cow,
+    panic::{RefUnwindSafe, UnwindSafe},
+    path::Path,
+    sync::Arc,
+};
 
 use {
     aho_corasick::AhoCorasick,
     bstr::{ByteSlice, ByteVec, B},
-    regex_automata::meta::Regex,
+    regex_automata::{
+        meta::Regex,
+        util::pool::{Pool, PoolGuard},
+        PatternSet,
+    },
 };
 
 use crate::{
@@ -793,8 +802,19 @@ impl RequiredExtensionStrategy {
 struct RegexSetStrategy {
     matcher: Regex,
     map: Vec<usize>,
-    // patset: regex_automata::PatternSet,
+    // We use a pool of PatternSets to hopefully allocating a fresh one on each
+    // call.
+    //
+    // TODO: In the next semver breaking release, we should drop this pool and
+    // expose an opaque type that wraps PatternSet. Then callers can provide
+    // it to `matches_into` directly. Callers might still want to use a pool
+    // or similar to amortize allocation, but that matches the status quo and
+    // absolves us of needing to do it here.
+    patset: Arc<Pool<PatternSet, PatternSetPoolFn>>,
 }
+
+type PatternSetPoolFn =
+    Box<dyn Fn() -> PatternSet + Send + Sync + UnwindSafe + RefUnwindSafe>;
 
 impl RegexSetStrategy {
     fn is_match(&self, candidate: &Candidate<'_>) -> bool {
@@ -807,12 +827,13 @@ impl RegexSetStrategy {
         matches: &mut Vec<usize>,
     ) {
         let input = regex_automata::Input::new(candidate.path.as_bytes());
-        let mut patset =
-            regex_automata::PatternSet::new(self.matcher.pattern_len());
+        let mut patset = self.patset.get();
+        patset.clear();
         self.matcher.which_overlapping_matches(&input, &mut patset);
         for i in patset.iter() {
             matches.push(self.map[i]);
         }
+        PoolGuard::put(patset);
     }
 }
 
@@ -853,9 +874,14 @@ impl MultiStrategyBuilder {
     }
 
     fn regex_set(self) -> Result<RegexSetStrategy, Error> {
+        let matcher = new_regex_set(self.literals)?;
+        let pattern_len = matcher.pattern_len();
+        let create: PatternSetPoolFn =
+            Box::new(move || PatternSet::new(pattern_len));
         Ok(RegexSetStrategy {
-            matcher: new_regex_set(self.literals)?,
+            matcher,
             map: self.map,
+            patset: Arc::new(Pool::new(create)),
         })
     }
 }
@@ -915,8 +941,9 @@ pub fn escape(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{GlobSet, GlobSetBuilder};
     use crate::glob::Glob;
+
+    use super::{GlobSet, GlobSetBuilder};
 
     #[test]
     fn set_works() {
@@ -963,5 +990,25 @@ mod tests {
         assert_eq!("src/[*][*]/[*].rs", escape("src/**/*.rs"));
         assert_eq!("bar[[]ab[]]baz", escape("bar[ab]baz"));
         assert_eq!("bar[[]!![]]!baz", escape("bar[!!]!baz"));
+    }
+
+    // This tests that regex matching doesn't "remember" the results of
+    // previous searches. That is, if any memory is reused from a previous
+    // search, then it should be cleared first.
+    #[test]
+    fn set_does_not_remember() {
+        let mut builder = GlobSetBuilder::new();
+        builder.add(Glob::new("*foo*").unwrap());
+        builder.add(Glob::new("*bar*").unwrap());
+        builder.add(Glob::new("*quux*").unwrap());
+        let set = builder.build().unwrap();
+
+        let matches = set.matches("ZfooZquuxZ");
+        assert_eq!(2, matches.len());
+        assert_eq!(0, matches[0]);
+        assert_eq!(2, matches[1]);
+
+        let matches = set.matches("nada");
+        assert_eq!(0, matches.len());
     }
 }
