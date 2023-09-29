@@ -35,6 +35,17 @@ impl<'a> Glob<'a> {
     fn unmatched() -> Glob<'a> {
         Glob(GlobInner::UnmatchedIgnore)
     }
+
+    /// Return the matched glob if it exists.
+    ///
+    /// This can be used to differentiate between matching against an explicit ignore glob and not
+    /// matching against any globs.
+    pub fn inner(&self) -> Option<&gitignore::Glob> {
+        match self.0 {
+            GlobInner::UnmatchedIgnore => None,
+            GlobInner::Matched(glob) => Some(glob),
+        }
+    }
 }
 
 /// Manages a set of overrides provided explicitly by the end user.
