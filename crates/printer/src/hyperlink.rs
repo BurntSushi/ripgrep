@@ -632,6 +632,7 @@ pub(crate) struct InterpolatorStatus {
 
 impl InterpolatorStatus {
     /// Create an inactive interpolator status.
+    #[inline]
     pub(crate) fn inactive() -> InterpolatorStatus {
         InterpolatorStatus { active: false }
     }
