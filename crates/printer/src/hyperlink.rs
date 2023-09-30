@@ -5,7 +5,7 @@ use {
     termcolor::{HyperlinkSpec, WriteColor},
 };
 
-use crate::hyperlink_aliases;
+use crate::{hyperlink_aliases, util::DecimalFormatter};
 
 /// Hyperlink configuration.
 ///
@@ -484,11 +484,11 @@ impl Part {
             ),
             Part::Path => dest.extend_from_slice(&values.path.0),
             Part::Line => {
-                let line = values.line.unwrap_or(1).to_string();
+                let line = DecimalFormatter::new(values.line.unwrap_or(1));
                 dest.extend_from_slice(line.as_bytes());
             }
             Part::Column => {
-                let column = values.column.unwrap_or(1).to_string();
+                let column = DecimalFormatter::new(values.column.unwrap_or(1));
                 dest.extend_from_slice(column.as_bytes());
             }
         }

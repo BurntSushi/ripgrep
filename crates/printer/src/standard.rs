@@ -24,7 +24,7 @@ use crate::{
     stats::Stats,
     util::{
         find_iter_at_in_context, trim_ascii_prefix, trim_line_terminator,
-        PrinterPath, Replacer, Sunk,
+        DecimalFormatter, PrinterPath, Replacer, Sunk,
     },
 };
 
@@ -1709,7 +1709,7 @@ impl<'a, M: Matcher, W: WriteColor> PreludeWriter<'a, M, W> {
     fn write_line_number(&mut self, line: Option<u64>) -> io::Result<()> {
         let Some(line_number) = line else { return Ok(()) };
         self.write_separator()?;
-        let n = line_number.to_string();
+        let n = DecimalFormatter::new(line_number);
         self.std.write_spec(self.config().colors.line(), n.as_bytes())?;
         self.next_separator = PreludeSeparator::FieldSeparator;
         Ok(())
@@ -1723,7 +1723,7 @@ impl<'a, M: Matcher, W: WriteColor> PreludeWriter<'a, M, W> {
         }
         let Some(column_number) = column else { return Ok(()) };
         self.write_separator()?;
-        let n = column_number.to_string();
+        let n = DecimalFormatter::new(column_number);
         self.std.write_spec(self.config().colors.column(), n.as_bytes())?;
         self.next_separator = PreludeSeparator::FieldSeparator;
         Ok(())
@@ -1736,7 +1736,7 @@ impl<'a, M: Matcher, W: WriteColor> PreludeWriter<'a, M, W> {
             return Ok(());
         }
         self.write_separator()?;
-        let n = offset.to_string();
+        let n = DecimalFormatter::new(offset);
         self.std.write_spec(self.config().colors.column(), n.as_bytes())?;
         self.next_separator = PreludeSeparator::FieldSeparator;
         Ok(())

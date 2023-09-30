@@ -397,6 +397,47 @@ impl Serialize for NiceDuration {
     }
 }
 
+/// A simple formatter for converting `u64` values to ASCII byte strings.
+///
+/// This avoids going through the formatting machinery which seems to
+/// substantially slow things down.
+///
+/// The `itoa` crate does the same thing as this formatter, but is a bit
+/// faster. We roll our own which is a bit slower, but gets us enough of a win
+/// to be satisfied with and with pure safe code.
+#[derive(Debug)]
+pub(crate) struct DecimalFormatter {
+    buf: [u8; Self::MAX_U64_LEN],
+    start: usize,
+}
+
+impl DecimalFormatter {
+    /// Discovered via `u64::MAX.to_string().len()`.
+    const MAX_U64_LEN: usize = 20;
+
+    /// Create a new decimal formatter for the given 64-bit unsigned integer.
+    pub(crate) fn new(mut n: u64) -> DecimalFormatter {
+        let mut buf = [0; Self::MAX_U64_LEN];
+        let mut i = buf.len();
+        loop {
+            i -= 1;
+
+            let digit = u8::try_from(n % 10).unwrap();
+            n /= 10;
+            buf[i] = b'0' + digit;
+            if n == 0 {
+                break;
+            }
+        }
+        DecimalFormatter { buf, start: i }
+    }
+
+    /// Return the decimal formatted as an ASCII byte string.
+    pub(crate) fn as_bytes(&self) -> &[u8] {
+        &self.buf[self.start..]
+    }
+}
+
 /// Trim prefix ASCII spaces from the given slice and return the corresponding
 /// range.
 ///
@@ -526,4 +567,23 @@ where
     let end = std::cmp::min(bytes.len(), range.end);
     dst.extend(&bytes[last_match..end]);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn custom_decimal_format() {
+        let fmt = |n: u64| {
+            let bytes = DecimalFormatter::new(n).as_bytes().to_vec();
+            String::from_utf8(bytes).unwrap()
+        };
+        let std = |n: u64| n.to_string();
+
+        let ints = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 100, 123, u64::MAX];
+        for n in ints {
+            assert_eq!(std(n), fmt(n));
+        }
+    }
 }
