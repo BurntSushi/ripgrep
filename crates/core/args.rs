@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     env,
     ffi::{OsStr, OsString},
     io::{self, IsTerminal, Write},
@@ -1436,35 +1437,44 @@ impl ArgMatches {
         if self.is_present("files") || self.is_present("type-list") {
             return Ok(vec![]);
         }
+        let mut seen = HashSet::new();
         let mut pats = vec![];
+        let mut add = |pat: String| {
+            if !seen.contains(&pat) {
+                seen.insert(pat.clone());
+                pats.push(pat);
+            }
+        };
         match self.values_of_os("regexp") {
             None => {
                 if self.values_of_os("file").is_none() {
                     if let Some(os_pat) = self.value_of_os("pattern") {
-                        pats.push(self.pattern_from_os_str(os_pat)?);
+                        add(self.pattern_from_os_str(os_pat)?);
                     }
                 }
             }
             Some(os_pats) => {
                 for os_pat in os_pats {
-                    pats.push(self.pattern_from_os_str(os_pat)?);
+                    add(self.pattern_from_os_str(os_pat)?);
                 }
             }
         }
         if let Some(paths) = self.values_of_os("file") {
             for path in paths {
                 if path == "-" {
-                    pats.extend(
-                        cli::patterns_from_stdin()?
-                            .into_iter()
-                            .map(|p| self.pattern_from_string(p)),
-                    );
+                    let it = cli::patterns_from_stdin()?
+                        .into_iter()
+                        .map(|p| self.pattern_from_string(p));
+                    for pat in it {
+                        add(pat);
+                    }
                 } else {
-                    pats.extend(
-                        cli::patterns_from_path(path)?
-                            .into_iter()
-                            .map(|p| self.pattern_from_string(p)),
-                    );
+                    let it = cli::patterns_from_path(path)?
+                        .into_iter()
+                        .map(|p| self.pattern_from_string(p));
+                    for pat in it {
+                        add(pat);
+                    }
                 }
             }
         }
