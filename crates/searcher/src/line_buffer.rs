@@ -524,24 +524,26 @@ impl LineBuffer {
 
 /// Replaces `src` with `replacement` in bytes, and return the offset of the
 /// first replacement, if one exists.
-fn replace_bytes(bytes: &mut [u8], src: u8, replacement: u8) -> Option<usize> {
+fn replace_bytes(
+    mut bytes: &mut [u8],
+    src: u8,
+    replacement: u8,
+) -> Option<usize> {
     if src == replacement {
         return None;
     }
-    let mut first_pos = None;
-    let mut pos = 0;
-    while let Some(i) = bytes[pos..].find_byte(src).map(|i| pos + i) {
-        if first_pos.is_none() {
-            first_pos = Some(i);
-        }
+    let first_pos = bytes.find_byte(src)?;
+    bytes[first_pos] = replacement;
+    bytes = &mut bytes[first_pos + 1..];
+    while let Some(i) = bytes.find_byte(src) {
         bytes[i] = replacement;
-        pos = i + 1;
-        while bytes.get(pos) == Some(&src) {
-            bytes[pos] = replacement;
-            pos += 1;
+        bytes = &mut bytes[i + 1..];
+        while bytes.get(0) == Some(&src) {
+            bytes[0] = replacement;
+            bytes = &mut bytes[1..];
         }
     }
-    first_pos
+    Some(first_pos)
 }
 
 #[cfg(test)]
