@@ -30,10 +30,6 @@ impl Error {
         Error { kind: ErrorKind::Regex(err.to_string()) }
     }
 
-    pub(crate) fn any<E: ToString>(msg: E) -> Error {
-        Error { kind: ErrorKind::Regex(msg.to_string()) }
-    }
-
     /// Return the kind of this error.
     pub fn kind(&self) -> &ErrorKind {
         &self.kind

@@ -1046,17 +1046,10 @@ rgtest!(r1878, |dir: Dir, _: TestCommand| {
 
 // See: https://github.com/BurntSushi/ripgrep/issues/1891
 rgtest!(r1891, |dir: Dir, mut cmd: TestCommand| {
-    // TODO: Sadly, PCRE2 has different behavior here. Not clear why. We should
-    // look into this and see if there's a fix needed at the regex engine
-    // level.
-    if dir.is_pcre2() {
-        return;
-    }
-
     dir.create("test", "\n##\n");
     // N.B. We use -o here to force the issue to occur, which seems to only
     // happen when each match needs to be detected.
-    eqnice!("1:\n2:\n2:\n", cmd.args(&["-won", "", "test"]).stdout());
+    eqnice!("1:\n2:\n2:\n2:\n", cmd.args(&["-won", "", "test"]).stdout());
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/2095

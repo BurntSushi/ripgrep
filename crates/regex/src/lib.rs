@@ -15,4 +15,3 @@ mod literal;
 mod matcher;
 mod non_matching;
 mod strip;
-mod word;

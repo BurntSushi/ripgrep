@@ -62,12 +62,12 @@ impl AstAnalysis {
             Ast::Flags(_)
             | Ast::Dot(_)
             | Ast::Assertion(_)
-            | Ast::Class(ast::Class::Unicode(_))
-            | Ast::Class(ast::Class::Perl(_)) => {}
+            | Ast::ClassUnicode(_)
+            | Ast::ClassPerl(_) => {}
             Ast::Literal(ref x) => {
                 self.from_ast_literal(x);
             }
-            Ast::Class(ast::Class::Bracketed(ref x)) => {
+            Ast::ClassBracketed(ref x) => {
                 self.from_ast_class_set(&x.kind);
             }
             Ast::Repetition(ref x) => {

@@ -19,7 +19,14 @@ fn remove_matching_bytes(expr: &Hir, set: &mut ByteSet) {
     match *expr.kind() {
         HirKind::Empty
         | HirKind::Look(Look::WordAscii | Look::WordAsciiNegate)
-        | HirKind::Look(Look::WordUnicode | Look::WordUnicodeNegate) => {}
+        | HirKind::Look(Look::WordUnicode | Look::WordUnicodeNegate)
+        | HirKind::Look(Look::WordStartAscii | Look::WordStartUnicode)
+        | HirKind::Look(Look::WordEndAscii | Look::WordEndUnicode)
+        | HirKind::Look(
+            Look::WordStartHalfAscii | Look::WordStartHalfUnicode,
+        )
+        | HirKind::Look(Look::WordEndHalfAscii | Look::WordEndHalfUnicode) => {
+        }
         HirKind::Look(Look::Start | Look::End) => {
             // FIXME: This is wrong, but not doing this leads to incorrect
             // results because of how anchored searches are implemented in

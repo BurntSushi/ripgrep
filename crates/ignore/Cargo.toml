@@ -27,7 +27,7 @@ same-file = "1.0.6"
 walkdir = "2.4.0"
 
 [dependencies.regex-automata]
-version = "0.3.8"
+version = "0.4.0"
 default-features = false
 features = ["std", "perf", "syntax", "meta", "nfa", "hybrid", "dfa-onepass"]
 

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use {
     grep_matcher::{
         ByteSet, Captures, LineMatchKind, LineTerminator, Match, Matcher,
@@ -11,12 +9,7 @@ use {
     },
 };
 
-use crate::{
-    config::{Config, ConfiguredHIR},
-    error::Error,
-    literal::InnerLiterals,
-    word::WordMatcher,
-};
+use crate::{config::Config, error::Error, literal::InnerLiterals};
 
 /// A builder for constructing a `Matcher` using regular expressions.
 ///
@@ -61,9 +54,15 @@ impl RegexMatcherBuilder {
         &self,
         patterns: &[P],
     ) -> Result<RegexMatcher, Error> {
-        let chir = self.config.build_many(patterns)?;
-        let matcher = RegexMatcherImpl::new(chir)?;
-        let (chir, re) = (matcher.chir(), matcher.regex());
+        let mut chir = self.config.build_many(patterns)?;
+        // 'whole_line' is a strict subset of 'word', so when it is enabled,
+        // we don't need to both with any specific to word matching.
+        if chir.config().whole_line {
+            chir = chir.into_whole_line();
+        } else if chir.config().word {
+            chir = chir.into_word();
+        }
+        let regex = chir.to_regex()?;
         log::trace!("final regex: {:?}", chir.hir().to_string());
 
         let non_matching_bytes = chir.non_matching_bytes();
@@ -76,18 +75,13 @@ impl RegexMatcherBuilder {
         // then run the original regex on only that line. (In this case, the
         // regex engine is likely to handle this case for us since it's so
         // simple, but the idea applies.)
-        let fast_line_regex = InnerLiterals::new(chir, re).one_regex()?;
+        let fast_line_regex = InnerLiterals::new(&chir, &regex).one_regex()?;
 
         // We override the line terminator in case the configured HIR doesn't
         // support it.
         let mut config = self.config.clone();
         config.line_terminator = chir.line_terminator();
-        Ok(RegexMatcher {
-            config,
-            matcher,
-            fast_line_regex,
-            non_matching_bytes,
-        })
+        Ok(RegexMatcher { config, regex, fast_line_regex, non_matching_bytes })
     }
 
     /// Build a new matcher from a plain alternation of literals.
@@ -357,8 +351,9 @@ impl RegexMatcherBuilder {
 pub struct RegexMatcher {
     /// The configuration specified by the caller.
     config: Config,
-    /// The underlying matcher implementation.
-    matcher: RegexMatcherImpl,
+    /// The regular expression compiled from the pattern provided by the
+    /// caller.
+    regex: Regex,
     /// A regex that never reports false negatives but may report false
     /// positives that is believed to be capable of being matched more quickly
     /// than `regex`. Typically, this is a single literal or an alternation
@@ -392,53 +387,6 @@ impl RegexMatcher {
     }
 }
 
-/// An encapsulation of the type of matcher we use in `RegexMatcher`.
-#[derive(Clone, Debug)]
-enum RegexMatcherImpl {
-    /// The standard matcher used for all regular expressions.
-    Standard(StandardMatcher),
-    /// A matcher that only matches at word boundaries. This transforms the
-    /// regex to `(^|\W)(...)($|\W)` instead of the more intuitive `\b(...)\b`.
-    /// Because of this, the WordMatcher provides its own implementation of
-    /// `Matcher` to encapsulate its use of capture groups to make them
-    /// invisible to the caller.
-    Word(WordMatcher),
-}
-
-impl RegexMatcherImpl {
-    /// Based on the configuration, create a new implementation of the
-    /// `Matcher` trait.
-    fn new(mut chir: ConfiguredHIR) -> Result<RegexMatcherImpl, Error> {
-        // When whole_line is set, we don't use a word matcher even if word
-        // matching was requested. Why? Because `(?m:^)(pat)(?m:$)` implies
-        // word matching.
-        Ok(if chir.config().word && !chir.config().whole_line {
-            RegexMatcherImpl::Word(WordMatcher::new(chir)?)
-        } else {
-            if chir.config().whole_line {
-                chir = chir.into_whole_line();
-            }
-            RegexMatcherImpl::Standard(StandardMatcher::new(chir)?)
-        })
-    }
-
-    /// Return the underlying regex object used.
-    fn regex(&self) -> &Regex {
-        match *self {
-            RegexMatcherImpl::Word(ref x) => x.regex(),
-            RegexMatcherImpl::Standard(ref x) => &x.regex,
-        }
-    }
-
-    /// Return the underlying HIR of the regex used for searching.
-    fn chir(&self) -> &ConfiguredHIR {
-        match *self {
-            RegexMatcherImpl::Word(ref x) => x.chir(),
-            RegexMatcherImpl::Standard(ref x) => &x.chir,
-        }
-    }
-}
-
 // This implementation just dispatches on the internal matcher impl except
 // for the line terminator optimization, which is possibly executed via
 // `fast_line_regex`.
@@ -446,265 +394,7 @@ impl Matcher for RegexMatcher {
     type Captures = RegexCaptures;
     type Error = NoError;
 
-    fn find_at(
-        &self,
-        haystack: &[u8],
-        at: usize,
-    ) -> Result<Option<Match>, NoError> {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => m.find_at(haystack, at),
-            Word(ref m) => m.find_at(haystack, at),
-        }
-    }
-
-    fn new_captures(&self) -> Result<RegexCaptures, NoError> {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => m.new_captures(),
-            Word(ref m) => m.new_captures(),
-        }
-    }
-
-    fn capture_count(&self) -> usize {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => m.capture_count(),
-            Word(ref m) => m.capture_count(),
-        }
-    }
-
-    fn capture_index(&self, name: &str) -> Option<usize> {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => m.capture_index(name),
-            Word(ref m) => m.capture_index(name),
-        }
-    }
-
-    fn find(&self, haystack: &[u8]) -> Result<Option<Match>, NoError> {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => m.find(haystack),
-            Word(ref m) => m.find(haystack),
-        }
-    }
-
-    fn find_iter<F>(&self, haystack: &[u8], matched: F) -> Result<(), NoError>
-    where
-        F: FnMut(Match) -> bool,
-    {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => m.find_iter(haystack, matched),
-            Word(ref m) => m.find_iter(haystack, matched),
-        }
-    }
-
-    fn try_find_iter<F, E>(
-        &self,
-        haystack: &[u8],
-        matched: F,
-    ) -> Result<Result<(), E>, NoError>
-    where
-        F: FnMut(Match) -> Result<bool, E>,
-    {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => m.try_find_iter(haystack, matched),
-            Word(ref m) => m.try_find_iter(haystack, matched),
-        }
-    }
-
-    fn captures(
-        &self,
-        haystack: &[u8],
-        caps: &mut RegexCaptures,
-    ) -> Result<bool, NoError> {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => m.captures(haystack, caps),
-            Word(ref m) => m.captures(haystack, caps),
-        }
-    }
-
-    fn captures_iter<F>(
-        &self,
-        haystack: &[u8],
-        caps: &mut RegexCaptures,
-        matched: F,
-    ) -> Result<(), NoError>
-    where
-        F: FnMut(&RegexCaptures) -> bool,
-    {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => m.captures_iter(haystack, caps, matched),
-            Word(ref m) => m.captures_iter(haystack, caps, matched),
-        }
-    }
-
-    fn try_captures_iter<F, E>(
-        &self,
-        haystack: &[u8],
-        caps: &mut RegexCaptures,
-        matched: F,
-    ) -> Result<Result<(), E>, NoError>
-    where
-        F: FnMut(&RegexCaptures) -> Result<bool, E>,
-    {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => m.try_captures_iter(haystack, caps, matched),
-            Word(ref m) => m.try_captures_iter(haystack, caps, matched),
-        }
-    }
-
-    fn captures_at(
-        &self,
-        haystack: &[u8],
-        at: usize,
-        caps: &mut RegexCaptures,
-    ) -> Result<bool, NoError> {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => m.captures_at(haystack, at, caps),
-            Word(ref m) => m.captures_at(haystack, at, caps),
-        }
-    }
-
-    fn replace<F>(
-        &self,
-        haystack: &[u8],
-        dst: &mut Vec<u8>,
-        append: F,
-    ) -> Result<(), NoError>
-    where
-        F: FnMut(Match, &mut Vec<u8>) -> bool,
-    {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => m.replace(haystack, dst, append),
-            Word(ref m) => m.replace(haystack, dst, append),
-        }
-    }
-
-    fn replace_with_captures<F>(
-        &self,
-        haystack: &[u8],
-        caps: &mut RegexCaptures,
-        dst: &mut Vec<u8>,
-        append: F,
-    ) -> Result<(), NoError>
-    where
-        F: FnMut(&Self::Captures, &mut Vec<u8>) -> bool,
-    {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => {
-                m.replace_with_captures(haystack, caps, dst, append)
-            }
-            Word(ref m) => {
-                m.replace_with_captures(haystack, caps, dst, append)
-            }
-        }
-    }
-
-    fn is_match(&self, haystack: &[u8]) -> Result<bool, NoError> {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => m.is_match(haystack),
-            Word(ref m) => m.is_match(haystack),
-        }
-    }
-
-    fn is_match_at(
-        &self,
-        haystack: &[u8],
-        at: usize,
-    ) -> Result<bool, NoError> {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => m.is_match_at(haystack, at),
-            Word(ref m) => m.is_match_at(haystack, at),
-        }
-    }
-
-    fn shortest_match(
-        &self,
-        haystack: &[u8],
-    ) -> Result<Option<usize>, NoError> {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => m.shortest_match(haystack),
-            Word(ref m) => m.shortest_match(haystack),
-        }
-    }
-
-    fn shortest_match_at(
-        &self,
-        haystack: &[u8],
-        at: usize,
-    ) -> Result<Option<usize>, NoError> {
-        use self::RegexMatcherImpl::*;
-        match self.matcher {
-            Standard(ref m) => m.shortest_match_at(haystack, at),
-            Word(ref m) => m.shortest_match_at(haystack, at),
-        }
-    }
-
-    fn non_matching_bytes(&self) -> Option<&ByteSet> {
-        Some(&self.non_matching_bytes)
-    }
-
-    fn line_terminator(&self) -> Option<LineTerminator> {
-        self.config.line_terminator
-    }
-
-    fn find_candidate_line(
-        &self,
-        haystack: &[u8],
-    ) -> Result<Option<LineMatchKind>, NoError> {
-        Ok(match self.fast_line_regex {
-            Some(ref regex) => {
-                let input = Input::new(haystack);
-                regex
-                    .search_half(&input)
-                    .map(|hm| LineMatchKind::Candidate(hm.offset()))
-            }
-            None => {
-                self.shortest_match(haystack)?.map(LineMatchKind::Confirmed)
-            }
-        })
-    }
-}
-
-/// The implementation of the standard regex matcher.
-#[derive(Clone, Debug)]
-struct StandardMatcher {
-    /// The regular expression compiled from the pattern provided by the
-    /// caller.
-    regex: Regex,
-    /// The HIR that produced this regex.
-    ///
-    /// We put this in an `Arc` because by the time it gets here, it won't
-    /// change. And because cloning and dropping an `Hir` is somewhat expensive
-    /// due to its deep recursive representation.
-    chir: Arc<ConfiguredHIR>,
-}
-
-impl StandardMatcher {
-    fn new(chir: ConfiguredHIR) -> Result<StandardMatcher, Error> {
-        let chir = Arc::new(chir);
-        let regex = chir.to_regex()?;
-        Ok(StandardMatcher { regex, chir })
-    }
-}
-
-impl Matcher for StandardMatcher {
-    type Captures = RegexCaptures;
-    type Error = NoError;
-
+    #[inline]
     fn find_at(
         &self,
         haystack: &[u8],
@@ -714,18 +404,22 @@ impl Matcher for StandardMatcher {
         Ok(self.regex.find(input).map(|m| Match::new(m.start(), m.end())))
     }
 
+    #[inline]
     fn new_captures(&self) -> Result<RegexCaptures, NoError> {
         Ok(RegexCaptures::new(self.regex.create_captures()))
     }
 
+    #[inline]
     fn capture_count(&self) -> usize {
         self.regex.captures_len()
     }
 
+    #[inline]
     fn capture_index(&self, name: &str) -> Option<usize> {
         self.regex.group_info().to_index(PatternID::ZERO, name)
     }
 
+    #[inline]
     fn try_find_iter<F, E>(
         &self,
         haystack: &[u8],
@@ -744,6 +438,7 @@ impl Matcher for StandardMatcher {
         Ok(Ok(()))
     }
 
+    #[inline]
     fn captures_at(
         &self,
         haystack: &[u8],
@@ -756,6 +451,7 @@ impl Matcher for StandardMatcher {
         Ok(caps.is_match())
     }
 
+    #[inline]
     fn shortest_match_at(
         &self,
         haystack: &[u8],
@@ -763,6 +459,34 @@ impl Matcher for StandardMatcher {
     ) -> Result<Option<usize>, NoError> {
         let input = Input::new(haystack).span(at..haystack.len());
         Ok(self.regex.search_half(&input).map(|hm| hm.offset()))
+    }
+
+    #[inline]
+    fn non_matching_bytes(&self) -> Option<&ByteSet> {
+        Some(&self.non_matching_bytes)
+    }
+
+    #[inline]
+    fn line_terminator(&self) -> Option<LineTerminator> {
+        self.config.line_terminator
+    }
+
+    #[inline]
+    fn find_candidate_line(
+        &self,
+        haystack: &[u8],
+    ) -> Result<Option<LineMatchKind>, NoError> {
+        Ok(match self.fast_line_regex {
+            Some(ref regex) => {
+                let input = Input::new(haystack);
+                regex
+                    .search_half(&input)
+                    .map(|hm| LineMatchKind::Candidate(hm.offset()))
+            }
+            None => {
+                self.shortest_match(haystack)?.map(LineMatchKind::Confirmed)
+            }
+        })
     }
 }
 
@@ -784,46 +508,27 @@ impl Matcher for StandardMatcher {
 pub struct RegexCaptures {
     /// Where the captures are stored.
     caps: AutomataCaptures,
-    /// These captures behave as if the capturing groups begin at the given
-    /// offset. When set to `0`, this has no affect and capture groups are
-    /// indexed like normal.
-    ///
-    /// This is useful when building matchers that wrap arbitrary regular
-    /// expressions. For example, `WordMatcher` takes an existing regex
-    /// `re` and creates `(?:^|\W)(re)(?:$|\W)`, but hides the fact that
-    /// the regex has been wrapped from the caller. In order to do this,
-    /// the matcher and the capturing groups must behave as if `(re)` is
-    /// the `0`th capture group.
-    offset: usize,
 }
 
 impl Captures for RegexCaptures {
+    #[inline]
     fn len(&self) -> usize {
-        self.caps
-            .group_info()
-            .all_group_len()
-            .checked_sub(self.offset)
-            .unwrap()
+        self.caps.group_info().all_group_len()
     }
 
+    #[inline]
     fn get(&self, i: usize) -> Option<Match> {
-        let actual = i.checked_add(self.offset).unwrap();
-        self.caps.get_group(actual).map(|sp| Match::new(sp.start, sp.end))
+        self.caps.get_group(i).map(|sp| Match::new(sp.start, sp.end))
     }
 }
 
 impl RegexCaptures {
+    #[inline]
     pub(crate) fn new(caps: AutomataCaptures) -> RegexCaptures {
-        RegexCaptures::with_offset(caps, 0)
+        RegexCaptures { caps }
     }
 
-    pub(crate) fn with_offset(
-        caps: AutomataCaptures,
-        offset: usize,
-    ) -> RegexCaptures {
-        RegexCaptures { caps, offset }
-    }
-
+    #[inline]
     pub(crate) fn captures_mut(&mut self) -> &mut AutomataCaptures {
         &mut self.caps
     }

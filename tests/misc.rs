@@ -144,6 +144,18 @@ For the Doctor Watsons of this world, as opposed to the Sherlock
     eqnice!(expected, cmd.stdout());
 });
 
+rgtest!(word_period, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("haystack", "...");
+    cmd.arg("-ow").arg(".").arg("haystack");
+
+    let expected = "\
+.
+.
+.
+";
+    eqnice!(expected, cmd.stdout());
+});
+
 rgtest!(line, |dir: Dir, mut cmd: TestCommand| {
     dir.create("sherlock", SHERLOCK);
     cmd.args(&[
