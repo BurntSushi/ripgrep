@@ -10,6 +10,8 @@ Unreleased changes. Release notes have not yet been written.
 
 Performance improvements:
 
+* [PERF #1760](https://github.com/BurntSushi/ripgrep/issues/1760):
+  Make most searches with `\b` look-arounds (among others) much faster.
 * [PERF #2591](https://github.com/BurntSushi/ripgrep/pull/2591):
   Parallel directory traversal now uses work stealing for faster searches.
 
