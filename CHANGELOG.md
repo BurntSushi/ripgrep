@@ -26,6 +26,8 @@ Feature enhancements:
 
 Bug fixes:
 
+* [BUG #1275](https://github.com/BurntSushi/ripgrep/issues/1275):
+  Fix bug with `\b` assertion in the regex engine.
 * [BUG #1757](https://github.com/BurntSushi/ripgrep/issues/1757):
   Fix bug when searching a sub-directory didn't have ignores applied correctly.
 * [BUG #1891](https://github.com/BurntSushi/ripgrep/issues/1891):
