@@ -52,6 +52,8 @@ Bug fixes:
   Make executable searching take `.com` into account on Windows.
 * [BUG #2574](https://github.com/BurntSushi/ripgrep/issues/2574):
   Fix bug in `-w/--word-regexp` that would result in incorrect match offsets.
+* [BUG #2623](https://github.com/BurntSushi/ripgrep/issues/2623):
+  Fix a number of bugs with the `-w/--word-regexp` flag.
 
 
 13.0.0 (2021-06-12)
