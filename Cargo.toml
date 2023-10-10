@@ -48,11 +48,6 @@ members = [
   "crates/ignore",
 ]
 
-[patch.crates-io]
-regex = { path = "/home/andrew/rust/regex" }
-regex-automata = { path = "/home/andrew/rust/regex/regex-automata" }
-regex-syntax = { path = "/home/andrew/rust/regex/regex-syntax" }
-
 [dependencies]
 bstr = "1.6.0"
 grep = { version = "0.2.12", path = "crates/grep" }
