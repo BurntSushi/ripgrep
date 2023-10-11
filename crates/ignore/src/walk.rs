@@ -1439,15 +1439,15 @@ impl Stack {
 
     /// Steal a message from another queue.
     fn steal(&self) -> Option<Message> {
-        // For fairness, try to steal from index - 1, then index - 2, ... 0,
-        // then wrap around to len - 1, len - 2, ... index + 1.
+        // For fairness, try to steal from index + 1, index + 2, ... len - 1,
+        // then wrap around to 0, 1, ... index - 1.
         let (left, right) = self.stealers.split_at(self.index);
         // Don't steal from ourselves
         let right = &right[1..];
 
-        left.iter()
-            .rev()
-            .chain(right.iter().rev())
+        right
+            .iter()
+            .chain(left.iter())
             .map(|s| s.steal_batch_and_pop(&self.deque))
             .find_map(|s| s.success())
     }
