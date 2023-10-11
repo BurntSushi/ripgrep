@@ -65,12 +65,19 @@ impl InnerLiterals {
         // If we believe the regex is already accelerated, then just let
         // the regex engine do its thing. We'll skip the inner literal
         // optimization.
+        //
+        // ... but only if the regex doesn't have any Unicode word boundaries.
+        // If it does, there's enough of a chance of the regex engine falling
+        // back to a slower engine that it's worth trying our own inner literal
+        // optimization.
         if re.is_accelerated() {
-            log::trace!(
-                "skipping inner literal extraction, \
-                 existing regex is believed to already be accelerated",
-            );
-            return InnerLiterals::none();
+            if !chir.hir().properties().look_set().contains_word_unicode() {
+                log::trace!(
+                    "skipping inner literal extraction, \
+                     existing regex is believed to already be accelerated",
+                );
+                return InnerLiterals::none();
+            }
         }
         // In this case, we pretty much know that the regex engine will handle
         // it as best as possible, even if it isn't reported as accelerated.
