@@ -1565,10 +1565,12 @@ empty string.
 A format string may be empty. An empty format string is equivalent to the
 'none' alias. In this case, hyperlinks will be disabled.
 
-At present, the default format when ripgrep detects a tty on stdout all systems
-is 'default'. This is an alias that expands to file://{host}{path} on Unix and
-file://{path} on Windows. When stdout is not a tty, then the default format
-behaves as if it were 'none'. That is, hyperlinks are disabled.
+At present, ripgrep does not enable hyperlinks by default. Users must opt into
+them. If you aren't sure what format to use, try 'default'.
+
+When ripgrep detects a tty on stdout then hyperlinks are automatically
+disabled, regardless of the value of this flag. Users can pass '--color always'
+to forcefully emit hyperlinks.
 
 Note that hyperlinks are only written when a path is also in the output
 and colors are enabled. To write hyperlinks without colors, you'll need to

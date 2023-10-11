@@ -1136,7 +1136,7 @@ impl ArgMatches {
             .wsl_prefix(wsl_prefix());
         let fmt: HyperlinkFormat =
             match self.value_of_lossy("hyperlink-format") {
-                None => "default".parse().unwrap(),
+                None => "none".parse().unwrap(),
                 Some(format) => match format.parse() {
                     Ok(format) => format,
                     Err(err) => {
