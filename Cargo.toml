@@ -49,6 +49,7 @@ members = [
 ]
 
 [dependencies]
+anyhow = "1.0.75"
 bstr = "1.6.0"
 grep = { version = "0.2.12", path = "crates/grep" }
 ignore = { version = "0.4.19", path = "crates/ignore" }

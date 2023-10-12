@@ -119,7 +119,7 @@ impl SearchWorkerBuilder {
     pub fn preprocessor(
         &mut self,
         cmd: Option<PathBuf>,
-    ) -> crate::Result<&mut SearchWorkerBuilder> {
+    ) -> anyhow::Result<&mut SearchWorkerBuilder> {
         if let Some(ref prog) = cmd {
             let bin = cli::resolve_binary(prog)?;
             self.config.preprocessor = Some(bin);
