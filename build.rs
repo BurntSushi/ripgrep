@@ -1,12 +1,14 @@
-use std::env;
-use std::fs::{self, File};
-use std::io::{self, Read, Write};
-use std::path::Path;
-use std::process;
+use std::{
+    env,
+    fs::{self, File},
+    io::{self, Read, Write},
+    path::Path,
+    process,
+};
 
 use clap::Shell;
 
-use app::{RGArg, RGArgKind};
+use crate::app::{RGArg, RGArgKind};
 
 #[allow(dead_code)]
 #[path = "crates/core/app.rs"]
@@ -15,16 +17,13 @@ mod app;
 fn main() {
     // OUT_DIR is set by Cargo and it's where any additional build artifacts
     // are written.
-    let outdir = match env::var_os("OUT_DIR") {
-        Some(outdir) => outdir,
-        None => {
-            eprintln!(
-                "OUT_DIR environment variable not defined. \
-                 Please file a bug: \
-                 https://github.com/BurntSushi/ripgrep/issues/new"
-            );
-            process::exit(1);
-        }
+    let Some(outdir) = env::var_os("OUT_DIR") else {
+        eprintln!(
+            "OUT_DIR environment variable not defined. \
+             Please file a bug: \
+             https://github.com/BurntSushi/ripgrep/issues/new"
+        );
+        process::exit(1);
     };
     fs::create_dir_all(&outdir).unwrap();
 
@@ -79,17 +78,16 @@ fn set_windows_exe_options() {
 }
 
 fn git_revision_hash() -> Option<String> {
-    let result = process::Command::new("git")
+    let output = process::Command::new("git")
         .args(&["rev-parse", "--short=10", "HEAD"])
-        .output();
-    result.ok().and_then(|output| {
-        let v = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        if v.is_empty() {
-            None
-        } else {
-            Some(v)
-        }
-    })
+        .output()
+        .ok()?;
+    let v = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if v.is_empty() {
+        None
+    } else {
+        Some(v)
+    }
 }
 
 fn generate_man_page<P: AsRef<Path>>(outdir: P) -> io::Result<()> {
