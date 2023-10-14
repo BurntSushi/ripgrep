@@ -605,7 +605,7 @@ fn parse_excludes_file(data: &[u8]) -> Option<PathBuf> {
         Regex::builder()
             .configure(Regex::config().utf8_empty(false))
             .syntax(syntax::Config::new().utf8(false))
-            .build(r"(?im-u)^\s*excludesfile\s*=\s*(\S+)\s*$")
+            .build(r#"(?im-u)^\s*excludesfile\s*=\s*"?\s*(\S+?)\s*"?\s*$"#)
             .unwrap()
     });
     // We don't care about amortizing allocs here I think. This should only
@@ -769,6 +769,22 @@ mod tests {
     #[test]
     fn parse_excludes_file3() {
         let data = bytes("[core]\nexcludeFile = /foo/bar");
+        assert!(super::parse_excludes_file(&data).is_none());
+    }
+
+    #[test]
+    fn parse_excludes_file4() {
+        let data = bytes("[core]\nexcludesFile = \"~/foo/bar\"");
+        let got = super::parse_excludes_file(&data);
+        assert_eq!(
+            path_string(got.unwrap()),
+            super::expand_tilde("~/foo/bar")
+        );
+    }
+
+    #[test]
+    fn parse_excludes_file5() {
+        let data = bytes("[core]\nexcludesFile = \" \"~/foo/bar \" \"");
         assert!(super::parse_excludes_file(&data).is_none());
     }
 

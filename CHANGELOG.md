@@ -46,6 +46,8 @@ Bug fixes:
   Fix gitignore parsing bug where a trailing `\/` resulted in an error.
 * [BUG #2243](https://github.com/BurntSushi/ripgrep/issues/2243):
   Fix `--sort` flag for values other than `path`.
+* [BUG #2392](https://github.com/BurntSushi/ripgrep/issues/2392):
+  Improve global git config parsing of the `excludesFile` field.
 * [BUG #2480](https://github.com/BurntSushi/ripgrep/issues/2480):
   Fix bug when using inline regex flags with `-e/--regexp`.
 * [BUG #2523](https://github.com/BurntSushi/ripgrep/issues/2523):
