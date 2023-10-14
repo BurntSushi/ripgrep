@@ -605,7 +605,7 @@ fn parse_excludes_file(data: &[u8]) -> Option<PathBuf> {
         Regex::builder()
             .configure(Regex::config().utf8_empty(false))
             .syntax(syntax::Config::new().utf8(false))
-            .build(r"(?im-u)^\s*excludesfile\s*=[\x22\s]*(\S+?)[\x22\s]*$")
+            .build(r#"(?im-u)^\s*excludesfile\s*=\s*"?\s*(\S+?)\s*"?\s*$"#)
             .unwrap()
     });
     // We don't care about amortizing allocs here I think. This should only
@@ -780,6 +780,11 @@ mod tests {
             path_string(got.unwrap()),
             super::expand_tilde("~/foo/bar")
         );
+    }
+    #[test]
+    fn parse_excludes_file5() {
+        let data = bytes("[core]\nexcludesFile = \" \"~/foo/bar \" \"");
+        assert!(super::parse_excludes_file(&data).is_none());
     }
 
     // See: https://github.com/BurntSushi/ripgrep/issues/106
