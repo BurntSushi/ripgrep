@@ -485,9 +485,9 @@ pub struct GlobSetBuilder {
 }
 
 impl GlobSetBuilder {
-    /// Create a new GlobSetBuilder. A GlobSetBuilder can be used to add new
+    /// Create a new `GlobSetBuilder`. A `GlobSetBuilder` can be used to add new
     /// patterns. Once all patterns have been added, `build` should be called
-    /// to produce a `GlobSet`, which can then be used for matching.
+    /// to produce a [`GlobSet`], which can then be used for matching.
     pub fn new() -> GlobSetBuilder {
         GlobSetBuilder { pats: vec![] }
     }
