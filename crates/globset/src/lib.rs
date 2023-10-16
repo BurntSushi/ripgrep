@@ -304,6 +304,14 @@ pub struct GlobSet {
 }
 
 impl GlobSet {
+    /// Create a new [`GlobSetBuilder`]. A `GlobSetBuilder` can be used to add
+    /// new patterns. Once all patterns have been added, `build` should be
+    /// called to produce a `GlobSet`, which can then be used for matching.
+    #[inline]
+    pub fn builder() -> GlobSetBuilder {
+        GlobSetBuilder::new()
+    }
+
     /// Create an empty `GlobSet`. An empty set matches nothing.
     #[inline]
     pub fn empty() -> GlobSet {
@@ -485,9 +493,9 @@ pub struct GlobSetBuilder {
 }
 
 impl GlobSetBuilder {
-    /// Create a new GlobSetBuilder. A GlobSetBuilder can be used to add new
+    /// Create a new `GlobSetBuilder`. A `GlobSetBuilder` can be used to add new
     /// patterns. Once all patterns have been added, `build` should be called
-    /// to produce a `GlobSet`, which can then be used for matching.
+    /// to produce a [`GlobSet`], which can then be used for matching.
     pub fn new() -> GlobSetBuilder {
         GlobSetBuilder { pats: vec![] }
     }
