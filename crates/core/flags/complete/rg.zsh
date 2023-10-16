@@ -73,6 +73,7 @@ _rg() {
     {-c,--count}'[only show count of matching lines for each file]'
     '--count-matches[only show count of individual matches for each file]'
     '--include-zero[include files with zero matches in summary]'
+    $no"--no-include-zero[don't include files with zero matches in summary]"
 
     + '(encoding)' # Encoding options
     {-E+,--encoding=}'[specify text encoding of files to search]: :_rg_encodings'
@@ -108,6 +109,15 @@ _rg() {
     {-L,--follow}'[follow symlinks]'
     $no"--no-follow[don't follow symlinks]"
 
+    + '(generate)' # Options for generating ancillary data
+    '--generate=[generate man page or completion scripts]:when:((
+      man\:"man page"
+      complete-bash\:"shell completions for bash"
+      complete-zsh\:"shell completions for zsh"
+      complete-fish\:"shell completions for fish"
+      complete-powershell\:"shell completions for PowerShell"
+    ))'
+
     + glob # File-glob options
     '*'{-g+,--glob=}'[include/exclude files matching specified glob]:glob'
     '*--iglob=[include/exclude files matching specified case-insensitive glob]:glob'
@@ -125,8 +135,8 @@ _rg() {
     $no"--no-hidden[don't search hidden files and directories]"
 
     + '(hybrid)' # hybrid regex options
-    '--auto-hybrid-regex[dynamically use PCRE2 if necessary]'
-    $no"--no-auto-hybrid-regex[don't dynamically use PCRE2 if necessary]"
+    '--auto-hybrid-regex[DEPRECATED: dynamically use PCRE2 if necessary]'
+    $no"--no-auto-hybrid-regex[DEPRECATED: don't dynamically use PCRE2 if necessary]"
 
     + '(ignore)' # Ignore-file options
     "(--no-ignore-global --no-ignore-parent --no-ignore-vcs --no-ignore-dot)--no-ignore[don't respect ignore files]"
@@ -183,6 +193,7 @@ _rg() {
 
     + '(max-depth)' # Directory-depth options
     '--max-depth=[specify max number of directories to descend]:number of directories'
+    '--maxdepth=[alias for --max-depth]:number of directories'
     '!--maxdepth=:number of directories'
 
     + '(messages)' # Error-message options
@@ -210,15 +221,15 @@ _rg() {
 
     + '(passthru)' # Pass-through options
     '(--vimgrep)--passthru[show both matching and non-matching lines]'
-    '!(--vimgrep)--passthrough'
+    '(--vimgrep)--passthrough[alias for --passthru]'
 
     + '(pcre2)' # PCRE2 options
     {-P,--pcre2}'[enable matching with PCRE2]'
     $no'(pcre2-unicode)--no-pcre2[disable matching with PCRE2]'
 
     + '(pcre2-unicode)' # PCRE2 Unicode options
-    $no'(--no-pcre2 --no-pcre2-unicode)--pcre2-unicode[enable PCRE2 Unicode mode (with -P)]'
-    '(--no-pcre2 --pcre2-unicode)--no-pcre2-unicode[disable PCRE2 Unicode mode (with -P)]'
+    $no'(--no-pcre2 --no-pcre2-unicode)--pcre2-unicode[DEPRECATED: enable PCRE2 Unicode mode (with -P)]'
+    '(--no-pcre2 --pcre2-unicode)--no-pcre2-unicode[DEPRECATED: disable PCRE2 Unicode mode (with -P)]'
 
     + '(pre)' # Preprocessing options
     '(-z --search-zip)--pre=[specify preprocessor utility]:preprocessor utility:_command_names -e'
@@ -252,7 +263,8 @@ _rg() {
       accessed\:"sort by last accessed time"
       created\:"sort by creation time"
     ))'
-    '!(threads)--sort-files[sort results by file path (disables parallelism)]'
+    '(threads)--sort-files[DEPRECATED: sort results by file path (disables parallelism)]'
+    $no"--no-sort-files[DEPRECATED: do not sort results]"
 
     + '(stats)' # Statistics options
     '(--files file-match)--stats[show search statistics]'
@@ -293,6 +305,7 @@ _rg() {
 
     + misc # Other options — no need to separate these at the moment
     '(-b --byte-offset)'{-b,--byte-offset}'[show 0-based byte offset for each matching line]'
+    $no"--no-byte-offset[don't show byte offsets for each matching line]"
     '--color=[specify when to use colors in output]:when:((
       never\:"never use colors"
       auto\:"use colors or not based on stdout, TERM, etc."
@@ -312,6 +325,7 @@ _rg() {
     "(1 stats)--files[show each file that would be searched (but don't search)]"
     '*--ignore-file=[specify additional ignore file]:ignore file:_files'
     '(-v --invert-match)'{-v,--invert-match}'[invert matching]'
+    $no"--no-invert-match[do not invert matching]"
     '(-M --max-columns)'{-M+,--max-columns=}'[specify max length of lines to print]:number of bytes'
     '(-m --max-count)'{-m+,--max-count=}'[specify max number of matches per file]:number of matches'
     '--max-filesize=[specify size above which files should be ignored]:file size (bytes)'

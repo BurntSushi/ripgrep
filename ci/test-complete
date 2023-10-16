@@ -19,7 +19,7 @@ get_comp_args() {
 main() {
     local diff
     local  rg="${0:a:h}/../${TARGET_DIR:-target}/release/rg"
-    local _rg="${0:a:h}/../complete/_rg"
+    local _rg="${0:a:h}/../crates/core/flags/complete/rg.zsh"
     local -a help_args comp_args
 
     [[ -e $rg ]] || rg=${rg/%\/release\/rg/\/debug\/rg}

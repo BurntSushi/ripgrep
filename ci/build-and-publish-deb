@@ -5,7 +5,7 @@ D="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 # This script builds a binary dpkg for Debian based distros. It does not
 # currently run in CI, and is instead run manually and the resulting dpkg is
-# uploaded to GitHub via the web UI.
+# uploaded to GitHub at the end of this script.
 #
 # Note that this requires 'cargo deb', which can be installed with
 # 'cargo install cargo-deb'.
@@ -13,13 +13,19 @@ D="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # This should be run from the root of the ripgrep repo.
 
 if ! command -V cargo-deb > /dev/null 2>&1; then
-    echo "cargo-deb command missing" >&2
-    exit 1
+  echo "cargo-deb command missing" >&2
+  exit 1
 fi
 
-if ! command -V asciidoctor > /dev/null 2>&1; then
-    echo "asciidoctor command missing" >&2
-    exit 1
+version="$1"
+if [ -z "$version" ]; then
+  echo "missing version" >&2
+  echo "Usage: "$(basename "$0")" <version>" >&2
+  exit 1
+fi
+if ! grep -q "version = \"$version\"" Cargo.toml; then
+  echo "version does not match Cargo.toml" >&2
+  exit 1
 fi
 
 # 'cargo deb' does not seem to provide a way to specify an asset that is
@@ -30,13 +36,20 @@ fi
 cargo build
 
 DEPLOY_DIR=deployment/deb
-OUT_DIR="$("$D"/cargo-out-dir target/debug/)"
 mkdir -p "$DEPLOY_DIR"
 
-# Copy man page and shell completions.
-cp "$OUT_DIR"/{rg.1,rg.bash,rg.fish} "$DEPLOY_DIR/"
-cp complete/_rg "$DEPLOY_DIR/"
+# Generate man page and shell completions. `cargo deb` knows how to find these
+# files via the manifest configuration in `Cargo.toml`.
+"target/debug/rg" --generate complete-bash > "$DEPLOY_DIR/rg.bash"
+"target/debug/rg" --generate complete-fish > "$DEPLOY_DIR/rg.fish"
+"target/debug/rg" --generate complete-zsh > "$DEPLOY_DIR/_rg"
+"target/debug/rg" --generate man > "$DEPLOY_DIR/rg.1"
 
 # Since we're distributing the dpkg, we don't know whether the user will have
 # PCRE2 installed, so just do a static build.
 PCRE2_SYS_STATIC=1 cargo deb --target x86_64-unknown-linux-musl
+target="target/x86_64-unknown-linux-musl/debian"
+deb="$target/ripgrep_$version-1_amd64.deb"
+debsum="$deb.sha256"
+shasum -a 256 "$deb" > "$debsum"
+gh release upload "$version" "$deb" "$debsum"

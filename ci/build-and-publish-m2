@@ -1,0 +1,34 @@
+#!/bin/bash
+
+set -e
+
+version="$1"
+if [ -z "$version" ]; then
+  echo "missing version" >&2
+  echo "Usage: "$(basename "$0")" <version>" >&2
+  exit 1
+fi
+if ! grep -q "version = \"$version\"" Cargo.toml; then
+  echo "version does not match Cargo.toml" >&2
+  exit 1
+fi
+
+cargo build --release --features pcre2
+BIN=target/release/rg
+NAME=ripgrep-$version-aarch64-apple-darwin
+ARCHIVE="deployment/m2/$NAME"
+
+mkdir -p "$ARCHIVE"/{complete,doc}
+cp target/release/rg "$ARCHIVE"/
+strip "$ARCHIVE/rg"
+cp {README.md,COPYING,UNLICENSE,LICENSE-MIT} "$ARCHIVE"/
+cp {CHANGELOG.md,FAQ.md,GUIDE.md} "$ARCHIVE"/doc/
+"$BIN" --generate complete-bash > "$ARCHIVE/complete/rg.bash"
+"$BIN" --generate complete-fish > "$ARCHIVE/complete/rg.fish"
+"$BIN" --generate complete-powershell > "$ARCHIVE/complete/_rg.ps1"
+"$BIN" --generate complete-zsh > "$ARCHIVE/complete/_rg"
+"$BIN" --generate man > "$ARCHIVE/doc/rg.1"
+
+tar c -C deployment/m2 -z -f "$ARCHIVE.tar.gz" "$NAME"
+shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
+gh release upload "$version" "$ARCHIVE.tar.gz" "$ARCHIVE.tar.gz.sha256"

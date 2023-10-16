@@ -489,7 +489,7 @@ impl StandardBuilder {
 /// then the `new_no_color` constructor can be used, or, alternatively,
 /// the `termcolor::NoColor` adapter can be used to wrap any `io::Write`
 /// implementation without enabling any colors.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Standard<W> {
     config: Config,
     wtr: RefCell<CounterWriter<W>>,

@@ -1,47 +1,39 @@
-# The way this works is the following:
-#
-# The create-release job runs purely to initialize the GitHub release itself
-# and to output upload_url for the following job.
-#
-# The build-release job runs only once create-release is finished. It gets the
-# release upload URL from create-release job outputs, then builds the release
-# executables for each supported platform and attaches them as release assets
-# to the previously created release.
-#
-# The key here is that we create the release only once.
-#
-# Reference:
-# https://eugene-babichenko.github.io/blog/2020/05/09/github-actions-cross-platform-auto-releases/
-
 name: release
+
+# Only do the release on x.y.z tags.
 on:
   push:
-    # Enable when testing release infrastructure on a branch.
-    # branches:
-    # - ag/work
     tags:
     - "[0-9]+.[0-9]+.[0-9]+"
+
+# We need this to be able to create releases.
+permissions:
+  contents: write
+
 jobs:
+  # The create-release job runs purely to initialize the GitHub release itself,
+  # and names the release after the `x.y.z` tag that was pushed. It's separate
+  # from building the release so that we only create the release once.
   create-release:
     name: create-release
     runs-on: ubuntu-latest
     # env:
       # Set to force version number, e.g., when no tag exists.
-      # RG_VERSION: TEST-0.0.0
-    outputs:
-      rg_version: ${{ env.RG_VERSION }}
+      # VERSION: TEST-0.0.0
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Get the release version from the tag
-        shell: bash
-        if: env.RG_VERSION == ''
+        if: env.VERSION == ''
+        run: echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+      - name: Show the version
         run: |
-          echo "RG_VERSION=$GITHUB_REF_NAME" >> $GITHUB_ENV
-          echo "version is: ${{ env.RG_VERSION }}"
+          echo "version is: $VERSION"
       - name: Create GitHub release
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release create ${{ env.RG_VERSION }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create $VERSION --draft --verify-tag --title $VERSION
+    outputs:
+      version: ${{ env.VERSION }}
 
   build-release:
     name: build-release
@@ -52,25 +44,50 @@ jobs:
       # systems.
       CARGO: cargo
       # When CARGO is set to CROSS, this is set to `--target matrix.target`.
-      TARGET_FLAGS: ""
+      TARGET_FLAGS:
       # When CARGO is set to CROSS, TARGET_DIR includes matrix.target.
       TARGET_DIR: ./target
+      # Bump this as appropriate. We pin to a version to make sure CI
+      # continues to work as cross releases in the past have broken things
+      # in subtle ways.
+      CROSS_VERSION: v0.2.5
       # Emit backtraces on panics.
       RUST_BACKTRACE: 1
       # Build static releases with PCRE2.
       PCRE2_SYS_STATIC: 1
     strategy:
+      fail-fast: false
       matrix:
-        build: [linux, linux-arm, macos, win-msvc, win-gnu, win32-msvc]
         include:
         - build: linux
           os: ubuntu-latest
           rust: nightly
           target: x86_64-unknown-linux-musl
-        - build: linux-arm
+          strip: x86_64-linux-musl-strip
+        - build: stable-x86
           os: ubuntu-latest
-          rust: nightly
-          target: arm-unknown-linux-gnueabihf
+          rust: stable
+          target: i686-unknown-linux-gnu
+          strip: x86_64-linux-gnu-strip
+          qemu: i386
+        - build: stable-aarch64
+          os: ubuntu-latest
+          rust: stable
+          target: aarch64-unknown-linux-gnu
+          strip: aarch64-linux-gnu-strip
+          qemu: qemu-aarch64
+        - build: stable-powerpc64
+          os: ubuntu-latest
+          rust: stable
+          target: powerpc64-unknown-linux-gnu
+          strip: powerpc64-linux-gnu-strip
+          qemu: qemu-ppc64
+        - build: stable-s390x
+          os: ubuntu-latest
+          rust: stable
+          target: s390x-unknown-linux-gnu
+          strip: s390x-linux-gnu-strip
+          qemu: qemu-s390x
         - build: macos
           os: macos-latest
           rust: nightly
@@ -90,15 +107,17 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Install packages (Ubuntu)
       if: matrix.os == 'ubuntu-latest'
+      shell: bash
       run: |
         ci/ubuntu-install-packages
 
     - name: Install packages (macOS)
       if: matrix.os == 'macos-latest'
+      shell: bash
       run: |
         ci/macos-install-packages
 
@@ -109,64 +128,140 @@ jobs:
         target: ${{ matrix.target }}
 
     - name: Use Cross
+      if: matrix.os == 'ubuntu-latest' && matrix.target != ''
       shell: bash
       run: |
-        cargo install cross
+        # In the past, new releases of 'cross' have broken CI. So for now, we
+        # pin it. We also use their pre-compiled binary releases because cross
+        # has over 100 dependencies and takes a bit to compile.
+        dir="$RUNNER_TEMP/cross-download"
+        mkdir "$dir"
+        echo "$dir" >> $GITHUB_PATH
+        cd "$dir"
+        curl -LO "https://github.com/cross-rs/cross/releases/download/$CROSS_VERSION/cross-x86_64-unknown-linux-musl.tar.gz"
+        tar xf cross-x86_64-unknown-linux-musl.tar.gz
         echo "CARGO=cross" >> $GITHUB_ENV
+
+    - name: Set target variables
+      shell: bash
+      run: |
         echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
         echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
 
     - name: Show command used for Cargo
+      shell: bash
       run: |
         echo "cargo command is: ${{ env.CARGO }}"
         echo "target flag is: ${{ env.TARGET_FLAGS }}"
         echo "target dir is: ${{ env.TARGET_DIR }}"
 
     - name: Build release binary
-      run: ${{ env.CARGO }} build --verbose --release --features pcre2 ${{ env.TARGET_FLAGS }}
+      shell: bash
+      run: |
+        ${{ env.CARGO }} build --verbose --release --features pcre2 ${{ env.TARGET_FLAGS }}
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          bin="target/${{ matrix.target }}/release/rg.exe"
+        else
+          bin="target/${{ matrix.target }}/release/rg"
+        fi
+        echo "BIN=$bin" >> $GITHUB_ENV
 
-    - name: Strip release binary (linux, macos and macos-arm)
-      if: matrix.build == 'linux' || matrix.os == 'macos'
-      run: strip "target/${{ matrix.target }}/release/rg"
+    - name: Strip release binary (macos)
+      if: matrix.os == 'macos'
+      shell: bash
+      run: strip "$BIN"
 
-    - name: Strip release binary (arm)
-      if: matrix.build == 'linux-arm'
+    - name: Strip release binary (cross)
+      if: env.CARGO == 'cross'
+      shell: bash
       run: |
         docker run --rm -v \
           "$PWD/target:/target:Z" \
-          rustembedded/cross:arm-unknown-linux-gnueabihf \
-          arm-linux-gnueabihf-strip \
-          /target/arm-unknown-linux-gnueabihf/release/rg
+          "rustembedded/cross:${{ matrix.target }}" \
+          "${{ matrix.strip }}" \
+          "/target/${{ matrix.target }}/release/rg"
 
-    - name: Build archive
+    - name: Determine archive name
       shell: bash
       run: |
-        outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
-        staging="ripgrep-${{ needs.create-release.outputs.rg_version }}-${{ matrix.target }}"
-        mkdir -p "$staging"/{complete,doc}
+        version="${{ needs.create-release.outputs.version }}"
+        echo "ARCHIVE=ripgrep-$version-${{ matrix.target }}" >> $GITHUB_ENV
 
-        cp {README.md,COPYING,UNLICENSE,LICENSE-MIT} "$staging/"
-        cp {CHANGELOG.md,FAQ.md,GUIDE.md} "$staging/doc/"
-        cp "$outdir"/{rg.bash,rg.fish,_rg.ps1} "$staging/complete/"
-        cp complete/_rg "$staging/complete/"
+    - name: Creating directory for archive
+      shell: bash
+      run: |
+        mkdir -p "$ARCHIVE"/{complete,doc}
+        cp "$BIN" "$ARCHIVE"/
+        cp {README.md,COPYING,UNLICENSE,LICENSE-MIT} "$ARCHIVE"/
+        cp {CHANGELOG.md,FAQ.md,GUIDE.md} "$ARCHIVE"/doc/
 
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          cp "target/${{ matrix.target }}/release/rg.exe" "$staging/"
-          7z a "$staging.zip" "$staging"
-          certutil -hashfile "$staging.zip" SHA256 > "$staging.zip.sha256"
-          echo "ASSET=$staging.zip" >> $GITHUB_ENV
-          echo "ASSET_SUM=$staging.zip.sha256" >> $GITHUB_ENV
-        else
-          # The man page is only generated on Unix systems. ¯\_(ツ)_/¯
-          cp "$outdir"/rg.1 "$staging/doc/"
-          cp "target/${{ matrix.target }}/release/rg" "$staging/"
-          tar czf "$staging.tar.gz" "$staging"
-          shasum -a 256 "$staging.tar.gz" > "$staging.tar.gz.sha256"
-          echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
-          echo "ASSET_SUM=$staging.tar.gz.sha256" >> $GITHUB_ENV
-        fi
+    - name: Generate man page and completions (no emulation)
+      if: matrix.qemu == ''
+      shell: bash
+      run: |
+        "$BIN" --version
+        "$BIN" --generate complete-bash > "$ARCHIVE/complete/rg.bash"
+        "$BIN" --generate complete-fish > "$ARCHIVE/complete/rg.fish"
+        "$BIN" --generate complete-powershell > "$ARCHIVE/complete/_rg.ps1"
+        "$BIN" --generate complete-zsh > "$ARCHIVE/complete/_rg"
+        "$BIN" --generate man > "$ARCHIVE/doc/rg.1"
+
+    - name: Generate man page and completions (emulation)
+      if: matrix.qemu != ''
+      shell: bash
+      run: |
+        docker run --rm -v \
+          "$PWD/target:/target:Z" \
+          "rustembedded/cross:${{ matrix.target }}" \
+          "${{ matrix.qemu }}" "/$BIN" --version
+        docker run --rm -v \
+          "$PWD/target:/target:Z" \
+          "rustembedded/cross:${{ matrix.target }}" \
+          "${{ matrix.qemu }}" "/$BIN" \
+            --generate complete-bash > "$ARCHIVE/complete/rg.bash"
+        docker run --rm -v \
+          "$PWD/target:/target:Z" \
+          "rustembedded/cross:${{ matrix.target }}" \
+          "${{ matrix.qemu }}" "/$BIN" \
+            --generate complete-fish > "$ARCHIVE/complete/rg.fish"
+        docker run --rm -v \
+          "$PWD/target:/target:Z" \
+          "rustembedded/cross:${{ matrix.target }}" \
+          "${{ matrix.qemu }}" "/$BIN" \
+            --generate complete-powershell > "$ARCHIVE/complete/_rg.ps1"
+        docker run --rm -v \
+          "$PWD/target:/target:Z" \
+          "rustembedded/cross:${{ matrix.target }}" \
+          "${{ matrix.qemu }}" "/$BIN" \
+            --generate complete-zsh > "$ARCHIVE/complete/_rg"
+        docker run --rm -v \
+          "$PWD/target:/target:Z" \
+          "rustembedded/cross:${{ matrix.target }}" \
+          "${{ matrix.qemu }}" "/$BIN" \
+            --generate man > "$ARCHIVE/doc/rg.1"
+
+    - name: Build archive (Windows)
+      shell: bash
+      if: matrix.os == 'windows-latest'
+      run: |
+        7z a "$ARCHIVE.zip" "$ARCHIVE"
+        certutil -hashfile "$ARCHIVE.zip" SHA256 > "$ARCHIVE.zip.sha256"
+        echo "ASSET=$ARCHIVE.zip" >> $GITHUB_ENV
+        echo "ASSET_SUM=$ARCHIVE.zip.sha256" >> $GITHUB_ENV
+
+    - name: Build archive (Unix)
+      shell: bash
+      if: matrix.os != 'windows-latest'
+      run: |
+        tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
+        shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
+        echo "ASSET=$ARCHIVE.tar.gz" >> $GITHUB_ENV
+        echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" >> $GITHUB_ENV
 
     - name: Upload release archive
       env:
-        GH_TOKEN: ${{ github.token }}
-      run: gh release upload ${{ needs.create-release.outputs.rg_version }} ${{ env.ASSET }} ${{ env.ASSET_SUM }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
+      run: |
+        version="${{ needs.create-release.outputs.version }}"
+        gh release upload "$version" ${{ env.ASSET }} ${{ env.ASSET_SUM }}

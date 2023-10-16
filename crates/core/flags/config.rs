@@ -1,6 +1,9 @@
-// This module provides routines for reading ripgrep config "rc" files. The
-// primary output of these routines is a sequence of arguments, where each
-// argument corresponds precisely to one shell argument.
+/*!
+This module provides routines for reading ripgrep config "rc" files.
+
+The primary output of these routines is a sequence of arguments, where each
+argument corresponds precisely to one shell argument.
+*/
 
 use std::{
     ffi::OsString,

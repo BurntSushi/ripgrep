@@ -411,7 +411,8 @@ rgtest!(
     |dir: Dir, mut cmd: TestCommand| {
         dir.create("sherlock", SHERLOCK);
 
-        let lines = cmd.arg("--stats").arg("Sherlock").stdout();
+        let lines = cmd.arg("-j1").arg("--stats").arg("Sherlock").stdout();
+        assert!(lines.contains("Sherlock"));
         assert!(lines.contains("2 matched lines"));
         assert!(lines.contains("1 files contained matches"));
         assert!(lines.contains("1 files searched"));
@@ -423,7 +424,40 @@ rgtest!(f411_parallel_search_stats, |dir: Dir, mut cmd: TestCommand| {
     dir.create("sherlock_1", SHERLOCK);
     dir.create("sherlock_2", SHERLOCK);
 
-    let lines = cmd.arg("--stats").arg("Sherlock").stdout();
+    let lines = cmd.arg("-j2").arg("--stats").arg("Sherlock").stdout();
+    dbg!(&lines);
+    assert!(lines.contains("4 matched lines"));
+    assert!(lines.contains("2 files contained matches"));
+    assert!(lines.contains("2 files searched"));
+    assert!(lines.contains("seconds"));
+});
+
+rgtest!(
+    f411_single_threaded_quiet_search_stats,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create("sherlock", SHERLOCK);
+
+        let lines = cmd
+            .arg("--quiet")
+            .arg("-j1")
+            .arg("--stats")
+            .arg("Sherlock")
+            .stdout();
+        assert!(!lines.contains("Sherlock"));
+        assert!(lines.contains("2 matched lines"));
+        assert!(lines.contains("1 files contained matches"));
+        assert!(lines.contains("1 files searched"));
+        assert!(lines.contains("seconds"));
+    }
+);
+
+rgtest!(f411_parallel_quiet_search_stats, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("sherlock_1", SHERLOCK);
+    dir.create("sherlock_2", SHERLOCK);
+
+    let lines =
+        cmd.arg("-j2").arg("--quiet").arg("--stats").arg("Sherlock").stdout();
+    assert!(!lines.contains("Sherlock"));
     assert!(lines.contains("4 matched lines"));
     assert!(lines.contains("2 files contained matches"));
     assert!(lines.contains("2 files searched"));

@@ -21,6 +21,8 @@ Feature enhancements:
   Gradle, GraphQL, Markdown, Prolog, Raku, TypeScript, USD, V
 * [FEATURE #1790](https://github.com/BurntSushi/ripgrep/issues/1790):
   Add new `--stop-on-nonmatch` flag.
+* [FEATURE #1814](https://github.com/BurntSushi/ripgrep/issues/1814):
+  Flags are now categorized in `-h/--help` output and ripgrep's man page.
 * [FEATURE #2195](https://github.com/BurntSushi/ripgrep/issues/2195):
   When `extra-verbose` mode is enabled in zsh, show extra file type info.
 * [FEATURE #2409](https://github.com/BurntSushi/ripgrep/pull/2409):
@@ -28,14 +30,22 @@ Feature enhancements:
 
 Bug fixes:
 
+* [BUG #884](https://github.com/BurntSushi/ripgrep/issues/884):
+  Don't error when `-v/--invert-match` is used multiple times.
 * [BUG #1275](https://github.com/BurntSushi/ripgrep/issues/1275):
   Fix bug with `\b` assertion in the regex engine.
+* [BUG #1648](https://github.com/BurntSushi/ripgrep/issues/1648):
+  Fix bug where sometimes short flags with values, e.g., `-M 900`, would fail.
+* [BUG #1701](https://github.com/BurntSushi/ripgrep/issues/1701):
+  Fix bug where some flags could not be repeated.
 * [BUG #1757](https://github.com/BurntSushi/ripgrep/issues/1757):
   Fix bug when searching a sub-directory didn't have ignores applied correctly.
 * [BUG #1891](https://github.com/BurntSushi/ripgrep/issues/1891):
   Fix bug when using `-w` with a regex that can match the empty string.
 * [BUG #1911](https://github.com/BurntSushi/ripgrep/issues/1911):
   Disable mmap searching in all non-64-bit environments.
+* [BUG #1966](https://github.com/BurntSushi/ripgrep/issues/1966):
+  Fix bug where ripgrep can panic when printing to stderr.
 * [BUG #2108](https://github.com/BurntSushi/ripgrep/issues/2108):
   Improve docs for `-r/--replace` syntax.
 * [BUG #2198](https://github.com/BurntSushi/ripgrep/issues/2198):

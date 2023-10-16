@@ -53,7 +53,7 @@ jobs:
         include:
         - build: pinned
           os: ubuntu-latest
-          rust: 1.72.1
+          rust: 1.74.0
         - build: stable
           os: ubuntu-latest
           rust: stable
@@ -94,7 +94,7 @@ jobs:
           rust: nightly-x86_64-gnu
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Install packages (Ubuntu)
       if: matrix.os == 'ubuntu-latest'
@@ -131,6 +131,7 @@ jobs:
       run: |
         echo "cargo command is: ${{ env.CARGO }}"
         echo "target flag is: ${{ env.TARGET_FLAGS }}"
+        echo "target dir is: ${{ env.TARGET_DIR }}"
 
     - name: Build ripgrep and all crates
       run: ${{ env.CARGO }} build --verbose --workspace ${{ env.TARGET_FLAGS }}
@@ -164,26 +165,6 @@ jobs:
       if: matrix.target != ''
       run: ${{ env.CARGO }} test --verbose --workspace ${{ env.TARGET_FLAGS }}
 
-    - name: Test for existence of build artifacts (Windows)
-      if: matrix.os == 'windows-2022'
-      shell: bash
-      run: |
-        outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
-        ls "$outdir/_rg.ps1" && file "$outdir/_rg.ps1"
-
-    - name: Test for existence of build artifacts (Unix)
-      if: matrix.os != 'windows-2022'
-      shell: bash
-      run: |
-        outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
-        # TODO: Check for the man page generation here. For whatever reason,
-        # it seems to be intermittently failing in CI. No idea why.
-        # for f in rg.bash rg.fish rg.1; do
-        for f in rg.bash rg.fish; do
-          # We could use file -E here, but it isn't supported on macOS.
-          ls "$outdir/$f" && file "$outdir/$f"
-        done
-
     - name: Test zsh shell completions (Unix, sans cross)
       # We could test this when using Cross, but we'd have to execute the
       # 'rg' binary (done in test-complete) with qemu, which is a pain and
@@ -197,11 +178,15 @@ jobs:
       shell: bash
       run: ${{ env.CARGO }} test --manifest-path crates/cli/Cargo.toml ${{ env.TARGET_FLAGS }} --lib print_hostname -- --nocapture
 
+    - name: Print available short flags
+      shell: bash
+      run: ${{ env.CARGO }} test --bin rg ${{ env.TARGET_FLAGS }} flags::defs::tests::available_shorts -- --nocapture
+
   rustfmt:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
       with:
@@ -214,7 +199,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:

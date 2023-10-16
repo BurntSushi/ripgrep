@@ -1,59 +1,47 @@
-use std::{
-    io,
-    path::{Path, PathBuf},
-    time::Duration,
-};
+/*!
+Defines a very high level "search worker" abstraction.
 
-use {
-    grep::{
-        cli,
-        matcher::Matcher,
-        printer::{Standard, Stats, Summary, JSON},
-        regex::RegexMatcher as RustRegexMatcher,
-        searcher::{BinaryDetection, Searcher},
-    },
-    ignore::overrides::Override,
-    serde_json::{self as json, json},
-    termcolor::WriteColor,
-};
+A search worker manages the high level interaction points between the matcher
+(i.e., which regex engine is used), the searcher (i.e., how data is actually
+read and matched using the regex engine) and the printer. For example, the
+search worker is where things like preprocessors or decompression happens.
+*/
 
-#[cfg(feature = "pcre2")]
-use grep::pcre2::RegexMatcher as PCRE2RegexMatcher;
+use std::{io, path::Path};
 
-use crate::subject::Subject;
+use {grep::matcher::Matcher, termcolor::WriteColor};
 
-/// The configuration for the search worker. Among a few other things, the
-/// configuration primarily controls the way we show search results to users
-/// at a very high level.
+/// The configuration for the search worker.
+///
+/// Among a few other things, the configuration primarily controls the way we
+/// show search results to users at a very high level.
 #[derive(Clone, Debug)]
 struct Config {
-    json_stats: bool,
-    preprocessor: Option<PathBuf>,
-    preprocessor_globs: Override,
+    preprocessor: Option<std::path::PathBuf>,
+    preprocessor_globs: ignore::overrides::Override,
     search_zip: bool,
-    binary_implicit: BinaryDetection,
-    binary_explicit: BinaryDetection,
+    binary_implicit: grep::searcher::BinaryDetection,
+    binary_explicit: grep::searcher::BinaryDetection,
 }
 
 impl Default for Config {
     fn default() -> Config {
         Config {
-            json_stats: false,
             preprocessor: None,
-            preprocessor_globs: Override::empty(),
+            preprocessor_globs: ignore::overrides::Override::empty(),
             search_zip: false,
-            binary_implicit: BinaryDetection::none(),
-            binary_explicit: BinaryDetection::none(),
+            binary_implicit: grep::searcher::BinaryDetection::none(),
+            binary_explicit: grep::searcher::BinaryDetection::none(),
         }
     }
 }
 
 /// A builder for configuring and constructing a search worker.
 #[derive(Clone, Debug)]
-pub struct SearchWorkerBuilder {
+pub(crate) struct SearchWorkerBuilder {
     config: Config,
-    command_builder: cli::CommandReaderBuilder,
-    decomp_builder: cli::DecompressionReaderBuilder,
+    command_builder: grep::cli::CommandReaderBuilder,
+    decomp_builder: grep::cli::DecompressionReaderBuilder,
 }
 
 impl Default for SearchWorkerBuilder {
@@ -64,11 +52,11 @@ impl Default for SearchWorkerBuilder {
 
 impl SearchWorkerBuilder {
     /// Create a new builder for configuring and constructing a search worker.
-    pub fn new() -> SearchWorkerBuilder {
-        let mut cmd_builder = cli::CommandReaderBuilder::new();
+    pub(crate) fn new() -> SearchWorkerBuilder {
+        let mut cmd_builder = grep::cli::CommandReaderBuilder::new();
         cmd_builder.async_stderr(true);
 
-        let mut decomp_builder = cli::DecompressionReaderBuilder::new();
+        let mut decomp_builder = grep::cli::DecompressionReaderBuilder::new();
         decomp_builder.async_stderr(true);
 
         SearchWorkerBuilder {
@@ -80,10 +68,10 @@ impl SearchWorkerBuilder {
 
     /// Create a new search worker using the given searcher, matcher and
     /// printer.
-    pub fn build<W: WriteColor>(
+    pub(crate) fn build<W: WriteColor>(
         &self,
         matcher: PatternMatcher,
-        searcher: Searcher,
+        searcher: grep::searcher::Searcher,
         printer: Printer<W>,
     ) -> SearchWorker<W> {
         let config = self.config.clone();
@@ -99,29 +87,17 @@ impl SearchWorkerBuilder {
         }
     }
 
-    /// Forcefully use JSON to emit statistics, even if the underlying printer
-    /// is not the JSON printer.
-    ///
-    /// This is useful for implementing flag combinations like
-    /// `--json --quiet`, which uses the summary printer for implementing
-    /// `--quiet` but still wants to emit summary statistics, which should
-    /// be JSON formatted because of the `--json` flag.
-    pub fn json_stats(&mut self, yes: bool) -> &mut SearchWorkerBuilder {
-        self.config.json_stats = yes;
-        self
-    }
-
     /// Set the path to a preprocessor command.
     ///
     /// When this is set, instead of searching files directly, the given
     /// command will be run with the file path as the first argument, and the
     /// output of that command will be searched instead.
-    pub fn preprocessor(
+    pub(crate) fn preprocessor(
         &mut self,
-        cmd: Option<PathBuf>,
+        cmd: Option<std::path::PathBuf>,
     ) -> anyhow::Result<&mut SearchWorkerBuilder> {
         if let Some(ref prog) = cmd {
-            let bin = cli::resolve_binary(prog)?;
+            let bin = grep::cli::resolve_binary(prog)?;
             self.config.preprocessor = Some(bin);
         } else {
             self.config.preprocessor = None;
@@ -132,9 +108,9 @@ impl SearchWorkerBuilder {
     /// Set the globs for determining which files should be run through the
     /// preprocessor. By default, with no globs and a preprocessor specified,
     /// every file is run through the preprocessor.
-    pub fn preprocessor_globs(
+    pub(crate) fn preprocessor_globs(
         &mut self,
-        globs: Override,
+        globs: ignore::overrides::Override,
     ) -> &mut SearchWorkerBuilder {
         self.config.preprocessor_globs = globs;
         self
@@ -147,7 +123,10 @@ impl SearchWorkerBuilder {
     ///
     /// Note that if a preprocessor command is set, then it overrides this
     /// setting.
-    pub fn search_zip(&mut self, yes: bool) -> &mut SearchWorkerBuilder {
+    pub(crate) fn search_zip(
+        &mut self,
+        yes: bool,
+    ) -> &mut SearchWorkerBuilder {
         self.config.search_zip = yes;
         self
     }
@@ -155,13 +134,14 @@ impl SearchWorkerBuilder {
     /// Set the binary detection that should be used when searching files
     /// found via a recursive directory search.
     ///
-    /// Generally, this binary detection may be `BinaryDetection::quit` if
-    /// we want to skip binary files completely.
+    /// Generally, this binary detection may be
+    /// `grep::searcher::BinaryDetection::quit` if we want to skip binary files
+    /// completely.
     ///
     /// By default, no binary detection is performed.
-    pub fn binary_detection_implicit(
+    pub(crate) fn binary_detection_implicit(
         &mut self,
-        detection: BinaryDetection,
+        detection: grep::searcher::BinaryDetection,
     ) -> &mut SearchWorkerBuilder {
         self.config.binary_implicit = detection;
         self
@@ -170,14 +150,14 @@ impl SearchWorkerBuilder {
     /// Set the binary detection that should be used when searching files
     /// explicitly supplied by an end user.
     ///
-    /// Generally, this binary detection should NOT be `BinaryDetection::quit`,
-    /// since we never want to automatically filter files supplied by the end
-    /// user.
+    /// Generally, this binary detection should NOT be
+    /// `grep::searcher::BinaryDetection::quit`, since we never want to
+    /// automatically filter files supplied by the end user.
     ///
     /// By default, no binary detection is performed.
-    pub fn binary_detection_explicit(
+    pub(crate) fn binary_detection_explicit(
         &mut self,
-        detection: BinaryDetection,
+        detection: grep::searcher::BinaryDetection,
     ) -> &mut SearchWorkerBuilder {
         self.config.binary_explicit = detection;
         self
@@ -191,14 +171,14 @@ impl SearchWorkerBuilder {
 /// every search also has some aggregate statistics or meta data that may be
 /// useful to higher level routines.
 #[derive(Clone, Debug, Default)]
-pub struct SearchResult {
+pub(crate) struct SearchResult {
     has_match: bool,
-    stats: Option<Stats>,
+    stats: Option<grep::printer::Stats>,
 }
 
 impl SearchResult {
     /// Whether the search found a match or not.
-    pub fn has_match(&self) -> bool {
+    pub(crate) fn has_match(&self) -> bool {
         self.has_match
     }
 
@@ -206,103 +186,36 @@ impl SearchResult {
     ///
     /// It can be expensive to compute statistics, so these are only present
     /// if explicitly enabled in the printer provided by the caller.
-    pub fn stats(&self) -> Option<&Stats> {
+    pub(crate) fn stats(&self) -> Option<&grep::printer::Stats> {
         self.stats.as_ref()
     }
 }
 
 /// The pattern matcher used by a search worker.
 #[derive(Clone, Debug)]
-pub enum PatternMatcher {
-    RustRegex(RustRegexMatcher),
+pub(crate) enum PatternMatcher {
+    RustRegex(grep::regex::RegexMatcher),
     #[cfg(feature = "pcre2")]
-    PCRE2(PCRE2RegexMatcher),
+    PCRE2(grep::pcre2::RegexMatcher),
 }
 
 /// The printer used by a search worker.
 ///
 /// The `W` type parameter refers to the type of the underlying writer.
-#[derive(Debug)]
-pub enum Printer<W> {
+#[derive(Clone, Debug)]
+pub(crate) enum Printer<W> {
     /// Use the standard printer, which supports the classic grep-like format.
-    Standard(Standard<W>),
+    Standard(grep::printer::Standard<W>),
     /// Use the summary printer, which supports aggregate displays of search
     /// results.
-    Summary(Summary<W>),
+    Summary(grep::printer::Summary<W>),
     /// A JSON printer, which emits results in the JSON Lines format.
-    JSON(JSON<W>),
+    JSON(grep::printer::JSON<W>),
 }
 
 impl<W: WriteColor> Printer<W> {
-    fn print_stats(
-        &mut self,
-        total_duration: Duration,
-        stats: &Stats,
-    ) -> io::Result<()> {
-        match *self {
-            Printer::JSON(_) => self.print_stats_json(total_duration, stats),
-            Printer::Standard(_) | Printer::Summary(_) => {
-                self.print_stats_human(total_duration, stats)
-            }
-        }
-    }
-
-    fn print_stats_human(
-        &mut self,
-        total_duration: Duration,
-        stats: &Stats,
-    ) -> io::Result<()> {
-        write!(
-            self.get_mut(),
-            "
-{matches} matches
-{lines} matched lines
-{searches_with_match} files contained matches
-{searches} files searched
-{bytes_printed} bytes printed
-{bytes_searched} bytes searched
-{search_time:0.6} seconds spent searching
-{process_time:0.6} seconds
-",
-            matches = stats.matches(),
-            lines = stats.matched_lines(),
-            searches_with_match = stats.searches_with_match(),
-            searches = stats.searches(),
-            bytes_printed = stats.bytes_printed(),
-            bytes_searched = stats.bytes_searched(),
-            search_time = fractional_seconds(stats.elapsed()),
-            process_time = fractional_seconds(total_duration)
-        )
-    }
-
-    fn print_stats_json(
-        &mut self,
-        total_duration: Duration,
-        stats: &Stats,
-    ) -> io::Result<()> {
-        // We specifically match the format laid out by the JSON printer in
-        // the grep-printer crate. We simply "extend" it with the 'summary'
-        // message type.
-        let fractional = fractional_seconds(total_duration);
-        json::to_writer(
-            self.get_mut(),
-            &json!({
-                "type": "summary",
-                "data": {
-                    "stats": stats,
-                    "elapsed_total": {
-                        "secs": total_duration.as_secs(),
-                        "nanos": total_duration.subsec_nanos(),
-                        "human": format!("{:0.6}s", fractional),
-                    },
-                }
-            }),
-        )?;
-        write!(self.get_mut(), "\n")
-    }
-
     /// Return a mutable reference to the underlying printer's writer.
-    pub fn get_mut(&mut self) -> &mut W {
+    pub(crate) fn get_mut(&mut self) -> &mut W {
         match *self {
             Printer::Standard(ref mut p) => p.get_mut(),
             Printer::Summary(ref mut p) => p.get_mut(),
@@ -316,29 +229,32 @@ impl<W: WriteColor> Printer<W> {
 /// It is intended for a single worker to execute many searches, and is
 /// generally intended to be used from a single thread. When searching using
 /// multiple threads, it is better to create a new worker for each thread.
-#[derive(Debug)]
-pub struct SearchWorker<W> {
+#[derive(Clone, Debug)]
+pub(crate) struct SearchWorker<W> {
     config: Config,
-    command_builder: cli::CommandReaderBuilder,
-    decomp_builder: cli::DecompressionReaderBuilder,
+    command_builder: grep::cli::CommandReaderBuilder,
+    decomp_builder: grep::cli::DecompressionReaderBuilder,
     matcher: PatternMatcher,
-    searcher: Searcher,
+    searcher: grep::searcher::Searcher,
     printer: Printer<W>,
 }
 
 impl<W: WriteColor> SearchWorker<W> {
-    /// Execute a search over the given subject.
-    pub fn search(&mut self, subject: &Subject) -> io::Result<SearchResult> {
-        let bin = if subject.is_explicit() {
+    /// Execute a search over the given haystack.
+    pub(crate) fn search(
+        &mut self,
+        haystack: &crate::haystack::Haystack,
+    ) -> io::Result<SearchResult> {
+        let bin = if haystack.is_explicit() {
             self.config.binary_explicit.clone()
         } else {
             self.config.binary_implicit.clone()
         };
-        let path = subject.path();
+        let path = haystack.path();
         log::trace!("{}: binary detection: {:?}", path.display(), bin);
 
         self.searcher.set_binary_detection(bin);
-        if subject.is_stdin() {
+        if haystack.is_stdin() {
             self.search_reader(path, &mut io::stdin().lock())
         } else if self.should_preprocess(path) {
             self.search_preprocessor(path)
@@ -350,26 +266,8 @@ impl<W: WriteColor> SearchWorker<W> {
     }
 
     /// Return a mutable reference to the underlying printer.
-    pub fn printer(&mut self) -> &mut Printer<W> {
+    pub(crate) fn printer(&mut self) -> &mut Printer<W> {
         &mut self.printer
-    }
-
-    /// Print the given statistics to the underlying writer in a way that is
-    /// consistent with this searcher's printer's format.
-    ///
-    /// While `Stats` contains a duration itself, this only corresponds to the
-    /// time spent searching, where as `total_duration` should roughly
-    /// approximate the lifespan of the ripgrep process itself.
-    pub fn print_stats(
-        &mut self,
-        total_duration: Duration,
-        stats: &Stats,
-    ) -> io::Result<()> {
-        if self.config.json_stats {
-            self.printer().print_stats_json(total_duration, stats)
-        } else {
-            self.printer().print_stats(total_duration, stats)
-        }
     }
 
     /// Returns true if and only if the given file path should be
@@ -399,10 +297,11 @@ impl<W: WriteColor> SearchWorker<W> {
         &mut self,
         path: &Path,
     ) -> io::Result<SearchResult> {
+        use std::{fs::File, process::Stdio};
+
         let bin = self.config.preprocessor.as_ref().unwrap();
         let mut cmd = std::process::Command::new(bin);
-        cmd.arg(path)
-            .stdin(std::process::Stdio::from(std::fs::File::open(path)?));
+        cmd.arg(path).stdin(Stdio::from(File::open(path)?));
 
         let mut rdr = self.command_builder.build(&mut cmd).map_err(|err| {
             io::Error::new(
@@ -478,7 +377,7 @@ impl<W: WriteColor> SearchWorker<W> {
 /// searcher and printer.
 fn search_path<M: Matcher, W: WriteColor>(
     matcher: M,
-    searcher: &mut Searcher,
+    searcher: &mut grep::searcher::Searcher,
     printer: &mut Printer<W>,
     path: &Path,
 ) -> io::Result<SearchResult> {
@@ -514,7 +413,7 @@ fn search_path<M: Matcher, W: WriteColor>(
 /// and printer.
 fn search_reader<M: Matcher, R: io::Read, W: WriteColor>(
     matcher: M,
-    searcher: &mut Searcher,
+    searcher: &mut grep::searcher::Searcher,
     printer: &mut Printer<W>,
     path: &Path,
     mut rdr: R,
@@ -545,9 +444,4 @@ fn search_reader<M: Matcher, R: io::Read, W: WriteColor>(
             })
         }
     }
-}
-
-/// Return the given duration as fractional seconds.
-fn fractional_seconds(duration: Duration) -> f64 {
-    (duration.as_secs() as f64) + (duration.subsec_nanos() as f64 * 1e-9)
 }

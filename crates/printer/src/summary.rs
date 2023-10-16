@@ -350,7 +350,7 @@ impl SummaryBuilder {
 ///
 /// This type is generic over `W`, which represents any implementation of
 /// the `termcolor::WriteColor` trait.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Summary<W> {
     config: Config,
     wtr: RefCell<CounterWriter<W>>,

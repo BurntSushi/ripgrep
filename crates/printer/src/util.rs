@@ -46,7 +46,7 @@ impl<M: Matcher> Replacer<M> {
         Replacer { space: None }
     }
 
-    /// Executes a replacement on the given subject string by replacing all
+    /// Executes a replacement on the given haystack string by replacing all
     /// matches with the given replacement. To access the result of the
     /// replacement, use the `replacement` method.
     ///
@@ -55,7 +55,7 @@ impl<M: Matcher> Replacer<M> {
         &'a mut self,
         searcher: &Searcher,
         matcher: &M,
-        mut subject: &[u8],
+        mut haystack: &[u8],
         range: std::ops::Range<usize>,
         replacement: &[u8],
     ) -> io::Result<()> {
@@ -63,8 +63,8 @@ impl<M: Matcher> Replacer<M> {
         // do this dance.
         let is_multi_line = searcher.multi_line_with_matcher(&matcher);
         if is_multi_line {
-            if subject[range.end..].len() >= MAX_LOOK_AHEAD {
-                subject = &subject[..range.end + MAX_LOOK_AHEAD];
+            if haystack[range.end..].len() >= MAX_LOOK_AHEAD {
+                haystack = &haystack[..range.end + MAX_LOOK_AHEAD];
             }
         } else {
             // When searching a single line, we should remove the line
@@ -72,8 +72,8 @@ impl<M: Matcher> Replacer<M> {
             // look-around) to observe the line terminator and not match
             // because of it.
             let mut m = Match::new(0, range.end);
-            trim_line_terminator(searcher, subject, &mut m);
-            subject = &subject[..m.end()];
+            trim_line_terminator(searcher, haystack, &mut m);
+            haystack = &haystack[..m.end()];
         }
         {
             let &mut Space { ref mut dst, ref mut caps, ref mut matches } =
@@ -83,7 +83,7 @@ impl<M: Matcher> Replacer<M> {
 
             replace_with_captures_in_context(
                 matcher,
-                subject,
+                haystack,
                 range.clone(),
                 caps,
                 dst,
@@ -91,7 +91,7 @@ impl<M: Matcher> Replacer<M> {
                     let start = dst.len();
                     caps.interpolate(
                         |name| matcher.capture_index(name),
-                        subject,
+                        haystack,
                         replacement,
                         dst,
                     );

@@ -447,7 +447,7 @@ impl JSONBuilder {
 ///   }
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct JSON<W> {
     config: Config,
     wtr: CounterWriter<W>,

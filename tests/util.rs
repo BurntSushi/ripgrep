@@ -78,7 +78,7 @@ impl Dir {
             nice_err(&dir, fs::remove_dir_all(&dir));
         }
         nice_err(&dir, repeat(|| fs::create_dir_all(&dir)));
-        Dir { root: root, dir: dir, pcre2: false }
+        Dir { root, dir, pcre2: false }
     }
 
     /// Use PCRE2 for this test.
@@ -167,7 +167,7 @@ impl Dir {
         if self.is_pcre2() {
             cmd.arg("--pcre2");
         }
-        TestCommand { dir: self.clone(), cmd: cmd }
+        TestCommand { dir: self.clone(), cmd }
     }
 
     /// Returns the path to the ripgrep executable.

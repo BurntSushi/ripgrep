@@ -1,0 +1,415 @@
+.TH RG 1 2023-11-13 "!!VERSION!!" "User Commands"
+.
+.
+.SH NAME
+rg \- recursively search the current directory for lines matching a pattern
+.
+.
+.SH SYNOPSIS
+.\" I considered using GNU troff's .SY and .YS "synopsis" macros here, but it
+.\" looks like they aren't portable. Specifically, they don't appear to be in
+.\" BSD's mdoc used on macOS.
+.sp
+\fBrg\fP [\fIOPTIONS\fP] \fIPATTERN\fP [\fIPATH\fP...]
+.sp
+\fBrg\fP [\fIOPTIONS\fP] \fB\-e\fP \fIPATTERN\fP... [\fIPATH\fP...]
+.sp
+\fBrg\fP [\fIOPTIONS\fP] \fB\-f\fP \fIPATTERNFILE\fP... [\fIPATH\fP...]
+.sp
+\fBrg\fP [\fIOPTIONS\fP] \fB\-\-files\fP [\fIPATH\fP...]
+.sp
+\fBrg\fP [\fIOPTIONS\fP] \fB\-\-type\-list\fP
+.sp
+\fIcommand\fP | \fBrg\fP [\fIOPTIONS\fP] \fIPATTERN\fP
+.sp
+\fBrg\fP [\fIOPTIONS\fP] \fB\-\-help\fP
+.sp
+\fBrg\fP [\fIOPTIONS\fP] \fB\-\-version\fP
+.
+.
+.SH DESCRIPTION
+ripgrep (rg) recursively searches the current directory for a regex pattern.
+By default, ripgrep will respect your \fB.gitignore\fP and automatically skip
+hidden files/directories and binary files.
+.sp
+ripgrep's default regex engine uses finite automata and guarantees linear
+time searching. Because of this, features like backreferences and arbitrary
+look-around are not supported. However, if ripgrep is built with PCRE2,
+then the \fB\-P/\-\-pcre2\fP flag can be used to enable backreferences and
+look-around.
+.sp
+ripgrep supports configuration files. Set \fBRIPGREP_CONFIG_PATH\fP to a
+configuration file. The file can specify one shell argument per line. Lines
+starting with \fB#\fP are ignored. For more details, see \fBCONFIGURATION
+FILES\fP below.
+.sp
+ripgrep will automatically detect if stdin exists and search stdin for a regex
+pattern, e.g. \fBls | rg foo\fP. In some environments, stdin may exist when
+it shouldn't. To turn off stdin detection, one can explicitly specify the
+directory to search, e.g. \fBrg foo ./\fP.
+.sp
+Tip: to disable all smart filtering and make ripgrep behave a bit more like
+classical grep, use \fBrg -uuu\fP.
+.
+.
+.SH REGEX SYNTAX
+ripgrep uses Rust's regex engine by default, which documents its syntax:
+\fIhttps://docs.rs/regex/1.*/regex/#syntax\fP
+.sp
+ripgrep uses byte-oriented regexes, which has some additional documentation:
+\fIhttps://docs.rs/regex/1.*/regex/bytes/index.html#syntax\fP
+.sp
+To a first approximation, ripgrep uses Perl-like regexes without look-around or
+backreferences. This makes them very similar to the "extended" (ERE) regular
+expressions supported by *egrep*, but with a few additional features like
+Unicode character classes.
+.sp
+If you're using ripgrep with the \fB\-P/\-\-pcre2\fP flag, then please consult
+\fIhttps://www.pcre.org\fP or the PCRE2 man pages for documentation on the
+supported syntax.
+.
+.
+.SH POSITIONAL ARGUMENTS
+.TP 12
+\fIPATTERN\fP
+A regular expression used for searching. To match a pattern beginning with a
+dash, use the \fB\-e/\-\-regexp\fP option.
+.TP 12
+\fIPATH\fP
+A file or directory to search. Directories are searched recursively. File paths
+specified explicitly on the command line override glob and ignore rules.
+.
+.
+.SH OPTIONS
+This section documents all flags that ripgrep accepts. Flags are grouped into
+categories below according to their function.
+.sp
+Note that many options can be turned on and off. In some cases, those flags are
+not listed explicitly below. For example, the \fB\-\-column\fP flag (listed
+below) enables column numbers in ripgrep's output, but the \fB\-\-no\-column\fP
+flag (not listed below) disables them. The reverse can also exist. For example,
+the \fB\-\-no\-ignore\fP flag (listed below) disables ripgrep's \fBgitignore\fP
+logic, but the \fB\-\-ignore\fP flag (not listed below) enables it. These
+flags are useful for overriding a ripgrep configuration file (or alias) on the
+command line. Each flag's documentation notes whether an inverted flag exists.
+In all cases, the flag specified last takes precedence.
+.
+.SS INPUT OPTIONS
+!!input!!
+.
+.SS SEARCH OPTIONS
+!!search!!
+.
+.SS FILTER OPTIONS
+!!filter!!
+.
+.SS OUTPUT OPTIONS
+!!output!!
+.
+.SS OUTPUT MODES
+!!output-modes!!
+.
+.SS LOGGING OPTIONS
+!!logging!!
+.
+.SS OTHER BEHAVIORS
+!!other-behaviors!!
+.
+.
+.SH EXIT STATUS
+If ripgrep finds a match, then the exit status of the program is \fB0\fP.
+If no match could be found, then the exit status is \fB1\fP. If an error
+occurred, then the exit status is always \fB2\fP unless ripgrep was run with
+the \fB\-q/\-\-quiet\fP flag and a match was found. In summary:
+.sp
+.IP \(bu 3n
+\fB0\fP exit status occurs only when at least one match was found, and if
+no error occurred, unless \fB\-q/\-\-quiet\fP was given.
+.
+.IP \(bu 3n
+\fB1\fP exit status occurs only when no match was found and no error occurred.
+.
+.IP \(bu 3n
+\fB2\fP exit status occurs when an error occurred. This is true for both
+catastrophic errors (e.g., a regex syntax error) and for soft errors (e.g.,
+unable to read a file).
+.
+.
+.SH AUTOMATIC FILTERING
+ripgrep does a fair bit of automatic filtering by default. This section
+describes that filtering and how to control it.
+.sp
+\fBTIP\fP: To disable automatic filtering, use \fBrg -uuu\fP.
+.sp
+ripgrep's automatic "smart" filtering is one of the most apparent
+differentiating features between ripgrep and other tools like \fBgrep\fP. As
+such, its behavior may be surprising to users that aren't expecting it.
+.sp
+ripgrep does four types of filtering automatically:
+.sp
+.
+.IP 1. 3n
+Files and directories that match ignore rules are not searched.
+.IP 2. 3n
+Hidden files and directories are not searched.
+.IP 3. 3n
+Binary files (files with a \fBNUL\fP byte) are not searched.
+.IP 4. 3n
+Symbolic links are not followed.
+.PP
+The first type of filtering is the most sophisticated. ripgrep will attempt to
+respect your \fBgitignore\fP rules as faithfully as possible. In particular,
+this includes the following:
+.
+.IP \(bu 3n
+Any global rules, e.g., in \fB$HOME/.config/git/ignore\fP.
+.
+.IP \(bu 3n
+Any rules in relevant \fB.gitignore\fP files.
+.
+.IP \(bu 3n
+Any local rules, e.g., in \fB.git/info/exclude\fP.
+.PP
+In some cases, ripgrep and \fBgit\fP will not always be in sync in terms
+of which files are ignored. For example, a file that is ignored via
+\fB.gitignore\fP but is tracked by \fBgit\fP would not be searched by ripgrep
+even though \fBgit\fP tracks it. This is unlikely to ever be fixed. Instead,
+you should either make sure your exclude rules match the files you track
+precisely, or otherwise use \fBgit grep\fP for search.
+.sp
+Additional ignore rules can be provided outside of a \fBgit\fP context:
+.
+.IP \(bu 3n
+Any rules in \fB.ignore\fP.
+.
+.IP \(bu 3n
+Any rules in \fB.rgignore\fP.
+.
+.IP \(bu 3n
+Any rules in files specified with the \fB\-\-ignore\-file\fP flag.
+.PP
+The precedence of ignore rules is as follows, with later items overriding
+earlier items:
+.
+.IP \(bu 3n
+Files given by \fB\-\-ignore\-file\fP.
+.
+.IP \(bu 3n
+Global gitignore rules, e.g., from \fB$HOME/.config/git/ignore\fP.
+.
+.IP \(bu 3n
+Local rules from \fB.git/info/exclude\fP.
+.
+.IP \(bu 3n
+Rules from \fB.gitignore\fP.
+.
+.IP \(bu 3n
+Rules from \fB.ignore\fP.
+.
+.IP \(bu 3n
+Rules from \fB.rgignore\fP.
+.PP
+So for example, if \fIfoo\fP were in a \fB.gitignore\fP and \fB!\fP\fIfoo\fP
+were in an \fB.rgignore\fP, then \fIfoo\fP would not be ignored since
+\fB.rgignore\fP takes precedence over \fB.gitignore\fP.
+.sp
+Each of the types of filtering can be configured via command line flags:
+.
+.IP \(bu 3n
+There are several flags starting with \fB\-\-no\-ignore\fP that toggle which,
+if any, ignore rules are respected. \fB\-\-no\-ignore\fP by itself will disable
+all
+of them.
+.
+.IP \(bu 3n
+\fB\-./\-\-hidden\fP will force ripgrep to search hidden files and directories.
+.
+.IP \(bu 3n
+\fB\-\-binary\fP will force ripgrep to search binary files.
+.
+.IP \(bu 3n
+\fB\-L/\-\-follow\fP will force ripgrep to follow symlinks.
+.PP
+As a special short hand, the \fB\-u\fP flag can be specified up to three times.
+Each additional time incrementally decreases filtering:
+.
+.IP \(bu 3n
+\fB\-u\fP is equivalent to \fB\-\-no\-ignore\fP.
+.
+.IP \(bu 3n
+\fB\-uu\fP is equivalent to \fB\-\-no\-ignore \-\-hidden\fP.
+.
+.IP \(bu 3n
+\fB\-uuu\fP is equivalent to \fB\-\-no\-ignore \-\-hidden \-\-binary\fP.
+.PP
+In particular, \fBrg -uuu\fP should search the same exact content as \fBgrep
+-r\fP.
+.
+.
+.SH CONFIGURATION FILES
+ripgrep supports reading configuration files that change ripgrep's default
+behavior. The format of the configuration file is an "rc" style and is very
+simple. It is defined by two rules:
+.
+.IP 1. 3n
+Every line is a shell argument, after trimming whitespace.
+.
+.IP 2. 3n
+Lines starting with \fB#\fP (optionally preceded by any amount of whitespace)
+are ignored.
+.PP
+ripgrep will look for a single configuration file if and only if the
+\fBRIPGREP_CONFIG_PATH\fP environment variable is set and is non-empty.
+ripgrep will parse arguments from this file on startup and will behave as if
+the arguments in this file were prepended to any explicit arguments given to
+ripgrep on the command line. Note though that the \fBrg\fP command you run
+must still be valid. That is, it must always contain at least one pattern at
+the command line, even if the configuration file uses the \fB\-e/\-\-regexp\fP
+flag.
+.sp
+For example, if your ripgreprc file contained a single line:
+.sp
+.EX
+    \-\-smart\-case
+.EE
+.sp
+then the following command
+.sp
+.EX
+    RIPGREP_CONFIG_PATH=wherever/.ripgreprc rg foo
+.EE
+.sp
+would behave identically to the following command:
+.sp
+.EX
+    rg \-\-smart-case foo
+.EE
+.sp
+Another example is adding types, like so:
+.sp
+.EX
+    \-\-type-add
+    web:*.{html,css,js}*
+.EE
+.sp
+The above would behave identically to the following command:
+.sp
+.EX
+    rg \-\-type\-add 'web:*.{html,css,js}*' foo
+.EE
+.sp
+The same applies to using globs. This:
+.sp
+.EX
+    \-\-glob=!.git
+.EE
+.sp
+or this:
+.sp
+.EX
+    \-\-glob
+    !.git
+.EE
+.sp
+would behave identically to the following command:
+.sp
+.EX
+    rg \-\-glob '!.git' foo
+.EE
+.sp
+The bottom line is that every shell argument needs to be on its own line. So
+for example, a config file containing
+.sp
+.EX
+    \-j 4
+.EE
+.sp
+is probably not doing what you intend. Instead, you want
+.sp
+.EX
+    \-j
+    4
+.EE
+.sp
+or
+.sp
+.EX
+    \-j4
+.EE
+.sp
+ripgrep also provides a flag, \fB\-\-no\-config\fP, that when present will
+suppress any and all support for configuration. This includes any future
+support for auto-loading configuration files from pre-determined paths.
+.sp
+Conflicts between configuration files and explicit arguments are handled
+exactly like conflicts in the same command line invocation. That is, assuming
+your config file contains only \fB\-\-smart\-case\fP, then this command:
+.sp
+.EX
+    RIPGREP_CONFIG_PATH=wherever/.ripgreprc rg foo \-\-case\-sensitive
+.EE
+.sp
+is exactly equivalent to
+.sp
+.EX
+    rg \-\-smart\-case foo \-\-case\-sensitive
+.EE
+.sp
+in which case, the \fB\-\-case\-sensitive\fP flag would override the
+\fB\-\-smart\-case\fP flag.
+.
+.
+.SH SHELL COMPLETION
+Shell completion files are included in the release tarball for Bash, Fish, Zsh
+and PowerShell.
+.sp
+For \fBbash\fP, move \fBrg.bash\fP to \fB$XDG_CONFIG_HOME/bash_completion\fP or
+\fB/etc/bash_completion.d/\fP.
+.sp
+For \fBfish\fP, move \fBrg.fish\fP to \fB$HOME/.config/fish/completions\fP.
+.sp
+For \fBzsh\fP, move \fB_rg\fP to one of your \fB$fpath\fP directories.
+.
+.
+.SH CAVEATS
+ripgrep may abort unexpectedly when using default settings if it searches a
+file that is simultaneously truncated. This behavior can be avoided by passing
+the \fB\-\-no\-mmap\fP flag which will forcefully disable the use of memory
+maps in all cases.
+.sp
+ripgrep may use a large amount of memory depending on a few factors. Firstly,
+if ripgrep uses parallelism for search (the default), then the entire
+output for each individual file is buffered into memory in order to prevent
+interleaving matches in the output. To avoid this, you can disable parallelism
+with the \fB\-j1\fP flag. Secondly, ripgrep always needs to have at least a
+single line in memory in order to execute a search. A file with a very long
+line can thus cause ripgrep to use a lot of memory. Generally, this only occurs
+when searching binary data with the \fB\-a/\-\-text\fP flag enabled. (When the
+\fB\-a/\-\-text\fP flag isn't enabled, ripgrep will replace all NUL bytes with
+line terminators, which typically prevents exorbitant memory usage.) Thirdly,
+when ripgrep searches a large file using a memory map, the process will likely
+report its resident memory usage as the size of the file. However, this does
+not mean ripgrep actually needed to use that much heap memory; the operating
+system will generally handle this for you.
+.
+.
+.SH VERSION
+!!VERSION!!
+.
+.
+.SH HOMEPAGE
+\fIhttps://github.com/BurntSushi/ripgrep\fP
+.sp
+Please report bugs and feature requests to the issue tracker. Please do your
+best to provide a reproducible test case for bugs. This should include the
+corpus being searched, the \fBrg\fP command, the actual output and the expected
+output. Please also include the output of running the same \fBrg\fP command but
+with the \fB\-\-debug\fP flag.
+.sp
+If you have questions that don't obviously fall into the "bug" or "feature
+request" category, then they are welcome in the Discussions section of the
+issue tracker: \fIhttps://github.com/BurntSushi/ripgrep/discussions\fP.
+.
+.
+.SH AUTHORS
+Andrew Gallant <\fIjamslam@gmail.com\fP>

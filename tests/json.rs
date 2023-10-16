@@ -189,6 +189,19 @@ rgtest!(basic, |dir: Dir, mut cmd: TestCommand| {
     assert_eq!(msgs[4].unwrap_summary().stats.bytes_printed, 494);
 });
 
+rgtest!(quiet_stats, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("sherlock", SHERLOCK);
+    cmd.arg("--json")
+        .arg("--quiet")
+        .arg("--stats")
+        .arg("Sherlock Holmes")
+        .arg("sherlock");
+
+    let msgs = json_decode(&cmd.stdout());
+    assert_eq!(msgs[0].unwrap_summary().stats.searches_with_match, 1);
+    assert_eq!(msgs[0].unwrap_summary().stats.bytes_searched, 367);
+});
+
 #[cfg(unix)]
 rgtest!(notutf8, |dir: Dir, mut cmd: TestCommand| {
     use std::ffi::OsStr;

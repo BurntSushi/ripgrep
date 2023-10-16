@@ -3,6 +3,7 @@ use std::io::{self, IsTerminal};
 use termcolor::{self, HyperlinkSpec};
 
 /// A writer that supports coloring with either line or block buffering.
+#[derive(Debug)]
 pub struct StandardStream(StandardStreamKind);
 
 /// Returns a possibly buffered writer to stdout for the given color choice.
@@ -57,6 +58,7 @@ pub fn stdout_buffered_block(
     StandardStream(StandardStreamKind::BlockBuffered(out))
 }
 
+#[derive(Debug)]
 enum StandardStreamKind {
     LineBuffered(termcolor::StandardStream),
     BlockBuffered(termcolor::BufferedStandardStream),
