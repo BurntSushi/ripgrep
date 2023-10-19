@@ -126,7 +126,7 @@ jobs:
       run: ${{ env.CARGO }} build --verbose --release --features pcre2 ${{ env.TARGET_FLAGS }}
 
     - name: Strip release binary (linux, macos and macos-arm)
-      if: matrix.build == 'linux' || matrix.os == 'macos'
+      if: matrix.build == 'linux' || matrix.build == 'macos'
       run: strip "target/${{ matrix.target }}/release/rg"
 
     - name: Strip release binary (arm)
