@@ -1111,12 +1111,12 @@ impl ArgMatches {
     /// Returns true if and only if matches should be grouped with file name
     /// headings.
     fn heading(&self) -> bool {
-        if self.is_present("no-heading") || self.is_present("vimgrep") {
-            false
+        if self.is_present("pretty") {
+            return true;
+        } else if self.is_present("no-heading") || self.is_present("vimgrep") {
+            return false;
         } else {
-            std::io::stdout().is_terminal()
-                || self.is_present("heading")
-                || self.is_present("pretty")
+            std::io::stdout().is_terminal() || self.is_present("heading")
         }
     }
 
@@ -1183,6 +1183,9 @@ impl ArgMatches {
         if self.output_kind() == OutputKind::Summary {
             return false;
         }
+        if self.is_present("pretty") {
+            return true;
+        }
         if self.is_present("no-line-number") {
             return false;
         }
@@ -1197,7 +1200,6 @@ impl ArgMatches {
         (std::io::stdout().is_terminal() && !self.is_only_stdin(paths))
             || self.is_present("line-number")
             || self.is_present("column")
-            || self.is_present("pretty")
             || self.is_present("vimgrep")
     }
 
