@@ -23,6 +23,8 @@ Performance improvements:
   Make most searches with `\b` look-arounds (among others) much faster.
 * [PERF #2591](https://github.com/BurntSushi/ripgrep/pull/2591):
   Parallel directory traversal now uses work stealing for faster searches.
+* [PERF #2642](https://github.com/BurntSushi/ripgrep/pull/2642):
+  Parallel directory traversal has some contention reduced.
 
 Feature enhancements:
 
