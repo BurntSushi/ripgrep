@@ -1934,6 +1934,7 @@ descended into. 'rg --max-depth 1 dir/' will search only the direct children of
 "
     );
     let arg = RGArg::flag("max-depth", "NUM")
+        .short("d")
         .help(SHORT)
         .long_help(LONG)
         .alias("maxdepth")
