@@ -161,7 +161,7 @@ jobs:
         echo "BIN=$bin" >> $GITHUB_ENV
 
     - name: Strip release binary (macos)
-      if: matrix.os == 'macos'
+      if: matrix.os == 'macos-latest'
       shell: bash
       run: strip "$BIN"
 

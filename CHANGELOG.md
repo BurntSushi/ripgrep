@@ -75,6 +75,8 @@ Bug fixes:
   Fix bug in `-w/--word-regexp` that would result in incorrect match offsets.
 * [BUG #2623](https://github.com/BurntSushi/ripgrep/issues/2623):
   Fix a number of bugs with the `-w/--word-regexp` flag.
+* [BUG #2636](https://github.com/BurntSushi/ripgrep/pull/2636):
+  Strip release binaries for macOS.
 
 
 13.0.0 (2021-06-12)
