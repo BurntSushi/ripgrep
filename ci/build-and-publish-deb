@@ -1,8 +1,5 @@
 #!/bin/bash
 
-set -e
-D="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-
 # This script builds a binary dpkg for Debian based distros. It does not
 # currently run in CI, and is instead run manually and the resulting dpkg is
 # uploaded to GitHub at the end of this script.
@@ -11,6 +8,12 @@ D="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # 'cargo install cargo-deb'.
 #
 # This should be run from the root of the ripgrep repo.
+#
+# TODO: It looks like this script could be pretty easily ported into GitHub
+# Actions?
+
+set -e
+D="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 if ! command -V cargo-deb > /dev/null 2>&1; then
   echo "cargo-deb command missing" >&2

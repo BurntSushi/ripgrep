@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# This script builds a ripgrep release for the aarch64-apple-darwin target.
+# At time of writing (2023-11-21), GitHub Actions does not free Apple silicon
+# runners. Since I have somewhat recently acquired an M2 mac mini, I just use
+# this script to build the release tarball and upload it with `gh`.
+#
+# Once GitHub Actions has proper support for Apple silicon, we should add it
+# to our release workflow and drop this script.
+
 set -e
 
 version="$1"
@@ -13,13 +21,14 @@ if ! grep -q "version = \"$version\"" Cargo.toml; then
   exit 1
 fi
 
-cargo build --release --features pcre2
-BIN=target/release/rg
-NAME=ripgrep-$version-aarch64-apple-darwin
+target=aarch64-apple-darwin
+cargo build --release --features pcre2 --target $target
+BIN=target/$target/release/rg
+NAME=ripgrep-$version-$target
 ARCHIVE="deployment/m2/$NAME"
 
 mkdir -p "$ARCHIVE"/{complete,doc}
-cp target/release/rg "$ARCHIVE"/
+cp "$BIN" "$ARCHIVE"/
 strip "$ARCHIVE/rg"
 cp {README.md,COPYING,UNLICENSE,LICENSE-MIT} "$ARCHIVE"/
 cp {CHANGELOG.md,FAQ.md,GUIDE.md} "$ARCHIVE"/doc/
