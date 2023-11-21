@@ -2,9 +2,8 @@ These are Docker images used for cross compilation in CI builds (or locally)
 via the [Cross](https://github.com/rust-embedded/cross) tool.
 
 The Cross tool actually provides its own Docker images, and all Docker images
-in this directory are derived from one of them. We provide our own in order
-to customize the environment. For example, we need to install some things like
-`asciidoctor` in order to generate man pages. We also install compression tools
+in this directory are derived from one of them. We provide our own in order to
+customize the environment. For example, we need to install compression tools
 like `xz` so that tests for the `-z/--search-zip` flag are run.
 
 If you make a change to a Docker image, then you can re-build it. `cd` into the

@@ -61,18 +61,24 @@ patch release out with a fix. However, no promises are made.
 Does ripgrep have a man page?
 </h3>
 
-Yes! Whenever ripgrep is compiled on a system with `asciidoctor` or `asciidoc`
-present, then a man page is generated from ripgrep's argv parser. After
-compiling ripgrep, you can find the man page like so from the root of the
-repository:
+Yes. If you installed ripgrep through a package manager on a Unix system, then
+it would have ideally been installed for you in the proper location. In which
+case, `man rg` should just work.
+
+Otherwise, you can ask ripgrep to generate the man page:
 
 ```
-$ find ./target -name rg.1 -print0 | xargs -0 ls -t | head -n1
-./target/debug/build/ripgrep-79899d0edd4129ca/out/rg.1
+$ mkdir -p man/man1
+$ rg --generate man > man/man1/rg.1
+$ MANPATH="$PWD/man" man rg
 ```
 
-Running `man -l ./target/debug/build/ripgrep-79899d0edd4129ca/out/rg.1` will
-show the man page in your normal pager.
+Or, if your version of `man` supports the `-l/--local-file` flag, then this
+will suffice:
+
+```
+$ rg --generate man | man -l -
+```
 
 Note that the man page's documentation for options is equivalent to the output
 shown in `rg --help`. To see more condensed documentation (one line per flag),

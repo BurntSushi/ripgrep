@@ -8,6 +8,15 @@ Unreleased changes. Release notes have not yet been written.
   `rg -B1 -A2`. That is, `-A` and `-B` no longer completely override `-C`.
   Instead, they only partially override `-C`.
 
+Build process changes:
+
+* ripgrep's shell completions and man page are now created by running ripgrep
+with a new `--generate` flag. For example, `rg --generate man` will write a
+man page in `roff` format on stdout. The release archives have not changed.
+* The optional build dependency on `asciidoc` or `asciidoctor` has been
+dropped. Previously, it was used to produce ripgrep's man page. ripgrep now
+owns this process itself by writing `roff` directly.
+
 Performance improvements:
 
 * [PERF #1760](https://github.com/BurntSushi/ripgrep/issues/1760):

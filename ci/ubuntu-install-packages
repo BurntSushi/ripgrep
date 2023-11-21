@@ -11,6 +11,4 @@ if ! command -V sudo; then
 fi
 sudo apt-get update
 sudo apt-get install -y --no-install-recommends \
-  asciidoctor \
-  zsh xz-utils liblz4-tool musl-tools \
-  brotli zstd
+  zsh xz-utils liblz4-tool musl-tools brotli zstd

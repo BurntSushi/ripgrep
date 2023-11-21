@@ -101,11 +101,6 @@ jobs:
       run: |
         ci/ubuntu-install-packages
 
-    - name: Install packages (macOS)
-      if: matrix.os == 'macos-latest'
-      run: |
-        ci/macos-install-packages
-
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
       with:
