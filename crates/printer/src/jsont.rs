@@ -8,10 +8,7 @@
 
 use std::{borrow::Cow, path::Path};
 
-use {
-    base64,
-    serde::{Serialize, Serializer},
-};
+use {base64, serde::Serializer, serde_derive::Serialize};
 
 use crate::stats::Stats;
 
@@ -132,6 +129,7 @@ where
     T: AsRef<[u8]>,
     S: Serializer,
 {
+    use serde::Serialize;
     Data::from_bytes(bytes.as_ref()).serialize(ser)
 }
 
@@ -140,5 +138,6 @@ where
     P: AsRef<Path>,
     S: Serializer,
 {
+    use serde::Serialize;
     path.as_ref().map(|p| Data::from_path(p.as_ref())).serialize(ser)
 }

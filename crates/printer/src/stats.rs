@@ -10,7 +10,7 @@ use crate::util::NiceDuration;
 /// When statistics are reported by a printer, they correspond to all searches
 /// executed with that printer.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(serde_derive::Serialize))]
 pub struct Stats {
     elapsed: NiceDuration,
     searches: u64,
