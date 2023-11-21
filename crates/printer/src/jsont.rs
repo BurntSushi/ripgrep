@@ -207,11 +207,84 @@ impl<'a> serde::Serialize for Data<'a> {
         match *self {
             Data::Text { ref text } => state.serialize_field("text", text)?,
             Data::Bytes { bytes } => {
-                use base64::engine::{general_purpose::STANDARD, Engine};
-                let encoded = STANDARD.encode(bytes);
-                state.serialize_field("bytes", &encoded)?;
+                // use base64::engine::{general_purpose::STANDARD, Engine};
+                // let encoded = STANDARD.encode(bytes);
+                state.serialize_field("bytes", &base64_standard(bytes))?;
             }
         }
         state.end()
+    }
+}
+
+/// Implements "standard" base64 encoding as described in RFC 3548[1].
+///
+/// We roll our own here instead of bringing in something heavier weight like
+/// the `base64` crate. In particular, we really don't care about perf much
+/// here, since this is only used for data or file paths that are not valid
+/// UTF-8.
+///
+/// [1]: https://tools.ietf.org/html/rfc3548#section-3
+fn base64_standard(bytes: &[u8]) -> String {
+    const ALPHABET: &[u8] =
+        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    let mut out = String::new();
+    let mut it = bytes.chunks_exact(3);
+    while let Some(chunk) = it.next() {
+        let group24 = (usize::from(chunk[0]) << 16)
+            | (usize::from(chunk[1]) << 8)
+            | usize::from(chunk[2]);
+        let index1 = (group24 >> 18) & 0b111_111;
+        let index2 = (group24 >> 12) & 0b111_111;
+        let index3 = (group24 >> 6) & 0b111_111;
+        let index4 = (group24 >> 0) & 0b111_111;
+        out.push(char::from(ALPHABET[index1]));
+        out.push(char::from(ALPHABET[index2]));
+        out.push(char::from(ALPHABET[index3]));
+        out.push(char::from(ALPHABET[index4]));
+    }
+    match it.remainder() {
+        &[] => {}
+        &[byte0] => {
+            let group8 = usize::from(byte0);
+            let index1 = (group8 >> 2) & 0b111_111;
+            let index2 = (group8 << 4) & 0b111_111;
+            out.push(char::from(ALPHABET[index1]));
+            out.push(char::from(ALPHABET[index2]));
+            out.push('=');
+            out.push('=');
+        }
+        &[byte0, byte1] => {
+            let group16 = (usize::from(byte0) << 8) | usize::from(byte1);
+            let index1 = (group16 >> 10) & 0b111_111;
+            let index2 = (group16 >> 4) & 0b111_111;
+            let index3 = (group16 << 2) & 0b111_111;
+            out.push(char::from(ALPHABET[index1]));
+            out.push(char::from(ALPHABET[index2]));
+            out.push(char::from(ALPHABET[index3]));
+            out.push('=');
+        }
+        _ => unreachable!("remainder must have length < 3"),
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Tests taken from RFC 4648[1].
+    //
+    // [1]: https://datatracker.ietf.org/doc/html/rfc4648#section-10
+    #[test]
+    fn base64_basic() {
+        let b64 = |s: &str| base64_standard(s.as_bytes());
+        assert_eq!(b64(""), "");
+        assert_eq!(b64("f"), "Zg==");
+        assert_eq!(b64("fo"), "Zm8=");
+        assert_eq!(b64("foo"), "Zm9v");
+        assert_eq!(b64("foob"), "Zm9vYg==");
+        assert_eq!(b64("fooba"), "Zm9vYmE=");
+        assert_eq!(b64("foobar"), "Zm9vYmFy");
     }
 }

@@ -16,10 +16,9 @@ edition = "2021"
 
 [features]
 default = ["serde"]
-serde = ["dep:base64", "dep:serde", "dep:serde_json"]
+serde = ["dep:serde", "dep:serde_json"]
 
 [dependencies]
-base64 = { version = "0.21.4", optional = true }
 bstr = "1.6.2"
 grep-matcher = { version = "0.1.6", path = "../matcher" }
 grep-searcher = { version = "0.1.11", path = "../searcher" }
