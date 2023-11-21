@@ -192,7 +192,6 @@ dependencies = [
  "grep-searcher",
  "log",
  "serde",
- "serde_derive",
  "serde_json",
  "termcolor",
 ]
