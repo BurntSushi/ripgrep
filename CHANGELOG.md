@@ -36,6 +36,8 @@ Feature enhancements:
   When `extra-verbose` mode is enabled in zsh, show extra file type info.
 * [FEATURE #2409](https://github.com/BurntSushi/ripgrep/pull/2409):
   Added installation instructions for `winget`.
+* [FEATURE #2643](https://github.com/BurntSushi/ripgrep/issues/2643):
+  Make `-d` a short flag for `--max-depth`.
 
 Bug fixes:
 

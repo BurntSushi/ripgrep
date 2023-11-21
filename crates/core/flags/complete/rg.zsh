@@ -192,7 +192,7 @@ _rg() {
     $no"--no-max-columns-preview[don't show preview for long lines (with -M)]"
 
     + '(max-depth)' # Directory-depth options
-    '--max-depth=[specify max number of directories to descend]:number of directories'
+    {-d,--max-depth}'[specify max number of directories to descend]:number of directories'
     '--maxdepth=[alias for --max-depth]:number of directories'
     '!--maxdepth=:number of directories'
 

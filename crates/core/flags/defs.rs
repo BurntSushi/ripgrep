@@ -3829,6 +3829,9 @@ impl Flag for MaxDepth {
     fn is_switch(&self) -> bool {
         false
     }
+    fn name_short(&self) -> Option<u8> {
+        Some(b'd')
+    }
     fn name_long(&self) -> &'static str {
         "max-depth"
     }
@@ -3871,6 +3874,9 @@ fn test_max_depth() {
     assert_eq!(None, args.max_depth);
 
     let args = parse_low_raw(["--max-depth", "5"]).unwrap();
+    assert_eq!(Some(5), args.max_depth);
+
+    let args = parse_low_raw(["-d", "5"]).unwrap();
     assert_eq!(Some(5), args.max_depth);
 
     let args = parse_low_raw(["--max-depth", "5", "--max-depth=10"]).unwrap();
