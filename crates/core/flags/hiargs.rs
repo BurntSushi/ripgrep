@@ -592,7 +592,8 @@ impl HiArgs {
         &self,
         wtr: W,
     ) -> grep::printer::Standard<W> {
-        grep::printer::StandardBuilder::new()
+        let mut builder = grep::printer::StandardBuilder::new();
+        builder
             .byte_offset(self.byte_offset)
             .color_specs(self.colors.clone())
             .column(self.column)
@@ -615,10 +616,17 @@ impl HiArgs {
                 self.field_match_separator.clone().into_bytes(),
             )
             .separator_path(self.path_separator.clone())
-            .separator_search(self.file_separator.clone())
             .stats(self.stats.is_some())
-            .trim_ascii(self.trim)
-            .build(wtr)
+            .trim_ascii(self.trim);
+        // When doing multi-threaded searching, the buffer writer is
+        // responsible for writing separators since it is the only thing that
+        // knows whether something has been printed or not. But for the single
+        // threaded case, we don't use a buffer writer and thus can let the
+        // printer own this.
+        if self.threads == 1 {
+            builder.separator_search(self.file_separator.clone());
+        }
+        builder.build(wtr)
     }
 
     /// Builds a "summary" printer where search results are aggregated on a
