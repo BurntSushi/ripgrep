@@ -1,9 +1,9 @@
 ripgrep !!VERSION!!
 Andrew Gallant <jamslam@gmail.com>
 
-ripgrep (rg) recursively searches the current directory for a regex pattern.
-By default, ripgrep will respect gitignore rules and automatically skip hidden
-files/directories and binary files.
+ripgrep (rg) recursively searches the current directory for lines matching
+a regex pattern. By default, ripgrep will respect gitignore rules and
+automatically skip hidden files/directories and binary files.
 
 Use -h for short descriptions and --help for more details.
 
