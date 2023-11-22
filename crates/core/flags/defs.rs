@@ -6205,7 +6205,10 @@ for this flag are:
 (Default) Do not sort results. Fastest. Can be multi-threaded.
 .TP 12
 \fBpath\fP
-Sort by file path. Always single-threaded.
+Sort by file path. Always single-threaded. The order is determined by sorting
+files in each directory entry during traversal. This means that given the files
+\fBa/b\fP and \fBa+\fP, the latter will sort after the former even though
+\fB+\fP would normally sort before \fB/\fP.
 .TP 12
 \fBmodified\fP
 Sort by the last modified time on a file. Always single-threaded.
@@ -6220,8 +6223,8 @@ If the chosen (manually or by-default) sorting criteria isn't available on your
 system (for example, creation time is not available on ext4 file systems), then
 ripgrep will attempt to detect this, print an error and exit without searching.
 .sp
-To sort results in reverse or descending order, use the \flag{sortr} flag. Also,
-this flag overrides \flag{sortr}.
+To sort results in reverse or descending order, use the \flag{sortr} flag.
+Also, this flag overrides \flag{sortr}.
 .sp
 Note that sorting results currently always forces ripgrep to abandon
 parallelism and run in a single thread.
@@ -6303,7 +6306,11 @@ for this flag are:
 (Default) Do not sort results. Fastest. Can be multi-threaded.
 .TP 12
 \fBpath\fP
-Sort by file path. Always single-threaded.
+Sort by file path. Always single-threaded. The order is determined by sorting
+files in each directory entry during traversal. This means that given the files
+\fBa/b\fP and \fBa+\fP, the latter will sort before the former even though
+\fB+\fP would normally sort after \fB/\fP when doing a reverse lexicographic
+sort.
 .TP 12
 \fBmodified\fP
 Sort by the last modified time on a file. Always single-threaded.
