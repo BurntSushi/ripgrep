@@ -30,6 +30,7 @@ pub(crate) use crate::flags::{
         man::generate as generate_man_page,
         version::{
             generate_long as generate_version_long,
+            generate_pcre2 as generate_version_pcre2,
             generate_short as generate_version_short,
         },
     },

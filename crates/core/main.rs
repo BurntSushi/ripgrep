@@ -383,6 +383,7 @@ fn generate(mode: crate::flags::GenerateMode) -> anyhow::Result<ExitCode> {
 fn special(mode: crate::flags::SpecialMode) -> anyhow::Result<ExitCode> {
     use crate::flags::SpecialMode;
 
+    let mut exit = ExitCode::from(0);
     let output = match mode {
         SpecialMode::HelpShort => flags::generate_help_short(),
         SpecialMode::HelpLong => flags::generate_help_long(),
@@ -390,33 +391,16 @@ fn special(mode: crate::flags::SpecialMode) -> anyhow::Result<ExitCode> {
         SpecialMode::VersionLong => flags::generate_version_long(),
         // --pcre2-version is a little special because it emits an error
         // exit code if this build of ripgrep doesn't support PCRE2.
-        SpecialMode::VersionPCRE2 => return version_pcre2(),
+        SpecialMode::VersionPCRE2 => {
+            let (output, available) = flags::generate_version_pcre2();
+            if !available {
+                exit = ExitCode::from(1);
+            }
+            output
+        }
     };
     writeln!(std::io::stdout(), "{}", output.trim_end())?;
-    Ok(ExitCode::from(0))
-}
-
-/// The top-level entry point for `--pcre2-version`.
-fn version_pcre2() -> anyhow::Result<ExitCode> {
-    let mut stdout = std::io::stdout().lock();
-
-    #[cfg(feature = "pcre2")]
-    {
-        use grep::pcre2;
-
-        let (major, minor) = pcre2::version();
-        writeln!(stdout, "PCRE2 {}.{} is available", major, minor)?;
-        if cfg!(target_pointer_width = "64") && pcre2::is_jit_available() {
-            writeln!(stdout, "JIT is available")?;
-        }
-        Ok(ExitCode::from(0))
-    }
-
-    #[cfg(not(feature = "pcre2"))]
-    {
-        writeln!(stdout, "PCRE2 is not available in this build of ripgrep.")?;
-        Ok(ExitCode::from(1))
-    }
+    Ok(exit)
 }
 
 /// Prints a heuristic error messages when nothing is searched.

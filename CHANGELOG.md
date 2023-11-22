@@ -44,6 +44,8 @@ Feature enhancements:
   The `--debug` flag now indicates whether stdin or `./` is being searched.
 * [FEATURE #2643](https://github.com/BurntSushi/ripgrep/issues/2643):
   Make `-d` a short flag for `--max-depth`.
+* [FEATURE #2645](https://github.com/BurntSushi/ripgrep/issues/2645):
+  The `--version` output will now also contain PCRE2 availability information.
 
 Bug fixes:
 

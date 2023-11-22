@@ -33,6 +33,7 @@ pub(crate) fn generate_long() -> String {
 
     let mut out = String::new();
     writeln!(out, "{}", generate_short()).unwrap();
+    writeln!(out).unwrap();
     writeln!(out, "features:{}", features().join(",")).unwrap();
     if !compile.is_empty() {
         writeln!(out, "simd(compile):{}", compile.join(",")).unwrap();
@@ -40,7 +41,38 @@ pub(crate) fn generate_long() -> String {
     if !runtime.is_empty() {
         writeln!(out, "simd(runtime):{}", runtime.join(",")).unwrap();
     }
+    let (pcre2_version, _) = generate_pcre2();
+    writeln!(out, "\n{pcre2_version}").unwrap();
     out
+}
+
+/// Generates multi-line version string with PCRE2 information.
+///
+/// This also returns whether PCRE2 is actually available in this build of
+/// ripgrep.
+pub(crate) fn generate_pcre2() -> (String, bool) {
+    let mut out = String::new();
+
+    #[cfg(feature = "pcre2")]
+    {
+        use grep::pcre2;
+
+        let (major, minor) = pcre2::version();
+        write!(out, "PCRE2 {}.{} is available", major, minor).unwrap();
+        if cfg!(target_pointer_width = "64") && pcre2::is_jit_available() {
+            writeln!(out, " (JIT is available)").unwrap();
+        } else {
+            writeln!(out, " (JIT is unavailable)").unwrap();
+        }
+        (out, true)
+    }
+
+    #[cfg(not(feature = "pcre2"))]
+    {
+        writeln!(out, "PCRE2 is not available in this build of ripgrep.")
+            .unwrap();
+        (out, false)
+    }
 }
 
 /// Returns the relevant SIMD features supported by the CPU at runtime.
