@@ -657,6 +657,110 @@ but Doctor Watson has to have it taken out for him and dusted,
     eqnice!(expected, cmd.stdout());
 });
 
+rgtest!(f917_trim_multi_standard, |dir: Dir, mut cmd: TestCommand| {
+    const HAYSTACK: &str = "     0123456789abcdefghijklmnopqrstuvwxyz";
+    dir.create("haystack", HAYSTACK);
+    cmd.args(&["--multiline", "--trim", "-r$0", "--no-filename", r"a\n?bc"]);
+
+    let expected = "0123456789abcdefghijklmnopqrstuvwxyz\n";
+    eqnice!(expected, cmd.stdout());
+});
+
+rgtest!(f917_trim_max_columns_normal, |dir: Dir, mut cmd: TestCommand| {
+    const HAYSTACK: &str = "     0123456789abcdefghijklmnopqrstuvwxyz";
+    dir.create("haystack", HAYSTACK);
+    cmd.args(&[
+        "--trim",
+        "--max-columns-preview",
+        "-M8",
+        "--no-filename",
+        "abc",
+    ]);
+
+    let expected = "01234567 [... omitted end of long line]\n";
+    eqnice!(expected, cmd.stdout());
+});
+
+rgtest!(f917_trim_max_columns_matches, |dir: Dir, mut cmd: TestCommand| {
+    const HAYSTACK: &str = "     0123456789abcdefghijklmnopqrstuvwxyz";
+    dir.create("haystack", HAYSTACK);
+    cmd.args(&[
+        "--trim",
+        "--max-columns-preview",
+        "-M8",
+        "--color=always",
+        "--colors=path:none",
+        "--no-filename",
+        "abc",
+    ]);
+
+    let expected = "01234567 [... 1 more match]\n";
+    eqnice!(expected, cmd.stdout());
+});
+
+rgtest!(
+    f917_trim_max_columns_multi_standard,
+    |dir: Dir, mut cmd: TestCommand| {
+        const HAYSTACK: &str = "     0123456789abcdefghijklmnopqrstuvwxyz";
+        dir.create("haystack", HAYSTACK);
+        cmd.args(&[
+            "--multiline",
+            "--trim",
+            "--max-columns-preview",
+            "-M8",
+            // Force the "slow" printing path without actually
+            // putting colors in the output.
+            "--color=always",
+            "--colors=path:none",
+            "--no-filename",
+            r"a\n?bc",
+        ]);
+
+        let expected = "01234567 [... 1 more match]\n";
+        eqnice!(expected, cmd.stdout());
+    }
+);
+
+rgtest!(
+    f917_trim_max_columns_multi_only_matching,
+    |dir: Dir, mut cmd: TestCommand| {
+        const HAYSTACK: &str = "     0123456789abcdefghijklmnopqrstuvwxyz";
+        dir.create("haystack", HAYSTACK);
+        cmd.args(&[
+            "--multiline",
+            "--trim",
+            "--max-columns-preview",
+            "-M8",
+            "--only-matching",
+            "--no-filename",
+            r".*a\n?bc.*",
+        ]);
+
+        let expected = "01234567 [... 0 more matches]\n";
+        eqnice!(expected, cmd.stdout());
+    }
+);
+
+rgtest!(
+    f917_trim_max_columns_multi_per_match,
+    |dir: Dir, mut cmd: TestCommand| {
+        const HAYSTACK: &str = "     0123456789abcdefghijklmnopqrstuvwxyz";
+        dir.create("haystack", HAYSTACK);
+        cmd.args(&[
+            "--multiline",
+            "--trim",
+            "--max-columns-preview",
+            "-M8",
+            "--vimgrep",
+            "--no-filename",
+            r".*a\n?bc.*",
+        ]);
+
+        let expected = "1:1:01234567 [... 0 more matches]\n";
+        eqnice!(expected, cmd.stdout());
+    }
+);
+
 // See: https://github.com/BurntSushi/ripgrep/issues/993
 rgtest!(f993_null_data, |dir: Dir, mut cmd: TestCommand| {
     dir.create("test", "foo\x00bar\x00\x00\x00baz\x00");

@@ -1100,13 +1100,14 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         let mut count = 0;
         let mut stepper = LineStep::new(line_term, 0, bytes.len());
         while let Some((start, end)) = stepper.next(bytes) {
-            let line = Match::new(start, end);
+            let mut line = Match::new(start, end);
             self.write_prelude(
                 self.sunk.absolute_byte_offset() + line.start() as u64,
                 self.sunk.line_number().map(|n| n + count),
                 Some(matches[0].start() as u64 + 1),
             )?;
             count += 1;
+            self.trim_ascii_prefix(bytes, &mut line);
             if self.exceeds_max_columns(&bytes[line]) {
                 self.write_exceeded_line(bytes, line, matches, &mut midx)?;
             } else {
@@ -1189,12 +1190,12 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                     Some(m.start().saturating_sub(line.start()) as u64 + 1),
                 )?;
                 count += 1;
+                self.trim_line_terminator(bytes, &mut line);
+                self.trim_ascii_prefix(bytes, &mut line);
                 if self.exceeds_max_columns(&bytes[line]) {
                     self.write_exceeded_line(bytes, line, &[m], &mut 0)?;
                     continue;
                 }
-                self.trim_line_terminator(bytes, &mut line);
-                self.trim_ascii_prefix(bytes, &mut line);
 
                 while !line.is_empty() {
                     if m.end() <= line.start() {
@@ -1246,6 +1247,14 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
 
     #[inline(always)]
     fn write_line(&self, line: &[u8]) -> io::Result<()> {
+        let line = if !self.config().trim_ascii {
+            line
+        } else {
+            let lineterm = self.searcher.line_terminator();
+            let full_range = Match::new(0, line.len());
+            let range = trim_ascii_prefix(lineterm, line, full_range);
+            &line[range]
+        };
         if self.exceeds_max_columns(line) {
             let range = Match::new(0, line.len());
             self.write_exceeded_line(
@@ -1255,7 +1264,8 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                 &mut 0,
             )?;
         } else {
-            self.write_trim(line)?;
+            // self.write_trim(line)?;
+            self.write(line)?;
             if !self.has_line_terminator(line) {
                 self.write_line_term()?;
             }
@@ -1274,7 +1284,8 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
             return self.write_line(bytes);
         }
 
-        let line = Match::new(0, bytes.len());
+        let mut line = Match::new(0, bytes.len());
+        self.trim_ascii_prefix(bytes, &mut line);
         if self.exceeds_max_columns(bytes) {
             self.write_exceeded_line(bytes, line, matches, &mut 0)
         } else {
@@ -1298,7 +1309,6 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         match_index: &mut usize,
     ) -> io::Result<()> {
         self.trim_line_terminator(bytes, &mut line);
-        self.trim_ascii_prefix(bytes, &mut line);
         if matches.is_empty() {
             self.write(&bytes[line])?;
             return Ok(());
@@ -1533,15 +1543,6 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         self.wtr().borrow_mut().reset()?;
         self.in_color_match.set(false);
         Ok(())
-    }
-
-    fn write_trim(&self, buf: &[u8]) -> io::Result<()> {
-        if !self.config().trim_ascii {
-            return self.write(buf);
-        }
-        let mut range = Match::new(0, buf.len());
-        self.trim_ascii_prefix(buf, &mut range);
-        self.write(&buf[range])
     }
 
     fn write(&self, buf: &[u8]) -> io::Result<()> {
