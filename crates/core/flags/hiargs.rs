@@ -171,6 +171,7 @@ impl HiArgs {
         } else {
             std::thread::available_parallelism().map_or(1, |n| n.get()).min(12)
         };
+        log::debug!("using {threads} thread(s)");
         let with_filename = low
             .with_filename
             .unwrap_or_else(|| low.vimgrep || !paths.is_one_file);
