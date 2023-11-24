@@ -75,6 +75,8 @@ Bug fixes:
   Fix gitignore parsing bug where a trailing `\/` resulted in an error.
 * [BUG #2243](https://github.com/BurntSushi/ripgrep/issues/2243):
   Fix `--sort` flag for values other than `path`.
+* [BUG #2337](https://github.com/BurntSushi/ripgrep/issues/2337):
+  Improve docs to mention that `--stats` is always implied by `--json`.
 * [BUG #2381](https://github.com/BurntSushi/ripgrep/issues/2381):
   Make `-p/--pretty` override flags like `--no-line-number`.
 * [BUG #2392](https://github.com/BurntSushi/ripgrep/issues/2392):

@@ -3392,7 +3392,8 @@ flags are used in concert with \flag{json}.
 .sp
 Other flags that control aspects of the standard output such as
 \flag{only-matching}, \flag{heading}, \flag{replace}, \flag{max-columns}, etc.,
-have no effect when \flag{json} is set.
+have no effect when \flag{json} is set. However, enabling JSON output will
+always implicitly and unconditionally enable \flag{stats}.
 .sp
 A more complete description of the JSON format used can be found here:
 \fIhttps://docs.rs/grep-printer/*/grep_printer/struct.JSON.html\fP.
@@ -6419,6 +6420,8 @@ matches, number of files searched, and the time taken for the entire search to
 complete.
 .sp
 This set of aggregate statistics may expand over time.
+.sp
+This flag is always and implicitly enabled when \flag{json} is used.
 .sp
 Note that this flag has no effect if \flag{files}, \flag{files-with-matches} or
 \flag{files-without-match} is passed.
