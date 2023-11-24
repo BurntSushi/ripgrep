@@ -7242,6 +7242,10 @@ if the pattern matches every byte in an input file, then each line will be
 repeated for every byte matched. For this reason, users should only use this
 flag when there is no other choice. Editor integrations should prefer some
 other way of reading results from ripgrep, such as via the \flag{json} flag.
+One alternative to avoiding exorbitant memory usage is to force ripgrep into
+single threaded mode with the \flag{threads} flag. Note though that this will
+not impact the total size of the output, just the heap memory that ripgrep will
+use.
 "
     }
     fn doc_choices(&self) -> &'static [&'static str] {

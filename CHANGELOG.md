@@ -87,6 +87,8 @@ Bug fixes:
   Add documentation about `.ignore`/`.rgignore` files in parent directories.
 * [BUG #2480](https://github.com/BurntSushi/ripgrep/issues/2480):
   Fix bug when using inline regex flags with `-e/--regexp`.
+* [BUG #2505](https://github.com/BurntSushi/ripgrep/issues/2505):
+  Improve docs for `--vimgrep` by mentioning footguns and some work-arounds.
 * [BUG #2519](https://github.com/BurntSushi/ripgrep/issues/2519):
   Fix incorrect default value in documentation for `--field-match-separator`.
 * [BUG #2523](https://github.com/BurntSushi/ripgrep/issues/2523):
