@@ -370,6 +370,14 @@ If you're a **Rust programmer**, ripgrep can be installed with `cargo`.
 $ cargo install ripgrep
 ```
 
+Alternatively, one can use [`cargo
+binstall`](https://github.com/cargo-bins/cargo-binstall) to install a ripgrep
+binary directly from GitHub:
+
+```
+$ cargo binstall ripgrep
+```
+
 
 ### Building
 

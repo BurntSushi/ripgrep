@@ -36,6 +36,8 @@ Feature enhancements:
   Flags are now categorized in `-h/--help` output and ripgrep's man page.
 * [FEATURE #2195](https://github.com/BurntSushi/ripgrep/issues/2195):
   When `extra-verbose` mode is enabled in zsh, show extra file type info.
+* [FEATURE #2298](https://github.com/BurntSushi/ripgrep/issues/2298):
+  Add instructions for installing ripgrep using `cargo binstall`.
 * [FEATURE #2409](https://github.com/BurntSushi/ripgrep/pull/2409):
   Added installation instructions for `winget`.
 * [FEATURE #2425](https://github.com/BurntSushi/ripgrep/pull/2425):
