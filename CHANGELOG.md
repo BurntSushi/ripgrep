@@ -71,6 +71,8 @@ Bug fixes:
   Improve docs for `-r/--replace` syntax.
 * [BUG #2198](https://github.com/BurntSushi/ripgrep/issues/2198):
   Fix bug where `--no-ignore-dot` would not ignore `.rgignore`.
+* [BUG #2201](https://github.com/BurntSushi/ripgrep/issues/2201):
+  Improve docs for `-r/--replace` flag.
 * [BUG #2288](https://github.com/BurntSushi/ripgrep/issues/2288):
   `-A` and `-B` now only each partially override `-C`.
 * [BUG #2236](https://github.com/BurntSushi/ripgrep/issues/2236):
