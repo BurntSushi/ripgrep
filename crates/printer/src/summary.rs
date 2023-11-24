@@ -688,6 +688,23 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for SummarySink<'p, 's, M, W> {
         Ok(!self.should_quit())
     }
 
+    fn binary_data(
+        &mut self,
+        searcher: &Searcher,
+        binary_byte_offset: u64,
+    ) -> Result<bool, io::Error> {
+        if searcher.binary_detection().quit_byte().is_some() {
+            if let Some(ref path) = self.path {
+                log::debug!(
+                    "ignoring {path}: found binary data at \
+                     offset {binary_byte_offset}",
+                    path = path.as_path().display(),
+                );
+            }
+        }
+        Ok(true)
+    }
+
     fn begin(&mut self, _searcher: &Searcher) -> Result<bool, io::Error> {
         if self.path.is_none() && self.summary.config.kind.requires_path() {
             return Err(io::Error::error_message(format!(

@@ -755,6 +755,23 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
         Ok(!self.should_quit())
     }
 
+    fn binary_data(
+        &mut self,
+        searcher: &Searcher,
+        binary_byte_offset: u64,
+    ) -> Result<bool, io::Error> {
+        if searcher.binary_detection().quit_byte().is_some() {
+            if let Some(ref path) = self.path {
+                log::debug!(
+                    "ignoring {path}: found binary data at \
+                     offset {binary_byte_offset}",
+                    path = path.display(),
+                );
+            }
+        }
+        Ok(true)
+    }
+
     fn begin(&mut self, _searcher: &Searcher) -> Result<bool, io::Error> {
         self.json.wtr.reset_count();
         self.start_time = Instant::now();

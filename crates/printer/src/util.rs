@@ -344,7 +344,7 @@ impl<'a> PrinterPath<'a> {
     }
 
     /// Return this path as an actual `Path` type.
-    fn as_path(&self) -> &Path {
+    pub(crate) fn as_path(&self) -> &Path {
         #[cfg(unix)]
         fn imp<'p>(p: &'p PrinterPath<'_>) -> &'p Path {
             use std::{ffi::OsStr, os::unix::ffi::OsStrExt};

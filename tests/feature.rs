@@ -425,7 +425,6 @@ rgtest!(f411_parallel_search_stats, |dir: Dir, mut cmd: TestCommand| {
     dir.create("sherlock_2", SHERLOCK);
 
     let lines = cmd.arg("-j2").arg("--stats").arg("Sherlock").stdout();
-    dbg!(&lines);
     assert!(lines.contains("4 matched lines"));
     assert!(lines.contains("2 files contained matches"));
     assert!(lines.contains("2 files searched"));

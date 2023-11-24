@@ -884,9 +884,18 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for StandardSink<'p, 's, M, W> {
 
     fn binary_data(
         &mut self,
-        _searcher: &Searcher,
+        searcher: &Searcher,
         binary_byte_offset: u64,
     ) -> Result<bool, io::Error> {
+        if searcher.binary_detection().quit_byte().is_some() {
+            if let Some(ref path) = self.path {
+                log::debug!(
+                    "ignoring {path}: found binary data at \
+                     offset {binary_byte_offset}",
+                    path = path.as_path().display(),
+                );
+            }
+        }
         self.binary_byte_offset = Some(binary_byte_offset);
         Ok(true)
     }
