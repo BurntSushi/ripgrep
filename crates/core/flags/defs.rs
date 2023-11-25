@@ -5969,7 +5969,9 @@ impl Flag for SearchZip {
 This flag instructs ripgrep to search in compressed files. Currently gzip,
 bzip2, xz, LZ4, LZMA, Brotli and Zstd files are supported. This option expects
 the decompression binaries (such as \fBgzip\fP) to be available in your
-\fBPATH\fP.
+\fBPATH\fP. If the required binaries are not found, then ripgrep will not
+emit an error messages by default. Use the \flag{debug} flag to see more
+information.
 .sp
 Note that this flag does not make ripgrep search archive formats as directory
 trees. It only makes ripgrep detect compressed files and then decompress them

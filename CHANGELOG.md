@@ -63,6 +63,8 @@ Bug fixes:
   Don't error when `-v/--invert-match` is used multiple times.
 * [BUG #1275](https://github.com/BurntSushi/ripgrep/issues/1275):
   Fix bug with `\b` assertion in the regex engine.
+* [BUG #1622](https://github.com/BurntSushi/ripgrep/issues/1622):
+  Add note about error messages to `-z/--search-zip` documentation.
 * [BUG #1648](https://github.com/BurntSushi/ripgrep/issues/1648):
   Fix bug where sometimes short flags with values, e.g., `-M 900`, would fail.
 * [BUG #1701](https://github.com/BurntSushi/ripgrep/issues/1701):
