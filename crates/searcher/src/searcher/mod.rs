@@ -52,7 +52,7 @@ type Range = Match;
 ///    heap, then binary detection is only guaranteed to be applied to the
 ///    parts corresponding to a match. When `Quit` is enabled, then the first
 ///    few KB of the data are searched for binary data.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct BinaryDetection(line_buffer::BinaryDetection);
 
 impl BinaryDetection {

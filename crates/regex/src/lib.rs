@@ -9,6 +9,7 @@ pub use crate::{
 };
 
 mod ast;
+mod ban;
 mod config;
 mod error;
 mod literal;

@@ -8,7 +8,7 @@ use {
 };
 
 use crate::{
-    ast::AstAnalysis, error::Error, non_matching::non_matching_bytes,
+    ast::AstAnalysis, ban, error::Error, non_matching::non_matching_bytes,
     strip::strip_from_match,
 };
 
@@ -35,6 +35,7 @@ pub(crate) struct Config {
     pub(crate) dfa_size_limit: usize,
     pub(crate) nest_limit: u32,
     pub(crate) line_terminator: Option<LineTerminator>,
+    pub(crate) ban: Option<u8>,
     pub(crate) crlf: bool,
     pub(crate) word: bool,
     pub(crate) fixed_strings: bool,
@@ -58,6 +59,7 @@ impl Default for Config {
             dfa_size_limit: 1000 * (1 << 20),
             nest_limit: 250,
             line_terminator: None,
+            ban: None,
             crlf: false,
             word: false,
             fixed_strings: false,
@@ -205,6 +207,9 @@ impl ConfiguredHIR {
                 .build()
                 .translate(&pattern, &ast)
                 .map_err(Error::generic)?;
+            if let Some(byte) = config.ban {
+                ban::check(&hir, byte)?;
+            }
             // We don't need to do this for the fixed-strings case above
             // because is_fixed_strings will return false if any pattern
             // contains a line terminator. Therefore, we don't need to strip

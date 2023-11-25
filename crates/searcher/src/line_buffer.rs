@@ -47,7 +47,7 @@ pub(crate) fn alloc_error(limit: usize) -> io::Error {
 /// is that binary data often indicates data that is undesirable to search
 /// using textual patterns. Of course, there are many cases in which this isn't
 /// true, which is why binary detection is disabled by default.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum BinaryDetection {
     /// No binary detection is performed. Data reported by the line buffer may
     /// contain arbitrary bytes.

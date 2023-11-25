@@ -977,6 +977,20 @@ rgtest!(r1765, |dir: Dir, mut cmd: TestCommand| {
     assert!(!cmd.stdout().is_empty());
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/1838
+rgtest!(r1838_nul_error_with_binary_detection, |dir: Dir, _: TestCommand| {
+    // We don't support this error reporting with PCRE2 since we can't parse
+    // the pattern (easily) to give a good error message.
+    if dir.is_pcre2() {
+        return;
+    }
+    dir.create("test", "foo\n");
+
+    dir.command().args(&[r"foo\x00?"]).assert_err();
+    eqnice!("test:foo\n", dir.command().args(&["-a", r"foo\x00?"]).stdout());
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/1866
 rgtest!(r1866, |dir: Dir, mut cmd: TestCommand| {
     dir.create("test", "foobar\nfoobar\nfoo quux");
     cmd.args(&[

@@ -34,6 +34,8 @@ Feature enhancements:
   Add new `--stop-on-nonmatch` flag.
 * [FEATURE #1814](https://github.com/BurntSushi/ripgrep/issues/1814):
   Flags are now categorized in `-h/--help` output and ripgrep's man page.
+* [FEATURE #1838](https://github.com/BurntSushi/ripgrep/issues/1838):
+  An error is shown when searching for NUL bytes with binary detection enabled.
 * [FEATURE #2195](https://github.com/BurntSushi/ripgrep/issues/2195):
   When `extra-verbose` mode is enabled in zsh, show extra file type info.
 * [FEATURE #2298](https://github.com/BurntSushi/ripgrep/issues/2298):

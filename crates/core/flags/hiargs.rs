@@ -499,9 +499,14 @@ impl HiArgs {
         if let Some(limit) = self.dfa_size_limit {
             builder.dfa_size_limit(limit);
         }
+        if !self.binary.is_none() {
+            builder.ban_byte(Some(b'\x00'));
+        }
         let m = match builder.build_many(&self.patterns.patterns) {
             Ok(m) => m,
-            Err(err) => anyhow::bail!(suggest_multiline(err.to_string())),
+            Err(err) => {
+                anyhow::bail!(suggest_text(suggest_multiline(err.to_string())))
+            }
         };
         Ok(PatternMatcher::RustRegex(m))
     }
@@ -1144,6 +1149,13 @@ impl BinaryDetection {
         };
         BinaryDetection { explicit, implicit }
     }
+
+    /// Returns true when both implicit and explicit binary detection is
+    /// disabled.
+    pub(crate) fn is_none(&self) -> bool {
+        let none = grep::searcher::BinaryDetection::none();
+        self.explicit == none && self.implicit == none
+    }
 }
 
 /// Builds the file type matcher from low level arguments.
@@ -1423,6 +1435,20 @@ fn suggest_multiline(msg: String) -> String {
 
 Consider enabling multiline mode with the --multiline flag (or -U for short).
 When multiline mode is enabled, new line characters can be matched.",
+        )
+    } else {
+        msg
+    }
+}
+
+/// Possibly suggest the `-a/--text` flag.
+fn suggest_text(msg: String) -> String {
+    if msg.contains("pattern contains \"\\0\"") {
+        format!(
+            "{msg}
+
+Consider enabling text mode with the --text flag (or -a for short). Otherwise,
+binary detection is enabled and matching a NUL byte is impossible.",
         )
     } else {
         msg

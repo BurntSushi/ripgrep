@@ -286,6 +286,22 @@ impl RegexMatcherBuilder {
         self
     }
 
+    /// Ban a byte from occurring in a regular expression pattern.
+    ///
+    /// If this byte is found in the regex pattern, then an error will be
+    /// returned at construction time.
+    ///
+    /// This is useful when binary detection is enabled. Callers will likely
+    /// want to ban the same byte that is used to detect binary data, i.e.,
+    /// the NUL byte. The reason for this is that when binary detection is
+    /// enabled, it's impossible to match a NUL byte because binary detection
+    /// will either quit when one is found, or will convert NUL bytes to line
+    /// terminators to avoid exorbitant heap usage.
+    pub fn ban_byte(&mut self, byte: Option<u8>) -> &mut RegexMatcherBuilder {
+        self.config.ban = byte;
+        self
+    }
+
     /// Set the line terminator to `\r\n` and enable CRLF matching for `$` in
     /// regex patterns.
     ///

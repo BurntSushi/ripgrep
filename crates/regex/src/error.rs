@@ -60,6 +60,8 @@ pub enum ErrorKind {
     ///
     /// The invalid byte is included in this error.
     InvalidLineTerminator(u8),
+    /// Occurs when a banned byte was found in a pattern.
+    Banned(u8),
 }
 
 impl std::error::Error for Error {}
@@ -76,8 +78,15 @@ impl std::fmt::Display for Error {
             ErrorKind::InvalidLineTerminator(byte) => {
                 write!(
                     f,
-                    "line terminators must be ASCII, but {} is not",
-                    [byte].as_bstr()
+                    "line terminators must be ASCII, but {byte:?} is not",
+                    byte = [byte].as_bstr(),
+                )
+            }
+            ErrorKind::Banned(byte) => {
+                write!(
+                    f,
+                    "pattern contains {byte:?} but it is impossible to match",
+                    byte = [byte].as_bstr(),
                 )
             }
         }
