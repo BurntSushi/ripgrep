@@ -48,6 +48,11 @@ pattern, e.g. \fBls | rg foo\fP. In some environments, stdin may exist when
 it shouldn't. To turn off stdin detection, one can explicitly specify the
 directory to search, e.g. \fBrg foo ./\fP.
 .sp
+Like other tools such as \fBls\fP, ripgrep will alter its output depending on
+whether stdout is connected to a tty. By default, when printing a tty, ripgrep
+will enable colors, line numbers and a heading format that lists each matching
+file path once instead of once per matching line.
+.sp
 Tip: to disable all smart filtering and make ripgrep behave a bit more like
 classical grep, use \fBrg -uuu\fP.
 .

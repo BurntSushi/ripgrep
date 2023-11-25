@@ -32,6 +32,8 @@ Feature enhancements:
 
 * Added or improved file type filtering for Ada, DITA, Elixir, Fuchsia, Gentoo,
   Gradle, GraphQL, Markdown, Prolog, Raku, TypeScript, USD, V
+* [FEATURE #1709](https://github.com/BurntSushi/ripgrep/issues/1709):
+  Improve documentation of ripgrep's behavior when stdout is a tty.
 * [FEATURE #1737](https://github.com/BurntSushi/ripgrep/issues/1737):
   Provide binaries for Apple silicon.
 * [FEATURE #1790](https://github.com/BurntSushi/ripgrep/issues/1790):

@@ -537,9 +537,8 @@ When enabled, ripgrep will use block buffering. That is, whenever a matching
 line is found, it will be written to an in-memory buffer and will not be
 written to stdout until the buffer reaches a certain size. This is the default
 when ripgrep's stdout is redirected to a pipeline or a file. When ripgrep's
-stdout is connected to a terminal, line buffering will be used by default.
-Forcing block buffering can be useful when dumping a large amount of contents
-to a terminal.
+stdout is connected to a tty, line buffering will be used by default. Forcing
+block buffering can be useful when dumping a large amount of contents to a tty.
 .sp
 This overrides the \flag{line-buffered} flag.
 "
@@ -709,8 +708,8 @@ impl Flag for Color {
         r"
 This flag controls when to use colors. The default setting is \fBauto\fP, which
 means ripgrep will try to guess when to use colors. For example, if ripgrep is
-printing to a terminal, then it will use colors, but if it is redirected to a
-file or a pipe, then it will suppress color output.
+printing to a tty, then it will use colors, but if it is redirected to a file
+or a pipe, then it will suppress color output.
 .sp
 ripgrep will suppress color output by default in some other circumstances as
 well. These include, but are not limited to:
@@ -851,8 +850,8 @@ the background color for line numbers to yellow:
     rg \-\-colors 'match:fg:magenta' \-\-colors 'line:bg:yellow'
 .EE
 .sp
-Extended colors can be used for \fIvalue\fP when the terminal supports
-ANSI color sequences. These are specified as either \fIx\fP (256-color) or
+Extended colors can be used for \fIvalue\fP when the tty supports ANSI color
+sequences. These are specified as either \fIx\fP (256-color) or
 .IB x , x , x
 (24-bit truecolor) where \fIx\fP is a number between \fB0\fP and \fB255\fP
 inclusive. \fIx\fP may be given as a normal decimal number or a hexadecimal
@@ -2615,10 +2614,11 @@ impl Flag for Heading {
     fn doc_long(&self) -> &'static str {
         r"
 This flag prints the file path above clusters of matches from each file instead
-of printing the file path as a prefix for each matched line. This is the
-default mode when printing to a terminal.
+of printing the file path as a prefix for each matched line.
 .sp
-When \fBstdout\fP is not a terminal, then ripgrep will default to the standard
+This is the default mode when printing to a tty.
+.sp
+When \fBstdout\fP is not a tty, then ripgrep will default to the standard
 grep-like format. Once can force this format in Unix-like environments by
 piping the output of ripgrep to \fBcat\fP. For example, \fBrg\fP \fIfoo\fP \fB|
 cat\fP.
@@ -3454,11 +3454,11 @@ impl Flag for LineBuffered {
     fn doc_long(&self) -> &'static str {
         r"
 When enabled, ripgrep will always use line buffering. That is, whenever a
-matching line is found, it will be flushed to stdout immediately. This is
-the default when ripgrep's stdout is connected to a terminal, but otherwise,
-ripgrep will use block buffering, which is typically faster. This flag forces
-ripgrep to use line buffering even if it would otherwise use block buffering.
-This is typically useful in shell pipelines, for example:
+matching line is found, it will be flushed to stdout immediately. This is the
+default when ripgrep's stdout is connected to a tty, but otherwise, ripgrep
+will use block buffering, which is typically faster. This flag forces ripgrep
+to use line buffering even if it would otherwise use block buffering. This is
+typically useful in shell pipelines, for example:
 .sp
 .EX
     tail -f something.log | rg foo --line-buffered | rg bar
@@ -3517,8 +3517,9 @@ impl Flag for LineNumber {
     }
     fn doc_long(&self) -> &'static str {
         r"
-Show line numbers (1-based). This is enabled by default stdout is connected to
-a tty.
+Show line numbers (1-based).
+.sp
+This is enabled by default when stdout is connected to a tty.
 .sp
 This flag can be disabled by \flag{no-line-number}.
 "
@@ -3569,8 +3570,9 @@ impl Flag for LineNumberNo {
     }
     fn doc_long(&self) -> &'static str {
         r"
-Suppress line numbers. Line numbers are off by default when stdout is not
-connected to a tty.
+Suppress line numbers.
+.sp
+Line numbers are off by default when stdout is not connected to a tty.
 .sp
 Line numbers can be forcefully turned on by \flag{line-number}.
 "
@@ -7296,9 +7298,9 @@ impl Flag for WithFilename {
         r"
 This flag instructs ripgrep to print the file path for each matching line.
 This is the default when more than one file is searched. If \flag{heading} is
-enabled (the default when printing to a terminal), the file path will be shown
-above clusters of matches from each file; otherwise, the file name will be
-shown as a prefix for each matched line.
+enabled (the default when printing to a tty), the file path will be shown above
+clusters of matches from each file; otherwise, the file name will be shown as a
+prefix for each matched line.
 .sp
 This flag overrides \flag{no-filename}.
 "
