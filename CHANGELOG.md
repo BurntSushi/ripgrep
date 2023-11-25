@@ -32,6 +32,8 @@ Feature enhancements:
 
 * Added or improved file type filtering for Ada, DITA, Elixir, Fuchsia, Gentoo,
   Gradle, GraphQL, Markdown, Prolog, Raku, TypeScript, USD, V
+* [FEATURE #1737](https://github.com/BurntSushi/ripgrep/issues/1737):
+  Provide binaries for Apple silicon.
 * [FEATURE #1790](https://github.com/BurntSushi/ripgrep/issues/1790):
   Add new `--stop-on-nonmatch` flag.
 * [FEATURE #1814](https://github.com/BurntSushi/ripgrep/issues/1814):
