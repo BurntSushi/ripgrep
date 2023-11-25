@@ -67,6 +67,8 @@ Bug fixes:
   Disable mmap searching in all non-64-bit environments.
 * [BUG #1966](https://github.com/BurntSushi/ripgrep/issues/1966):
   Fix bug where ripgrep can panic when printing to stderr.
+* [BUG #2046](https://github.com/BurntSushi/ripgrep/issues/2046):
+  Clarify that `--pre` can accept any kind of path in the documentation.
 * [BUG #2108](https://github.com/BurntSushi/ripgrep/issues/2108):
   Improve docs for `-r/--replace` syntax.
 * [BUG #2198](https://github.com/BurntSushi/ripgrep/issues/2198):

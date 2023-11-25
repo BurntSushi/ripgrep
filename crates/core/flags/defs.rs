@@ -5359,9 +5359,9 @@ impl Flag for Pre {
     fn doc_long(&self) -> &'static str {
         r#"
 For each input \fIPATH\fP, this flag causes ripgrep to search the standard
-output of \fICOMMAND\fP \fIPATH\fP instead of the contents of \fIPATH\fP. This
-option expects the \fICOMMAND\fP program to either be an absolute path or to
-be available in your \fBPATH\fP. Either an empty string \fICOMMAND\fP or the
+output of \fICOMMAND\fP \fIPATH\fP instead of the contents of \fIPATH\fP.
+This option expects the \fICOMMAND\fP program to either be a path or to be
+available in your \fBPATH\fP. Either an empty string \fICOMMAND\fP or the
 \fB\-\-no\-pre\fP flag will disable this behavior.
 .sp
 .TP 12
