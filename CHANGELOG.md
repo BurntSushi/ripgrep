@@ -63,6 +63,8 @@ Bug fixes:
   Don't error when `-v/--invert-match` is used multiple times.
 * [BUG #1275](https://github.com/BurntSushi/ripgrep/issues/1275):
   Fix bug with `\b` assertion in the regex engine.
+* [BUG #1376](https://github.com/BurntSushi/ripgrep/issues/1376):
+  Using `--no-ignore --ignore-vcs` now works as one would expect.
 * [BUG #1622](https://github.com/BurntSushi/ripgrep/issues/1622):
   Add note about error messages to `-z/--search-zip` documentation.
 * [BUG #1648](https://github.com/BurntSushi/ripgrep/issues/1648):
