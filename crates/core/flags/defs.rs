@@ -6773,6 +6773,9 @@ any custom file types). The end result is that \fB\-\-type=all\fP causes
 ripgrep to search in "whitelist" mode, where it will only search files it
 recognizes via its type definitions.
 .sp
+Note that this flag has lower precedence than both the \flag{glob} flag and
+any rules found in ignore files.
+.sp
 To see the list of available file types, use the \flag{type-list} flag.
 "#
     }
