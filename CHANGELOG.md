@@ -19,6 +19,8 @@ owns this process itself by writing `roff` directly.
 
 Performance improvements:
 
+* [PERF #1746](https://github.com/BurntSushi/ripgrep/issues/1746):
+  Make some cases with inner literals faster.
 * [PERF #1760](https://github.com/BurntSushi/ripgrep/issues/1760):
   Make most searches with `\b` look-arounds (among others) much faster.
 * [PERF #2591](https://github.com/BurntSushi/ripgrep/pull/2591):
