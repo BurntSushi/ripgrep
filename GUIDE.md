@@ -342,7 +342,7 @@ $ rg 'fn run' --type rust
 or, more succinctly,
 
 ```
-$ rg 'fn run' -trust
+$ rg 'fn run' -t rust
 ```
 
 The way the `--type` flag functions is simple. It acts as a name that is
