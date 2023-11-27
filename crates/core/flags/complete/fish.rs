@@ -37,7 +37,7 @@ pub(crate) fn generate() -> String {
         if let Some(negated) = flag.name_negated() {
             let long = format!("-l '{}'", negated.replace("'", "\\'"));
             out.push_str(
-                &template
+                &TEMPLATE
                     .replace("!SHORT!", "")
                     .replace("!LONG!", &long)
                     .replace("!DOC!", &doc),
