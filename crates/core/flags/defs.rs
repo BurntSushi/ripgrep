@@ -3078,7 +3078,7 @@ Individual patterns can still be matched case sensitively by using
 inline regex flags. For example, \fB(?\-i)abc\fP will match \fBabc\fP
 case sensitively even when this flag is used.
 .sp
-This flag overrides \flag{case-sensitive} and flag{smart-case}.
+This flag overrides \flag{case-sensitive} and \flag{smart-case}.
 "#
     }
 
