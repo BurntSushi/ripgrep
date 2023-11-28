@@ -6,6 +6,8 @@ Bug fixes:
 
 * [BUG #2654](https://github.com/BurntSushi/ripgrep/issues/2654):
   Fix `deb` release sha256 sum file.
+* [BUG #2658](https://github.com/BurntSushi/ripgrep/issues/2658):
+  Fix partial regression in the behavior of `--null-data --line-regexp`.
 * [BUG #2659](https://github.com/BurntSushi/ripgrep/issues/2659):
   Fix Fish shell completions.
 * [BUG #2662](https://github.com/BurntSushi/ripgrep/issues/2662):

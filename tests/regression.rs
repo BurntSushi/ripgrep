@@ -1210,3 +1210,10 @@ rgtest!(r2574, |dir: Dir, mut cmd: TestCommand| {
         .stdout();
     eqnice!("some.domain.com\nsome.domain.com\n", got);
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/2658
+rgtest!(r2658_null_data_line_regexp, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("haystack", "foo\0bar\0quux\0");
+    let got = cmd.args(&["--null-data", "--line-regexp", r"bar"]).stdout();
+    eqnice!("haystack:bar\0", got);
+});
