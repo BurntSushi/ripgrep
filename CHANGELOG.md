@@ -1,3 +1,13 @@
+14.0.2 (2023-11-27)
+===================
+This is a patch release with a few small bug fixes.
+
+Bug fixes:
+
+* [BUG #2662](https://github.com/BurntSushi/ripgrep/issues/2662):
+  Fix typo in documentation for `-i/--ignore-case`.
+
+
 14.0.1 (2023-11-26)
 ===================
 This a patch release meant to fix `cargo install ripgrep` on Windows.
