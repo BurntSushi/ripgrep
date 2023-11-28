@@ -332,14 +332,15 @@ jobs:
       run: |
         cargo deb --profile deb --target ${{ env.TARGET }}
         version="${{ needs.create-release.outputs.version }}"
-        deb="target/${{ env.TARGET }}/debian/ripgrep_$version-1_amd64.deb"
-        echo "DEB=$deb" >> $GITHUB_ENV
+        echo "DEB_DIR=target/${{ env.TARGET }}/debian" >> $GITHUB_ENV
+        echo "DEB_NAME=ripgrep_$version-1_amd64.deb" >> $GITHUB_ENV
 
     - name: Create sha256 sum of deb file
       shell: bash
       run: |
-        sum="$DEB.sha256"
-        shasum -a 256 "$DEB" > "$sum"
+        cd "$DEB_DIR"
+        sum="$DEB_NAME.sha256"
+        shasum -a 256 "$DEB_NAME" > "$sum"
         echo "SUM=$sum" >> $GITHUB_ENV
 
     - name: Upload release archive
@@ -347,5 +348,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       shell: bash
       run: |
+        cd "$DEB_DIR"
         version="${{ needs.create-release.outputs.version }}"
-        gh release upload "$version" ${{ env.DEB }} ${{ env.SUM }}
+        gh release upload "$version" "$DEB_NAME" "$SUM"
