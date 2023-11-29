@@ -358,7 +358,7 @@ same port as Haiku x86_64 using the x86 secondary architecture build:
 $ sudo pkgman install ripgrep_x86
 ```
 
-If you're a **Void Linux** user, then you can install ripgrep from
+If you're a **Void Linux** user, then you can install ripgrep from the
 [official repository](https://voidlinux.org/packages/?arch=x86_64&q=ripgrep):
 
 ```
