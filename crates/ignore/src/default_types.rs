@@ -172,7 +172,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
         "*.mdx",
     ]),
     (&["matlab"], &["*.m"]),
-    (&["meson"], &["meson.build", "meson_options.txt"]),
+    (&["meson"], &["meson.build", "meson_options.txt", "meson.options"]),
     (&["minified"], &["*.min.html", "*.min.css", "*.min.js"]),
     (&["mint"], &["*.mint"]),
     (&["mk"], &["mkfile"]),
