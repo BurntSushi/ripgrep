@@ -359,7 +359,7 @@ $ sudo pkgman install ripgrep_x86
 ```
 
 If you're a **Void Linux** user, then you can install ripgrep from
-[official repo](https://voidlinux.org/packages/?arch=x86_64&q=ripgrep):
+[official repository](https://voidlinux.org/packages/?arch=x86_64&q=ripgrep):
 
 ```
 $ sudo xbps-install -Syv ripgrep
