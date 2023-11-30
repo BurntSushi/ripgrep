@@ -283,7 +283,7 @@ If you're a **Guix** user, you can install ripgrep from the official
 package collection:
 
 ```
-$ sudo guix install ripgrep
+$ guix install ripgrep
 ```
 
 If you're a **Debian** user (or a user of a Debian derivative like **Ubuntu**),
