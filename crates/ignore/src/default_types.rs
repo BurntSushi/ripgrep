@@ -118,6 +118,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["jupyter"], &["*.ipynb", "*.jpynb"]),
     (&["k"], &["*.k"]),
     (&["kotlin"], &["*.kt", "*.kts"]),
+    (&["lean"], &["*.lean"]),
     (&["less"], &["*.less"]),
     (&["license"], &[
         // General
