@@ -90,6 +90,7 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &LineRegexp,
     &MaxColumns,
     &MaxColumnsPreview,
+    &MaxColumnsPreviewBefore,
     &MaxCount,
     &MaxDepth,
     &MaxFilesize,
@@ -116,6 +117,7 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &Passthru,
     &PCRE2,
     &PCRE2Version,
+    &PerMatch,
     &Pre,
     &PreGlob,
     &Pretty,
@@ -3768,6 +3770,53 @@ fn test_max_columns_preview() {
     assert_eq!(false, args.max_columns_preview);
 }
 
+/// --max-columns-preview-before
+#[derive(Debug)]
+struct MaxColumnsPreviewBefore;
+
+impl Flag for MaxColumnsPreviewBefore {
+    fn is_switch(&self) -> bool {
+        false
+    }
+    fn name_long(&self) -> &'static str {
+        "max-columns-preview-before"
+    }
+    fn doc_variable(&self) -> Option<&'static str> {
+        Some("NUM")
+    }
+    fn doc_category(&self) -> Category {
+        Category::Output
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Columns to be printed before the first match in the preview."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Set the maximum amount of columns before the first match should be printed in
+the preview.
+.sp
+When the \flag{max-columns-preview} flag is used, ripgrep will print a preview
+start from the beginning of the line. When this flag is combined with
+\flag{max-columns-preview}, the preview will start \fINUM\fP columns before the
+first match.
+.sp
+If the \flag{max-columns-preview} flag is not set, then this has no effect.
+"
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        args.max_columns_preview_before =
+            Some(convert::u64(&v.unwrap_value())?);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_max_columns_preview_before() {
+    // TODO
+}
+
 /// -m/--max-count
 #[derive(Debug)]
 struct MaxCount;
@@ -5333,6 +5382,42 @@ fn test_pcre2_version() {
 
     let args = parse_low_raw(["--pcre2-version"]).unwrap();
     assert_eq!(Some(SpecialMode::VersionPCRE2), args.special);
+}
+
+/// --per-match
+#[derive(Debug)]
+struct PerMatch;
+
+impl Flag for PerMatch {
+    fn is_switch(&self) -> bool {
+        true
+    }
+    fn name_long(&self) -> &'static str {
+        "per-match"
+    }
+    fn doc_category(&self) -> Category {
+        Category::Output
+    }
+    fn doc_short(&self) -> &'static str {
+        r"TODO"
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+TODO
+"
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        assert!(v.unwrap_switch(), "--per-match does not have a negation");
+        args.per_match = true;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_per_match() {
+    // TODO
 }
 
 /// --pre
