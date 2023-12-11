@@ -1,3 +1,13 @@
+14.1.0 (TBD)
+============
+This is a minor release with a few small new features and bug fixes.
+
+Feature enhancements:
+
+* [FEATURE #2684](https://github.com/BurntSushi/ripgrep/issues/2684):
+  Improve completions for the `fish` shell.
+
+
 14.0.3 (2023-11-28)
 ===================
 This is a patch release with a bug fix for the `--sortr` flag.

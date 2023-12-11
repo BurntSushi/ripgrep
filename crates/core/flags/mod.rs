@@ -70,7 +70,7 @@ mod parse;
 /// value. Flags that accept multiple values are an unsupported abberation.
 trait Flag: Debug + Send + Sync + UnwindSafe + RefUnwindSafe + 'static {
     /// Returns true if this flag is a switch. When a flag is a switch, the
-    /// CLI parser will look for a value after the flag is seen.
+    /// CLI parser will not look for a value after the flag is seen.
     fn is_switch(&self) -> bool;
 
     /// A short single byte name for this flag. This returns `None` by default,
@@ -150,6 +150,10 @@ trait Flag: Debug + Send + Sync + UnwindSafe + RefUnwindSafe + 'static {
         &[]
     }
 
+    fn completion_type(&self) -> CompletionType {
+        CompletionType::Other
+    }
+
     /// Given the parsed value (which might just be a switch), this should
     /// update the state in `args` based on the value given for this flag.
     ///
@@ -226,6 +230,21 @@ impl Category {
             Category::OtherBehaviors => "other-behaviors",
         }
     }
+}
+
+/// The kind of argument a flag accepts, to be used for shell completions.
+#[derive(Clone, Copy, Debug)]
+enum CompletionType {
+    /// No special category. is_switch() and doc_choices() may apply.
+    Other,
+    /// A path to a file.
+    Filename,
+    /// A command in $PATH.
+    Executable,
+    /// The name of a file type, as used by e.g. --type.
+    Filetype,
+    /// The name of an encoding_rs encoding, as used by --encoding.
+    Encoding,
 }
 
 /// Represents a value parsed from the command line.
