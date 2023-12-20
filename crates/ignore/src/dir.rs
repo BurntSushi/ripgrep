@@ -19,7 +19,7 @@ use std::{
     fs::{File, FileType},
     io::{self, BufRead},
     path::{Path, PathBuf},
-    sync::{Arc, RwLock},
+    sync::{Arc, RwLock, Weak},
 };
 
 use crate::{
@@ -101,7 +101,7 @@ struct IgnoreInner {
     /// Note that this is never used during matching, only when adding new
     /// parent directory matchers. This avoids needing to rebuild glob sets for
     /// parent directories if many paths are being searched.
-    compiled: Arc<RwLock<HashMap<OsString, Ignore>>>,
+    compiled: Arc<RwLock<HashMap<OsString, Weak<IgnoreInner>>>>,
     /// The path to the directory that this matcher was built from.
     dir: PathBuf,
     /// An override matcher (default is empty).
@@ -200,9 +200,11 @@ impl Ignore {
         let mut ig = self.clone();
         for parent in parents.into_iter().rev() {
             let mut compiled = self.0.compiled.write().unwrap();
-            if let Some(prebuilt) = compiled.get(parent.as_os_str()) {
-                ig = prebuilt.clone();
-                continue;
+            if let Some(weak) = compiled.get(parent.as_os_str()) {
+                if let Some(prebuilt) = weak.upgrade() {
+                    ig = Ignore(prebuilt);
+                    continue;
+                }
             }
             let (mut igtmp, err) = ig.add_child_path(parent);
             errs.maybe_push(err);
@@ -214,8 +216,12 @@ impl Ignore {
                 } else {
                     false
                 };
-            ig = Ignore(Arc::new(igtmp));
-            compiled.insert(parent.as_os_str().to_os_string(), ig.clone());
+            let ig_arc = Arc::new(igtmp);
+            ig = Ignore(ig_arc.clone());
+            compiled.insert(
+                parent.as_os_str().to_os_string(),
+                Arc::downgrade(&ig_arc),
+            );
         }
         (ig, errs.into_error_option())
     }

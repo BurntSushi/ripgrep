@@ -2,6 +2,11 @@
 ============
 This is a minor release with a few small new features and bug fixes.
 
+Bug fixes:
+
+* [BUG #2664](https://github.com/BurntSushi/ripgrep/issues/2690):
+  Fix unbounded memory growth in the `ignore` crate.
+
 Feature enhancements:
 
 * [FEATURE #2684](https://github.com/BurntSushi/ripgrep/issues/2684):
