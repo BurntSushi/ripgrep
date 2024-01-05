@@ -46,6 +46,8 @@ jobs:
       CROSS_VERSION: v0.2.5
       # Emit backtraces on panics.
       RUST_BACKTRACE: 1
+      # Build static release binaries and auto strip them
+      RUSTFLAGS: -C link-arg=-s -C target-feature=+crt-static
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

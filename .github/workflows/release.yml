@@ -59,6 +59,8 @@ jobs:
       RUST_BACKTRACE: 1
       # Build static releases with PCRE2.
       PCRE2_SYS_STATIC: 1
+      # Build static release binaries and auto strip them
+      RUSTFLAGS: -C link-arg=-s -C target-feature=+crt-static
     strategy:
       fail-fast: false
       matrix:
