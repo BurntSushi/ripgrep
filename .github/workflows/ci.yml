@@ -75,6 +75,18 @@ jobs:
           os: ubuntu-latest
           rust: stable
           target: aarch64-unknown-linux-gnu
+        - build: stable-arm-gnueabihf
+          os: ubuntu-latest
+          rust: stable
+          target: armv7-unknown-linux-gnueabihf
+        - build: stable-arm-musleabihf
+          os: ubuntu-latest
+          rust: stable
+          target: armv7-unknown-linux-musleabihf
+        - build: stable-arm-musleabi
+          os: ubuntu-latest
+          rust: stable
+          target: armv7-unknown-linux-musleabi
         - build: stable-powerpc64
           os: ubuntu-latest
           rust: stable
