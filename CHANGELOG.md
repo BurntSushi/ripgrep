@@ -3,8 +3,8 @@ TBD
 Unreleased changes. Release notes have not yet been written.
 
 
-14.1.0 (TBD)
-============
+14.1.0 (2024-01-06)
+===================
 This is a minor release with a few small new features and bug fixes. This
 release contains a bug fix for unbounded memory growth while walking a
 directory tree. This release also includes improvements to the completions for
