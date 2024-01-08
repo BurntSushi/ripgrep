@@ -229,6 +229,8 @@ macOS and Linux.](https://github.com/BurntSushi/ripgrep/releases)** Linux and
 Windows binaries are static executables. Users of platforms not explicitly
 mentioned below are advised to download one of these archives.
 
+Replace sudo with doas depending on what you use.
+
 If you're a **macOS Homebrew** or a **Linuxbrew** user, then you can install
 ripgrep from homebrew-core:
 
@@ -278,7 +280,7 @@ If you're a **Gentoo** user, you can install ripgrep from the
 $ sudo emerge sys-apps/ripgrep
 ```
 
-If you're a **Fedora** user, you can install ripgrep from official
+If you're a **Fedora** or **Mageia** user, you can install ripgrep from official
 repositories.
 
 ```
@@ -301,7 +303,7 @@ $ sudo yum-config-manager --add-repo=https://copr.fedorainfracloud.org/coprs/car
 $ sudo yum install ripgrep
 ```
 
-If you're a **Nix** user, you can install ripgrep from
+If you're a **NixOS** user, you can install ripgrep from
 [nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/tools/text/ripgrep/default.nix):
 
 ```
@@ -315,7 +317,7 @@ package collection:
 $ guix install ripgrep
 ```
 
-If you're a **Debian** user (or a user of a Debian derivative like **Ubuntu**),
+If you're a **Debian** user (or a user of a Debian derivative like **Ubuntu** or **Linux Mint**),
 then ripgrep can be installed using a binary `.deb` file provided in each
 [ripgrep release](https://github.com/BurntSushi/ripgrep/releases).
 
@@ -330,6 +332,27 @@ be older than the `deb` package available in the previous step.
 
 ```
 $ sudo apt-get install ripgrep
+```
+
+If you're an **Alpine Linux** or **Adélie** user, you can install ripgrep from the
+[official repo](https://pkgs.alpinelinux.org/packages?name=ripgrep&branch=edge&repo=&arch=&maintainer=):
+
+```
+$ apk add --upgrade ripgrep
+```
+
+If you're an **Slackware** user, you can install ripgrep from the
+[SalixOS repo](https://packages.salixos.org/):
+
+```
+$ upgradepkg --install-new ripgrep
+```
+
+If you're an **Solus** user, you can install ripgrep from the
+[official repo](https://github.com/getsolus/packages):
+
+```
+$ sudo eopkg install ripgrep
 ```
 
 If you're an **Ubuntu Cosmic (18.10)** (or newer) user, ripgrep is
