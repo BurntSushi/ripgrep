@@ -68,7 +68,7 @@ impl Dir {
     /// does not need to be distinct for each invocation, but should correspond
     /// to a logical grouping of tests.
     pub fn new(name: &str) -> Dir {
-        let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
+        let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
         let root = env::current_exe()
             .unwrap()
             .parent()

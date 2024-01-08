@@ -99,19 +99,19 @@ macro_rules! ignore_message {
 
 /// Returns true if and only if messages should be shown.
 pub(crate) fn messages() -> bool {
-    MESSAGES.load(Ordering::SeqCst)
+    MESSAGES.load(Ordering::Relaxed)
 }
 
 /// Set whether messages should be shown or not.
 ///
 /// By default, they are not shown.
 pub(crate) fn set_messages(yes: bool) {
-    MESSAGES.store(yes, Ordering::SeqCst)
+    MESSAGES.store(yes, Ordering::Relaxed)
 }
 
 /// Returns true if and only if "ignore" related messages should be shown.
 pub(crate) fn ignore_messages() -> bool {
-    IGNORE_MESSAGES.load(Ordering::SeqCst)
+    IGNORE_MESSAGES.load(Ordering::Relaxed)
 }
 
 /// Set whether "ignore" related messages should be shown or not.
@@ -122,12 +122,12 @@ pub(crate) fn ignore_messages() -> bool {
 /// `messages` is disabled, then "ignore" messages are never shown, regardless
 /// of this setting.
 pub(crate) fn set_ignore_messages(yes: bool) {
-    IGNORE_MESSAGES.store(yes, Ordering::SeqCst)
+    IGNORE_MESSAGES.store(yes, Ordering::Relaxed)
 }
 
 /// Returns true if and only if ripgrep came across a non-fatal error.
 pub(crate) fn errored() -> bool {
-    ERRORED.load(Ordering::SeqCst)
+    ERRORED.load(Ordering::Relaxed)
 }
 
 /// Indicate that ripgrep has come across a non-fatal error.
@@ -135,5 +135,5 @@ pub(crate) fn errored() -> bool {
 /// Callers should not use this directly. Instead, it is called automatically
 /// via the `err_message` macro.
 pub(crate) fn set_errored() {
-    ERRORED.store(true, Ordering::SeqCst);
+    ERRORED.store(true, Ordering::Relaxed);
 }

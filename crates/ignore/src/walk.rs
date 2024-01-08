@@ -1712,12 +1712,12 @@ impl<'s> Worker<'s> {
 
     /// Indicates that all workers should quit immediately.
     fn quit_now(&self) {
-        self.quit_now.store(true, AtomicOrdering::SeqCst);
+        self.quit_now.store(true, AtomicOrdering::Release);
     }
 
     /// Returns true if this worker should quit immediately.
     fn is_quit_now(&self) -> bool {
-        self.quit_now.load(AtomicOrdering::SeqCst)
+        self.quit_now.load(AtomicOrdering::Acquire)
     }
 
     /// Send work.
