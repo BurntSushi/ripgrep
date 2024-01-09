@@ -355,6 +355,14 @@ If you're an **Solus** user, you can install ripgrep from the
 $ sudo eopkg install ripgrep
 ```
 
+If you're a **KISS Linux** user, you can install ripgrep from the
+[KISS-Community repo](https://codeberg.org/kiss-community/community):
+
+```
+$ kiss b ripgrep
+$ kiss i ripgrep
+```
+
 If you're an **Ubuntu Cosmic (18.10)** (or newer) user, ripgrep is
 [available](https://launchpad.net/ubuntu/+source/rust-ripgrep) using the same
 packaging as Debian:
