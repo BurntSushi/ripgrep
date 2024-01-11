@@ -462,9 +462,13 @@ impl Ignore {
                 // it does fix a nasty bug. It should do fine until we overhaul
                 // this crate.
                 let dirpath = self.0.dir.as_path();
-                let path_prefix = match strip_prefix("./", dirpath) {
-                    None => dirpath,
-                    Some(stripped_dot_slash) => stripped_dot_slash,
+                let path_prefix = if dirpath == Path::new(".") {
+                    Path::new("")
+                } else {
+                    match strip_prefix("./", dirpath) {
+                        None => dirpath,
+                        Some(stripped_dot_slash) => stripped_dot_slash,
+                    }
                 };
                 let path = match strip_prefix(path_prefix, path) {
                     None => abs_parent_path.join(path),
