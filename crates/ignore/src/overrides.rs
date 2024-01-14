@@ -23,9 +23,11 @@ use crate::{
 /// The lifetime `'a` refers to the lifetime of the matcher that produced
 /// this glob.
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub struct Glob<'a>(GlobInner<'a>);
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 enum GlobInner<'a> {
     /// No glob matched, but the file path should still be ignored.
     UnmatchedIgnore,

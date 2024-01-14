@@ -411,7 +411,7 @@ rgtest!(include_zero, |dir: Dir, mut cmd: TestCommand| {
     cmd.args(&["--count", "--include-zero", "nada"]);
     cmd.assert_err();
 
-    let output = cmd.cmd().output().unwrap();
+    let output = cmd.raw_output();
     let stdout = String::from_utf8_lossy(&output.stdout);
     let expected = "sherlock:0\n";
 
@@ -423,7 +423,7 @@ rgtest!(include_zero_override, |dir: Dir, mut cmd: TestCommand| {
     cmd.args(&["--count", "--include-zero", "--no-include-zero", "nada"]);
     cmd.assert_err();
 
-    let output = cmd.cmd().output().unwrap();
+    let output = cmd.raw_output();
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.is_empty());
 });

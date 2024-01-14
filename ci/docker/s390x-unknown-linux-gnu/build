@@ -1,5 +1,0 @@
-#!/bin/sh
-
-mkdir -p stage
-cp ../../ubuntu-install-packages ./stage/
-docker build -t burntsushi/cross:s390x-unknown-linux-gnu .

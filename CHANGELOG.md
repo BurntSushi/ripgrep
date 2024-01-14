@@ -1,3 +1,30 @@
+TBD
+===
+Unreleased changes. Release notes have not yet been written.
+
+
+14.1.0 (2024-01-06)
+===================
+This is a minor release with a few small new features and bug fixes. This
+release contains a bug fix for unbounded memory growth while walking a
+directory tree. This release also includes improvements to the completions for
+the `fish` shell, and release binaries for several additional ARM targets.
+
+Bug fixes:
+
+* [BUG #2664](https://github.com/BurntSushi/ripgrep/issues/2690):
+  Fix unbounded memory growth in the `ignore` crate.
+
+Feature enhancements:
+
+* Added or improved file type filtering for Lean and Meson.
+* [FEATURE #2684](https://github.com/BurntSushi/ripgrep/issues/2684):
+  Improve completions for the `fish` shell.
+* [FEATURE #2702](https://github.com/BurntSushi/ripgrep/pull/2702):
+  Add release binaries for `armv7-unknown-linux-gnueabihf`,
+  `armv7-unknown-linux-musleabihf` and `armv7-unknown-linux-musleabi`.
+
+
 14.0.3 (2023-11-28)
 ===================
 This is a patch release with a bug fix for the `--sortr` flag.

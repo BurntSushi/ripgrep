@@ -972,10 +972,10 @@ rgtest!(f1404_nothing_searched_warning, |dir: Dir, mut cmd: TestCommand| {
     cmd.assert_err();
 
     // Test that we actually get an error message that we expect.
-    let output = cmd.cmd().output().unwrap();
+    let output = cmd.raw_output();
     let stderr = String::from_utf8_lossy(&output.stderr);
     let expected = "\
-        No files were searched, which means ripgrep probably applied \
+        rg: No files were searched, which means ripgrep probably applied \
         a filter you didn't expect.\n\
         Running with --debug will show why files are being skipped.\n\
     ";
@@ -995,7 +995,7 @@ rgtest!(f1404_nothing_searched_ignored, |dir: Dir, mut cmd: TestCommand| {
 
     // But since --no-messages is given, there should not be any error message
     // printed.
-    let output = cmd.cmd().output().unwrap();
+    let output = cmd.raw_output();
     let stderr = String::from_utf8_lossy(&output.stderr);
     let expected = "";
     eqnice!(expected, stderr);

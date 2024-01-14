@@ -399,10 +399,10 @@ rgtest!(r428_unrecognized_style, |dir: Dir, mut cmd: TestCommand| {
     cmd.arg("--colors=match:style:").arg("Sherlock");
     cmd.assert_err();
 
-    let output = cmd.cmd().output().unwrap();
+    let output = cmd.raw_output();
     let stderr = String::from_utf8_lossy(&output.stderr);
     let expected = "\
-error parsing flag --colors: \
+rg: error parsing flag --colors: \
 unrecognized style attribute ''. Choose from: nobold, bold, nointense, \
 intense, nounderline, underline.
 ";

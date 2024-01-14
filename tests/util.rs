@@ -9,6 +9,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 use std::time::Duration;
 
+use bstr::ByteSlice;
+
 static TEST_DIR: &'static str = "ripgrep-tests";
 static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
 
@@ -325,13 +327,21 @@ impl TestCommand {
 
     /// Gets the output of a command. If the command failed, then this panics.
     pub fn output(&mut self) -> process::Output {
-        let output = self.cmd.output().unwrap();
+        let output = self.raw_output();
         self.expect_success(output)
+    }
+
+    /// Gets the raw output of a command after filtering nonsense like jemalloc
+    /// error messages from stderr.
+    pub fn raw_output(&mut self) -> process::Output {
+        let mut output = self.cmd.output().unwrap();
+        output.stderr = strip_jemalloc_nonsense(&output.stderr);
+        output
     }
 
     /// Runs the command and asserts that it resulted in an error exit code.
     pub fn assert_err(&mut self) {
-        let o = self.cmd.output().unwrap();
+        let o = self.raw_output();
         if o.status.success() {
             panic!(
                 "\n\n===== {:?} =====\n\
@@ -479,7 +489,7 @@ fn dir_list<P: AsRef<Path>>(dir: P) -> Vec<String> {
 /// So... we just manually handle these cases. So fucking fun.
 fn cross_runner() -> Option<String> {
     let runner = std::env::var("CROSS_RUNNER").ok()?;
-    if runner.is_empty() {
+    if runner.is_empty() || runner == "empty" {
         return None;
     }
     if cfg!(target_arch = "powerpc64") {
@@ -499,4 +509,18 @@ fn cross_runner() -> Option<String> {
 /// under Cross.
 pub fn is_cross() -> bool {
     std::env::var("CROSS_RUNNER").ok().map_or(false, |v| !v.is_empty())
+}
+
+/// Strips absolutely fucked `<jemalloc>:` lines from the output.
+///
+/// In theory this only happens under qemu, which is where our tests run under
+/// `cross`. But is messes with our tests, because... they don't expect the
+/// allocator to fucking write to stderr. I mean, what the fuck? Who prints a
+/// warning message with absolutely no instruction for what to do with it or
+/// how to disable it. Absolutely fucking bonkers.
+fn strip_jemalloc_nonsense(data: &[u8]) -> Vec<u8> {
+    let lines = data
+        .lines_with_terminator()
+        .filter(|line| !line.starts_with_str("<jemalloc>:"));
+    bstr::concat(lines)
 }

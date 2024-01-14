@@ -80,6 +80,24 @@ jobs:
           target: aarch64-unknown-linux-gnu
           strip: aarch64-linux-gnu-strip
           qemu: qemu-aarch64
+        - build: stable-arm-gnueabihf
+          os: ubuntu-latest
+          rust: stable
+          target: armv7-unknown-linux-gnueabihf
+          strip: arm-linux-gnueabihf-strip
+          qemu: qemu-arm
+        - build: stable-arm-musleabihf
+          os: ubuntu-latest
+          rust: stable
+          target: armv7-unknown-linux-musleabihf
+          strip: arm-linux-musleabihf-strip
+          qemu: qemu-arm
+        - build: stable-arm-musleabi
+          os: ubuntu-latest
+          rust: stable
+          target: armv7-unknown-linux-musleabi
+          strip: arm-linux-musleabi-strip
+          qemu: qemu-arm
         - build: stable-powerpc64
           os: ubuntu-latest
           rust: stable
@@ -175,9 +193,9 @@ jobs:
       run: |
         docker run --rm -v \
           "$PWD/target:/target:Z" \
-          "rustembedded/cross:${{ matrix.target }}" \
+          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
           "${{ matrix.strip }}" \
-          "/target/${{ matrix.target }}/release/rg"
+          "/$BIN"
 
     - name: Determine archive name
       shell: bash
@@ -210,31 +228,31 @@ jobs:
       run: |
         docker run --rm -v \
           "$PWD/target:/target:Z" \
-          "rustembedded/cross:${{ matrix.target }}" \
+          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
           "${{ matrix.qemu }}" "/$BIN" --version
         docker run --rm -v \
           "$PWD/target:/target:Z" \
-          "rustembedded/cross:${{ matrix.target }}" \
+          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
           "${{ matrix.qemu }}" "/$BIN" \
             --generate complete-bash > "$ARCHIVE/complete/rg.bash"
         docker run --rm -v \
           "$PWD/target:/target:Z" \
-          "rustembedded/cross:${{ matrix.target }}" \
+          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
           "${{ matrix.qemu }}" "/$BIN" \
             --generate complete-fish > "$ARCHIVE/complete/rg.fish"
         docker run --rm -v \
           "$PWD/target:/target:Z" \
-          "rustembedded/cross:${{ matrix.target }}" \
+          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
           "${{ matrix.qemu }}" "/$BIN" \
             --generate complete-powershell > "$ARCHIVE/complete/_rg.ps1"
         docker run --rm -v \
           "$PWD/target:/target:Z" \
-          "rustembedded/cross:${{ matrix.target }}" \
+          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
           "${{ matrix.qemu }}" "/$BIN" \
             --generate complete-zsh > "$ARCHIVE/complete/_rg"
         docker run --rm -v \
           "$PWD/target:/target:Z" \
-          "rustembedded/cross:${{ matrix.target }}" \
+          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
           "${{ matrix.qemu }}" "/$BIN" \
             --generate man > "$ARCHIVE/doc/rg.1"
 
