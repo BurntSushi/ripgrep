@@ -2746,7 +2746,7 @@ impl Flag for Hidden {
 Search hidden files and directories. By default, hidden files and directories
 are skipped. Note that if a hidden file or a directory is whitelisted in
 an ignore file, then it will be searched even if this flag isn't provided.
-Similarly if a hidden file or directory is given explicitly as an argumnet to
+Similarly if a hidden file or directory is given explicitly as an argument to
 ripgrep.
 .sp
 A file or directory is considered hidden if its base name starts with a dot
