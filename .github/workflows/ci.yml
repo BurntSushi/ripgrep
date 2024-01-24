@@ -222,10 +222,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: install dependencies 
+      - name: Install packages (Ubuntu)
         run: |
-          apt-get update
-          apt-get install g++ --yes
+          sudo apt-get update
+          sudo apt-get install g++ --yes
 
       - uses: dtolnay/rust-toolchain@nightly
 
