@@ -230,3 +230,28 @@ jobs:
         env:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc --no-deps --document-private-items --workspace
+
+  fuzz_testing:
+    name: Compile Fuzz Test Targets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install required packages (Ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install g++ --yes
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install Fuzzer
+        run: cargo install cargo-fuzz
+        working-directory: fuzz
+
+      - name: Verify fuzz targets build
+        run: cargo check
+        working-directory: fuzz

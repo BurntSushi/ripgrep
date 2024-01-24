@@ -72,6 +72,7 @@ impl MatchStrategy {
 /// It cannot be used directly to match file paths, but it can be converted
 /// to a regular expression string or a matcher.
 #[derive(Clone, Debug, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct Glob {
     glob: String,
     re: String,
@@ -194,6 +195,7 @@ pub struct GlobBuilder<'a> {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 struct GlobOptions {
     /// Whether to match case insensitively.
     case_insensitive: bool,
@@ -220,6 +222,7 @@ impl GlobOptions {
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 struct Tokens(Vec<Token>);
 
 impl std::ops::Deref for Tokens {
@@ -236,6 +239,7 @@ impl std::ops::DerefMut for Tokens {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 enum Token {
     Literal(char),
     Any,
