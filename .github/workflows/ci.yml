@@ -215,3 +215,22 @@ jobs:
         env:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc --no-deps --document-private-items --workspace
+
+  fuzz_testing:
+    name: Run Fuzz Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install dependencies 
+        run: |
+          apt-get update
+          apt-get install g++ --yes
+
+      - uses: dtolnay/rust-toolchain@nightly
+
+      - run: cargo fuzz_install
+        working-directory: fuzz
+
+      - run: ./scripts/run-all.sh
+        working-directory: fuzz

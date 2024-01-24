@@ -1,0 +1,4 @@
+[alias]
+fuzz_install = "install cargo-fuzz"
+fuzz_list = "fuzz list"
+fuzz_run = "fuzz run"
