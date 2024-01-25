@@ -19,7 +19,7 @@ This example shows how to match a single glob against a single file path.
 
 # Crate features
 
-This crate includes optional features that can be enabled if neceesary. These features are
+This crate includes optional features that can be enabled if necessary. These features are
 not required but may be useful depending on the use case.
 
 The following features are available:
