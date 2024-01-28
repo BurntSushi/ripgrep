@@ -408,6 +408,7 @@ dependencies = [
  "ignore",
  "jemallocator",
  "lexopt",
+ "libc",
  "log",
  "serde",
  "serde_derive",
@@ -415,6 +416,7 @@ dependencies = [
  "termcolor",
  "textwrap",
  "walkdir",
+ "winapi",
 ]
 
 [[package]]

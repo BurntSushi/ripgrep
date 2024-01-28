@@ -59,6 +59,12 @@ serde_json = "1.0.23"
 termcolor = "1.1.0"
 textwrap = { version = "0.16.0", default-features = false }
 
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3.9", features = ["handleapi"] }
+
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+libc = "0.2.151"
+
 [target.'cfg(all(target_env = "musl", target_pointer_width = "64"))'.dependencies.jemallocator]
 version = "0.5.0"
 

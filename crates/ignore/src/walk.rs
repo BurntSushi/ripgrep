@@ -491,6 +491,7 @@ pub struct WalkBuilder {
     threads: usize,
     skip: Option<Arc<Handle>>,
     filter: Option<Filter>,
+    thread_guards: (fn(), fn()),
 }
 
 #[derive(Clone)]
@@ -524,6 +525,7 @@ impl WalkBuilder {
     /// is better to call `add` on this builder than to create multiple
     /// `Walk` values.
     pub fn new<P: AsRef<Path>>(path: P) -> WalkBuilder {
+        fn nop() {}
         WalkBuilder {
             paths: vec![path.as_ref().to_path_buf()],
             ig_builder: IgnoreBuilder::new(),
@@ -535,6 +537,7 @@ impl WalkBuilder {
             threads: 0,
             skip: None,
             filter: None,
+            thread_guards: (nop, nop),
         }
     }
 
@@ -603,6 +606,7 @@ impl WalkBuilder {
             threads: self.threads,
             skip: self.skip.clone(),
             filter: self.filter.clone(),
+            thread_guards: self.thread_guards,
         }
     }
 
@@ -621,6 +625,16 @@ impl WalkBuilder {
     /// The default, `None`, imposes no depth restriction.
     pub fn max_depth(&mut self, depth: Option<usize>) -> &mut WalkBuilder {
         self.max_depth = depth;
+        self
+    }
+
+    /// Set functions to call inside each thread at the beginning and outside
+    /// after joining all threads.
+    pub fn thread_guards(
+        &mut self,
+        functions: (fn(), fn()),
+    ) -> &mut WalkBuilder {
+        self.thread_guards = functions;
         self
     }
 
@@ -1196,6 +1210,7 @@ pub struct WalkParallel {
     threads: usize,
     skip: Option<Arc<Handle>>,
     filter: Option<Filter>,
+    thread_guards: (fn(), fn()),
 }
 
 impl WalkParallel {
@@ -1281,6 +1296,9 @@ impl WalkParallel {
         let quit_now = Arc::new(AtomicBool::new(false));
         let active_workers = Arc::new(AtomicUsize::new(threads));
         let stacks = Stack::new_for_each_thread(threads, stack);
+
+        let (begin, post_join) = self.thread_guards;
+
         std::thread::scope(|s| {
             let handles: Vec<_> = stacks
                 .into_iter()
@@ -1295,11 +1313,18 @@ impl WalkParallel {
                     skip: self.skip.clone(),
                     filter: self.filter.clone(),
                 })
-                .map(|worker| s.spawn(|| worker.run()))
+                .map(|worker| {
+                    s.spawn(|| {
+                        begin();
+                        worker.run()
+                    })
+                })
                 .collect();
+
             for handle in handles {
                 handle.join().unwrap();
             }
+            post_join();
         });
     }
 

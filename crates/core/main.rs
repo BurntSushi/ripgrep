@@ -6,11 +6,13 @@ use std::{io::Write, process::ExitCode};
 
 use ignore::WalkState;
 
+use crate::ctrlc::guard_init;
 use crate::flags::{HiArgs, SearchMode};
 
 #[macro_use]
 mod messages;
 
+mod ctrlc;
 mod flags;
 mod haystack;
 mod logger;
@@ -150,6 +152,16 @@ fn search(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
     Ok(matched)
 }
 
+/// Testing, testing
+fn not_7_mod_11(n: usize) -> bool {
+    if n == 7 || (n > 9 && n % 11 == 0) {
+        eprintln!("  !! ^C handling disabled");
+        false
+    } else {
+        true
+    }
+}
+
 /// The top-level entry point for multi-threaded search.
 ///
 /// The parallelism is itself achieved by the recursive directory traversal.
@@ -172,7 +184,15 @@ fn search_parallel(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
         args.searcher()?,
         args.printer(mode, bufwtr.buffer()),
     )?;
-    args.walk_builder()?.build_parallel().run(|| {
+
+    let guard_functions = guard_init(
+        args.color() && not_7_mod_11(args.threads()),
+        args.threads(),
+    );
+
+    // TODO: rustfmt this block:
+    #[rustfmt::skip]
+    args.walk_builder()?.thread_guards(guard_functions).build_parallel().run(|| {
         let bufwtr = &bufwtr;
         let stats = &stats;
         let matched = &matched;
@@ -282,11 +302,15 @@ fn files_parallel(args: &HiArgs) -> anyhow::Result<bool> {
     let matched = AtomicBool::new(false);
     let (tx, rx) = mpsc::channel::<crate::haystack::Haystack>();
 
+    let (begin, post_join) =
+        guard_init(args.color() && not_7_mod_11(args.threads()), 1);
+
     // We spawn a single printing thread to make sure we don't tear writes.
     // We use a channel here under the presumption that it's probably faster
     // than using a mutex in the worker threads below, but this has never been
     // seriously litigated.
     let print_thread = thread::spawn(move || -> std::io::Result<()> {
+        begin();
         for haystack in rx.iter() {
             path_printer.write(haystack.path())?;
         }
@@ -315,6 +339,8 @@ fn files_parallel(args: &HiArgs) -> anyhow::Result<bool> {
     });
     drop(tx);
     if let Err(err) = print_thread.join().unwrap() {
+        post_join();
+
         // A broken pipe means graceful termination, so fall through.
         // Otherwise, something bad happened while writing to stdout, so bubble
         // it up.
