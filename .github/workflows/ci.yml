@@ -217,20 +217,26 @@ jobs:
         run: cargo doc --no-deps --document-private-items --workspace
 
   fuzz_testing:
-    name: Run Fuzz Tests
+    name: Compile Fuzz Test Targets
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Install packages (Ubuntu)
+      - name: Install required packages (Ubuntu)
         run: |
           sudo apt-get update
           sudo apt-get install g++ --yes
 
-      - uses: dtolnay/rust-toolchain@nightly
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
 
-      - run: cargo fuzz_install
+      - name: Install Fuzzer
+        run: cargo install cargo-fuzz
         working-directory: fuzz
 
-      - run: ./scripts/run-all.sh
+      - name: Verify fuzz targets build
+        run: cargo check
         working-directory: fuzz

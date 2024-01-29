@@ -1,13 +1,10 @@
 #![no_main]
 
-extern crate globset;
-extern crate libfuzzer_sys;
-
-use globset::Glob;
-use libfuzzer_sys::fuzz_target;
 use std::str::FromStr;
 
-fuzz_target!(|glob_str: &str| {
+use globset::Glob;
+
+libfuzzer_sys::fuzz_target!(|glob_str: &str| {
     let Ok(glob) = Glob::new(glob_str) else {
         return;
     };
