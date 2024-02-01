@@ -262,16 +262,16 @@ mod ctrlc {
     mod windows {
         use super::*;
 
-        use winapi::shared::minwindef::{BOOL, DWORD, FALSE, TRUE};
-        use winapi::um::consoleapi::{SetConsoleCtrlHandler, WriteConsoleA};
-        use winapi::um::handleapi::DuplicateHandle;
-        use winapi::um::processenv::GetStdHandle;
-        use winapi::um::processthreadsapi::{
+        use windows_sys::Win32::Foundation::{
+            DuplicateHandle, BOOL, DUPLICATE_SAME_ACCESS, FALSE, HANDLE, TRUE,
+        };
+        use windows_sys::Win32::System::Console::{
+            GetStdHandle, SetConsoleCtrlHandler, WriteConsoleA, CTRL_C_EVENT,
+            STD_OUTPUT_HANDLE,
+        };
+        use windows_sys::Win32::System::Threading::{
             GetCurrentProcess, GetCurrentThread, SuspendThread,
         };
-        use winapi::um::winbase::STD_OUTPUT_HANDLE;
-        use winapi::um::wincon::CTRL_C_EVENT;
-        use winapi::um::winnt::{DUPLICATE_SAME_ACCESS, HANDLE};
 
         pub type ThreadType = HANDLE;
 
@@ -280,7 +280,7 @@ mod ctrlc {
         const ANSI_RESET: &str = "\u{1B}[00m^C";
 
         pub(super) fn thread_self() -> ThreadId {
-            let mut this_thread: ThreadType = std::ptr::null_mut();
+            let mut this_thread: ThreadType = 0;
 
             // SAFETY: GetCurrentThread/Process can not fail. The thread handle on a failed
             // DuplicateHandle() call is not used.
@@ -303,7 +303,7 @@ mod ctrlc {
             })
         }
 
-        extern "system" fn on_ctrlc(event_type: DWORD) -> BOOL {
+        extern "system" fn on_ctrlc(event_type: u32) -> BOOL {
             if event_type == CTRL_C_EVENT {
                 // Observed behavior: When in a Ctrl-C handler (i.e. this), resetting it so the
                 // next ^C is not handled by it does not work, this handler has to run to
@@ -325,8 +325,8 @@ mod ctrlc {
                 // SAFETY: Only a valid handle is used later.
                 let stdout_handle = unsafe { GetStdHandle(STD_OUTPUT_HANDLE) };
 
-                if stdout_handle != std::ptr::null_mut() {
-                    let mut _bytes_written: DWORD = 0;
+                if stdout_handle != 0 {
+                    let mut _bytes_written: u32 = 0;
 
                     // Short writes or other errors are ignored.
                     // SAFETY: correctness of `lpBuffer` and `nNumberOfCharsToWrite` is ensured by Rust.
@@ -334,7 +334,7 @@ mod ctrlc {
                         WriteConsoleA(
                             stdout_handle,
                             ANSI_RESET.as_ptr() as *const _,
-                            ANSI_RESET.len() as DWORD,
+                            ANSI_RESET.len() as u32,
                             &mut _bytes_written,
                             std::ptr::null_mut(),
                         )

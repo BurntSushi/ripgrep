@@ -60,7 +60,7 @@ termcolor = "1.1.0"
 textwrap = { version = "0.16.0", default-features = false }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-winapi = { version = "0.3.9", features = ["handleapi"] }
+windows-sys = { version = "0.52", features = ["Win32_Foundation", "Win32_System_Console", "Win32_System_Threading"] }
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 libc = "0.2.151"
