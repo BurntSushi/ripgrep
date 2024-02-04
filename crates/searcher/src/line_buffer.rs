@@ -538,6 +538,11 @@ fn replace_bytes(
     while let Some(i) = bytes.find_byte(src) {
         bytes[i] = replacement;
         bytes = &mut bytes[i + 1..];
+
+        // To search for adjacent `src` bytes we use a different strategy.
+        // Since binary data tends to have long runs of NUL terminators,
+        // it is faster to compare one-byte-at-a-time than to stop and start
+        // memchr (through `find_byte`) for every byte in a sequence.
         while bytes.get(0) == Some(&src) {
             bytes[0] = replacement;
             bytes = &mut bytes[1..];
