@@ -538,6 +538,11 @@ fn replace_bytes(
     while let Some(i) = bytes.find_byte(src) {
         bytes[i] = replacement;
         bytes = &mut bytes[i + 1..];
+
+        // To search for adjacent `src` bytes we use a different strategy.
+        // Since binary data tends to have long runs of NUL terminators,
+        // it is faster to compare one-byte-at-a-time than to stop and start
+        // memchr (through `find_byte`) for every byte in a sequence.
         while bytes.get(0) == Some(&src) {
             bytes[0] = replacement;
             bytes = &mut bytes[1..];
@@ -577,6 +582,9 @@ and exhibited clearly, with a label attached.\
 
     #[test]
     fn replace() {
+        assert_eq!(replace_str("", b'b', b'z'), (s(""), None));
+        assert_eq!(replace_str("a", b'a', b'a'), (s("a"), None));
+        assert_eq!(replace_str("a", b'b', b'z'), (s("a"), None));
         assert_eq!(replace_str("abc", b'b', b'z'), (s("azc"), Some(1)));
         assert_eq!(replace_str("abb", b'b', b'z'), (s("azz"), Some(1)));
         assert_eq!(replace_str("aba", b'a', b'z'), (s("zbz"), Some(0)));
