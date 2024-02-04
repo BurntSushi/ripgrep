@@ -582,6 +582,9 @@ and exhibited clearly, with a label attached.\
 
     #[test]
     fn replace() {
+        assert_eq!(replace_str("", b'b', b'z'), (s(""), None));
+        assert_eq!(replace_str("a", b'a', b'a'), (s("a"), None));
+        assert_eq!(replace_str("a", b'b', b'z'), (s("a"), None));
         assert_eq!(replace_str("abc", b'b', b'z'), (s("azc"), Some(1)));
         assert_eq!(replace_str("abb", b'b', b'z'), (s("azz"), Some(1)));
         assert_eq!(replace_str("aba", b'a', b'z'), (s("zbz"), Some(0)));
