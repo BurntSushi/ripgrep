@@ -15,7 +15,7 @@ autotests = false
 edition = "2021"
 
 [dependencies]
-memchr = "2.6.3"
+memchr = "2.7.1"
 
 [dev-dependencies]
 regex = "1.9.5"

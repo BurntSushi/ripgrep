@@ -22,7 +22,7 @@ bench = false
 crossbeam-deque = "0.8.3"
 globset = { version = "0.4.14", path = "../globset" }
 log = "0.4.20"
-memchr = "2.6.3"
+memchr = "2.7.1"
 same-file = "1.0.6"
 walkdir = "2.4.0"
 
