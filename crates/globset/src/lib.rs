@@ -94,6 +94,19 @@ Standard Unix-style glob syntax is supported:
 
 A `GlobBuilder` can be used to prevent wildcards from matching path separators,
 or to enable case insensitive matching.
+
+# Crate Features
+
+This crate includes optional features that can be enabled if necessary.
+These features are not required but may be useful depending on the use case.
+
+The following features are available:
+
+* **arbitrary** -
+  Enabling this feature introduces a public dependency on the
+  [`arbitrary`](https://crates.io/crates/arbitrary)
+  crate. Namely, it implements the `Arbitrary` trait from that crate for the
+  [`Glob`] type. This feature is disabled by default.
 */
 
 #![deny(missing_docs)]
