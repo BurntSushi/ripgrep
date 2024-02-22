@@ -484,9 +484,9 @@ impl HiArgs {
             if self.crlf {
                 builder.crlf(true);
             }
-            // We don't need to set this in multiline mode since mulitline
+            // We don't need to set this in multiline mode since multiline
             // matchers don't use optimizations related to line terminators.
-            // Moreover, a mulitline regex used with --null-data should
+            // Moreover, a multiline regex used with --null-data should
             // be allowed to match NUL bytes explicitly, which this would
             // otherwise forbid.
             if self.null_data {
