@@ -27,7 +27,6 @@ grep-regex = { version = "0.1.12", path = "../regex" }
 regex = "1.9.5"
 
 [features]
-simd-accel = ["encoding_rs/simd-accel"]
-
-# This feature is DEPRECATED. Runtime dispatch is used for SIMD now.
+# These features are DEPRECATED. Runtime dispatch is used for SIMD now.
+simd-accel = []
 avx-accel = []

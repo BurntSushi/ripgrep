@@ -26,8 +26,8 @@ termcolor = "1.0.4"
 walkdir = "2.2.7"
 
 [features]
-simd-accel = ["grep-searcher/simd-accel"]
 pcre2 = ["grep-pcre2"]
 
-# This feature is DEPRECATED. Runtime dispatch is used for SIMD now.
+# These features are DEPRECATED. Runtime dispatch is used for SIMD now.
+simd-accel = []
 avx-accel = []

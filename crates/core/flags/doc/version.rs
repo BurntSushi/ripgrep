@@ -161,9 +161,6 @@ fn compile_cpu_features() -> Vec<String> {
 fn features() -> Vec<String> {
     let mut features = vec![];
 
-    let simd_accel = cfg!(feature = "simd-accel");
-    features.push(format!("{sign}simd-accel", sign = sign(simd_accel)));
-
     let pcre2 = cfg!(feature = "pcre2");
     features.push(format!("{sign}pcre2", sign = sign(pcre2)));
 

@@ -2,6 +2,11 @@ TBD
 ===
 Unreleased changes. Release notes have not yet been written.
 
+Miscellaneous:
+
+* [MISC #2748](https://github.com/BurntSushi/ripgrep/issues/2748):
+  Remove ripgrep's `simd-accel` feature because it was frequently broken.
+
 
 14.1.0 (2024-01-06)
 ===================

@@ -68,7 +68,6 @@ serde_derive = "1.0.77"
 walkdir = "2"
 
 [features]
-simd-accel = ["grep/simd-accel"]
 pcre2 = ["grep/pcre2"]
 
 [profile.release]
