@@ -9,13 +9,13 @@ use {
 
 use crate::{config::ConfiguredHIR, error::Error};
 
-/// A type that encapsulates "inner" literal extractiong from a regex.
+/// A type that encapsulates "inner" literal extraction from a regex.
 ///
 /// It uses a huge pile of heuristics to try to pluck out literals from a regex
 /// that are in turn used to build a simpler regex that is more amenable to
 /// optimization.
 ///
-/// The main idea underyling the validity of this technique is the fact
+/// The main idea underlying the validity of this technique is the fact
 /// that ripgrep searches individuals lines and not across lines. (Unless
 /// -U/--multiline is enabled.) Namely, we can pluck literals out of the regex,
 /// search for them, find the bounds of the line in which that literal occurs

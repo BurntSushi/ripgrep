@@ -1135,7 +1135,7 @@ impl Paths {
 /// ripgrep actually uses two different binary detection heuristics depending
 /// on whether a file is explicitly being searched (e.g., via a CLI argument)
 /// or implicitly searched (e.g., via directory traversal). In general, the
-/// former can never use a heuristic that lets it "quit" seaching before
+/// former can never use a heuristic that lets it "quit" searching before
 /// either getting EOF or finding a match. (Because doing otherwise would be
 /// considered a filter, and ripgrep follows the rule that an explicitly given
 /// file is always searched.)

@@ -447,7 +447,7 @@ impl SearcherBuilder {
     ///
     /// If a heap limit is set to `0`, then no heap space is used. If there are
     /// no alternative strategies available for searching without heap space
-    /// (e.g., memory maps are disabled), then the searcher wil return an error
+    /// (e.g., memory maps are disabled), then the searcher will return an error
     /// immediately.
     ///
     /// By default, no limit is set.
