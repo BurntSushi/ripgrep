@@ -64,6 +64,7 @@ pub(crate) struct LowArgs {
     pub(crate) iglobs: Vec<String>,
     pub(crate) ignore_file: Vec<PathBuf>,
     pub(crate) ignore_file_case_insensitive: bool,
+    pub(crate) ignore_nested_git: bool,
     pub(crate) include_zero: bool,
     pub(crate) invert_match: bool,
     pub(crate) line_number: Option<bool>,

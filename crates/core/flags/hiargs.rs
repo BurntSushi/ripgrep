@@ -59,6 +59,7 @@ pub(crate) struct HiArgs {
     hyperlink_config: grep::printer::HyperlinkConfig,
     ignore_file_case_insensitive: bool,
     ignore_file: Vec<PathBuf>,
+    ignore_nested_git: bool,
     include_zero: bool,
     invert_match: bool,
     is_terminal_stdout: bool,
@@ -275,6 +276,7 @@ impl HiArgs {
             hyperlink_config,
             ignore_file: low.ignore_file,
             ignore_file_case_insensitive: low.ignore_file_case_insensitive,
+            ignore_nested_git: low.ignore_nested_git,
             include_zero: low.include_zero,
             invert_match: low.invert_match,
             is_terminal_stdout: state.is_terminal_stdout,
@@ -893,7 +895,8 @@ impl HiArgs {
             .git_ignore(!self.no_ignore_vcs)
             .git_exclude(!self.no_ignore_vcs && !self.no_ignore_exclude)
             .require_git(!self.no_require_git)
-            .ignore_case_insensitive(self.ignore_file_case_insensitive);
+            .ignore_case_insensitive(self.ignore_file_case_insensitive)
+            .ignore_nested_git_repo(self.ignore_nested_git);
         if !self.no_ignore_dot {
             builder.add_custom_ignore_filename(".rgignore");
         }

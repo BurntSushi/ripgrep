@@ -146,6 +146,10 @@ _rg() {
     '--ignore-file-case-insensitive[process ignore files case insensitively]'
     $no'--no-ignore-file-case-insensitive[process ignore files case sensitively]'
 
+    + '(ignore-nested-git)' # Ignore nested git repository option
+    '--ignore-nested-git[ignore nested git repositories]'
+    $no"--no-ignore-nested-git[don't ignore nested git repositories]"
+
     + '(ignore-exclude)' # Local exclude (ignore)-file options
     "--no-ignore-exclude[don't respect local exclude (ignore) files]"
     $no'--ignore-exclude[respect local exclude (ignore) files]'
