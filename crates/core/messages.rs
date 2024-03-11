@@ -28,7 +28,7 @@ static ERRORED: AtomicBool = AtomicBool::new(false);
 ///
 /// This locks stdout, not stderr, even though this prints to stderr. This
 /// avoids the appearance of interleaving output when stdout and stderr both
-/// correspond to a tty.)
+/// correspond to a tty.
 #[macro_export]
 macro_rules! eprintln_locked {
     ($($tt:tt)*) => {{
