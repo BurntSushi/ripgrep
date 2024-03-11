@@ -233,7 +233,7 @@ impl ConfiguredHIR {
         &self.config
     }
 
-    /// Return a reference to the underyling HIR.
+    /// Return a reference to the underlying HIR.
     pub(crate) fn hir(&self) -> &Hir {
         &self.hir
     }
