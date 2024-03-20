@@ -222,9 +222,12 @@ multiline search and opt-in fancy regex support via PCRE2.
 
 ### Playground
 
-If you'd like to try ripgrep before installing, there's a [playground](https://codapi.org/ripgrep/) and an [interactive tutorial](https://codapi.org/try/ripgrep/).
+If you'd like to try ripgrep before installing, there's an unofficial
+[playground](https://codapi.org/ripgrep/) and an [interactive
+tutorial](https://codapi.org/try/ripgrep/).
 
-If you have any questions about these, please open an issue in the [tutorial repo](https://github.com/nalgeon/tryxinyminutes).
+If you have any questions about these, please open an issue in the [tutorial
+repo](https://github.com/nalgeon/tryxinyminutes).
 
 
 ### Installation
