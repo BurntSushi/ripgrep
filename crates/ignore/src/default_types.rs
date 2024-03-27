@@ -27,7 +27,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["bat", "batch"], &["*.bat"]),
     (&["bazel"], &[
         "*.bazel", "*.bzl", "*.BUILD", "*.bazelrc", "BUILD", "MODULE.bazel",
-        "WORKSPACE", "WORKSPACE.bazel",
+        "WORKSPACE", "WORKSPACE.bazel", "WORKSPACE.bzlmod",
     ]),
     (&["bitbake"], &["*.bb", "*.bbappend", "*.bbclass", "*.conf", "*.inc"]),
     (&["brotli"], &["*.br"]),
