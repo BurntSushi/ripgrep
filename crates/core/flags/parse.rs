@@ -323,7 +323,7 @@ enum FlagLookup<'a> {
     UnrecognizedLong(String),
 }
 
-/// The info about a flag associated with a flag's ID in the the flag map.
+/// The info about a flag associated with a flag's ID in the flag map.
 #[derive(Debug)]
 struct FlagInfo {
     /// The flag object and its associated metadata.
