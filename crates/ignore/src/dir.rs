@@ -46,6 +46,7 @@ enum IgnoreMatchInner<'a> {
     Gitignore(&'a gitignore::Glob),
     Types(types::Glob<'a>),
     Hidden,
+    NestedRepo,
 }
 
 impl<'a> IgnoreMatch<'a> {
@@ -63,6 +64,9 @@ impl<'a> IgnoreMatch<'a> {
 
     fn hidden() -> IgnoreMatch<'static> {
         IgnoreMatch(IgnoreMatchInner::Hidden)
+    }
+    fn nested_repo() -> IgnoreMatch<'static> {
+        IgnoreMatch(IgnoreMatchInner::NestedRepo)
     }
 }
 
@@ -84,6 +88,8 @@ struct IgnoreOptions {
     git_exclude: bool,
     /// Whether to ignore files case insensitively
     ignore_case_insensitive: bool,
+    /// Whether to ignore nested git repositories.
+    ignore_nested_git_repo: bool,
     /// Whether a git repository must be present in order to apply any
     /// git-related ignore rules.
     require_git: bool,
@@ -342,6 +348,7 @@ impl Ignore {
             || opts.git_global
             || opts.git_ignore
             || opts.git_exclude
+            || opts.ignore_nested_git_repo
             || has_custom_ignore_files
             || has_explicit_ignores
     }
@@ -422,6 +429,14 @@ impl Ignore {
             mut m_gi_exclude,
             mut m_explicit,
         ) = (Match::None, Match::None, Match::None, Match::None, Match::None);
+
+        if is_dir
+            && self.0.opts.ignore_nested_git_repo
+            && path.join(".git").exists()
+        {
+            return Match::Ignore(IgnoreMatch::nested_repo());
+        }
+
         let any_git =
             !self.0.opts.require_git || self.parents().any(|ig| ig.0.has_git);
         let mut saw_git = false;
@@ -599,6 +614,7 @@ impl IgnoreBuilder {
                 git_ignore: true,
                 git_exclude: true,
                 ignore_case_insensitive: false,
+                ignore_nested_git_repo: false,
                 require_git: true,
             },
         }
@@ -773,6 +789,17 @@ impl IgnoreBuilder {
         self.opts.ignore_case_insensitive = yes;
         self
     }
+
+    /// Enables ignoring nested git repositories.
+    ///
+    /// This is disabled by default.
+    pub(crate) fn ignore_nested_git_repo(
+        &mut self,
+        yes: bool,
+    ) -> &mut IgnoreBuilder {
+        self.opts.ignore_nested_git_repo = yes;
+        self
+    }
 }
 
 /// Creates a new gitignore matcher for the directory given.
@@ -885,6 +912,10 @@ mod tests {
     fn wfile<P: AsRef<Path>>(path: P, contents: &str) {
         let mut file = std::fs::File::create(path).unwrap();
         file.write_all(contents.as_bytes()).unwrap();
+    }
+
+    fn rmfile<P: AsRef<Path>>(path: P) {
+        std::fs::remove_file(path).unwrap();
     }
 
     fn mkdirp<P: AsRef<Path>>(path: P) {
@@ -1130,6 +1161,41 @@ mod tests {
 
         assert!(ig1.matched("bar", false).is_ignore());
         assert!(ig2.matched("bar", false).is_ignore());
+    }
+
+    //
+    #[test]
+    fn ignore_nested_git() {
+        let td = tmpdir();
+        let repo = td.path().join("foo");
+        mkdirp(&repo);
+        let dotgit_path = repo.join(".git");
+        wfile(&dotgit_path, "");
+        wfile(repo.join("bar"), "");
+
+        let (ig_default, err) =
+            IgnoreBuilder::new().build().add_child(td.path());
+        assert!(err.is_none());
+
+        let (ig_git, err) = IgnoreBuilder::new()
+            .ignore_nested_git_repo(true)
+            .build()
+            .add_child(td.path());
+        assert!(err.is_none());
+
+        // is_dir = false, so no check for .git child
+        assert!(ig_git.matched(&repo, false).is_none());
+        // on the same level as .git; it's expected that the parent directory wouldn't be recursed in this case
+        assert!(ig_git.matched(repo.join("bar"), false).is_none());
+        // is_dir = true and has .git child
+        assert!(ig_git.matched(&repo, true).is_ignore());
+        // but by default, don't ignore dir with .git child
+        assert!(ig_default.matched(&repo, true).is_none());
+
+        // also test with .git as a directory
+        rmfile(&dotgit_path);
+        mkdirp(&dotgit_path);
+        assert!(ig_git.matched(&repo, true).is_ignore());
     }
 
     #[test]
