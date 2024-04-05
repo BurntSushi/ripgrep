@@ -909,6 +909,11 @@ impl HiArgs {
         }
         Ok(builder)
     }
+
+    /// Returns if output should be colored
+    pub(crate) fn color(&self) -> bool {
+        self.color != ColorChoice::Never
+    }
 }
 
 /// State that only needs to be computed once during argument parsing.
