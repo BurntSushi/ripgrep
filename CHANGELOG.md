@@ -11,6 +11,8 @@ Bug fixes:
   [BUG #2836](https://github.com/BurntSushi/ripgrep/issues/2836),
   [BUG #2933](https://github.com/BurntSushi/ripgrep/pull/2933):
   Fix bug related to gitignores from parent directories.
+* [BUG #2177](https://github.com/BurntSushi/ripgrep/issues/2177):
+  Ignore a UTF-8 BOM marker at the start of `.gitignore` (and similar files).
 
 Feature enhancements:
 
