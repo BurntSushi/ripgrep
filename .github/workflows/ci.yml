@@ -189,9 +189,12 @@ jobs:
       shell: bash
       run: ${{ env.CARGO }} test --bin rg ${{ env.TARGET_FLAGS }} flags::defs::tests::available_shorts -- --nocapture
 
-     # Setup and compile on the wasm32-wasi target
+  # Setup and run tests on the wasm32-wasi target via wasmtime.
   wasm:
     runs-on: ubuntu-latest
+    env:
+      # The version of wasmtime to download and install.
+      WASMTIME_VERSION: 15.0.1
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -201,9 +204,19 @@ jobs:
         toolchain: stable
     - name: Add wasm32-wasi target
       run: rustup target add wasm32-wasi
+    - name: Download and install Wasmtime
+      run: |
+        echo "CARGO_BUILD_TARGET=wasm32-wasi" >> $GITHUB_ENV
+        echo "RUSTFLAGS=-Ctarget-feature=+simd128" >> $GITHUB_ENV
+        curl -LO https://github.com/bytecodealliance/wasmtime/releases/download/v$WASMTIME_VERSION/wasmtime-v$WASMTIME_VERSION-x86_64-linux.tar.xz
+        tar xvf wasmtime-v$WASMTIME_VERSION-x86_64-linux.tar.xz
+        echo `pwd`/wasmtime-v$WASMTIME_VERSION-x86_64-linux >> $GITHUB_PATH
+        echo "CARGO_TARGET_WASM32_WASI_RUNNER=wasmtime run --wasm simd --" >> $GITHUB_ENV
     - name: Basic build
       run: cargo build --verbose
-
+    - name: Run tests
+      run: cargo test --verbose
+    
   rustfmt:
     runs-on: ubuntu-latest
     steps:
