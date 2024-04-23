@@ -853,6 +853,57 @@ impl HyperlinkPath {
         }
         HyperlinkPath(result)
     }
+    #[cfg(target_os = "wasi")]
+    pub(crate) fn from_path(original_path: &Path) -> Option<HyperlinkPath> {
+        use std::os::wasi::ffi::OsStrExt;
+
+        // We canonicalize the path in order to get an absolute version of it
+        // without any `.` or `..` or superfluous separators. Unfortunately,
+        // this does also remove symlinks, and in theory, it would be nice to
+        // retain them. Perhaps even simpler, we could just join the current
+        // working directory with the path and be done with it. There was
+        // some discussion about this on PR#2483, and there generally appears
+        // to be some uncertainty about the extent to which hyperlinks with
+        // things like `..` in them actually work. So for now, we do the safest
+        // thing possible even though I think it can result in worse user
+        // experience. (Because it means the path you click on and the actual
+        // path that gets followed are different, even though they ostensibly
+        // refer to the same file.)
+        //
+        // There's also the potential issue that path canonicalization is
+        // expensive since it can touch the file system. That is probably
+        // less of an issue since hyperlinks are only created when they're
+        // supported, i.e., when writing to a tty.
+        //
+        // [1]: https://github.com/BurntSushi/ripgrep/pull/2483
+        let path = match original_path.canonicalize() {
+            Ok(path) => path,
+            Err(err) => {
+                log::debug!(
+                    "hyperlink creation for {:?} failed, error occurred \
+                     during path canonicalization: {}",
+                    original_path,
+                    err,
+                );
+                return None;
+            }
+        };
+        let bytes = path.as_os_str().as_bytes();
+        // This should not be possible since one imagines that canonicalization
+        // should always return an absolute path. But it doesn't actually
+        // appear guaranteed by POSIX, so we check whether it's true or not and
+        // refuse to create a hyperlink from a relative path if it isn't.
+        if !bytes.starts_with(b"/") {
+            log::debug!(
+                "hyperlink creation for {:?} failed, canonicalization \
+                 returned {:?}, which does not start with a slash",
+                original_path,
+                path,
+            );
+            return None;
+        }
+        Some(HyperlinkPath::encode(bytes))
+    }
 }
 
 #[cfg(test)]

@@ -25,10 +25,8 @@ pub fn hostname() -> io::Result<OsString> {
     }
     #[cfg(not(any(windows, unix)))]
     {
-        io::Error::new(
-            io::ErrorKind::Other,
-            "hostname could not be found on unsupported platform",
-        )
+        // backup solution for systems that do not have gethostname():
+        Ok(OsString::from("localhost"))
     }
 }
 
