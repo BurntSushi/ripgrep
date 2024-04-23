@@ -189,6 +189,21 @@ jobs:
       shell: bash
       run: ${{ env.CARGO }} test --bin rg ${{ env.TARGET_FLAGS }} flags::defs::tests::available_shorts -- --nocapture
 
+     # Setup and compile on the wasm32-wasi target
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: stable
+    - name: Add wasm32-wasi target
+      run: rustup target add wasm32-wasi
+    - name: Basic build
+      run: cargo build --verbose
+
   rustfmt:
     runs-on: ubuntu-latest
     steps:
