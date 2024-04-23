@@ -811,6 +811,13 @@ impl HyperlinkPath {
         Some(HyperlinkPath::encode(with_slash.as_bytes()))
     }
 
+    /// For other platforms (not windows, not unix), return None and log a debug message.
+    #[cfg(not(any(windows, unix)))]
+    pub(crate) fn from_path(original_path: &Path) -> Option<HyperlinkPath> {
+        log::debug!("hyperlinks are not supported on this platform");
+        None
+    }
+
     /// Percent-encodes a path.
     ///
     /// The alphanumeric ASCII characters and "-", ".", "_", "~" are unreserved
@@ -852,13 +859,6 @@ impl HyperlinkPath {
             }
         }
         HyperlinkPath(result)
-    }
-
-    // For other platforms (not windows, not unix), return None and log a debug message.
-    #[cfg(not(any(windows, unix)))]
-    pub(crate) fn from_path(original_path: &Path) -> Option<HyperlinkPath> {
-        log::debug!("Hyperlinks are not supported on this platform");
-        None
     }
 }
 
