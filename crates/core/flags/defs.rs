@@ -7261,7 +7261,7 @@ impl Flag for Vimgrep {
         Category::Output
     }
     fn doc_short(&self) -> &'static str {
-        r"Print results im a vim compatible format."
+        r"Print results in a vim compatible format."
     }
     fn doc_long(&self) -> &'static str {
         r"
