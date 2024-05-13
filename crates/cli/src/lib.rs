@@ -178,22 +178,71 @@ pub fn is_readable_stdin() -> bool {
         };
 
         let stdin = std::io::stdin();
-        let Ok(fd) = stdin.as_fd().try_clone_to_owned() else { return false };
+        let fd = match stdin.as_fd().try_clone_to_owned() {
+            Ok(fd) => fd,
+            Err(err) => {
+                log::debug!(
+                    "for heuristic stdin detection on Unix, \
+                     could not clone stdin file descriptor \
+                     (thus assuming stdin is not readable): {err}",
+                );
+                return false;
+            }
+        };
         let file = File::from(fd);
-        let Ok(md) = file.metadata() else { return false };
+        let md = match file.metadata() {
+            Ok(md) => md,
+            Err(err) => {
+                log::debug!(
+                    "for heuristic stdin detection on Unix, \
+                     could not get file metadata for stdin \
+                     (thus assuming stdin is not readable): {err}",
+                );
+                return false;
+            }
+        };
         let ft = md.file_type();
-        ft.is_file() || ft.is_fifo() || ft.is_socket()
+        let is_file = ft.is_file();
+        let is_fifo = ft.is_fifo();
+        let is_socket = ft.is_socket();
+        let is_readable = is_file || is_fifo || is_socket;
+        log::debug!(
+            "for heuristic stdin detection on Unix, \
+             found that \
+             is_file={is_file}, is_fifo={is_fifo} and is_socket={is_socket}, \
+             and thus concluded that is_stdin_readable={is_readable}",
+        );
+        is_readable
     }
 
     #[cfg(windows)]
     fn imp() -> bool {
-        winapi_util::file::typ(winapi_util::HandleRef::stdin())
-            .map(|t| t.is_disk() || t.is_pipe())
-            .unwrap_or(false)
+        let stdin = winapi_util::HandleRef::stdin();
+        let typ = match winapi_util::file::typ(stdin) {
+            Ok(typ) => typ,
+            Err(err) => {
+                log::debug!(
+                    "for heuristic stdin detection on Windows, \
+                     could not get file type of stdin \
+                     (thus assuming stdin is not readable): {err}",
+                );
+                return false;
+            }
+        };
+        let is_disk = typ.is_disk();
+        let is_pipe = typ.is_pipe();
+        let is_readable = is_disk || is_pipe;
+        log::debug!(
+            "for heuristic stdin detection on Windows, \
+             found that is_disk={is_disk} and is_pipe={is_pipe}, \
+             and thus concluded that is_stdin_readable={is_readable}",
+        );
+        is_readable
     }
 
     #[cfg(not(any(unix, windows)))]
     fn imp() -> bool {
+        log::debug!("on non-{{Unix,Windows}}, assuming stdin is not readable");
         false
     }
 
