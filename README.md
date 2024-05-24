@@ -318,6 +318,12 @@ If you're a **Nix** user, you can install ripgrep from
 $ nix-env --install ripgrep
 ```
 
+If you're a **Flox** user, you can install ripgrep as follows:
+
+```
+$ flox install ripgrep
+```
+
 If you're a **Guix** user, you can install ripgrep from the official
 package collection:
 
