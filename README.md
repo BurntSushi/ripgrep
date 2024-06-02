@@ -445,7 +445,7 @@ $ git clone https://github.com/BurntSushi/ripgrep
 $ cd ripgrep
 $ cargo build --release
 $ ./target/release/rg --version
-0.1.3
+14.1.0
 ```
 
 **NOTE:** In the past, ripgrep supported a `simd-accel` Cargo feature when
