@@ -336,7 +336,7 @@ then ripgrep can be installed using a binary `.deb` file provided in each
 [ripgrep release](https://github.com/BurntSushi/ripgrep/releases).
 
 ```
-$ curl -LO https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgrep_13.0.0_amd64.deb
+$ curl -LO https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/ripgrep_14.1.0-1_amd64.deb
 $ sudo dpkg -i ripgrep_13.0.0_amd64.deb
 ```
 
