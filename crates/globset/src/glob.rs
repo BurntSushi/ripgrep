@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::path::{is_separator, Path};
 
 use regex_automata::meta::Regex;
@@ -743,11 +744,12 @@ fn bytes_to_escaped_literal(bs: &[u8]) -> String {
     let mut s = String::with_capacity(bs.len());
     for &b in bs {
         if b <= 0x7F {
-            s.push_str(&regex_syntax::escape(
+            regex_syntax::escape_into(
                 char::from(b).encode_utf8(&mut [0; 4]),
-            ));
+                &mut s,
+            );
         } else {
-            s.push_str(&format!("\\x{:02x}", b));
+            write!(&mut s, "\\x{:02x}", b).unwrap();
         }
     }
     s
