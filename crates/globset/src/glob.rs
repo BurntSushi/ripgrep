@@ -732,7 +732,9 @@ impl Tokens {
 /// Convert a Unicode scalar value to an escaped string suitable for use as
 /// a literal in a non-Unicode regex.
 fn char_to_escaped_literal(c: char) -> String {
-    bytes_to_escaped_literal(&c.to_string().into_bytes())
+    let mut buf = [0; 4];
+    let bytes = c.encode_utf8(&mut buf).as_bytes();
+    bytes_to_escaped_literal(bytes)
 }
 
 /// Converts an arbitrary sequence of bytes to a UTF-8 string. All non-ASCII
