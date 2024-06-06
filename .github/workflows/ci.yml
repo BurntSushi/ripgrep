@@ -67,6 +67,10 @@ jobs:
           os: ubuntu-latest
           rust: stable
           target: x86_64-unknown-linux-musl
+        - build: stable-aarch64-musl
+          os: ubuntu-latest
+          rust: stable 
+          target: aarch64-unknown-linux-musl
         - build: stable-x86
           os: ubuntu-latest
           rust: stable
