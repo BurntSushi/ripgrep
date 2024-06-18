@@ -303,7 +303,7 @@ $ sudo yum-config-manager --add-repo=https://copr.fedorainfracloud.org/coprs/car
 $ sudo yum install ripgrep
 ```
 
-If you're a **NixOS** user, you can install ripgrep from
+If you're a **Nix** user, you can install ripgrep from
 [nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/tools/text/ripgrep/default.nix):
 
 ```
