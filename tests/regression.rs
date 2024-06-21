@@ -404,7 +404,7 @@ rgtest!(r428_unrecognized_style, |dir: Dir, mut cmd: TestCommand| {
     let expected = "\
 rg: error parsing flag --colors: \
 unrecognized style attribute ''. Choose from: nobold, bold, nointense, \
-intense, nounderline, underline.
+intense, nounderline, underline, noitalic, italic.
 ";
     eqnice!(expected, stderr);
 });
