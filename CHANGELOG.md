@@ -18,6 +18,8 @@ Feature enhancements:
 
 * [FEATURE #2708](https://github.com/BurntSushi/ripgrep/pull/2708):
   Completions for the fish shell take ripgrep's config file into account.
+* [FEATURE #2841](https://github.com/BurntSushi/ripgrep/pull/2841):
+  Add `italic` to the list of available style attributes in `--color`.
 
 
 14.1.1 (2024-09-08)

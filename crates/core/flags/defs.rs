@@ -835,7 +835,7 @@ provided multiple times. Settings are applied iteratively. Pre-existing color
 labels are limited to one of eight choices: \fBred\fP, \fBblue\fP, \fBgreen\fP,
 \fBcyan\fP, \fBmagenta\fP, \fByellow\fP, \fBwhite\fP and \fBblack\fP. Styles
 are limited to \fBnobold\fP, \fBbold\fP, \fBnointense\fP, \fBintense\fP,
-\fBnounderline\fP or \fBunderline\fP.
+\fBnounderline\fP, \fBunderline\fP, \fBnoitalic\fP or \fBitalic\fP.
 .sp
 The format of the flag is
 \fB{\fP\fItype\fP\fB}:{\fP\fIattribute\fP\fB}:{\fP\fIvalue\fP\fB}\fP.
