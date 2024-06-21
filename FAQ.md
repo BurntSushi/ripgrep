@@ -248,7 +248,7 @@ The `--colors` flag is a bit more complicated. The general format is:
   to bold the output or not).
 * `{value}` is determined by the value of `{attribute}`. If
   `{attribute}` is `style`, then `{value}` should be one of `nobold`,
-  `bold`, `nointense`, `intense`, `nounderline` or `underline`. If
+  `bold`, `nointense`, `intense`, `nounderline`, `underline`, `noitalic`, or `italic`. If
   `{attribute}` is `fg` or `bg`, then `{value}` should be a color.
 
 A color is specified by either one of eight of English names, a single 256-bit
