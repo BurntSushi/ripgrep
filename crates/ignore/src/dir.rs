@@ -212,7 +212,7 @@ impl Ignore {
             igtmp.absolute_base = Some(absolute_base.clone());
             igtmp.has_git =
                 if self.0.opts.require_git && self.0.opts.git_ignore {
-                    parent.join(".git").exists()
+                    parent.join(".git").exists() || parent.join(".jj").exists()
                 } else {
                     false
                 };
@@ -244,15 +244,6 @@ impl Ignore {
 
     /// Like add_child, but takes a full path and returns an IgnoreInner.
     fn add_child_path(&self, dir: &Path) -> (IgnoreInner, Option<Error>) {
-        let git_type = if self.0.opts.require_git
-            && (self.0.opts.git_ignore || self.0.opts.git_exclude)
-        {
-            dir.join(".git").metadata().ok().map(|md| md.file_type())
-        } else {
-            None
-        };
-        let has_git = git_type.map(|_| true).unwrap_or(false);
-
         let mut errs = PartialErrorBuilder::default();
         let custom_ig_matcher = if self.0.custom_ignore_filenames.is_empty() {
             Gitignore::empty()
@@ -290,10 +281,17 @@ impl Ignore {
             errs.maybe_push(err);
             m
         };
+
         let gi_exclude_matcher = if !self.0.opts.git_exclude {
             Gitignore::empty()
         } else {
-            match resolve_git_commondir(dir, git_type) {
+            let git_dir = dir.join(".git");
+            let git_type = if self.0.opts.require_git {
+                git_dir.metadata().ok().map(|md| md.file_type())
+            } else {
+                None
+            };
+            match resolve_git_commondir(git_dir, git_type) {
                 Ok(git_dir) => {
                     let (m, err) = create_gitignore(
                         &dir,
@@ -325,7 +323,7 @@ impl Ignore {
             git_global_matcher: self.0.git_global_matcher.clone(),
             git_ignore_matcher: gi_matcher,
             git_exclude_matcher: gi_exclude_matcher,
-            has_git,
+            has_git: dir.join(".git").exists() || dir.join(".jj").exists(),
             opts: self.0.opts,
         };
         (ig, errs.into_error_option())
@@ -829,24 +827,22 @@ pub(crate) fn create_gitignore<T: AsRef<OsStr>>(
 ///
 /// Some I/O errors are ignored.
 fn resolve_git_commondir(
-    dir: &Path,
+    git_dir: PathBuf,
     git_type: Option<FileType>,
 ) -> Result<PathBuf, Option<Error>> {
-    let git_dir_path = || dir.join(".git");
-    let git_dir = git_dir_path();
     if !git_type.map_or(false, |ft| ft.is_file()) {
         return Ok(git_dir);
     }
-    let file = match File::open(git_dir) {
+    let file = match File::open(&git_dir) {
         Ok(file) => io::BufReader::new(file),
         Err(err) => {
-            return Err(Some(Error::Io(err).with_path(git_dir_path())));
+            return Err(Some(Error::Io(err).with_path(git_dir)));
         }
     };
     let dot_git_line = match file.lines().next() {
         Some(Ok(line)) => line,
         Some(Err(err)) => {
-            return Err(Some(Error::Io(err).with_path(git_dir_path())));
+            return Err(Some(Error::Io(err).with_path(git_dir)));
         }
         None => return Err(None),
     };
@@ -934,6 +930,19 @@ mod tests {
     fn gitignore() {
         let td = tmpdir();
         mkdirp(td.path().join(".git"));
+        wfile(td.path().join(".gitignore"), "foo\n!bar");
+
+        let (ig, err) = IgnoreBuilder::new().build().add_child(td.path());
+        assert!(err.is_none());
+        assert!(ig.matched("foo", false).is_ignore());
+        assert!(ig.matched("bar", false).is_whitelist());
+        assert!(ig.matched("baz", false).is_none());
+    }
+
+    #[test]
+    fn gitignore_with_jj() {
+        let td = tmpdir();
+        mkdirp(td.path().join(".jj"));
         wfile(td.path().join(".gitignore"), "foo\n!bar");
 
         let (ig, err) = IgnoreBuilder::new().build().add_child(td.path());
