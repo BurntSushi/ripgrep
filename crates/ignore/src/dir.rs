@@ -212,7 +212,7 @@ impl Ignore {
             igtmp.absolute_base = Some(absolute_base.clone());
             igtmp.has_git =
                 if self.0.opts.require_git && self.0.opts.git_ignore {
-                    parent.join(".git").exists()
+                    parent.join(".git").exists() || parent.join(".jj").exists()
                 } else {
                     false
                 };
@@ -251,7 +251,7 @@ impl Ignore {
         } else {
             None
         };
-        let has_git = git_type.map(|_| true).unwrap_or(false);
+        let has_git = git_type.is_some() || dir.join(".jj").exists();
 
         let mut errs = PartialErrorBuilder::default();
         let custom_ig_matcher = if self.0.custom_ignore_filenames.is_empty() {
@@ -290,6 +290,7 @@ impl Ignore {
             errs.maybe_push(err);
             m
         };
+
         let gi_exclude_matcher = if !self.0.opts.git_exclude {
             Gitignore::empty()
         } else {
@@ -945,6 +946,19 @@ mod tests {
     fn gitignore() {
         let td = tmpdir();
         mkdirp(td.path().join(".git"));
+        wfile(td.path().join(".gitignore"), "foo\n!bar");
+
+        let (ig, err) = IgnoreBuilder::new().build().add_child(td.path());
+        assert!(err.is_none());
+        assert!(ig.matched("foo", false).is_ignore());
+        assert!(ig.matched("bar", false).is_whitelist());
+        assert!(ig.matched("baz", false).is_none());
+    }
+
+    #[test]
+    fn gitignore_with_jj() {
+        let td = tmpdir();
+        mkdirp(td.path().join(".jj"));
         wfile(td.path().join(".gitignore"), "foo\n!bar");
 
         let (ig, err) = IgnoreBuilder::new().build().add_child(td.path());
