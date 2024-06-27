@@ -247,14 +247,18 @@ fn files(args: &HiArgs) -> anyhow::Result<bool> {
         if args.quit_after_match() {
             break;
         }
-        if let Err(err) = path_printer.write(haystack.path()) {
-            // A broken pipe means graceful termination.
-            if err.kind() == std::io::ErrorKind::BrokenPipe {
-                break;
+        match path_printer.write(haystack.path()) {
+            Ok(()) => (),
+            Err(err) => {
+                // A broken pipe means graceful termination.
+                if err.kind() == std::io::ErrorKind::BrokenPipe {
+                    break;
+                } else {
+                    // Otherwise, we have some other error that's preventing us from
+                    // writing to stdout, so we should bubble it up.
+                    return Err(err.into());
+                }
             }
-            // Otherwise, we have some other error that's preventing us from
-            // writing to stdout, so we should bubble it up.
-            return Err(err.into());
         }
     }
     Ok(matched)
