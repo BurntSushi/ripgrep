@@ -16,6 +16,7 @@ Bug fixes:
 
 Feature enhancements:
 
+* Many enhancements to the default set of file types available for filtering.
 * [FEATURE #2708](https://github.com/BurntSushi/ripgrep/pull/2708):
   Completions for the fish shell take ripgrep's config file into account.
 * [FEATURE #2841](https://github.com/BurntSushi/ripgrep/pull/2841):
