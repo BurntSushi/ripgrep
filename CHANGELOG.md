@@ -23,6 +23,8 @@ Feature enhancements:
   Add `italic` to the list of available style attributes in `--color`.
 * [FEATURE #2842](https://github.com/BurntSushi/ripgrep/pull/2842):
   Directories containing `.jj` are now treated as git repositories.
+* [FEATURE #2849](https://github.com/BurntSushi/ripgrep/pull/2849):
+  When using multithreading, schedule files to search in order given on CLI.
 
 
 14.1.1 (2024-09-08)
