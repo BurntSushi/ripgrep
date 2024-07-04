@@ -138,7 +138,7 @@ generally speaking):
   backreferences in your patterns, which are not supported in ripgrep's default
   regex engine. PCRE2 support can be enabled with `-P/--pcre2` (use PCRE2
   always) or `--auto-hybrid-regex` (use PCRE2 only if needed). An alternative
-  syntax is provided via the `--engine (default|pcre2|auto-hybrid)` option.
+  syntax is provided via the `--engine (default|pcre2|auto)` option.
 * ripgrep has [rudimentary support for replacements](GUIDE.md#replacements),
   which permit rewriting output based on what was matched.
 * ripgrep supports [searching files in text encodings](GUIDE.md#file-encoding)
