@@ -1305,7 +1305,7 @@ impl WalkParallel {
 
     fn threads(&self) -> usize {
         if self.threads == 0 {
-            2
+            std::thread::available_parallelism().map_or(1, |n| n.get()).min(12)
         } else {
             self.threads
         }
