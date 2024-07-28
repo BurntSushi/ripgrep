@@ -159,7 +159,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
         "[Gg][Nn][Uu]makefile", "[Mm]akefile",
         "[Gg][Nn][Uu]makefile.am", "[Mm]akefile.am",
         "[Gg][Nn][Uu]makefile.in", "[Mm]akefile.in",
-        "[Mm]akefile.inc",
+        "Makefile.*",
         "*.mk", "*.mak"
     ]),
     (&["mako"], &["*.mako", "*.mao"]),
