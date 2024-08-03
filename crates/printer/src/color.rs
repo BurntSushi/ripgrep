@@ -65,7 +65,7 @@ impl std::fmt::Display for ColorError {
                 f,
                 "unrecognized style attribute '{}'. Choose from: \
                  nobold, bold, nointense, intense, nounderline, \
-                 underline.",
+                 underline, noitalic, italic.",
                 name,
             ),
             ColorError::InvalidFormat(ref original) => write!(
@@ -121,7 +121,7 @@ pub struct ColorSpecs {
 /// `0x`.
 ///
 /// Valid style instructions are `nobold`, `bold`, `intense`, `nointense`,
-/// `underline`, `nounderline`.
+/// `underline`, `nounderline`, `italic`, `noitalic`.
 ///
 /// ## Example
 ///
@@ -201,6 +201,8 @@ enum Style {
     NoIntense,
     Underline,
     NoUnderline,
+    Italic,
+    NoItalic,
 }
 
 impl ColorSpecs {
@@ -286,6 +288,12 @@ impl SpecValue {
                 Style::NoUnderline => {
                     cspec.set_underline(false);
                 }
+                Style::Italic => {
+                    cspec.set_italic(true);
+                }
+                Style::NoItalic => {
+                    cspec.set_italic(false);
+                }
             },
         }
     }
@@ -370,6 +378,8 @@ impl std::str::FromStr for Style {
             "nointense" => Ok(Style::NoIntense),
             "underline" => Ok(Style::Underline),
             "nounderline" => Ok(Style::NoUnderline),
+            "italic" => Ok(Style::Italic),
+            "noitalic" => Ok(Style::NoItalic),
             _ => Err(ColorError::UnrecognizedStyle(s.to_string())),
         }
     }
