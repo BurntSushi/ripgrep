@@ -702,16 +702,20 @@ impl HyperlinkPath {
     /// Returns a hyperlink path from an OS path.
     #[cfg(windows)]
     pub(crate) fn from_path(original_path: &Path) -> Option<HyperlinkPath> {
-        // On Windows, Path::canonicalize returns the result of
-        // GetFinalPathNameByHandleW with VOLUME_NAME_DOS,
-        // which produces paths such as the following:
+        // On Windows, we use `std::path::absolute` instead of `Path::canonicalize`
+        // as it can be much faster since it does not touch the file system.
+        // It wraps the [`GetFullPathNameW`][1] API, except for verbatim paths
+        // (those which start with `\\?\`, see [the documentation][2] for details).
+        //
+        // Here, we strip any verbatim path prefixes since we cannot use them
+        // in hyperlinks anyway. This can only happen if the user explicitly
+        // supplies a verbatim path as input, which already needs to be absolute:
         //
         //   \\?\C:\dir\file.txt           (local path)
         //   \\?\UNC\server\dir\file.txt   (network share)
         //
-        // The \\?\ prefix comes from VOLUME_NAME_DOS and is constant.
-        // It is followed either by the drive letter, or by UNC\
-        // (universal naming convention), which denotes a network share.
+        // The `\\?\` prefix is constant for verbatim paths, and can be followed
+        // by `UNC\` (universal naming convention), which denotes a network share.
         //
         // Given that the default URL format on Windows is file://{path}
         // we need to return the following from this function:
@@ -750,18 +754,19 @@ impl HyperlinkPath {
         //
         // It doesn't parse any other number of slashes in "file//server" as a
         // network path.
+        //
+        // [1]: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfullpathnamew
+        // [2]: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file
 
         const WIN32_NAMESPACE_PREFIX: &str = r"\\?\";
         const UNC_PREFIX: &str = r"UNC\";
 
-        // As for Unix, we canonicalize the path to make sure we have an
-        // absolute path.
-        let path = match original_path.canonicalize() {
+        let path = match std::path::absolute(original_path) {
             Ok(path) => path,
             Err(err) => {
                 log::debug!(
                     "hyperlink creation for {:?} failed, error occurred \
-                     during path canonicalization: {}",
+                     during conversion to absolute path: {}",
                     original_path,
                     err,
                 );
@@ -784,24 +789,20 @@ impl HyperlinkPath {
                 return None;
             }
         };
-        // As the comment above says, we expect all canonicalized paths to
-        // begin with a \\?\. If it doesn't, then something weird is happening
-        // and we should just give up.
-        if !string.starts_with(WIN32_NAMESPACE_PREFIX) {
-            log::debug!(
-                "hyperlink creation for {:?} failed, canonicalization \
-                 returned {:?}, which does not start with \\\\?\\",
-                original_path,
-                path,
-            );
-            return None;
-        }
-        string = &string[WIN32_NAMESPACE_PREFIX.len()..];
 
-        // And as above, drop the UNC prefix too, but keep the leading slash.
-        if string.starts_with(UNC_PREFIX) {
-            string = &string[(UNC_PREFIX.len() - 1)..];
+        // Strip verbatim path prefixes (see the comment above for details).
+        if string.starts_with(WIN32_NAMESPACE_PREFIX) {
+            string = &string[WIN32_NAMESPACE_PREFIX.len()..];
+
+            // Drop the UNC prefix if there is one, but keep the leading slash.
+            if string.starts_with(UNC_PREFIX) {
+                string = &string[(UNC_PREFIX.len() - 1)..];
+            }
+        } else if string.starts_with(r"\\") || string.starts_with(r"//") {
+            // Drop one of the two leading slashes of network paths, it will be added back.
+            string = &string[1..];
         }
+
         // Finally, add a leading slash. In the local file case, this turns
         // C:\foo\bar into /C:\foo\bar (and then percent encoding turns it into
         // /C:/foo/bar). In the network share case, this turns \share\foo\bar
@@ -1004,6 +1005,35 @@ mod tests {
         assert_eq!(
             HyperlinkFormat::from_str("foo://{bar{{}").unwrap_err(),
             err(InvalidVariable("bar{{".to_string())),
+        );
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn convert_to_hyperlink_path() {
+        let convert = |path| {
+            String::from_utf8(
+                HyperlinkPath::from_path(Path::new(path)).unwrap().0,
+            )
+            .unwrap()
+        };
+
+        assert_eq!(convert(r"C:\dir\file.txt"), "/C:/dir/file.txt");
+        assert_eq!(
+            convert(r"C:\foo\bar\..\other\baz.txt"),
+            "/C:/foo/other/baz.txt"
+        );
+
+        assert_eq!(convert(r"\\server\dir\file.txt"), "//server/dir/file.txt");
+        assert_eq!(
+            convert(r"\\server\dir\foo\..\other\file.txt"),
+            "//server/dir/other/file.txt"
+        );
+
+        assert_eq!(convert(r"\\?\C:\dir\file.txt"), "/C:/dir/file.txt");
+        assert_eq!(
+            convert(r"\\?\UNC\server\dir\file.txt"),
+            "//server/dir/file.txt"
         );
     }
 }
