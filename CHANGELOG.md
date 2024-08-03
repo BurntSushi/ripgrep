@@ -2,6 +2,11 @@ TBD
 ===
 Unreleased changes. Release notes have not yet been written.
 
+Performance improvements:
+
+* [PERF #2865](https://github.com/BurntSushi/ripgrep/pull/2865):
+  Avoid using path canonicalization on Windows when emitting hyperlinks.
+
 Bug fixes:
 
 * [BUG #829](https://github.com/BurntSushi/ripgrep/issues/829),
