@@ -98,7 +98,7 @@ files for patterns without any opportunities for literal optimizations:
 | Tool | Command | Line count | Time |
 | ---- | ------- | ---------- | ---- |
 | ripgrep | `rg '[A-Za-z]{30}'` | 6749 | **15.569s** (1.00x) |
-| [ugrep](https://github.com/Genivia/ugrep) | `ugrep -w '[A-Z]\w+ Sherlock [A-Z]\w+'` | 6749 | 21.857s (1.40x) |
+| [ugrep](https://github.com/Genivia/ugrep) | `ugrep -E '[A-Za-z]{30}'` | 6749 | 21.857s (1.40x) |
 | [GNU grep](https://www.gnu.org/software/grep/) | `LC_ALL=C grep -E '[A-Za-z]{30}'` | 6749 | 32.409s (2.08x) |
 | [GNU grep (Unicode)](https://www.gnu.org/software/grep/) | `LC_ALL=en_US.UTF-8 grep -E '[A-Za-z]{30}'` | 6795 | 8m30s (32.74x) |
 
