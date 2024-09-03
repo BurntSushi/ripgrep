@@ -2442,14 +2442,15 @@ fn test_generate() {
             .unwrap();
     assert_eq!(Mode::Generate(GenerateMode::Man), args.mode);
 
-    let args = parse_low_raw(["--generate", "man", "-l"]).unwrap();
-    assert_eq!(Mode::Search(SearchMode::FilesWithMatches), args.mode);
+    let args = parse_low_raw(["-l", "--generate", "man"]).unwrap();
+    assert_eq!(Mode::Generate(GenerateMode::Man), args.mode);
 
-    // An interesting quirk of how the modes override each other that lets
-    // you get back to the "default" mode of searching.
+    let args = parse_low_raw(["--generate", "man", "--files"]).unwrap();
+    assert_eq!(Mode::Files, args.mode);
+
     let args =
         parse_low_raw(["--generate", "man", "--json", "--no-json"]).unwrap();
-    assert_eq!(Mode::Search(SearchMode::Standard), args.mode);
+    assert_eq!(Mode::Generate(GenerateMode::Man), args.mode);
 }
 
 /// -g/--glob
@@ -5658,6 +5659,10 @@ fn test_quiet() {
 
     let args = parse_low_raw(["-q", "--count-matches"]).unwrap();
     assert_eq!(true, args.quiet);
+
+    let args = parse_low_raw(["--files", "-l"]).unwrap();
+    dbg!(args.mode);
+    assert_eq!(Mode::Files, args.mode);
 }
 
 /// --regex-size-limit

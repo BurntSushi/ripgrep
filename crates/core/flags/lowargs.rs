@@ -181,7 +181,7 @@ impl Mode {
                 // Once we're in a non-search mode, other non-search modes
                 // can override it. But search modes cannot. So for example,
                 // `--files -l` will still be Mode::Files.
-                if !matches!(*self, Mode::Search(_)) {
+                if !matches!(new, Mode::Search(_)) {
                     *self = new;
                 }
             }
