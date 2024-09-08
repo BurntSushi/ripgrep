@@ -270,7 +270,6 @@ impl JSONBuilder {
 ///   present. If no file path is available, then this field is `null`.
 /// * **lines** - An
 ///   [arbitrary data object](#object-arbitrary-data)
-// TODO (sbadragan): add note about replacement
 ///   representing one or more lines contained in this match.
 /// * **line_number** - If the searcher has been configured to report line
 ///   numbers, then this corresponds to the line number of the first line
@@ -283,7 +282,8 @@ impl JSONBuilder {
 ///   encoded, then the byte offsets correspond to the data after base64
 ///   decoding.) The `submatch` objects are guaranteed to be sorted by their
 ///   starting offsets. Note that it is possible for this array to be empty,
-///   for example, when searching reports inverted matches.
+///   for example, when searching reports inverted matches. If a replace value
+///   has been configured, the resulting replacement text is also present.
 ///
 /// #### Message: **context**
 ///
@@ -313,7 +313,8 @@ impl JSONBuilder {
 ///   decoding.) The `submatch` objects are guaranteed to be sorted by
 ///   their starting offsets. Note that it is possible for this array to be
 ///   non-empty, for example, when searching reports inverted matches such that
-///   the original matcher could match things in the contextual lines.
+///   the original matcher could match things in the contextual lines. If a replace
+///   value has been configured, the resulting replacement text is also present.
 ///
 /// #### Object: **submatch**
 ///
@@ -673,7 +674,6 @@ impl<'p, 's, M: Matcher, W: io::Write> JSONSink<'p, 's, M, W> {
         Ok(())
     }
 
-    // TODO (sbadragan): do we need to clone bytes?
     /// If the configuration specifies a replacement, then this executes the
     /// replacement, lazily allocating memory if necessary.
     ///
@@ -916,8 +916,6 @@ impl<'a> SubMatches<'a> {
             for (i, &mat) in matches.iter().enumerate() {
                 match_ranges.push(jsont::SubMatch {
                     m: &bytes[mat],
-                    // TODO (sbadragan): remove
-                    // stephan stephan
                     replacement: replacement
                         .map(|(rbuf, rmatches)| &rbuf[rmatches[i]]),
                     start: mat.start(),
