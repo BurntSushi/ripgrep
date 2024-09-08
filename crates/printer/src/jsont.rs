@@ -135,6 +135,7 @@ impl<'a> serde::Serialize for Context<'a> {
 
 pub(crate) struct SubMatch<'a> {
     pub(crate) m: &'a [u8],
+    pub(crate) replacement: Option<&'a [u8]>,
     pub(crate) start: usize,
     pub(crate) end: usize,
 }
@@ -148,6 +149,9 @@ impl<'a> serde::Serialize for SubMatch<'a> {
 
         let mut state = s.serialize_struct("SubMatch", 3)?;
         state.serialize_field("match", &Data::from_bytes(self.m))?;
+        if let Some(r) = self.replacement {
+            state.serialize_field("replacement", &Data::from_bytes(r))?;
+        }
         state.serialize_field("start", &self.start)?;
         state.serialize_field("end", &self.end)?;
         state.end()

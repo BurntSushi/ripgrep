@@ -55,11 +55,13 @@ impl Message {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 struct Begin {
     path: Option<Data>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 struct End {
     path: Option<Data>,
     binary_offset: Option<u64>,
@@ -67,12 +69,14 @@ struct End {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 struct Summary {
     elapsed_total: Duration,
     stats: Stats,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 struct Match {
     path: Option<Data>,
     lines: Data,
@@ -82,6 +86,7 @@ struct Match {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 struct Context {
     path: Option<Data>,
     lines: Data,
@@ -91,9 +96,11 @@ struct Context {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 struct SubMatch {
     #[serde(rename = "match")]
     m: Data,
+    replacement: Option<Data>,
     start: usize,
     end: usize,
 }
@@ -117,6 +124,7 @@ impl Data {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 struct Stats {
     elapsed: Duration,
     searches: u64,
@@ -128,6 +136,7 @@ struct Stats {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 struct Duration {
     #[serde(flatten)]
     duration: time::Duration,
@@ -178,6 +187,7 @@ rgtest!(basic, |dir: Dir, mut cmd: TestCommand| {
             absolute_offset: 129,
             submatches: vec![SubMatch {
                 m: Data::text("Sherlock Holmes"),
+                replacement: None,
                 start: 48,
                 end: 63,
             },],
@@ -187,6 +197,57 @@ rgtest!(basic, |dir: Dir, mut cmd: TestCommand| {
     assert_eq!(msgs[3].unwrap_end().binary_offset, None);
     assert_eq!(msgs[4].unwrap_summary().stats.searches_with_match, 1);
     assert_eq!(msgs[4].unwrap_summary().stats.bytes_printed, 494);
+});
+
+rgtest!(replacement, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("sherlock", SHERLOCK);
+    cmd.arg("--json")
+        .arg("-B1")
+        .arg("Sherlock Holmes")
+        .args(["-r", "John Watson"])
+        .arg("sherlock");
+
+    let msgs = json_decode(&cmd.stdout());
+
+    assert_eq!(
+        msgs[0].unwrap_begin(),
+        Begin { path: Some(Data::text("sherlock")) }
+    );
+    assert_eq!(
+        msgs[1].unwrap_context(),
+        Context {
+            path: Some(Data::text("sherlock")),
+            lines: Data::text(
+                "Holmeses, success in the province of \
+                 detective work must always\n",
+            ),
+            line_number: Some(2),
+            absolute_offset: 65,
+            submatches: vec![],
+        }
+    );
+    assert_eq!(
+        msgs[2].unwrap_match(),
+        Match {
+            path: Some(Data::text("sherlock")),
+            lines: Data::text(
+                "be, to a very large extent, the result of luck. \
+                 Sherlock Holmes\n",
+            ),
+            line_number: Some(3),
+            absolute_offset: 129,
+            submatches: vec![SubMatch {
+                m: Data::text("Sherlock Holmes"),
+                replacement: Some(Data::text("John Watson")),
+                start: 48,
+                end: 63,
+            },],
+        }
+    );
+    assert_eq!(msgs[3].unwrap_end().path, Some(Data::text("sherlock")));
+    assert_eq!(msgs[3].unwrap_end().binary_offset, None);
+    assert_eq!(msgs[4].unwrap_summary().stats.searches_with_match, 1);
+    assert_eq!(msgs[4].unwrap_summary().stats.bytes_printed, 531);
 });
 
 rgtest!(quiet_stats, |dir: Dir, mut cmd: TestCommand| {
@@ -244,6 +305,7 @@ rgtest!(notutf8, |dir: Dir, mut cmd: TestCommand| {
             absolute_offset: 0,
             submatches: vec![SubMatch {
                 m: Data::bytes("/w=="),
+                replacement: None,
                 start: 4,
                 end: 5,
             },],
@@ -285,6 +347,7 @@ rgtest!(notutf8_file, |dir: Dir, mut cmd: TestCommand| {
             absolute_offset: 0,
             submatches: vec![SubMatch {
                 m: Data::bytes("/w=="),
+                replacement: None,
                 start: 4,
                 end: 5,
             },],
@@ -305,7 +368,12 @@ rgtest!(crlf, |dir: Dir, mut cmd: TestCommand| {
 
     assert_eq!(
         msgs[1].unwrap_match().submatches[0].clone(),
-        SubMatch { m: Data::text("Sherlock"), start: 56, end: 64 },
+        SubMatch {
+            m: Data::text("Sherlock"),
+            replacement: None,
+            start: 56,
+            end: 64
+        },
     );
 });
 
