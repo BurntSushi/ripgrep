@@ -1,6 +1,7 @@
 use std::{
     io::{self, Write},
     path::Path,
+    sync::Arc,
     time::Instant,
 };
 
@@ -13,7 +14,8 @@ use {
 };
 
 use crate::{
-    counter::CounterWriter, jsont, stats::Stats, util::find_iter_at_in_context,
+    counter::CounterWriter, jsont, stats::Stats,
+    util::find_iter_at_in_context, util::Replacer,
 };
 
 /// The configuration for the JSON printer.
@@ -26,11 +28,17 @@ struct Config {
     pretty: bool,
     max_matches: Option<u64>,
     always_begin_end: bool,
+    replacement: Arc<Option<Vec<u8>>>,
 }
 
 impl Default for Config {
     fn default() -> Config {
-        Config { pretty: false, max_matches: None, always_begin_end: false }
+        Config {
+            pretty: false,
+            max_matches: None,
+            always_begin_end: false,
+            replacement: Arc::new(None),
+        }
     }
 }
 
@@ -96,6 +104,24 @@ impl JSONBuilder {
     /// This is disabled by default.
     pub fn always_begin_end(&mut self, yes: bool) -> &mut JSONBuilder {
         self.config.always_begin_end = yes;
+        self
+    }
+
+    /// Set the bytes that will be used to replace each occurrence of a match
+    /// found.
+    ///
+    /// The replacement bytes given may include references to capturing groups,
+    /// which may either be in index form (e.g., `$2`) or can reference named
+    /// capturing groups if present in the original pattern (e.g., `$foo`).
+    ///
+    /// For documentation on the full format, please see the `Capture` trait's
+    /// `interpolate` method in the
+    /// [grep-printer](https://docs.rs/grep-printer) crate.
+    pub fn replacement(
+        &mut self,
+        replacement: Option<Vec<u8>>,
+    ) -> &mut JSONBuilder {
+        self.config.replacement = Arc::new(replacement);
         self
     }
 }
@@ -244,6 +270,7 @@ impl JSONBuilder {
 ///   present. If no file path is available, then this field is `null`.
 /// * **lines** - An
 ///   [arbitrary data object](#object-arbitrary-data)
+// TODO (sbadragan): add note about replacement
 ///   representing one or more lines contained in this match.
 /// * **line_number** - If the searcher has been configured to report line
 ///   numbers, then this corresponds to the line number of the first line
@@ -471,6 +498,7 @@ impl<W: io::Write> JSON<W> {
     ) -> JSONSink<'static, 's, M, W> {
         JSONSink {
             matcher,
+            replacer: Replacer::new(),
             json: self,
             path: None,
             start_time: Instant::now(),
@@ -497,6 +525,7 @@ impl<W: io::Write> JSON<W> {
     {
         JSONSink {
             matcher,
+            replacer: Replacer::new(),
             json: self,
             path: Some(path.as_ref()),
             start_time: Instant::now(),
@@ -559,6 +588,7 @@ impl<W> JSON<W> {
 #[derive(Debug)]
 pub struct JSONSink<'p, 's, M: Matcher, W> {
     matcher: M,
+    replacer: Replacer<M>,
     json: &'s mut JSON<W>,
     path: Option<&'p Path>,
     start_time: Instant,
@@ -643,6 +673,32 @@ impl<'p, 's, M: Matcher, W: io::Write> JSONSink<'p, 's, M, W> {
         Ok(())
     }
 
+    // TODO (sbadragan): do we need to clone bytes?
+    /// If the configuration specifies a replacement, then this executes the
+    /// replacement, lazily allocating memory if necessary.
+    ///
+    /// To access the result of a replacement, use `replacer.replacement()`.
+    fn replace(
+        &mut self,
+        searcher: &Searcher,
+        bytes: &[u8],
+        range: std::ops::Range<usize>,
+    ) -> io::Result<()> {
+        self.replacer.clear();
+        if self.json.config.replacement.is_some() {
+            let replacement =
+                (*self.json.config.replacement).as_ref().map(|r| &*r).unwrap();
+            self.replacer.replace_all(
+                searcher,
+                &self.matcher,
+                bytes,
+                range,
+                replacement,
+            )?;
+        }
+        Ok(())
+    }
+
     /// Returns true if this printer should quit.
     ///
     /// This implements the logic for handling quitting after seeing a certain
@@ -711,10 +767,15 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
             mat.buffer(),
             mat.bytes_range_in_buffer(),
         )?;
+        self.replace(searcher, mat.buffer(), mat.bytes_range_in_buffer())?;
         self.stats.add_matches(self.json.matches.len() as u64);
         self.stats.add_matched_lines(mat.lines().count() as u64);
 
-        let submatches = SubMatches::new(mat.bytes(), &self.json.matches);
+        let submatches = SubMatches::new(
+            mat.bytes(),
+            &self.json.matches,
+            self.replacer.replacement(),
+        );
         let msg = jsont::Message::Match(jsont::Match {
             path: self.path,
             lines: mat.bytes(),
@@ -740,7 +801,12 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
         }
         let submatches = if searcher.invert_match() {
             self.record_matches(searcher, ctx.bytes(), 0..ctx.bytes().len())?;
-            SubMatches::new(ctx.bytes(), &self.json.matches)
+            self.replace(searcher, ctx.bytes(), 0..ctx.bytes().len())?;
+            SubMatches::new(
+                ctx.bytes(),
+                &self.json.matches,
+                self.replacer.replacement(),
+            )
         } else {
             SubMatches::empty()
         };
@@ -831,19 +897,29 @@ enum SubMatches<'a> {
 impl<'a> SubMatches<'a> {
     /// Create a new set of match ranges from a set of matches and the
     /// corresponding bytes that those matches apply to.
-    fn new(bytes: &'a [u8], matches: &[Match]) -> SubMatches<'a> {
+    fn new(
+        bytes: &'a [u8],
+        matches: &[Match],
+        replacement: Option<(&'a [u8], &'a [Match])>,
+    ) -> SubMatches<'a> {
         if matches.len() == 1 {
             let mat = matches[0];
             SubMatches::Small([jsont::SubMatch {
                 m: &bytes[mat],
+                replacement: replacement
+                    .map(|(rbuf, rmatches)| &rbuf[rmatches[0]]),
                 start: mat.start(),
                 end: mat.end(),
             }])
         } else {
             let mut match_ranges = vec![];
-            for &mat in matches {
+            for (i, &mat) in matches.iter().enumerate() {
                 match_ranges.push(jsont::SubMatch {
                     m: &bytes[mat],
+                    // TODO (sbadragan): remove
+                    // stephan stephan
+                    replacement: replacement
+                        .map(|(rbuf, rmatches)| &rbuf[rmatches[i]]),
                     start: mat.start(),
                     end: mat.end(),
                 });
