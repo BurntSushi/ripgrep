@@ -282,8 +282,8 @@ impl JSONBuilder {
 ///   encoded, then the byte offsets correspond to the data after base64
 ///   decoding.) The `submatch` objects are guaranteed to be sorted by their
 ///   starting offsets. Note that it is possible for this array to be empty,
-///   for example, when searching reports inverted matches. If a replace value
-///   has been configured, the resulting replacement text is also present.
+///   for example, when searching reports inverted matches. If the configuration
+///   specifies a replacement, the resulting replacement text is also present.
 ///
 /// #### Message: **context**
 ///
@@ -313,8 +313,9 @@ impl JSONBuilder {
 ///   decoding.) The `submatch` objects are guaranteed to be sorted by
 ///   their starting offsets. Note that it is possible for this array to be
 ///   non-empty, for example, when searching reports inverted matches such that
-///   the original matcher could match things in the contextual lines. If a replace
-///   value has been configured, the resulting replacement text is also present.
+///   the original matcher could match things in the contextual lines. If the
+///   configuration specifies a replacemement, the resulting replacement text
+///   is also present.
 ///
 /// #### Object: **submatch**
 ///
@@ -336,6 +337,10 @@ impl JSONBuilder {
 ///   the `lines` field in the
 ///   [`match`](#message-match) or [`context`](#message-context)
 ///   messages.
+/// * **replacement** (optional) - An
+///   [arbitrary data object](#object-arbitrary-data) corresponding to the
+///   replacement text for this submatch, if the configuration specifies
+///   a replacement.
 ///
 /// #### Object: **stats**
 ///
@@ -475,6 +480,23 @@ impl JSONBuilder {
 ///   }
 /// }
 /// ```
+/// and here's what a match type item would looks like if a replacement text
+/// of 'Moriarity' was given as a parameter:
+/// ```json
+/// {
+///   "type": "match",
+///   "data": {
+///     "path": {"text": "/home/andrew/sherlock"},
+///     "lines": {"text": "For the Doctor Watsons of this world, as opposed to the Sherlock\n"},
+///     "line_number": 1,
+///     "absolute_offset": 0,
+///     "submatches": [
+///       {"match": {"text": "Watson"}, "replacement": {"text": "Moriarity"}, "start": 15, "end": 21}
+///     ]
+///   }
+/// }
+/// ```
+
 #[derive(Clone, Debug)]
 pub struct JSON<W> {
     config: Config,
