@@ -284,16 +284,7 @@ impl TestCommand {
     /// Runs and captures the stdout of the given command.
     pub fn stdout(&mut self) -> String {
         let o = self.output();
-        let stdout = String::from_utf8_lossy(&o.stdout);
-        match stdout.parse() {
-            Ok(t) => t,
-            Err(err) => {
-                panic!(
-                    "could not convert from string: {:?}\n\n{}",
-                    err, stdout
-                );
-            }
-        }
+        String::from_utf8_lossy(&o.stdout).into_owned()
     }
 
     /// Pipe `input` to a command, and collect the output.
@@ -313,16 +304,7 @@ impl TestCommand {
         let output = self.expect_success(child.wait_with_output().unwrap());
         worker.join().unwrap().unwrap();
 
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        match stdout.parse() {
-            Ok(t) => t,
-            Err(err) => {
-                panic!(
-                    "could not convert from string: {:?}\n\n{}",
-                    err, stdout
-                );
-            }
-        }
+        String::from_utf8_lossy(&output.stdout).into_owned()
     }
 
     /// Gets the output of a command. If the command failed, then this panics.
