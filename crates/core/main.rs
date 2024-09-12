@@ -37,7 +37,7 @@ mod search;
 // i686.
 #[cfg(all(target_env = "musl", target_pointer_width = "64"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 /// Then, as it was, then again it will be.
 fn main() -> ExitCode {
