@@ -60,8 +60,8 @@ serde_json = "1.0.23"
 termcolor = "1.1.0"
 textwrap = { version = "0.16.0", default-features = false }
 
-[target.'cfg(all(target_env = "musl", target_pointer_width = "64"))'.dependencies.jemallocator]
-version = "0.5.0"
+[target.'cfg(all(target_env = "musl", target_pointer_width = "64"))'.dependencies.tikv-jemallocator]
+version = "0.6.0"
 
 [dev-dependencies]
 serde = "1.0.77"
