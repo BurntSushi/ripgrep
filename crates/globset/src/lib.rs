@@ -364,6 +364,43 @@ impl GlobSet {
         false
     }
 
+    /// Returns true if all globs in this set match the path given.
+    ///
+    /// This will return true if the set of globs is empty, as in that case all
+    /// `0` of the globs will match.
+    ///
+    /// ```
+    /// use globset::{Glob, GlobSetBuilder};
+    ///
+    /// let mut builder = GlobSetBuilder::new();
+    /// builder.add(Glob::new("src/*").unwrap());
+    /// builder.add(Glob::new("**/*.rs").unwrap());
+    /// let set = builder.build().unwrap();
+    ///
+    /// assert!(set.matches_all("src/foo.rs"));
+    /// assert!(!set.matches_all("src/bar.c"));
+    /// assert!(!set.matches_all("test.rs"));
+    /// ```
+    pub fn matches_all<P: AsRef<Path>>(&self, path: P) -> bool {
+        self.matches_all_candidate(&Candidate::new(path.as_ref()))
+    }
+
+    /// Returns ture if all globs in this set match the path given.
+    ///
+    /// This takes a Candidate as input, which can be used to amortize the cost
+    /// of peparing a path for matching.
+    ///
+    /// This will return true if the set of globs is empty, as in that case all
+    /// `0` of the globs will match.
+    pub fn matches_all_candidate(&self, path: &Candidate<'_>) -> bool {
+        for strat in &self.strats {
+            if !strat.is_match(path) {
+                return false;
+            }
+        }
+        true
+    }
+
     /// Returns the sequence number of every glob pattern that matches the
     /// given path.
     pub fn matches<P: AsRef<Path>>(&self, path: P) -> Vec<usize> {
@@ -474,20 +511,33 @@ impl GlobSet {
             required_exts.0.len(),
             regexes.literals.len()
         );
-        Ok(GlobSet {
-            len: pats.len(),
-            strats: vec![
-                GlobSetMatchStrategy::Extension(exts),
-                GlobSetMatchStrategy::BasenameLiteral(base_lits),
-                GlobSetMatchStrategy::Literal(lits),
-                GlobSetMatchStrategy::Suffix(suffixes.suffix()),
-                GlobSetMatchStrategy::Prefix(prefixes.prefix()),
-                GlobSetMatchStrategy::RequiredExtension(
-                    required_exts.build()?,
-                ),
-                GlobSetMatchStrategy::Regex(regexes.regex_set()?),
-            ],
-        })
+        let mut strats = Vec::with_capacity(7);
+        // Only add strategies that are populated
+        if !exts.0.is_empty() {
+            strats.push(GlobSetMatchStrategy::Extension(exts));
+        }
+        if !base_lits.0.is_empty() {
+            strats.push(GlobSetMatchStrategy::BasenameLiteral(base_lits));
+        }
+        if !lits.0.is_empty() {
+            strats.push(GlobSetMatchStrategy::Literal(lits));
+        }
+        if !suffixes.is_empty() {
+            strats.push(GlobSetMatchStrategy::Suffix(suffixes.suffix()));
+        }
+        if !prefixes.is_empty() {
+            strats.push(GlobSetMatchStrategy::Prefix(prefixes.prefix()));
+        }
+        if !required_exts.0.is_empty() {
+            strats.push(GlobSetMatchStrategy::RequiredExtension(
+                required_exts.build()?,
+            ));
+        }
+        if !regexes.is_empty() {
+            strats.push(GlobSetMatchStrategy::Regex(regexes.regex_set()?));
+        }
+
+        Ok(GlobSet { len: pats.len(), strats })
     }
 }
 
@@ -905,6 +955,10 @@ impl MultiStrategyBuilder {
             patset: Arc::new(Pool::new(create)),
         })
     }
+
+    fn is_empty(&self) -> bool {
+        self.literals.is_empty()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -1005,6 +1059,7 @@ mod tests {
         let set = GlobSetBuilder::new().build().unwrap();
         assert!(!set.is_match(""));
         assert!(!set.is_match("a"));
+        assert!(set.matches_all("a"));
     }
 
     #[test]
