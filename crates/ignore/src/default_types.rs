@@ -267,7 +267,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["sql"], &["*.sql", "*.psql"]),
     (&["stylus"], &["*.styl"]),
     (&["sv"], &["*.v", "*.vg", "*.sv", "*.svh", "*.h"]),
-    (&["svelte"], &["*.svelte"]),
+    (&["svelte"], &["*.svelte", "*.svelte.ts"]),
     (&["svg"], &["*.svg"]),
     (&["swift"], &["*.swift"]),
     (&["swig"], &["*.def", "*.i"]),
