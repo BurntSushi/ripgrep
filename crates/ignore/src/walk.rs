@@ -811,6 +811,14 @@ impl WalkBuilder {
         self
     }
 
+    /// Enables ignoring nested git repositories, including submodules.
+    ///
+    /// This is disabled by default.
+    pub fn ignore_nested_git_repo(&mut self, yes: bool) -> &mut WalkBuilder {
+        self.ig_builder.ignore_nested_git_repo(yes);
+        self
+    }
+
     /// Set a function for sorting directory entries by their path.
     ///
     /// If a compare function is set, the resulting iterator will return all
