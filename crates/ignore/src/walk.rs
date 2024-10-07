@@ -1420,8 +1420,11 @@ impl Stack {
                 stealers: stealers.clone(),
             })
             .collect();
-        // Distribute the initial messages.
+        // Distribute the initial messages, reverse the order to cancel out
+        // the other reversal caused by the inherent LIFO processing of the
+        // per-thread stacks which are filled here.
         init.into_iter()
+            .rev()
             .zip(stacks.iter().cycle())
             .for_each(|(m, s)| s.push(m));
         stacks
