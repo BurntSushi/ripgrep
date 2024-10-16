@@ -75,7 +75,7 @@ impl Dir {
             .expect("executable's directory")
             .to_path_buf();
         let dir =
-            env::temp_dir().join(TEST_DIR).join(name).join(&format!("{}", id));
+            env::temp_dir().join(TEST_DIR).join(name).join(&format!("{id}"));
         if dir.exists() {
             nice_err(&dir, fs::remove_dir_all(&dir));
         }
