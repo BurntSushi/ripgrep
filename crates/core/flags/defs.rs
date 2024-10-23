@@ -59,6 +59,7 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &ContextSeparator,
     &Count,
     &CountMatches,
+    &Histogram,
     &Crlf,
     &Debug,
     &DfaSizeLimit,
@@ -1318,6 +1319,42 @@ given.
     fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
         assert!(v.unwrap_switch(), "--count-matches can only be enabled");
         args.mode.update(Mode::Search(SearchMode::CountMatches));
+        Ok(())
+    }
+}
+
+/// --histogram
+#[derive(Debug)]
+struct Histogram;
+
+impl Flag for Histogram {
+    fn is_switch(&self) -> bool {
+        false
+    }
+    fn name_short(&self) -> Option<u8> {
+        None
+    }
+    fn name_long(&self) -> &'static str {
+        "histogram"
+    }
+    fn doc_variable(&self) -> Option<&'static str> {
+        Some("NUM")
+    }
+    fn doc_category(&self) -> Category {
+        Category::OutputModes
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Print a histogram of the matches"
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+--histogram NUM means that the bins of the histograms are NUM characters wide. In the output the numbers are the counts in these bins.
+            "
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        let binsize = convert::usize(&v.unwrap_value())?;
+        args.histogram = if binsize == 0 { None } else { Some(binsize) };
         Ok(())
     }
 }

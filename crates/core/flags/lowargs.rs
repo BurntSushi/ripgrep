@@ -59,6 +59,7 @@ pub(crate) struct LowArgs {
     pub(crate) globs: Vec<String>,
     pub(crate) heading: Option<bool>,
     pub(crate) hidden: bool,
+    pub(crate) histogram: Option<usize>,
     pub(crate) hostname_bin: Option<PathBuf>,
     pub(crate) hyperlink_format: HyperlinkFormat,
     pub(crate) iglobs: Vec<String>,
