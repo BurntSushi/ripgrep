@@ -72,7 +72,7 @@ pub enum SummaryKind {
     /// corresponding file path.
     CountMatches,
     /// Show a histogram of the matches
-    Histogram,
+    Histogram(u64),
     /// Show only the file path if and only if a match was found.
     ///
     /// This ignores the `path` setting and always shows the file path. If no
@@ -103,7 +103,7 @@ impl SummaryKind {
 
         match *self {
             PathWithMatch | PathWithoutMatch => true,
-            Count | CountMatches | Histogram | Quiet => false,
+            Count | CountMatches | Histogram { .. } | Quiet => false,
         }
     }
 
@@ -113,7 +113,7 @@ impl SummaryKind {
         use self::SummaryKind::*;
 
         match *self {
-            Histogram | CountMatches => true,
+            Histogram { .. } | CountMatches => true,
             Count | PathWithMatch | PathWithoutMatch | Quiet => false,
         }
     }
@@ -125,7 +125,9 @@ impl SummaryKind {
 
         match *self {
             PathWithMatch | Quiet => true,
-            Count | CountMatches | Histogram | PathWithoutMatch => false,
+            Count | CountMatches | Histogram { .. } | PathWithoutMatch => {
+                false
+            }
         }
     }
 }
@@ -682,9 +684,15 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for SummarySink<'p, 's, M, W> {
             self.match_count += 1;
         }
         if let Some(ref mut stats) = self.stats {
-            stats.increment_histogram(mat.absolute_byte_offset() / 500);
             stats.add_matches(sink_match_count);
             stats.add_matched_lines(mat.lines().count() as u64);
+
+            if let SummaryKind::Histogram(bin_size) = self.summary.config.kind
+            {
+                stats.increment_histogram(
+                    mat.absolute_byte_offset() / bin_size,
+                );
+            }
         } else if self.summary.config.kind.quit_early() {
             return Ok(false);
         }
@@ -791,18 +799,32 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for SummarySink<'p, 's, M, W> {
                     self.write_line_term(searcher)?;
                 }
             }
-            SummaryKind::Histogram => {
+            SummaryKind::Histogram(bin_size) => {
                 let stats = self
                     .stats
                     .as_ref()
                     .expect("Histogram should enable stats tracking");
-                let histo_string = stats
-                    .histogram()
-                    .values()
-                    .map(|v| v.to_string())
-                    .collect::<Vec<String>>()
-                    .join("\n");
-                self.write(histo_string.as_bytes())?;
+                let total: u64 = stats.histogram().values().sum();
+                if total > 0 {
+                    let bin_iter = 0..=(stats.bytes_searched() / bin_size);
+                    let terminal_str = bin_iter
+                        .map(|i| {
+                            stats
+                                .histogram()
+                                .get(&i)
+                                .unwrap_or(&0)
+                                .to_string()
+                                .into_bytes()
+                        })
+                        .collect::<Vec<Vec<u8>>>()
+                        .join(searcher.line_terminator().as_bytes());
+                    self.write_path_field()?;
+                    self.write_line_term(searcher)?;
+                    self.write(&terminal_str)?;
+                    self.write_line_term(searcher)?;
+                    self.write(b"---")?;
+                    self.write_line_term(searcher)?;
+                }
             }
             SummaryKind::PathWithMatch => {
                 if self.match_count > 0 {

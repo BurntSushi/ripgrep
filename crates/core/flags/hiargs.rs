@@ -55,6 +55,7 @@ pub(crate) struct HiArgs {
     follow: bool,
     globs: ignore::overrides::Override,
     heading: bool,
+    histogram_bin_size: Option<u64>,
     hidden: bool,
     hyperlink_config: grep::printer::HyperlinkConfig,
     ignore_file_case_insensitive: bool,
@@ -273,6 +274,7 @@ impl HiArgs {
             follow: low.follow,
             heading,
             hidden: low.hidden,
+            histogram_bin_size: low.histogram_bin_size,
             hyperlink_config,
             ignore_file: low.ignore_file,
             ignore_file_case_insensitive: low.ignore_file_case_insensitive,
@@ -570,7 +572,10 @@ impl HiArgs {
                 SearchMode::FilesWithoutMatch => SummaryKind::PathWithoutMatch,
                 SearchMode::Count => SummaryKind::Count,
                 SearchMode::CountMatches => SummaryKind::CountMatches,
-                SearchMode::Histogram => SummaryKind::Histogram,
+                SearchMode::Histogram => SummaryKind::Histogram(
+                    self.histogram_bin_size
+                        .expect("Histogram bin size must be specified"),
+                ),
                 SearchMode::JSON => {
                     return Printer::JSON(self.printer_json(wtr))
                 }

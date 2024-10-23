@@ -1353,8 +1353,8 @@ impl Flag for Histogram {
     }
 
     fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
-        let binsize = convert::usize(&v.unwrap_value())?;
-        args.histogram = binsize;
+        let binsize = convert::u64(&v.unwrap_value())?;
+        args.histogram_bin_size = Some(binsize);
         args.mode.update(Mode::Search(SearchMode::Histogram));
         Ok(())
     }
