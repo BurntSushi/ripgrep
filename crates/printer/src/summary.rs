@@ -822,8 +822,6 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for SummarySink<'p, 's, M, W> {
                     self.write_line_term(searcher)?;
                     self.write(&terminal_str)?;
                     self.write_line_term(searcher)?;
-                    self.write(b"---")?;
-                    self.write_line_term(searcher)?;
                 }
             }
             SummaryKind::PathWithMatch => {
