@@ -573,7 +573,7 @@ impl HiArgs {
                 SearchMode::Histogram => SummaryKind::Histogram,
                 SearchMode::JSON => {
                     return Printer::JSON(self.printer_json(wtr))
-                },
+                }
                 SearchMode::Standard => {
                     return Printer::Standard(self.printer_standard(wtr))
                 }

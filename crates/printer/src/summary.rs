@@ -113,7 +113,7 @@ impl SummaryKind {
         use self::SummaryKind::*;
 
         match *self {
-            Histogram |CountMatches => true,
+            Histogram | CountMatches => true,
             Count | PathWithMatch | PathWithoutMatch | Quiet => false,
         }
     }
@@ -682,6 +682,7 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for SummarySink<'p, 's, M, W> {
             self.match_count += 1;
         }
         if let Some(ref mut stats) = self.stats {
+            stats.increment_histogram(mat.absolute_byte_offset() / 500);
             stats.add_matches(sink_match_count);
             stats.add_matched_lines(mat.lines().count() as u64);
         } else if self.summary.config.kind.quit_early() {
@@ -791,8 +792,18 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for SummarySink<'p, 's, M, W> {
                 }
             }
             SummaryKind::Histogram => {
-                self.write(b"hello")?;
-            },
+                let stats = self
+                    .stats
+                    .as_ref()
+                    .expect("Histogram should enable stats tracking");
+                let histo_string = stats
+                    .histogram()
+                    .values()
+                    .map(|v| v.to_string())
+                    .collect::<Vec<String>>()
+                    .join("\n");
+                self.write(histo_string.as_bytes())?;
+            }
             SummaryKind::PathWithMatch => {
                 if self.match_count > 0 {
                     self.write_path_line(searcher)?;
