@@ -203,6 +203,7 @@ impl HiArgs {
                 SearchMode::FilesWithMatches
                 | SearchMode::FilesWithoutMatch
                 | SearchMode::Count
+                | SearchMode::Histogram
                 | SearchMode::CountMatches => return false,
                 SearchMode::JSON => return true,
                 SearchMode::Standard => {
@@ -569,9 +570,10 @@ impl HiArgs {
                 SearchMode::FilesWithoutMatch => SummaryKind::PathWithoutMatch,
                 SearchMode::Count => SummaryKind::Count,
                 SearchMode::CountMatches => SummaryKind::CountMatches,
+                SearchMode::Histogram => SummaryKind::Histogram,
                 SearchMode::JSON => {
                     return Printer::JSON(self.printer_json(wtr))
-                }
+                },
                 SearchMode::Standard => {
                     return Printer::Standard(self.printer_standard(wtr))
                 }

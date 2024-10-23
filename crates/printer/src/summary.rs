@@ -71,6 +71,8 @@ pub enum SummaryKind {
     /// If the `path` setting is enabled, then the count is prefixed by the
     /// corresponding file path.
     CountMatches,
+    /// Show a histogram of the matches
+    Histogram,
     /// Show only the file path if and only if a match was found.
     ///
     /// This ignores the `path` setting and always shows the file path. If no
@@ -101,7 +103,7 @@ impl SummaryKind {
 
         match *self {
             PathWithMatch | PathWithoutMatch => true,
-            Count | CountMatches | Quiet => false,
+            Count | CountMatches | Histogram | Quiet => false,
         }
     }
 
@@ -111,7 +113,7 @@ impl SummaryKind {
         use self::SummaryKind::*;
 
         match *self {
-            CountMatches => true,
+            Histogram |CountMatches => true,
             Count | PathWithMatch | PathWithoutMatch | Quiet => false,
         }
     }
@@ -123,7 +125,7 @@ impl SummaryKind {
 
         match *self {
             PathWithMatch | Quiet => true,
-            Count | CountMatches | PathWithoutMatch => false,
+            Count | CountMatches | Histogram | PathWithoutMatch => false,
         }
     }
 }
@@ -788,6 +790,9 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for SummarySink<'p, 's, M, W> {
                     self.write_line_term(searcher)?;
                 }
             }
+            SummaryKind::Histogram => {
+                self.write(b"hello")?;
+            },
             SummaryKind::PathWithMatch => {
                 if self.match_count > 0 {
                     self.write_path_line(searcher)?;
