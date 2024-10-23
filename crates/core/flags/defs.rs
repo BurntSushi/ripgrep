@@ -1347,9 +1347,10 @@ impl Flag for Histogram {
         r"Print a histogram of the matches"
     }
     fn doc_long(&self) -> &'static str {
-        r"
---histogram NUM means that the bins of the histograms are NUM characters wide. In the output the numbers are the counts in these bins.
-            "
+        r" 
+The offset of the match and the specified bin size
+(NUM) of this argument are used to determine which bin gets
+incremented for every match."
     }
 
     fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
