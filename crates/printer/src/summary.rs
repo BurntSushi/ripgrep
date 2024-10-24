@@ -804,8 +804,7 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for SummarySink<'p, 's, M, W> {
                     .stats
                     .as_ref()
                     .expect("Histogram should enable stats tracking");
-                let total: u64 = stats.histogram().values().sum();
-                if total > 0 {
+                if self.match_count > 0 {
                     let bin_iter = 0..=(stats.bytes_searched() / bin_size);
                     let terminal_str = bin_iter
                         .map(|i| {
@@ -818,8 +817,10 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for SummarySink<'p, 's, M, W> {
                         })
                         .collect::<Vec<Vec<u8>>>()
                         .join(searcher.line_terminator().as_bytes());
-                    self.write_path_field()?;
-                    self.write_line_term(searcher)?;
+                    if self.path.is_some() {
+                        self.write_path_field()?;
+                        self.write_line_term(searcher)?;
+                    }
                     self.write(&terminal_str)?;
                     self.write_line_term(searcher)?;
                 }
