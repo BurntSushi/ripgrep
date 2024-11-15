@@ -461,21 +461,23 @@ impl Ignore {
                 // off of `path`. Overall, this seems a little ham-fisted, but
                 // it does fix a nasty bug. It should do fine until we overhaul
                 // this crate.
-                let dirpath = self.0.dir.as_path();
-                let path_prefix = match strip_prefix("./", dirpath) {
-                    None => dirpath,
-                    Some(stripped_dot_slash) => stripped_dot_slash,
-                };
-                let path = match strip_prefix(path_prefix, path) {
-                    None => abs_parent_path.join(path),
-                    Some(p) => {
-                        let p = match strip_prefix("/", p) {
-                            None => p,
-                            Some(p) => p,
-                        };
-                        abs_parent_path.join(p)
-                    }
-                };
+                let path = abs_parent_path.join(
+                    self.parents()
+                        .take_while(|ig| !ig.0.is_absolute_parent)
+                        .last()
+                        .map_or(path, |ig| {
+                            strip_if_is_prefix(
+                                "/",
+                                strip_if_is_prefix(
+                                    strip_if_is_prefix(
+                                        "./",
+                                        ig.0.dir.as_path(),
+                                    ),
+                                    path,
+                                ),
+                            )
+                        }),
+                );
 
                 for ig in
                     self.parents().skip_while(|ig| !ig.0.is_absolute_parent)
@@ -872,6 +874,15 @@ fn resolve_git_commondir(
         PathBuf::from(commondir_line)
     };
     Ok(commondir_abs)
+}
+
+/// Strips `prefix` from `path` if it's a prefix, otherwise returns `path`
+/// unchanged.
+fn strip_if_is_prefix<'a, P: AsRef<Path> + ?Sized>(
+    prefix: &'a P,
+    path: &'a Path,
+) -> &'a Path {
+    strip_prefix(prefix, path).map_or(path, |p| p)
 }
 
 #[cfg(test)]

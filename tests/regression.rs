@@ -569,6 +569,139 @@ rgtest!(r807, |dir: Dir, mut cmd: TestCommand| {
     eqnice!(".a/c/file:test\n", cmd.arg("--hidden").arg("test").stdout());
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/829
+rgtest!(r829_original, |dir: Dir, _cmd: TestCommand| {
+    dir.create_dir("a/b");
+    dir.create(".ignore", "/a/b");
+    dir.create("a/b/test.txt", "Sample text");
+
+    {
+        let mut cmd = dir.command();
+        cmd.args(&["Sample"]).assert_err();
+    }
+    {
+        let mut cmd = dir.command();
+        cmd.args(&["Sample", "a"]).assert_err();
+    }
+    {
+        let mut cmd = dir.command();
+        cmd.current_dir(dir.path().join("a"));
+        cmd.args(&["Sample"]).assert_err();
+    }
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/2731
+rgtest!(r829_2731, |dir: Dir, _cmd: TestCommand| {
+    dir.create_dir("some_dir/build");
+    dir.create("some_dir/build/foo", "string");
+    dir.create(".ignore", "build/\n!/some_dir/build/");
+
+    {
+        let mut cmd = dir.command();
+        eqnice!("some_dir/build/foo\n", cmd.arg("-l").arg("string").stdout());
+    }
+    {
+        let mut cmd = dir.command();
+        eqnice!(
+            "some_dir/build/foo\n",
+            cmd.arg("-l").arg("string").arg("some_dir").stdout()
+        );
+    }
+    {
+        let mut cmd = dir.command();
+        eqnice!(
+            "./some_dir/build/foo\n",
+            cmd.arg("-l").arg("string").arg("./some_dir").stdout()
+        );
+    }
+    {
+        let mut cmd = dir.command();
+        eqnice!(
+            "some_dir/build/foo\n",
+            cmd.arg("-l").arg("string").arg("some_dir/build").stdout()
+        );
+    }
+    {
+        let mut cmd = dir.command();
+        eqnice!(
+            "./some_dir/build/foo\n",
+            cmd.arg("-l").arg("string").arg("./some_dir/build").stdout()
+        );
+    }
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/2747
+rgtest!(r829_2747, |dir: Dir, _cmd: TestCommand| {
+    dir.create_dir("a/c/b");
+    dir.create_dir("a/src/f/b");
+    dir.create("a/c/b/foo", "");
+    dir.create("a/src/f/b/foo", "");
+    dir.create(".ignore", "/a/*/b");
+
+    {
+        let mut cmd = dir.command();
+        eqnice!("a/src/f/b/foo\n", cmd.arg("--files").stdout());
+    }
+    {
+        let mut cmd = dir.command();
+        eqnice!("a/src/f/b/foo\n", cmd.arg("--files").arg("a/src").stdout());
+    }
+    {
+        let mut cmd = dir.command();
+        cmd.current_dir(dir.path().join("a/src"));
+        eqnice!("f/b/foo\n", cmd.arg("--files").stdout());
+    }
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/2778
+rgtest!(r829_2778, |dir: Dir, _cmd: TestCommand| {
+    dir.create_dir("parent/subdir");
+    dir.create(".ignore", "/parent/*.txt");
+    dir.create("parent/ignore-me.txt", "");
+    dir.create("parent/subdir/dont-ignore-me.txt", "");
+
+    {
+        let mut cmd = dir.command();
+        eqnice!(
+            "parent/subdir/dont-ignore-me.txt\n",
+            cmd.arg("--files").stdout()
+        );
+    }
+    {
+        let mut cmd = dir.command();
+        cmd.current_dir(dir.path().join("parent"));
+        eqnice!("subdir/dont-ignore-me.txt\n", cmd.arg("--files").stdout());
+    }
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/2836
+rgtest!(r829_2836, |dir: Dir, _cmd: TestCommand| {
+    dir.create_dir("testdir/sub/sub2");
+    dir.create(".ignore", "/testdir/sub/sub2/\n");
+    dir.create("testdir/sub/sub2/foo", "");
+
+    {
+        let mut cmd = dir.command();
+        cmd.arg("--files").assert_err();
+    }
+    {
+        let mut cmd = dir.command();
+        cmd.current_dir(dir.path().join("testdir"));
+        cmd.arg("--files").assert_err();
+    }
+});
+
+// See: https://github.com/BurntSushi/ripgrep/pull/2933
+rgtest!(r829_2933, |dir: Dir, mut cmd: TestCommand| {
+    dir.create_dir("testdir/sub/sub2");
+    dir.create(".ignore", "/testdir/sub/sub2/");
+    dir.create("testdir/sub/sub2/testfile", "needle");
+
+    let args = &["--files-with-matches", "needle"];
+    cmd.current_dir(dir.path().join("testdir"));
+    cmd.args(args).assert_err();
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/900
 rgtest!(r900, |dir: Dir, mut cmd: TestCommand| {
     dir.create("sherlock", SHERLOCK);
@@ -965,6 +1098,15 @@ rgtest!(f1757, |dir: Dir, _: TestCommand| {
     eqnice!("rust/source.rs\n", dir.command().args(args).stdout());
     let args = &["--files-with-matches", "needle", "./rust"];
     eqnice!("./rust/source.rs\n", dir.command().args(args).stdout());
+
+    dir.create_dir("rust1/target/onemore");
+    dir.create(".ignore", "rust1/target/onemore");
+    dir.create("rust1/source.rs", "needle");
+    dir.create("rust1/target/onemore/rustdoc-output.html", "needle");
+    let args = &["--files-with-matches", "needle", "rust1"];
+    eqnice!("rust1/source.rs\n", dir.command().args(args).stdout());
+    let args = &["--files-with-matches", "needle", "./rust1"];
+    eqnice!("./rust1/source.rs\n", dir.command().args(args).stdout());
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/1765

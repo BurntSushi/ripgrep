@@ -2,6 +2,16 @@ TBD
 ===
 Unreleased changes. Release notes have not yet been written.
 
+Bug fixes:
+
+* [BUG #829](https://github.com/BurntSushi/ripgrep/issues/829),
+  [BUG #2731](https://github.com/BurntSushi/ripgrep/issues/2731),
+  [BUG #2747](https://github.com/BurntSushi/ripgrep/issues/2747),
+  [BUG #2778](https://github.com/BurntSushi/ripgrep/issues/2778),
+  [BUG #2836](https://github.com/BurntSushi/ripgrep/issues/2836),
+  [BUG #2933](https://github.com/BurntSushi/ripgrep/pull/2933):
+  Fix bug related to gitignores from parent directories.
+
 Feature enhancements:
 
 * [FEATURE #2708](https://github.com/BurntSushi/ripgrep/pull/2708):
