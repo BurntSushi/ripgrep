@@ -965,6 +965,15 @@ rgtest!(f1757, |dir: Dir, _: TestCommand| {
     eqnice!("rust/source.rs\n", dir.command().args(args).stdout());
     let args = &["--files-with-matches", "needle", "./rust"];
     eqnice!("./rust/source.rs\n", dir.command().args(args).stdout());
+
+    dir.create_dir("rust1/target/onemore");
+    dir.create(".ignore", "rust1/target/onemore");
+    dir.create("rust1/source.rs", "needle");
+    dir.create("rust1/target/onemore/rustdoc-output.html", "needle");
+    let args = &["--files-with-matches", "needle", "rust1"];
+    eqnice!("rust1/source.rs\n", dir.command().args(args).stdout());
+    let args = &["--files-with-matches", "needle", "./rust1"];
+    eqnice!("./rust1/source.rs\n", dir.command().args(args).stdout());
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/1765
@@ -1216,4 +1225,14 @@ rgtest!(r2658_null_data_line_regexp, |dir: Dir, mut cmd: TestCommand| {
     dir.create("haystack", "foo\0bar\0quux\0");
     let got = cmd.args(&["--null-data", "--line-regexp", r"bar"]).stdout();
     eqnice!("haystack:bar\0", got);
+});
+
+rgtest!(f2836, |dir: Dir, mut cmd: TestCommand| {
+    dir.create_dir("testdir/sub/sub2");
+    dir.create(".ignore", "/testdir/sub/sub2/");
+    dir.create("testdir/sub/sub2/testfile", "needle");
+
+    let args = &["--files-with-matches", "needle"];
+    cmd.current_dir(dir.path().join("testdir"));
+    cmd.args(args).assert_err();
 });
