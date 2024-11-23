@@ -798,6 +798,10 @@ impl WalkBuilder {
     ///
     /// When disabled, git-related ignore rules are applied even when searching
     /// outside a git repository.
+    ///
+    /// In particular, if this is `false` then `.gitignore` files will be read
+    /// from parent directories above the git root directory containing `.git`,
+    /// which is different from the git behavior.
     pub fn require_git(&mut self, yes: bool) -> &mut WalkBuilder {
         self.ig_builder.require_git(yes);
         self
