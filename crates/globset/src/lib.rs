@@ -598,7 +598,23 @@ impl<'a> std::fmt::Debug for Candidate<'a> {
 impl<'a> Candidate<'a> {
     /// Create a new candidate for matching from the given path.
     pub fn new<P: AsRef<Path> + ?Sized>(path: &'a P) -> Candidate<'a> {
-        let path = normalize_path(Vec::from_path_lossy(path.as_ref()));
+        Self::from_cow(Vec::from_path_lossy(path.as_ref()))
+    }
+
+    /// Create a new candidate for matching from the given path as a sequence
+    /// of bytes.
+    ///
+    /// Generally speaking, this routine expects the bytes to be
+    /// _conventionally_ UTF-8. It is legal for the byte sequence to contain
+    /// invalid UTF-8. However, if the bytes are in some other encoding that
+    /// isn't ASCII compatible (for example, UTF-16), then the results of
+    /// matching are unspecified.
+    pub fn from_bytes<P: AsRef<[u8]> + ?Sized>(path: &'a P) -> Candidate<'a> {
+        Self::from_cow(Cow::Borrowed(path.as_ref()))
+    }
+
+    fn from_cow(path: Cow<'a, [u8]>) -> Candidate<'a> {
+        let path = normalize_path(path);
         let basename = file_name(&path).unwrap_or(Cow::Borrowed(B("")));
         let ext = file_name_ext(&basename).unwrap_or(Cow::Borrowed(B("")));
         Candidate { path, basename, ext }
