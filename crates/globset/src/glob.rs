@@ -300,7 +300,7 @@ impl Glob {
     /// an entire path exactly.
     ///
     /// The basic format of these patterns is `{literal}`.
-    fn literal(&self) -> Option<String> {
+    pub fn literal(&self) -> Option<String> {
         if self.opts.case_insensitive {
             return None;
         }
