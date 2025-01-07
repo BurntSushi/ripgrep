@@ -235,6 +235,71 @@ impl std::ops::DerefMut for Tokens {
     }
 }
 
+// compare to https://www.gnu.org/software/bash/manual/bash.html#Pattern-Matching
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum WellKnownClasses {
+    Alnum,
+    Alpha,
+    Ascii,
+    Blank,
+    Cntrl,
+    Digit,
+    Graph,
+    Lower,
+    Print,
+    Punct,
+    Space,
+    Upper,
+    Word,
+    Xdigit,
+}
+
+impl WellKnownClasses {
+    fn to_regex(&self) -> &'static str {
+        match self {
+            WellKnownClasses::Alnum => "[a-zA-Z0-9]",
+            WellKnownClasses::Alpha => "[a-zA-Z]",
+            WellKnownClasses::Ascii => "[\\x00-\\x7F]",
+            WellKnownClasses::Blank => "[ \\t]",
+            WellKnownClasses::Cntrl => "[\\x00-\\x1F\\x7F]",
+            WellKnownClasses::Digit => "\\d",
+            WellKnownClasses::Graph => "[\\x21-\\x7E]",
+            WellKnownClasses::Lower => "[a-z]",
+            WellKnownClasses::Print => "[\\x20-\\x7E]",
+            WellKnownClasses::Punct => {
+                "[!\"\\#$%&'()*+,\\-./:;<=>?@\\[\\\\\\]^_`{|}~]"
+            }
+            WellKnownClasses::Space => "\\s",
+            WellKnownClasses::Upper => "[A-Z]",
+            WellKnownClasses::Word => "\\w",
+            WellKnownClasses::Xdigit => "[A-Fa-f0-9]",
+        }
+    }
+
+    fn parse(name: String) -> Result<WellKnownClasses, Error> {
+        match name.as_str() {
+            "alnum" => Ok(Self::Alnum),
+            "alpha" => Ok(Self::Alpha),
+            "ascii" => Ok(Self::Ascii),
+            "blank" => Ok(Self::Blank),
+            "cntrl" => Ok(Self::Cntrl),
+            "digit" => Ok(Self::Digit),
+            "graph" => Ok(Self::Graph),
+            "lower" => Ok(Self::Lower),
+            "print" => Ok(Self::Print),
+            "punct" => Ok(Self::Punct),
+            "space" => Ok(Self::Space),
+            "upper" => Ok(Self::Upper),
+            "word" => Ok(Self::Word),
+            "xdigit" => Ok(Self::Xdigit),
+            _ => Err(Error {
+                glob: None,
+                kind: ErrorKind::UnknownNamedClass(name),
+            }),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum Token {
     Literal(char),
@@ -243,6 +308,7 @@ enum Token {
     RecursivePrefix,
     RecursiveSuffix,
     RecursiveZeroOrMore,
+    NamedClass(WellKnownClasses),
     Class { negated: bool, ranges: Vec<(char, char)> },
     Alternates(Vec<Tokens>),
 }
@@ -525,7 +591,9 @@ impl Glob {
                 | Token::RecursiveZeroOrMore => {
                     return None;
                 }
-                Token::Class { .. } | Token::Alternates(..) => {
+                Token::NamedClass(_)
+                | Token::Class { .. }
+                | Token::Alternates(..) => {
                     // We *could* be a little smarter here, but either one
                     // of these is going to prevent our literal optimizations
                     // anyway, so give up.
@@ -707,6 +775,9 @@ impl Tokens {
                     }
                     re.push(']');
                 }
+                Token::NamedClass(ref r) => {
+                    re.push_str(r.to_regex());
+                }
                 Token::Alternates(ref patterns) => {
                     let mut parts = vec![];
                     for pat in patterns {
@@ -771,15 +842,17 @@ impl<'a> Parser<'a> {
 
     fn parse(&mut self) -> Result<(), Error> {
         while let Some(c) = self.bump() {
-            match c {
-                '?' => self.push_token(Token::Any)?,
-                '*' => self.parse_star()?,
-                '[' => self.parse_class()?,
-                '{' => self.push_alternate()?,
-                '}' => self.pop_alternate()?,
-                ',' => self.parse_comma()?,
-                '\\' => self.parse_backslash()?,
-                c => self.push_token(Token::Literal(c))?,
+            let peek = self.peek();
+            match (c, peek) {
+                ('?', _) => self.push_token(Token::Any)?,
+                ('*', _) => self.parse_star()?,
+                ('[', Some(':')) => self.parse_named_class()?,
+                ('[', _) => self.parse_class()?,
+                ('{', _) => self.push_alternate()?,
+                ('}', _) => self.pop_alternate()?,
+                (',', _) => self.parse_comma()?,
+                ('\\', _) => self.parse_backslash()?,
+                (c, _) => self.push_token(Token::Literal(c))?,
             }
         }
         Ok(())
@@ -907,6 +980,31 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
+    fn parse_named_class(&mut self) -> Result<(), Error> {
+        if !matches!(self.bump(), Some(':')) {
+            unreachable!("Checked before calling this function");
+        }
+        let mut name = String::new();
+        let mut last_was_colon = false;
+        loop {
+            let c = match self.bump() {
+                Some(c) => c,
+                // The only way to successfully break this loop is to observe
+                // a ':]'.
+                None => return Err(self.error(ErrorKind::UnclosedClass)),
+            };
+            match c {
+                ':' => last_was_colon = true,
+                ']' if last_was_colon => break,
+                c => {
+                    last_was_colon = false;
+                    name.push(c);
+                }
+            }
+        }
+        self.push_token(Token::NamedClass(WellKnownClasses::parse(name)?))
+    }
+
     fn parse_class(&mut self) -> Result<(), Error> {
         fn add_to_last_range(
             glob: &str,
@@ -1014,8 +1112,8 @@ fn ends_with(needle: &[u8], haystack: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::Token::*;
     use super::{Glob, GlobBuilder, Token};
+    use super::{Token::*, WellKnownClasses};
     use crate::{ErrorKind, GlobSetBuilder};
 
     #[derive(Clone, Copy, Debug, Default)]
@@ -1154,6 +1252,10 @@ mod tests {
         Class { negated: true, ranges: ranges.to_vec() }
     }
 
+    fn named_class(c: WellKnownClasses) -> Token {
+        Token::NamedClass(c)
+    }
+
     syntax!(literal1, "a", vec![Literal('a')]);
     syntax!(literal2, "ab", vec![Literal('a'), Literal('b')]);
     syntax!(any1, "?", vec![Any]);
@@ -1200,12 +1302,33 @@ mod tests {
     syntax!(cls20, "[^a]", vec![classn('a', 'a')]);
     syntax!(cls21, "[^a-z]", vec![classn('a', 'z')]);
 
+    syntax!(cls22, "[:alnum:]", vec![named_class(WellKnownClasses::Alnum)]);
+    syntax!(cls23, "[:alpha:]", vec![named_class(WellKnownClasses::Alpha)]);
+    syntax!(cls24, "[:ascii:]", vec![named_class(WellKnownClasses::Ascii)]);
+    syntax!(cls25, "[:blank:]", vec![named_class(WellKnownClasses::Blank)]);
+    syntax!(cls26, "[:cntrl:]", vec![named_class(WellKnownClasses::Cntrl)]);
+    syntax!(cls27, "[:digit:]", vec![named_class(WellKnownClasses::Digit)]);
+    syntax!(cls28, "[:graph:]", vec![named_class(WellKnownClasses::Graph)]);
+    syntax!(cls29, "[:lower:]", vec![named_class(WellKnownClasses::Lower)]);
+    syntax!(cls30, "[:print:]", vec![named_class(WellKnownClasses::Print)]);
+    syntax!(cls31, "[:punct:]", vec![named_class(WellKnownClasses::Punct)]);
+    syntax!(cls32, "[:space:]", vec![named_class(WellKnownClasses::Space)]);
+    syntax!(cls33, "[:upper:]", vec![named_class(WellKnownClasses::Upper)]);
+    syntax!(cls34, "[:word:]", vec![named_class(WellKnownClasses::Word)]);
+    syntax!(cls35, "[:xdigit:]", vec![named_class(WellKnownClasses::Xdigit)]);
+
     syntaxerr!(err_unclosed1, "[", ErrorKind::UnclosedClass);
     syntaxerr!(err_unclosed2, "[]", ErrorKind::UnclosedClass);
     syntaxerr!(err_unclosed3, "[!", ErrorKind::UnclosedClass);
     syntaxerr!(err_unclosed4, "[!]", ErrorKind::UnclosedClass);
+    syntaxerr!(err_unclosed5, "[:]", ErrorKind::UnclosedClass);
     syntaxerr!(err_range1, "[z-a]", ErrorKind::InvalidRange('z', 'a'));
     syntaxerr!(err_range2, "[z--]", ErrorKind::InvalidRange('z', '-'));
+    syntaxerr!(
+        err_unknown_class,
+        "[:whatever:]",
+        ErrorKind::UnknownNamedClass(s("whatever"))
+    );
 
     const CASEI: Options =
         Options { casei: Some(true), litsep: None, bsesc: None, ealtre: None };
@@ -1317,6 +1440,21 @@ mod tests {
     matches!(matchrange10, "[a-c-]", "b");
     matches!(matchrange11, "[-]", "-");
     matches!(matchrange12, "a[^0-9]b", "a_b");
+
+    matches!(match_class1, "a[:alnum:]b", "a1b");
+    matches!(match_class2, "a[:alpha:]b", "aAb");
+    matches!(match_class3, "a[:ascii:]b", "aAb");
+    matches!(match_class4, "a[:blank:]b", "a\tb");
+    matches!(match_class5, "a[:cntrl:]b", "a\x01b");
+    matches!(match_class6, "a[:digit:]b", "a2b");
+    matches!(match_class7, "a[:graph:]b", "aAb");
+    matches!(match_class8, "a[:lower:]b", "alb");
+    matches!(match_class9, "a[:print:]b", "aAb");
+    matches!(match_class10, "a[:punct:]b", "a!b");
+    matches!(match_class11, "a[:space:]b", "a b");
+    matches!(match_class12, "a[:upper:]b", "aUb");
+    matches!(match_class13, "a[:word:]b", "aAb");
+    matches!(match_class14, "a[:xdigit:]b", "aFb");
 
     matches!(matchpat1, "*hello.txt", "hello.txt");
     matches!(matchpat2, "*hello.txt", "gareth_says_hello.txt");
