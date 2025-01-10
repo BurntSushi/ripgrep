@@ -6633,7 +6633,8 @@ impl Flag for Threads {
     fn doc_long(&self) -> &'static str {
         r"
 This flag sets the approximate number of threads to use. A value of \fB0\fP
-(default) will use all logical CPU cores up to 12 threads."
+(default) will use all logical CPU cores up to 12 threads.
+"
     }
 
     fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
