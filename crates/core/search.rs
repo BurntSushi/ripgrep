@@ -307,15 +307,14 @@ impl<W: WriteColor> SearchWorker<W> {
             io::Error::new(
                 io::ErrorKind::Other,
                 format!(
-                    "preprocessor command could not start: '{:?}': {}",
-                    cmd, err,
+                    "preprocessor command could not start: '{cmd:?}': {err}",
                 ),
             )
         })?;
         let result = self.search_reader(path, &mut rdr).map_err(|err| {
             io::Error::new(
                 io::ErrorKind::Other,
-                format!("preprocessor command failed: '{:?}': {}", cmd, err),
+                format!("preprocessor command failed: '{cmd:?}': {err}"),
             )
         });
         let close_result = rdr.close();
