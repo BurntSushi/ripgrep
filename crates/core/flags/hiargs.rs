@@ -65,6 +65,7 @@ pub(crate) struct HiArgs {
     line_number: bool,
     max_columns: Option<u64>,
     max_columns_preview: bool,
+    max_columns_preview_before: Option<u64>,
     max_count: Option<u64>,
     max_depth: Option<usize>,
     max_filesize: Option<u64>,
@@ -87,6 +88,7 @@ pub(crate) struct HiArgs {
     paths: Paths,
     path_terminator: Option<u8>,
     patterns: Patterns,
+    per_match: bool,
     pre: Option<PathBuf>,
     pre_globs: ignore::overrides::Override,
     quiet: bool,
@@ -281,6 +283,7 @@ impl HiArgs {
             line_number,
             max_columns: low.max_columns,
             max_columns_preview: low.max_columns_preview,
+            max_columns_preview_before: low.max_columns_preview_before,
             max_count: low.max_count,
             max_depth: low.max_depth,
             max_filesize: low.max_filesize,
@@ -301,6 +304,7 @@ impl HiArgs {
             globs,
             path_separator: low.path_separator,
             path_terminator,
+            per_match: low.per_match,
             pre: low.pre,
             pre_globs,
             quiet: low.quiet,
@@ -606,13 +610,14 @@ impl HiArgs {
             .heading(self.heading)
             .hyperlink(self.hyperlink_config.clone())
             .max_columns_preview(self.max_columns_preview)
+            .max_columns_preview_before(self.max_columns_preview_before)
             .max_columns(self.max_columns)
             .max_matches(self.max_count)
             .only_matching(self.only_matching)
             .path(self.with_filename)
             .path_terminator(self.path_terminator.clone())
             .per_match_one_line(true)
-            .per_match(self.vimgrep)
+            .per_match(self.per_match || self.vimgrep)
             .replacement(self.replace.clone().map(|r| r.into()))
             .separator_context(self.context_separator.clone().into_bytes())
             .separator_field_context(
