@@ -21,35 +21,35 @@ impl Message {
     fn unwrap_begin(&self) -> Begin {
         match *self {
             Message::Begin(ref x) => x.clone(),
-            ref x => panic!("expected Message::Begin but got {:?}", x),
+            ref x => panic!("expected Message::Begin but got {x:?}"),
         }
     }
 
     fn unwrap_end(&self) -> End {
         match *self {
             Message::End(ref x) => x.clone(),
-            ref x => panic!("expected Message::End but got {:?}", x),
+            ref x => panic!("expected Message::End but got {x:?}"),
         }
     }
 
     fn unwrap_match(&self) -> Match {
         match *self {
             Message::Match(ref x) => x.clone(),
-            ref x => panic!("expected Message::Match but got {:?}", x),
+            ref x => panic!("expected Message::Match but got {x:?}"),
         }
     }
 
     fn unwrap_context(&self) -> Context {
         match *self {
             Message::Context(ref x) => x.clone(),
-            ref x => panic!("expected Message::Context but got {:?}", x),
+            ref x => panic!("expected Message::Context but got {x:?}"),
         }
     }
 
     fn unwrap_summary(&self) -> Summary {
         match *self {
             Message::Summary(ref x) => x.clone(),
-            ref x => panic!("expected Message::Summary but got {:?}", x),
+            ref x => panic!("expected Message::Summary but got {x:?}"),
         }
     }
 }

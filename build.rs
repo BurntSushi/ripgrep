@@ -22,7 +22,7 @@ fn set_windows_exe_options() {
     manifest.push(MANIFEST);
     let Some(manifest) = manifest.to_str() else { return };
 
-    println!("cargo:rerun-if-changed={}", MANIFEST);
+    println!("cargo:rerun-if-changed={MANIFEST}");
     // Embed the Windows application manifest file.
     println!("cargo:rustc-link-arg-bin=rg=/MANIFEST:EMBED");
     println!("cargo:rustc-link-arg-bin=rg=/MANIFESTINPUT:{manifest}");
@@ -42,5 +42,5 @@ fn set_git_revision_hash() {
     if rev.is_empty() {
         return;
     }
-    println!("cargo:rustc-env=RIPGREP_BUILD_GIT_HASH={}", rev);
+    println!("cargo:rustc-env=RIPGREP_BUILD_GIT_HASH={rev}");
 }
