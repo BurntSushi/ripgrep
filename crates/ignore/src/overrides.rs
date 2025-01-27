@@ -4,7 +4,10 @@ This provides functionality similar to `--include` or `--exclude` in command
 line tools.
 */
 
-use std::path::Path;
+use std::{
+    path::Path,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use crate::{
     gitignore::{self, Gitignore, GitignoreBuilder},
@@ -101,13 +104,23 @@ impl Override {
         if self.is_empty() {
             return Match::None;
         }
-        let mat = self.0.matched(path, is_dir).invert();
-        if mat.is_none() && self.num_whitelists() > 0 && !is_dir {
+        let mat = if INVERTED_MATCHING.load(Ordering::Relaxed) {
+            self.0.matched(path, is_dir).invert()
+        } else {
+            self.0.matched(path, is_dir)
+        };
+        if mat.is_none()
+            && (self.num_whitelists() > 0
+                && INVERTED_MATCHING.load(Ordering::Relaxed))
+            && !is_dir
+        {
             return Match::Ignore(Glob::unmatched());
         }
         mat.map(move |giglob| Glob(GlobInner::Matched(giglob)))
     }
 }
+
+static INVERTED_MATCHING: AtomicBool = AtomicBool::new(true);
 
 /// Builds a matcher for a set of glob overrides.
 #[derive(Clone, Debug)]
@@ -139,6 +152,17 @@ impl OverrideBuilder {
     pub fn add(&mut self, glob: &str) -> Result<&mut OverrideBuilder, Error> {
         self.builder.add_line(None, glob)?;
         Ok(self)
+    }
+
+    /// Enables inverting the gitignore file matching.
+    ///
+    /// If enabled it acts as an --include
+    /// If disabled it acts as an --exclude
+    ///
+    /// This is enabled by default.
+    pub fn inverted_matching(&mut self, yes: bool) -> &mut OverrideBuilder {
+        INVERTED_MATCHING.store(yes, Ordering::Relaxed);
+        self
     }
 
     /// Toggle whether the globs should be matched case insensitively or not.
