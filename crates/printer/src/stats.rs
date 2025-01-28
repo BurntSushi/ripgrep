@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     ops::{Add, AddAssign},
     time::Duration,
 };
@@ -17,6 +18,7 @@ pub struct Stats {
     bytes_searched: u64,
     bytes_printed: u64,
     matched_lines: u64,
+    histogram: HashMap<u64, u64>,
     matches: u64,
 }
 
@@ -31,6 +33,11 @@ impl Stats {
     /// Return the total amount of time elapsed.
     pub fn elapsed(&self) -> Duration {
         self.elapsed.0
+    }
+
+    /// Returns a reference to the histogram
+    pub fn histogram(&self) -> &HashMap<u64, u64> {
+        &self.histogram
     }
 
     /// Return the total number of searches executed.
@@ -102,6 +109,11 @@ impl Stats {
     pub fn add_matches(&mut self, n: u64) {
         self.matches += n;
     }
+
+    /// Add to the total number of matches.
+    pub fn increment_histogram(&mut self, entry: u64) {
+        self.histogram.entry(entry).and_modify(|c| *c += 1).or_insert(1);
+    }
 }
 
 impl Add for Stats {
@@ -125,6 +137,14 @@ impl<'a> Add<&'a Stats> for Stats {
             bytes_printed: self.bytes_printed + rhs.bytes_printed,
             matched_lines: self.matched_lines + rhs.matched_lines,
             matches: self.matches + rhs.matches,
+            histogram: self
+                .histogram
+                .into_iter()
+                .chain(rhs.histogram.clone())
+                .fold(std::collections::HashMap::new(), |mut acc, (k, v)| {
+                    acc.entry(k).and_modify(|e| *e += v).or_insert(v);
+                    acc
+                }),
         }
     }
 }
