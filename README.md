@@ -302,6 +302,17 @@ and **openSUSE Leap** since 15.1.
 $ sudo zypper install ripgrep
 ```
 
+If you're a **RHEL/CentOS/Rocky Linux 9** user, you can install ripgrep from
+the [EPEL](https://docs.fedoraproject.org/en-US/epel/) repository:
+
+```
+$ sudo dnf config-manager --set-enabled crb
+$ sudo dnf install -y \
+    https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
+    https://dl.fedoraproject.org/pub/epel/epel-next-release-latest-9.noarch.rpm
+$ sudo dnf install -y ripgrep
+```
+
 If you're a **Nix** user, you can install ripgrep from
 [nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/ri/ripgrep/package.nix):
 
