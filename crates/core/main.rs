@@ -35,7 +35,11 @@ mod search;
 //
 // Moreover, we only do this on 64-bit systems since jemalloc doesn't support
 // i686.
-#[cfg(all(target_env = "musl", target_pointer_width = "64"))]
+#[cfg(all(
+    not(target_arch = "riscv64"),
+    target_env = "musl",
+    target_pointer_width = "64"
+))]
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
