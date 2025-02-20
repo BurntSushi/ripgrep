@@ -45,6 +45,9 @@ See the documentation for `WalkBuilder` for many other options.
 */
 
 #![deny(missing_docs)]
+// https://github.com/rust-lang/rust/issues/130323
+#![cfg_attr(all(target_os = "wasi", target_env = "p2"), feature(wasip2))]
+#![cfg_attr(target_os = "wasi", feature(wasi_ext))]
 
 use std::path::{Path, PathBuf};
 
