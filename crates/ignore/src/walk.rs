@@ -84,7 +84,7 @@ impl DirEntry {
     /// Returns the underlying inode number if one exists.
     ///
     /// If this entry doesn't have an inode number, then `None` is returned.
-    #[cfg(unix)]
+    #[cfg(any(unix, target_os = "wasi"))]
     pub fn ino(&self) -> Option<u64> {
         self.dent.ino()
     }
@@ -212,7 +212,7 @@ impl DirEntryInner {
         }
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, target_os = "wasi"))]
     fn ino(&self) -> Option<u64> {
         use self::DirEntryInner::*;
         use walkdir::DirEntryExt;
@@ -244,7 +244,7 @@ struct DirEntryRaw {
     /// The depth at which this entry was generated relative to the root.
     depth: usize,
     /// The underlying inode number (Unix only).
-    #[cfg(unix)]
+    #[cfg(any(unix, target_os = "wasi"))]
     ino: u64,
     /// The underlying metadata (Windows only). We store this on Windows
     /// because this comes for free while reading a directory.
@@ -314,7 +314,7 @@ impl DirEntryRaw {
         self.depth
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, target_os = "wasi"))]
     fn ino(&self) -> u64 {
         self.ino
     }
@@ -349,13 +349,16 @@ impl DirEntryRaw {
         })
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, target_os = "wasi"))]
     fn from_entry_os(
         depth: usize,
         ent: &fs::DirEntry,
         ty: fs::FileType,
     ) -> Result<DirEntryRaw, Error> {
+        #[cfg(unix)]
         use std::os::unix::fs::DirEntryExt;
+        #[cfg(target_os = "wasi")]
+        use std::os::wasi::fs::DirEntryExt;
 
         Ok(DirEntryRaw {
             path: ent.path(),
@@ -368,7 +371,7 @@ impl DirEntryRaw {
 
     // Placeholder implementation to allow compiling on non-standard platforms
     // (e.g. wasm32).
-    #[cfg(not(any(windows, unix)))]
+    #[cfg(not(any(windows, unix, target_os = "wasi")))]
     fn from_entry_os(
         depth: usize,
         ent: &fs::DirEntry,
@@ -397,13 +400,16 @@ impl DirEntryRaw {
         })
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, target_os = "wasi"))]
     fn from_path(
         depth: usize,
         pb: PathBuf,
         link: bool,
     ) -> Result<DirEntryRaw, Error> {
+        #[cfg(unix)]
         use std::os::unix::fs::MetadataExt;
+        #[cfg(target_os = "wasi")]
+        use std::os::wasi::fs::MetadataExt;
 
         let md =
             fs::metadata(&pb).map_err(|err| Error::Io(err).with_path(&pb))?;
@@ -418,7 +424,7 @@ impl DirEntryRaw {
 
     // Placeholder implementation to allow compiling on non-standard platforms
     // (e.g. wasm32).
-    #[cfg(not(any(windows, unix)))]
+    #[cfg(not(any(windows, unix, target_os = "wasi")))]
     fn from_path(
         depth: usize,
         pb: PathBuf,
@@ -1277,30 +1283,40 @@ impl WalkParallel {
                 return;
             }
         }
+
         // Create the workers and then wait for them to finish.
         let quit_now = Arc::new(AtomicBool::new(false));
         let active_workers = Arc::new(AtomicUsize::new(threads));
         let stacks = Stack::new_for_each_thread(threads, stack);
-        std::thread::scope(|s| {
-            let handles: Vec<_> = stacks
-                .into_iter()
-                .map(|stack| Worker {
-                    visitor: builder.build(),
-                    stack,
-                    quit_now: quit_now.clone(),
-                    active_workers: active_workers.clone(),
-                    max_depth: self.max_depth,
-                    max_filesize: self.max_filesize,
-                    follow_links: self.follow_links,
-                    skip: self.skip.clone(),
-                    filter: self.filter.clone(),
-                })
-                .map(|worker| s.spawn(|| worker.run()))
-                .collect();
-            for handle in handles {
-                handle.join().unwrap();
+        let mut make_worker = |stack| Worker {
+            visitor: builder.build(),
+            stack,
+            quit_now: quit_now.clone(),
+            active_workers: active_workers.clone(),
+            max_depth: self.max_depth,
+            max_filesize: self.max_filesize,
+            follow_links: self.follow_links,
+            skip: self.skip.clone(),
+            filter: self.filter.clone(),
+        };
+        if cfg!(target_os = "wasi") {
+            for stack in stacks.into_iter() {
+                make_worker(stack).run();
             }
-        });
+        } else {
+            std::thread::scope(|s| {
+                let handles: Vec<_> = stacks
+                    .into_iter()
+                    .map(|stack| {
+                        let worker = make_worker(stack);
+                        s.spawn(|| worker.run())
+                    })
+                    .collect();
+                for handle in handles {
+                    handle.join().unwrap();
+                }
+            });
+        }
     }
 
     fn threads(&self) -> usize {
