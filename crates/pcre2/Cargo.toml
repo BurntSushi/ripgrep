@@ -14,6 +14,6 @@ license = "Unlicense OR MIT"
 edition = "2018"
 
 [dependencies]
-grep-matcher = { version = "0.1.7", path = "../matcher" }
-log = "0.4.20"
-pcre2 = "0.2.6"
+grep-matcher = { workspace = true }
+log = { workspace = true }
+pcre2 = { workspace = true }

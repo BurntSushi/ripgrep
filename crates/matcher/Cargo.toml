@@ -15,10 +15,10 @@ autotests = false
 edition = "2021"
 
 [dependencies]
-memchr = "2.6.3"
+memchr = { workspace = true }
 
 [dev-dependencies]
-regex = "1.9.5"
+regex = { workspace = true }
 
 [[test]]
 name = "integration"
