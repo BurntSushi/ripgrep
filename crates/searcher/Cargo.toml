@@ -14,17 +14,17 @@ license = "Unlicense OR MIT"
 edition = "2021"
 
 [dependencies]
-bstr = { version = "1.6.2", default-features = false, features = ["std"] }
-encoding_rs = "0.8.33"
-encoding_rs_io = "0.1.7"
-grep-matcher = { version = "0.1.7", path = "../matcher" }
-log = "0.4.20"
-memchr = "2.6.3"
+bstr = { workspace = true, features = ["std"] }
+encoding_rs = { workspace = true }
+encoding_rs_io = { workspace = true }
+grep-matcher = { workspace = true }
+log = { workspace = true }
+memchr = { workspace = true }
 memmap = { package = "memmap2", version = "0.9.0" }
 
 [dev-dependencies]
-grep-regex = { version = "0.1.13", path = "../regex" }
-regex = "1.9.5"
+grep-regex = { workspace = true }
+regex = { workspace = true }
 
 [features]
 # These features are DEPRECATED. Runtime dispatch is used for SIMD now.

@@ -19,16 +19,16 @@ default = ["serde"]
 serde = ["dep:serde", "dep:serde_json"]
 
 [dependencies]
-bstr = "1.6.2"
-grep-matcher = { version = "0.1.7", path = "../matcher" }
-grep-searcher = { version = "0.1.14", path = "../searcher" }
-log = "0.4.5"
-termcolor = "1.3.0"
-serde = { version = "1.0.193", optional = true }
-serde_json = { version = "1.0.107", optional = true }
+bstr = { workspace = true }
+grep-matcher = { workspace = true }
+grep-searcher = { workspace = true }
+log = { workspace = true }
+termcolor = { workspace = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
-grep-regex = { version = "0.1.13", path = "../regex" }
+grep-regex = { workspace = true }
 
 [package.metadata.docs.rs]
 # We want to document all features.
