@@ -59,7 +59,7 @@ rgtest!(mmap_match_explicit, |dir: Dir, mut cmd: TestCommand| {
 rgtest!(mmap_match_near_nul, |dir: Dir, mut cmd: TestCommand| {
     dir.create_bytes("hay", HAY);
     // Pattern that matches around line 1898 where the NUL byte is
-    cmd.args(&["-n", "abcdef", "hay"]);  // Note: Using direct file path instead of glob
+    cmd.args(&["-n", "abcdef", "hay"]); // Note: Using direct file path instead of glob
 
     let expected = "\
 binary file matches (found \"\\0\" byte around offset 77041)
@@ -71,7 +71,7 @@ binary file matches (found \"\\0\" byte around offset 77041)
 rgtest!(mmap_match_count, |dir: Dir, mut cmd: TestCommand| {
     dir.create_bytes("hay", HAY);
     cmd.args(&["-c", "Project Gutenberg EBook", "hay"]);
-    
+
     // With mmap, since we're counting all matches and might not
     // encounter the NUL byte during initial detection, the count
     // should still be reported
@@ -134,7 +134,6 @@ rgtest!(mmap_after_nul_match, |dir: Dir, mut cmd: TestCommand| {
 ";
     eqnice!(expected, cmd.stdout());
 });
-
 
 // This tests that ripgrep prints a warning message if it finds and prints a
 // match in a binary file before detecting that it is a binary file. The point
