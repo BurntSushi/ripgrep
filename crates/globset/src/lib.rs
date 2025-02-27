@@ -928,13 +928,26 @@ impl RequiredExtensionStrategyBuilder {
 ///
 /// The escaping works by surrounding meta-characters with brackets. For
 /// example, `*` becomes `[*]`.
+///
+/// # Example
+///
+/// ```
+/// use globset::escape;
+///
+/// assert_eq!(escape("foo*bar"), "foo[*]bar");
+/// assert_eq!(escape("foo?bar"), "foo[?]bar");
+/// assert_eq!(escape("foo[bar"), "foo[[]bar");
+/// assert_eq!(escape("foo]bar"), "foo[]]bar");
+/// assert_eq!(escape("foo{bar"), "foo[{]bar");
+/// assert_eq!(escape("foo}bar"), "foo[}]bar");
+/// ```
 pub fn escape(s: &str) -> String {
     let mut escaped = String::with_capacity(s.len());
     for c in s.chars() {
         match c {
             // note that ! does not need escaping because it is only special
             // inside brackets
-            '?' | '*' | '[' | ']' => {
+            '?' | '*' | '[' | ']' | '{' | '}' => {
                 escaped.push('[');
                 escaped.push(c);
                 escaped.push(']');
