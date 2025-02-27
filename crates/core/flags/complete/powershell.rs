@@ -72,7 +72,7 @@ pub(crate) fn generate() -> String {
         }
 
         if let Some(negated) = flag.name_negated() {
-            let dash_name = format!("--{}", negated);
+            let dash_name = format!("--{negated}");
             flags.push_str("\n      ");
             flags.push_str(
                 &TEMPLATE_FLAG
