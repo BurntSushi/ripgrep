@@ -176,6 +176,8 @@ pub enum ErrorKind {
     DanglingEscape,
     /// An error associated with parsing or compiling a regex.
     Regex(String),
+    /// Occurs when an unknown named class is encountered
+    UnknownNamedClass(String),
     /// Hints that destructuring should not be exhaustive.
     ///
     /// This enum may grow additional variants, so this makes sure clients
@@ -224,6 +226,7 @@ impl ErrorKind {
             ErrorKind::NestedAlternates => {
                 "nested alternate groups are not allowed"
             }
+            ErrorKind::UnknownNamedClass(_) => "unknown named class",
             ErrorKind::DanglingEscape => "dangling '\\'",
             ErrorKind::Regex(ref err) => err,
             ErrorKind::__Nonexhaustive => unreachable!(),
@@ -254,6 +257,9 @@ impl std::fmt::Display for ErrorKind {
             | ErrorKind::Regex(_) => write!(f, "{}", self.description()),
             ErrorKind::InvalidRange(s, e) => {
                 write!(f, "invalid range; '{}' > '{}'", s, e)
+            }
+            ErrorKind::UnknownNamedClass(ref class) => {
+                write!(f, "unknown named class: '{class}'")
             }
             ErrorKind::__Nonexhaustive => unreachable!(),
         }
