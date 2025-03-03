@@ -46,6 +46,7 @@ struct Config {
     replacement: Arc<Option<Vec<u8>>>,
     max_columns: Option<u64>,
     max_columns_preview: bool,
+    max_columns_preview_before: Option<u64>,
     max_matches: Option<u64>,
     column: bool,
     byte_offset: bool,
@@ -72,6 +73,7 @@ impl Default for Config {
             replacement: Arc::new(None),
             max_columns: None,
             max_columns_preview: false,
+            max_columns_preview_before: None,
             max_matches: None,
             column: false,
             byte_offset: false,
@@ -323,6 +325,19 @@ impl StandardBuilder {
     /// This is disabled by default.
     pub fn max_columns_preview(&mut self, yes: bool) -> &mut StandardBuilder {
         self.config.max_columns_preview = yes;
+        self
+    }
+
+    /// Set the maximum amount of columns before the first match should be
+    /// printed in the preview.
+    ///
+    /// When this is not set (the default), the preview will print from the
+    /// beginning of the line.
+    pub fn max_columns_preview_before(
+        &mut self,
+        limit: Option<u64>,
+    ) -> &mut StandardBuilder {
+        self.config.max_columns_preview_before = limit;
         self
     }
 
@@ -1360,6 +1375,13 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     ) -> io::Result<()> {
         if self.config().max_columns_preview {
             let original = line;
+            if let Some(p) = self.config().max_columns_preview_before {
+                let start = matches[0].start().saturating_sub(p as usize);
+                if start != 0 {
+                    self.write(b"[... omitted start of long line] ")?;
+                    line = line.with_start(start);
+                }
+            }
             let end = bytes[line]
                 .grapheme_indices()
                 .map(|(_, end, _)| end)
