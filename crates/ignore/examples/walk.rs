@@ -27,12 +27,12 @@ fn main() {
         let walker = WalkBuilder::new(path).threads(6).build_parallel();
         walker.run(|| {
             let tx = tx.clone();
-            Box::new(move |result| {
+            move |result| {
                 use ignore::WalkState::*;
 
                 tx.send(DirEntry::Y(result.unwrap())).unwrap();
                 Continue
-            })
+            }
         });
     } else if simple {
         let walker = WalkDir::new(path);

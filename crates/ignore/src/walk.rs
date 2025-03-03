@@ -1128,15 +1128,21 @@ impl WalkState {
 /// The builder will be called for each thread started by `WalkParallel`. The
 /// visitor returned from each builder is then called for every directory
 /// entry.
-pub trait ParallelVisitorBuilder<'s> {
+pub trait ParallelVisitorBuilder {
+    /// The visitor implementation, which may or may not share state with the builder.
+    type Visitor<'s>: ParallelVisitor
+    where
+        Self: 's;
     /// Create per-thread `ParallelVisitor`s for `WalkParallel`.
-    fn build(&mut self) -> Box<dyn ParallelVisitor + 's>;
+    fn build<'s, 't: 's>(&'t self) -> Self::Visitor<'s>;
 }
 
-impl<'a, 's, P: ParallelVisitorBuilder<'s>> ParallelVisitorBuilder<'s>
-    for &'a mut P
-{
-    fn build(&mut self) -> Box<dyn ParallelVisitor + 's> {
+impl<P: ParallelVisitorBuilder> ParallelVisitorBuilder for &P {
+    type Visitor<'s>
+        = P::Visitor<'s>
+    where
+        Self: 's;
+    fn build<'s, 't: 's>(&'t self) -> Self::Visitor<'s> {
         (**self).build()
     }
 }
@@ -1156,23 +1162,30 @@ struct FnBuilder<F> {
     builder: F,
 }
 
-impl<'s, F: FnMut() -> FnVisitor<'s>> ParallelVisitorBuilder<'s>
-    for FnBuilder<F>
+impl<V, F> ParallelVisitorBuilder for FnBuilder<F>
+where
+    V: FnMut(Result<DirEntry, Error>) -> WalkState + Send,
+    F: Fn() -> V,
 {
-    fn build(&mut self) -> Box<dyn ParallelVisitor + 's> {
+    type Visitor<'s>
+        = FnVisitorImp<V>
+    where
+        F: 's;
+
+    fn build<'s, 't: 's>(&'t self) -> Self::Visitor<'s> {
         let visitor = (self.builder)();
-        Box::new(FnVisitorImp { visitor })
+        FnVisitorImp { visitor }
     }
 }
 
-type FnVisitor<'s> =
-    Box<dyn FnMut(Result<DirEntry, Error>) -> WalkState + Send + 's>;
-
-struct FnVisitorImp<'s> {
-    visitor: FnVisitor<'s>,
+struct FnVisitorImp<F> {
+    visitor: F,
 }
 
-impl<'s> ParallelVisitor for FnVisitorImp<'s> {
+impl<F> ParallelVisitor for FnVisitorImp<F>
+where
+    F: FnMut(Result<DirEntry, Error>) -> WalkState + Send,
+{
     fn visit(&mut self, entry: Result<DirEntry, Error>) -> WalkState {
         (self.visitor)(entry)
     }
@@ -1202,11 +1215,12 @@ impl WalkParallel {
     /// Execute the parallel recursive directory iterator. `mkf` is called
     /// for each thread used for iteration. The function produced by `mkf`
     /// is then in turn called for each visited file path.
-    pub fn run<'s, F>(self, mkf: F)
+    pub fn run<V, F>(self, mkf: F)
     where
-        F: FnMut() -> FnVisitor<'s>,
+        V: FnMut(Result<DirEntry, Error>) -> WalkState + Send,
+        F: Fn() -> V,
     {
-        self.visit(&mut FnBuilder { builder: mkf })
+        self.visit(FnBuilder { builder: mkf })
     }
 
     /// Execute the parallel recursive directory iterator using a custom
@@ -1226,7 +1240,7 @@ impl WalkParallel {
     /// visitor runs on only one thread, this build-up can be done without
     /// synchronization. Then, once traversal is complete, all of the results
     /// can be merged together into a single data structure.
-    pub fn visit(mut self, builder: &mut dyn ParallelVisitorBuilder<'_>) {
+    pub fn visit(mut self, builder: impl ParallelVisitorBuilder) {
         let threads = self.threads();
         let mut stack = vec![];
         {
@@ -1457,9 +1471,9 @@ impl Stack {
 /// ignore matchers, producing new work and invoking the caller's callback.
 ///
 /// Note that a worker is *both* a producer and a consumer.
-struct Worker<'s> {
+struct Worker<V> {
     /// The caller's callback.
-    visitor: Box<dyn ParallelVisitor + 's>,
+    visitor: V,
     /// A work-stealing stack of work to do.
     ///
     /// We use a stack instead of a channel because a stack lets us visit
@@ -1490,7 +1504,10 @@ struct Worker<'s> {
     filter: Option<Filter>,
 }
 
-impl<'s> Worker<'s> {
+impl<V> Worker<V>
+where
+    V: ParallelVisitor,
+{
     /// Runs this worker until there is no more work left to do.
     ///
     /// The worker will call the caller's callback for all entries that aren't
