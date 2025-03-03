@@ -59,6 +59,7 @@ pub(crate) struct LowArgs {
     pub(crate) globs: Vec<String>,
     pub(crate) heading: Option<bool>,
     pub(crate) hidden: bool,
+    pub(crate) histogram_bin_size: Option<u64>,
     pub(crate) hostname_bin: Option<PathBuf>,
     pub(crate) hyperlink_format: HyperlinkFormat,
     pub(crate) iglobs: Vec<String>,
@@ -209,6 +210,8 @@ pub(crate) enum SearchMode {
     /// Show files containing at least one match and the total number of
     /// matches.
     CountMatches,
+    /// Show a histogram of the matches
+    Histogram,
     /// Print matches in a JSON lines format.
     JSON,
 }
