@@ -1281,26 +1281,53 @@ impl WalkParallel {
         let quit_now = Arc::new(AtomicBool::new(false));
         let active_workers = Arc::new(AtomicUsize::new(threads));
         let stacks = Stack::new_for_each_thread(threads, stack);
+
+        let workers: Vec<_> = stacks
+            .into_iter()
+            .map(|stack| Worker {
+                visitor: builder.build(),
+                stack,
+                quit_now: quit_now.clone(),
+                active_workers: active_workers.clone(),
+                max_depth: self.max_depth,
+                max_filesize: self.max_filesize,
+                follow_links: self.follow_links,
+                skip: self.skip.clone(),
+                filter: self.filter.clone(),
+            })
+            .collect();
+
+        // Retain panic objects and re-throw them outside the thread scope.
+        let mut err: Option<Box<dyn std::any::Any + Send>> = None;
         std::thread::scope(|s| {
-            let handles: Vec<_> = stacks
+            let handles: Vec<_> = workers
                 .into_iter()
-                .map(|stack| Worker {
-                    visitor: builder.build(),
-                    stack,
-                    quit_now: quit_now.clone(),
-                    active_workers: active_workers.clone(),
-                    max_depth: self.max_depth,
-                    max_filesize: self.max_filesize,
-                    follow_links: self.follow_links,
-                    skip: self.skip.clone(),
-                    filter: self.filter.clone(),
+                .map(|worker| {
+                    let quit_now = quit_now.clone();
+                    s.spawn(move || {
+                        let mut worker = std::panic::AssertUnwindSafe(worker);
+                        let result =
+                            std::panic::catch_unwind(move || worker.run());
+                        if let Err(e) = result {
+                            // Send the quit flag to all remaining workers, which overrides any
+                            // other work.
+                            quit_now.store(true, AtomicOrdering::SeqCst);
+                            std::panic::resume_unwind(e)
+                        }
+                    })
                 })
-                .map(|worker| s.spawn(|| worker.run()))
                 .collect();
             for handle in handles {
-                handle.join().unwrap();
+                if let Err(e) = handle.join() {
+                    // If any panic occurs, only retain the first.
+                    let _ = err.get_or_insert(e);
+                }
             }
         });
+        // Re-throw any panic.
+        if let Some(e) = err {
+            std::panic::resume_unwind(e);
+        }
     }
 
     fn threads(&self) -> usize {
@@ -1495,7 +1522,11 @@ impl<'s> Worker<'s> {
     ///
     /// The worker will call the caller's callback for all entries that aren't
     /// skipped by the ignore matcher.
-    fn run(mut self) {
+    ///
+    /// This method is `&mut self` instead of consuming with `mut self` in order to be used within
+    /// [`AssertUnwindSafe`](std::panic::AssertUnwindSafe), which seems to require dereferencing
+    /// a mutable reference to avoid triggering the unwind safety check.
+    fn run(&mut self) {
         while let Some(work) = self.get_work() {
             if let WalkState::Quit = self.run_one(work) {
                 self.quit_now();
@@ -1693,6 +1724,12 @@ impl<'s> Worker<'s> {
                     }
                     // Wait for next `Work` or `Quit` message.
                     loop {
+                        // While in this busy loop, also ensure we check for the global quit flag.
+                        // This ensures we don't loop forever if the worker stack that was supposed
+                        // to alert us exited with a panic.
+                        if self.is_quit_now() {
+                            return None;
+                        }
                         if let Some(v) = self.recv() {
                             self.activate_worker();
                             value = Some(v);
