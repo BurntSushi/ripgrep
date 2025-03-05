@@ -232,6 +232,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["rust"], &["*.rs"]),
     (&["sass"], &["*.sass", "*.scss"]),
     (&["scala"], &["*.scala", "*.sbt"]),
+    (&["scdoc"], &["*.scd", "*.scdoc"]),
     (&["sh"], &[
         // Portable/misc. init files
         ".login", ".logout", ".profile", "profile",
