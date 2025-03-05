@@ -878,11 +878,13 @@ The output of this command is a list of filenames that contain a match for
 the `foo` pattern.
 
 This list can be piped into `xargs`, which will split the filenames from
-standard input into arguments for the command following xargs. You can use this
-combination to pipe a list of filenames into sed for replacement. For example:
+standard input into arguments for the command following xargs.
+`xargs` splits by space and newline by default, one should specify delimiter
+by `-d '\n'` if any file name contains space. You can use this combination to
+pipe a list of filenames into sed for replacement. For example:
 
 ```
-rg foo --files-with-matches | xargs sed -i 's/foo/bar/g'
+rg foo --files-with-matches | xargs -d '\n' sed -i 's/foo/bar/g'
 ```
 
 will replace all instances of 'foo' with 'bar' in the files in which
@@ -896,7 +898,7 @@ BSD sed (the default on macOS and FreeBSD) then you must modify the above
 command to be the following:
 
 ```
-rg foo --files-with-matches | xargs sed -i '' 's/foo/bar/g'
+rg foo --files-with-matches | xargs -d '\n' sed -i '' 's/foo/bar/g'
 ```
 
 The `-i` flag in BSD sed requires a file extension to be given to make backups
