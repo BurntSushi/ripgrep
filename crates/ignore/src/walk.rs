@@ -1220,7 +1220,62 @@ impl WalkParallel {
         V: FnMut(Result<DirEntry, Error>) -> WalkState + Send,
         F: Fn() -> V,
     {
-        self.visit(FnBuilder { builder: mkf })
+        self.visit(FnBuilder { builder: mkf });
+    }
+
+    fn send_root_paths<B>(&mut self, builder: &B) -> Result<Vec<Message>, ()>
+    where
+        B: ParallelVisitorBuilder,
+    {
+        let mut stack = vec![];
+        let mut visitor = builder.build();
+        let mut paths = Vec::new().into_iter();
+        std::mem::swap(&mut paths, &mut self.paths);
+
+        // Send the initial set of root paths to the pool of workers. Note
+        // that we only send directories. For files, we send to them the
+        // callback directly.
+        for path in paths {
+            let (dent, root_device) = if path == Path::new("-") {
+                (DirEntry::new_stdin(), None)
+            } else {
+                let root_device = if !self.same_file_system {
+                    None
+                } else {
+                    match device_num(&path) {
+                        Ok(root_device) => Some(root_device),
+                        Err(err) => {
+                            let err = Error::Io(err).with_path(path);
+                            if visitor.visit(Err(err)).is_quit() {
+                                return Err(());
+                            }
+                            continue;
+                        }
+                    }
+                };
+                match DirEntryRaw::from_path(0, path, false) {
+                    Ok(dent) => (DirEntry::new_raw(dent, None), root_device),
+                    Err(err) => {
+                        if visitor.visit(Err(err)).is_quit() {
+                            return Err(());
+                        }
+                        continue;
+                    }
+                }
+            };
+            stack.push(Message::Work(Work {
+                dent,
+                ignore: self.ig_root.clone(),
+                root_device,
+            }));
+        }
+
+        // ... but there's no need to start workers if we don't need them.
+        if stack.is_empty() {
+            Err(())
+        } else {
+            Ok(stack)
+        }
     }
 
     /// Execute the parallel recursive directory iterator using a custom
@@ -1240,57 +1295,16 @@ impl WalkParallel {
     /// visitor runs on only one thread, this build-up can be done without
     /// synchronization. Then, once traversal is complete, all of the results
     /// can be merged together into a single data structure.
-    pub fn visit(mut self, builder: impl ParallelVisitorBuilder) {
+    pub fn visit<B>(mut self, builder: B) -> B
+    where
+        B: ParallelVisitorBuilder,
+    {
         let threads = self.threads();
-        let mut stack = vec![];
-        {
-            let mut visitor = builder.build();
-            let mut paths = Vec::new().into_iter();
-            std::mem::swap(&mut paths, &mut self.paths);
-            // Send the initial set of root paths to the pool of workers. Note
-            // that we only send directories. For files, we send to them the
-            // callback directly.
-            for path in paths {
-                let (dent, root_device) = if path == Path::new("-") {
-                    (DirEntry::new_stdin(), None)
-                } else {
-                    let root_device = if !self.same_file_system {
-                        None
-                    } else {
-                        match device_num(&path) {
-                            Ok(root_device) => Some(root_device),
-                            Err(err) => {
-                                let err = Error::Io(err).with_path(path);
-                                if visitor.visit(Err(err)).is_quit() {
-                                    return;
-                                }
-                                continue;
-                            }
-                        }
-                    };
-                    match DirEntryRaw::from_path(0, path, false) {
-                        Ok(dent) => {
-                            (DirEntry::new_raw(dent, None), root_device)
-                        }
-                        Err(err) => {
-                            if visitor.visit(Err(err)).is_quit() {
-                                return;
-                            }
-                            continue;
-                        }
-                    }
-                };
-                stack.push(Message::Work(Work {
-                    dent,
-                    ignore: self.ig_root.clone(),
-                    root_device,
-                }));
-            }
-            // ... but there's no need to start workers if we don't need them.
-            if stack.is_empty() {
-                return;
-            }
-        }
+        let stack = match self.send_root_paths(&builder) {
+            Ok(stack) => stack,
+            Err(()) => return builder,
+        };
+
         // Create the workers and then wait for them to finish.
         let quit_now = Arc::new(AtomicBool::new(false));
         let active_workers = Arc::new(AtomicUsize::new(threads));
@@ -1315,6 +1329,7 @@ impl WalkParallel {
                 handle.join().unwrap();
             }
         });
+        builder
     }
 
     fn threads(&self) -> usize {
