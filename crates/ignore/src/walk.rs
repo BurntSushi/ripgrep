@@ -500,7 +500,15 @@ enum Sorter {
 }
 
 #[derive(Clone)]
-struct Filter(Arc<dyn Fn(&DirEntry) -> bool + Send + Sync + 'static>);
+struct Filter(
+    Arc<
+        dyn Fn(&DirEntry) -> bool
+            + std::panic::UnwindSafe
+            + Send
+            + Sync
+            + 'static,
+    >,
+);
 
 impl std::fmt::Debug for WalkBuilder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -896,7 +904,15 @@ impl WalkBuilder {
     /// predicate will still be yielded.
     pub fn filter_entry<P>(&mut self, filter: P) -> &mut WalkBuilder
     where
-        P: Fn(&DirEntry) -> bool + Send + Sync + 'static,
+        P: Fn(&DirEntry) -> bool
+            // NB: this is a breaking API change that will disallow some valid filter methods, if
+            //     used within a context where panic="abort", for example. This will allow *most*
+            //     filter methods, however, and users can simply use AssertUnwindSafe to circumvent
+            //     this check.
+            + std::panic::UnwindSafe
+            + Send
+            + Sync
+            + 'static,
     {
         self.filter = Some(Filter(Arc::new(filter)));
         self
@@ -1305,6 +1321,21 @@ impl WalkParallel {
                 .map(|worker| {
                     let quit_now = quit_now.clone();
                     s.spawn(move || {
+                        // This is safe because we consume the worker in this closure and never
+                        // touch it again. Any thread-local data is never read again, and any shared
+                        // data is only accessed through safe atomic operations.
+                        // NB: this requires the filter method to be UnwindSafe for two reasons:
+                        // (1) If WalkBuilder#filter_entry() is called, and *that* callback panics,
+                        //     then the given `Fn(&DirEntry) -> bool` may be left in an
+                        //     inconsistent state.
+                        // (2) This is only an issue because WalkParallel#visit() does not consume
+                        //     the provided ParallelVisitorBuilder! This means the builder may still
+                        //     be accessible when this function returns, e.g. if the user wraps
+                        //     .visit() with panic::catch_unwind().
+                        // I'm pretty sure this can only be resolved with a breaking change to the
+                        // API. We currently remain safe by adding an UnwindSafe requirement to the
+                        // method provided to .filter_entry(), but we should probably be consuming
+                        // the builder as well.
                         let mut worker = std::panic::AssertUnwindSafe(worker);
                         let result =
                             std::panic::catch_unwind(move || worker.run());
