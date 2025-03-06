@@ -1316,6 +1316,7 @@ impl WalkParallel {
         // Retain panic objects and re-throw them outside the thread scope.
         let mut err: Option<Box<dyn std::any::Any + Send>> = None;
         std::thread::scope(|s| {
+            // Spawn a thread per worker, and catch any inner panics.
             let handles: Vec<_> = workers
                 .into_iter()
                 .map(|worker| {
@@ -1348,9 +1349,13 @@ impl WalkParallel {
                     })
                 })
                 .collect();
+            // Iterate through the threads in the order they were spawned.
             for handle in handles {
                 if let Err(e) = handle.join() {
-                    // If any panic occurs, only retain the first.
+                    // If any panic occurs, pick whichever one we get first and discard the rest.
+                    // NB: this *doesn't* correspond to the first thread to actually panic, but just
+                    //     the first thread in the spawn order. If one thread panics as the *result*
+                    //     of another thread panic, we won't have provided complete information.
                     let _ = err.get_or_insert(e);
                 }
             }
