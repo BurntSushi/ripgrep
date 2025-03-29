@@ -7,7 +7,7 @@ use bstr::{ByteSlice, ByteVec};
 /// If the path terminates in `.`, `..`, or consists solely of a root of
 /// prefix, file_name will return None.
 pub(crate) fn file_name<'a>(path: &Cow<'a, [u8]>) -> Option<Cow<'a, [u8]>> {
-    if path.last_byte().map_or(true, |b| b == b'.') {
+    if path.iter().all(|&b| b == b'.') {
         return None;
     }
     let last_slash = path.rfind_byte(b'/').map(|i| i + 1).unwrap_or(0);
