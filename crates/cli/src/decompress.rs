@@ -515,6 +515,7 @@ fn default_decompression_commands() -> Vec<DecompressionCommand> {
     }
     let mut cmds = vec![];
     add("*.gz", ARGS_GZIP, &mut cmds);
+    add("*.gzip", ARGS_GZIP, &mut cmds);
     add("*.tgz", ARGS_GZIP, &mut cmds);
     add("*.bz2", ARGS_BZIP, &mut cmds);
     add("*.tbz2", ARGS_BZIP, &mut cmds);
