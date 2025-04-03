@@ -97,7 +97,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     ]),
     (&["graphql"], &["*.graphql", "*.graphqls"]),
     (&["groovy"], &["*.groovy", "*.gradle"]),
-    (&["gzip"], &["*.gz", ".gzip", "*.tgz"]),
+    (&["gzip"], &["*.gz", "*.gzip", "*.tgz"]),
     (&["h"], &["*.h", "*.hh", "*.hpp"]),
     (&["haml"], &["*.haml"]),
     (&["hare"], &["*.ha"]),
