@@ -71,7 +71,7 @@ impl MatchStrategy {
 ///
 /// It cannot be used directly to match file paths, but it can be converted
 /// to a regular expression string or a matcher.
-#[derive(Clone, Debug, Eq)]
+#[derive(Clone, Eq)]
 #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct Glob {
     glob: String,
@@ -90,6 +90,21 @@ impl std::hash::Hash for Glob {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.glob.hash(state);
         self.opts.hash(state);
+    }
+}
+
+impl std::fmt::Debug for Glob {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if f.alternate() {
+            f.debug_struct("Glob")
+                .field("glob", &self.glob)
+                .field("re", &self.re)
+                .field("opts", &self.opts)
+                .field("tokens", &self.tokens)
+                .finish()
+        } else {
+            f.debug_tuple("Glob").field(&self.glob).finish()
+        }
     }
 }
 

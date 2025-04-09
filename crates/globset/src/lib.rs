@@ -1100,4 +1100,16 @@ mod tests {
         let matches = set.matches("nada");
         assert_eq!(0, matches.len());
     }
+
+    #[test]
+    fn debug() {
+        let mut builder = GlobSetBuilder::new();
+        builder.add(Glob::new("*foo*").unwrap());
+        builder.add(Glob::new("*bar*").unwrap());
+        builder.add(Glob::new("*quux*").unwrap());
+        assert_eq!(
+            format!("{builder:?}"),
+            "GlobSetBuilder { pats: [Glob(\"*foo*\"), Glob(\"*bar*\"), Glob(\"*quux*\")] }",
+        );
+    }
 }
