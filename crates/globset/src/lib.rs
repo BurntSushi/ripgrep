@@ -514,6 +514,16 @@ impl GlobSetBuilder {
     }
 }
 
+impl<'a> IntoIterator for &'a GlobSetBuilder {
+    type Item = &'a Glob;
+    type IntoIter = std::slice::Iter<'a, Glob>;
+
+    /// Returns an iterator over the globs in this set.
+    fn into_iter(self) -> Self::IntoIter {
+        self.pats.iter()
+    }
+}
+
 /// A candidate path for matching.
 ///
 /// All glob matching in this crate operates on `Candidate` values.
@@ -1031,5 +1041,22 @@ mod tests {
 
         let matches = set.matches("nada");
         assert_eq!(0, matches.len());
+    }
+
+    #[test]
+    fn set_builder_can_be_iterated() {
+        let mut builder = GlobSetBuilder::new();
+        builder.add(Glob::new("src/**/*.rs").unwrap());
+        builder.add(Glob::new("*.c").unwrap());
+        builder.add(Glob::new("src/lib.rs").unwrap());
+
+        assert_eq!(
+            builder.into_iter().collect::<Vec<_>>(),
+            &[
+                &Glob::new("src/**/*.rs").unwrap(),
+                &Glob::new("*.c").unwrap(),
+                &Glob::new("src/lib.rs").unwrap(),
+            ]
+        );
     }
 }
