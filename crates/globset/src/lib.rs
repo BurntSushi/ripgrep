@@ -487,7 +487,7 @@ impl Default for GlobSet {
 
 /// GlobSetBuilder builds a group of patterns that can be used to
 /// simultaneously match a file path.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct GlobSetBuilder {
     pats: Vec<Glob>,
 }
@@ -511,6 +511,22 @@ impl GlobSetBuilder {
     pub fn add(&mut self, pat: Glob) -> &mut GlobSetBuilder {
         self.pats.push(pat);
         self
+    }
+}
+
+impl std::fmt::Debug for GlobSetBuilder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if f.alternate() {
+            f.debug_struct("GlobSetBuilder").field("pats", &self.pats).finish()
+        } else {
+            // If the formatter is not in alternate mode, print the patterns in
+            // a way that is easier to read, so one can quickly see which globs
+            // have been added to the glob set.
+            let iter = self.pats.iter().map(ToString::to_string);
+            f.debug_struct("GlobSetBuilder")
+                .field("pats", &iter.collect::<Vec<_>>())
+                .finish()
+        }
     }
 }
 
