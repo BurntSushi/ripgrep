@@ -589,6 +589,7 @@ impl HiArgs {
             .pretty(false)
             .max_matches(self.max_count)
             .always_begin_end(false)
+            .replacement(self.replace.clone().map(|r| r.into()))
             .build(wtr)
     }
 
