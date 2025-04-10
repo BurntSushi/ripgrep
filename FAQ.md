@@ -1055,7 +1055,7 @@ How can I donate to ripgrep or its maintainers?
 
 I welcome [sponsorship](https://github.com/sponsors/BurntSushi/).
 
-Or if you'd prefer, donating to a charitably organization that you like would
+Or if you'd prefer, donating to a charitable organization that you like would
 also be most welcome. My favorites are:
 
 * [The Internet Archive](https://archive.org/donate/)
