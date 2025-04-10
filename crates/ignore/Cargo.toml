@@ -36,7 +36,7 @@ version = "0.1.2"
 
 [dev-dependencies]
 bstr = { version = "1.6.2", default-features = false, features = ["std"] }
-crossbeam-channel = "0.5.8"
+crossbeam-channel = "0.5.15"
 
 [features]
 # DEPRECATED. It is a no-op. SIMD is done automatically through runtime
