@@ -180,7 +180,7 @@ fn search_parallel(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
         let haystack_builder = &haystack_builder;
         let mut searcher = searcher.clone();
 
-        Box::new(move |result| {
+        move |result| {
             let haystack = match haystack_builder.build_from_result(result) {
                 Some(haystack) => haystack,
                 None => return WalkState::Continue,
@@ -214,7 +214,7 @@ fn search_parallel(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
             } else {
                 WalkState::Continue
             }
-        })
+        }
     });
     if args.has_implicit_path() && !searched.load(Ordering::SeqCst) {
         eprint_nothing_searched();
@@ -297,7 +297,7 @@ fn files_parallel(args: &HiArgs) -> anyhow::Result<bool> {
         let matched = &matched;
         let tx = tx.clone();
 
-        Box::new(move |result| {
+        move |result| {
             let haystack = match haystack_builder.build_from_result(result) {
                 Some(haystack) => haystack,
                 None => return WalkState::Continue,
@@ -311,7 +311,7 @@ fn files_parallel(args: &HiArgs) -> anyhow::Result<bool> {
                     Err(_) => WalkState::Quit,
                 }
             }
-        })
+        }
     });
     drop(tx);
     if let Err(err) = print_thread.join().unwrap() {
