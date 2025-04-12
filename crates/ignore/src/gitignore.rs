@@ -402,6 +402,12 @@ impl GitignoreBuilder {
                     break;
                 }
             };
+
+            // Match Git's handling of .gitignore files that begin with the Unicode BOM
+            const UTF8_BOM: &str = "\u{feff}";
+            let line =
+                if i == 0 { line.trim_start_matches(UTF8_BOM) } else { &line };
+
             if let Err(err) = self.add_line(Some(path.to_path_buf()), &line) {
                 errs.push(err.tagged(path, lineno));
             }
