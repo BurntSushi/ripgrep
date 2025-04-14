@@ -540,7 +540,16 @@ impl<'a> std::fmt::Debug for Candidate<'a> {
 impl<'a> Candidate<'a> {
     /// Create a new candidate for matching from the given path.
     pub fn new<P: AsRef<Path> + ?Sized>(path: &'a P) -> Candidate<'a> {
-        let path = normalize_path(Vec::from_path_lossy(path.as_ref()));
+        Self::from_cow(Vec::from_path_lossy(path.as_ref()))
+    }
+
+    /// Create a new candidate for matching from the given path stored as `[u8]`.
+    pub fn from_bytes<P: AsRef<[u8]> + ?Sized>(path: &'a P) -> Candidate<'a> {
+        Self::from_cow(Cow::Borrowed(path.as_ref()))
+    }
+
+    fn from_cow(path: Cow<'a, [u8]>) -> Candidate<'a> {
+        let path = normalize_path(path);
         let basename = file_name(&path).unwrap_or(Cow::Borrowed(B("")));
         let ext = file_name_ext(&basename).unwrap_or(Cow::Borrowed(B("")));
         Candidate { path, basename, ext }
