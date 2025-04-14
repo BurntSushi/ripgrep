@@ -227,7 +227,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
         // Idiomatic files
         "config.ru", "Gemfile", ".irbrc", "Rakefile",
         // Extensions
-        "*.gemspec", "*.rb", "*.rbw"
+        "*.gemspec", "*.rake", "*.rb", "*.rbw"
     ]),
     (&["rust"], &["*.rs"]),
     (&["sass"], &["*.sass", "*.scss"]),
