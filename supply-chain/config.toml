@@ -1,0 +1,50 @@
+
+# cargo-vet config file
+
+[cargo-vet]
+version = "0.10"
+
+[imports.bytecode-alliance]
+url = "https://raw.githubusercontent.com/bytecodealliance/wasmtime/main/supply-chain/audits.toml"
+
+[imports.embark-studios]
+url = "https://raw.githubusercontent.com/EmbarkStudios/rust-ecosystem/main/audits.toml"
+
+[imports.fermyon]
+url = "https://raw.githubusercontent.com/fermyon/spin/main/supply-chain/audits.toml"
+
+[imports.google]
+url = "https://raw.githubusercontent.com/google/supply-chain/main/audits.toml"
+
+[imports.mozilla]
+url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
+
+[policy.globset]
+audit-as-crates-io = true
+
+[policy.grep]
+audit-as-crates-io = true
+
+[policy.grep-cli]
+audit-as-crates-io = true
+
+[policy.grep-matcher]
+audit-as-crates-io = true
+
+[policy.grep-pcre2]
+audit-as-crates-io = true
+
+[policy.grep-printer]
+audit-as-crates-io = true
+
+[policy.grep-regex]
+audit-as-crates-io = true
+
+[policy.grep-searcher]
+audit-as-crates-io = true
+
+[policy.ignore]
+audit-as-crates-io = true
+
+[policy.ripgrep]
+audit-as-crates-io = true

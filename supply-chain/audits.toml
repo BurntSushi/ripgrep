@@ -1,0 +1,142 @@
+
+# cargo-vet audits file
+
+[audits]
+
+[[trusted.aho-corasick]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-03-28"
+end = "2026-04-27"
+
+[[trusted.bstr]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-02"
+end = "2026-04-27"
+
+[[trusted.encoding_rs_io]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-03-03"
+end = "2026-04-27"
+
+[[trusted.globset]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-15"
+end = "2026-04-27"
+
+[[trusted.grep]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-15"
+end = "2026-04-27"
+
+[[trusted.grep-cli]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-15"
+end = "2026-04-27"
+
+[[trusted.grep-matcher]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-15"
+end = "2026-04-27"
+
+[[trusted.grep-pcre2]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-15"
+end = "2026-04-27"
+
+[[trusted.grep-printer]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-15"
+end = "2026-04-27"
+
+[[trusted.grep-regex]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-15"
+end = "2026-04-27"
+
+[[trusted.grep-searcher]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-15"
+end = "2026-04-27"
+
+[[trusted.ignore]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-15"
+end = "2026-04-27"
+
+[[trusted.memchr]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-07-07"
+end = "2026-04-27"
+
+[[trusted.pcre2]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-14"
+end = "2026-04-27"
+
+[[trusted.pcre2-sys]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-14"
+end = "2026-04-27"
+
+[[trusted.regex]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-02-27"
+end = "2026-04-27"
+
+[[trusted.regex-automata]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-02-25"
+end = "2026-04-27"
+
+[[trusted.regex-syntax]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-03-30"
+end = "2026-04-27"
+
+[[trusted.ripgrep]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-16"
+end = "2026-04-27"
+
+[[trusted.same-file]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-07-16"
+end = "2026-04-27"
+
+[[trusted.termcolor]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-06-04"
+end = "2026-04-27"
+
+[[trusted.walkdir]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-06-09"
+end = "2026-04-27"
+
+[[trusted.winapi-util]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2020-01-11"
+end = "2026-04-27"
