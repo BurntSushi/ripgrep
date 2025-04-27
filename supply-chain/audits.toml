@@ -152,3 +152,63 @@ criteria = "safe-to-deploy"
 user-id = 189 # Andrew Gallant (BurntSushi)
 start = "2020-01-11"
 end = "2026-04-27"
+
+[[trusted.windows-sys]]
+criteria = "safe-to-deploy"
+user-id = 64539
+start = "2021-11-15"
+end = "2026-04-27"
+
+[[trusted.windows-targets]]
+criteria = "safe-to-deploy"
+user-id = 64539
+start = "2022-09-09"
+end = "2026-04-27"
+
+[[trusted.windows_aarch64_gnullvm]]
+criteria = "safe-to-deploy"
+user-id = 64539
+start = "2022-09-01"
+end = "2026-04-27"
+
+[[trusted.windows_aarch64_msvc]]
+criteria = "safe-to-deploy"
+user-id = 64539
+start = "2021-11-05"
+end = "2026-04-27"
+
+[[trusted.windows_i686_gnu]]
+criteria = "safe-to-deploy"
+user-id = 64539
+start = "2021-10-28"
+end = "2026-04-27"
+
+[[trusted.windows_i686_gnullvm]]
+criteria = "safe-to-deploy"
+user-id = 64539
+start = "2024-04-02"
+end = "2026-04-27"
+
+[[trusted.windows_i686_msvc]]
+criteria = "safe-to-deploy"
+user-id = 64539
+start = "2021-10-27"
+end = "2026-04-27"
+
+[[trusted.windows_x86_64_gnu]]
+criteria = "safe-to-deploy"
+user-id = 64539
+start = "2021-10-28"
+end = "2026-04-27"
+
+[[trusted.windows_x86_64_gnullvm]]
+criteria = "safe-to-deploy"
+user-id = 64539
+start = "2022-09-01"
+end = "2026-04-27"
+
+[[trusted.windows_x86_64_msvc]]
+criteria = "safe-to-deploy"
+user-id = 64539
+start = "2021-10-27"
+end = "2026-04-27"
