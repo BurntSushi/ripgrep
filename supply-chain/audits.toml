@@ -1,7 +1,44 @@
 
 # cargo-vet audits file
 
-[audits]
+[[audits.anyhow]]
+who = "Jan Fooken <jan@faulty.computer>"
+criteria = "safe-to-deploy"
+delta = "1.0.95 -> 1.0.87"
+notes = "Mostly refactoring, because some APIs are now stable"
+
+[[audits.cc]]
+who = "Jan Fooken <jan@faulty.computer>"
+criteria = "safe-to-deploy"
+delta = "1.1.6 -> 1.1.18"
+
+[[audits.lexopt]]
+who = "Jan Fooken <jan@faulty.computer>"
+criteria = "safe-to-deploy"
+version = "0.3.0"
+notes = """
+The code looks sound and has no \"unsafe\" code blocks. It does not pull in
+any dependencies
+"""
+
+[[audits.memmap2]]
+who = "Jan Fooken <jan@faulty.computer>"
+criteria = "safe-to-deploy"
+version = "0.9.4"
+notes = """
+I made a non-thorough audit, which means I didn't check the soundness of the
+unsafe code.  However, Mozilla did audit this code previously and I didn't
+find anything concerning except from <10 lines of assembly in a test case.
+"""
+
+[[audits.pkg-config]]
+who = "Jan Fooken <jan@faulty.computer>"
+criteria = "safe-to-deploy"
+delta = "0.3.29 -> 0.3.30"
+notes = """
+Updates CI workflow versions, moves the Rust installer from actions-rs to
+dtolnay and does documentation changes
+"""
 
 [[trusted.aho-corasick]]
 criteria = "safe-to-deploy"
