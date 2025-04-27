@@ -75,6 +75,12 @@ user-id = 189 # Andrew Gallant (BurntSushi)
 start = "2019-04-15"
 end = "2026-04-27"
 
+[[trusted.jobserver]]
+criteria = "safe-to-deploy"
+user-id = 1
+start = "2019-03-15"
+end = "2026-04-27"
+
 [[trusted.memchr]]
 criteria = "safe-to-deploy"
 user-id = 189 # Andrew Gallant (BurntSushi)
