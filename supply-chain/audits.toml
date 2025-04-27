@@ -129,10 +129,28 @@ user-id = 189 # Andrew Gallant (BurntSushi)
 start = "2019-04-16"
 end = "2026-04-27"
 
+[[trusted.ryu]]
+criteria = "safe-to-deploy"
+user-id = 3618
+start = "2019-05-02"
+end = "2026-04-27"
+
 [[trusted.same-file]]
 criteria = "safe-to-deploy"
 user-id = 189 # Andrew Gallant (BurntSushi)
 start = "2019-07-16"
+end = "2026-04-27"
+
+[[trusted.serde_json]]
+criteria = "safe-to-deploy"
+user-id = 3618
+start = "2019-02-28"
+end = "2026-04-27"
+
+[[trusted.syn]]
+criteria = "safe-to-deploy"
+user-id = 3618
+start = "2019-03-01"
 end = "2026-04-27"
 
 [[trusted.termcolor]]
