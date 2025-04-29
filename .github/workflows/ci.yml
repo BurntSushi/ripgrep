@@ -99,11 +99,14 @@ jobs:
           os: macos-latest
           rust: nightly
         - build: win-msvc
-          os: windows-2022
+          os: windows-latest
           rust: nightly
         - build: win-gnu
-          os: windows-2022
+          os: windows-latest
           rust: nightly-x86_64-gnu
+        - build: winaarch64-msvc
+          os: windows-11-arm
+          rust: nightly
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -177,7 +180,7 @@ jobs:
       # 'rg' binary (done in test-complete) with qemu, which is a pain and
       # doesn't really gain us much. If shell completion works in one place,
       # it probably works everywhere.
-      if: matrix.target == '' && matrix.os != 'windows-2022'
+      if: matrix.target == '' && !startsWith(matrix.os, 'windows')
       shell: bash
       run: ci/test-complete
 
