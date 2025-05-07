@@ -20,3 +20,7 @@ mod misc;
 mod multiline;
 // Regression tests.
 mod regression;
+
+mod patternfile;
+
+mod files;
