@@ -517,6 +517,11 @@ impl HiArgs {
     /// When this returns false, it is impossible for ripgrep to ever report
     /// a match.
     pub(crate) fn matches_possible(&self) -> bool {
+        if cfg!(feature="pcre2") {
+            if self.patterns.patterns.is_empty() {
+                return false;
+            }
+        }
         if self.max_count == Some(0) {
             return false;
         }
