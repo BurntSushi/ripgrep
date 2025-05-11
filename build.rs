@@ -43,6 +43,7 @@ fn main() {
     app.gen_completions("rg", Shell::PowerShell, &outdir);
     // Note that we do not use clap's support for zsh. Instead, zsh completions
     // are manually maintained in `complete/_rg`.
+    // damn right
 
     // Make the current git hash available to the build.
     if let Some(rev) = git_revision_hash() {
