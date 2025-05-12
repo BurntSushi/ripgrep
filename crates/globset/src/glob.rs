@@ -583,25 +583,26 @@ impl<'a> GlobBuilder<'a> {
     pub fn build(&self) -> Result<Glob, Error> {
         let mut p = Parser {
             glob: &self.glob,
-            stack: vec![Tokens::default()],
+            alternates_stack: Vec::new(),
+            branches: vec![Tokens::default()],
             chars: self.glob.chars().peekable(),
             prev: None,
             cur: None,
             opts: &self.opts,
         };
         p.parse()?;
-        if p.stack.is_empty() {
-            Err(Error {
-                glob: Some(self.glob.to_string()),
-                kind: ErrorKind::UnopenedAlternates,
-            })
-        } else if p.stack.len() > 1 {
+        if p.branches.is_empty() {
+            // OK because of how the the branches/alternate_stack are managed.
+            // If we end up here, then there *must* be a bug in the parser
+            // somewhere.
+            unreachable!()
+        } else if p.branches.len() > 1 {
             Err(Error {
                 glob: Some(self.glob.to_string()),
                 kind: ErrorKind::UnclosedAlternates,
             })
         } else {
-            let tokens = p.stack.pop().unwrap();
+            let tokens = p.branches.pop().unwrap();
             Ok(Glob {
                 glob: self.glob.to_string(),
                 re: tokens.to_regex_with(&self.opts),
@@ -776,7 +777,11 @@ fn bytes_to_escaped_literal(bs: &[u8]) -> String {
 
 struct Parser<'a> {
     glob: &'a str,
-    stack: Vec<Tokens>,
+    // Marks the index in `stack` where the alternation started.
+    alternates_stack: Vec<usize>,
+    // The set of active alternation branches being parsed.
+    // Tokens are added to the end of the last one.
+    branches: Vec<Tokens>,
     chars: std::iter::Peekable<std::str::Chars<'a>>,
     prev: Option<char>,
     cur: Option<char>,
@@ -805,36 +810,37 @@ impl<'a> Parser<'a> {
     }
 
     fn push_alternate(&mut self) -> Result<(), Error> {
-        if self.stack.len() > 1 {
-            return Err(self.error(ErrorKind::NestedAlternates));
-        }
-        Ok(self.stack.push(Tokens::default()))
+        self.alternates_stack.push(self.branches.len());
+        self.branches.push(Tokens::default());
+        Ok(())
     }
 
     fn pop_alternate(&mut self) -> Result<(), Error> {
-        let mut alts = vec![];
-        while self.stack.len() >= 2 {
-            alts.push(self.stack.pop().unwrap());
-        }
-        self.push_token(Token::Alternates(alts))
+        let Some(start) = self.alternates_stack.pop() else {
+            return Err(self.error(ErrorKind::UnopenedAlternates));
+        };
+        assert!(start <= self.branches.len());
+        let alts = Token::Alternates(self.branches.drain(start..).collect());
+        self.push_token(alts)?;
+        Ok(())
     }
 
     fn push_token(&mut self, tok: Token) -> Result<(), Error> {
-        if let Some(ref mut pat) = self.stack.last_mut() {
+        if let Some(ref mut pat) = self.branches.last_mut() {
             return Ok(pat.push(tok));
         }
         Err(self.error(ErrorKind::UnopenedAlternates))
     }
 
     fn pop_token(&mut self) -> Result<Token, Error> {
-        if let Some(ref mut pat) = self.stack.last_mut() {
+        if let Some(ref mut pat) = self.branches.last_mut() {
             return Ok(pat.pop().unwrap());
         }
         Err(self.error(ErrorKind::UnopenedAlternates))
     }
 
     fn have_tokens(&self) -> Result<bool, Error> {
-        match self.stack.last() {
+        match self.branches.last() {
             None => Err(self.error(ErrorKind::UnopenedAlternates)),
             Some(ref pat) => Ok(!pat.is_empty()),
         }
@@ -843,11 +849,11 @@ impl<'a> Parser<'a> {
     fn parse_comma(&mut self) -> Result<(), Error> {
         // If we aren't inside a group alternation, then don't
         // treat commas specially. Otherwise, we need to start
-        // a new alternate.
-        if self.stack.len() <= 1 {
+        // a new alternate branch.
+        if self.alternates_stack.is_empty() {
             self.push_token(Token::Literal(','))
         } else {
-            Ok(self.stack.push(Tokens::default()))
+            Ok(self.branches.push(Tokens::default()))
         }
     }
 
@@ -884,7 +890,7 @@ impl<'a> Parser<'a> {
         }
 
         if !prev.map(is_separator).unwrap_or(false) {
-            if self.stack.len() <= 1
+            if self.branches.len() <= 1
                 || (prev != Some(',') && prev != Some('{'))
             {
                 self.push_token(Token::ZeroOrMore)?;
@@ -897,7 +903,7 @@ impl<'a> Parser<'a> {
                 assert!(self.bump().is_none());
                 true
             }
-            Some(',') | Some('}') if self.stack.len() >= 2 => true,
+            Some(',') | Some('}') if self.branches.len() >= 2 => true,
             Some(c) if is_separator(c) => {
                 assert!(self.bump().map(is_separator).unwrap_or(false));
                 false
@@ -1225,6 +1231,10 @@ mod tests {
     syntaxerr!(err_unclosed4, "[!]", ErrorKind::UnclosedClass);
     syntaxerr!(err_range1, "[z-a]", ErrorKind::InvalidRange('z', 'a'));
     syntaxerr!(err_range2, "[z--]", ErrorKind::InvalidRange('z', '-'));
+    syntaxerr!(err_alt1, "{a,b", ErrorKind::UnclosedAlternates);
+    syntaxerr!(err_alt2, "{a,{b,c}", ErrorKind::UnclosedAlternates);
+    syntaxerr!(err_alt3, "a,b}", ErrorKind::UnopenedAlternates);
+    syntaxerr!(err_alt4, "{a,b}}", ErrorKind::UnopenedAlternates);
 
     const CASEI: Options =
         Options { casei: Some(true), litsep: None, bsesc: None, ealtre: None };
@@ -1244,6 +1254,8 @@ mod tests {
         bsesc: Some(true),
         ealtre: Some(true),
     };
+
+    toregex!(re_empty, "", "^$");
 
     toregex!(re_casei, "a", "(?i)^a$", &CASEI);
 
@@ -1284,7 +1296,9 @@ mod tests {
     toregex!(re32, "/a**", r"^/a.*.*$");
     toregex!(re33, "/**a", r"^/.*.*a$");
     toregex!(re34, "/a**b", r"^/a.*.*b$");
-    toregex!(re35, "{a,b}", r"^(?:b|a)$");
+    toregex!(re35, "{a,b}", r"^(?:a|b)$");
+    toregex!(re36, "{a,{b,c}}", r"^(?:a|(?:b|c))$");
+    toregex!(re37, "{{a,b},{c,d}}", r"^(?:(?:a|b)|(?:c|d))$");
 
     matches!(match1, "a", "a");
     matches!(match2, "a*b", "a_b");
@@ -1372,6 +1386,9 @@ mod tests {
     matches!(matchalt14, "foo{,.txt}", "foo.txt");
     nmatches!(matchalt15, "foo{,.txt}", "foo");
     matches!(matchalt16, "foo{,.txt}", "foo", EALTRE);
+    matches!(matchalt17, "{a,b{c,d}}", "bc");
+    matches!(matchalt18, "{a,b{c,d}}", "bd");
+    matches!(matchalt19, "{a,b{c,d}}", "a");
 
     matches!(matchslash1, "abc/def", "abc/def", SLASHLIT);
     #[cfg(unix)]

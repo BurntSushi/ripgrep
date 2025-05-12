@@ -182,8 +182,11 @@ pub enum ErrorKind {
     UnopenedAlternates,
     /// Occurs when a `{` is found without a matching `}`.
     UnclosedAlternates,
-    /// Occurs when an alternating group is nested inside another alternating
-    /// group, e.g., `{{a,b},{c,d}}`.
+    /// **DEPRECATED**.
+    ///
+    /// This error used to occur when an alternating group was nested inside
+    /// another alternating group, e.g., `{{a,b},{c,d}}`. However, this is now
+    /// supported and as such this error cannot occur.
     NestedAlternates,
     /// Occurs when an unescaped '\' is found at the end of a glob.
     DanglingEscape,

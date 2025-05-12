@@ -37,6 +37,8 @@ Feature enhancements:
   When using multithreading, schedule files to search in order given on CLI.
 * [FEATURE #2943](https://github.com/BurntSushi/ripgrep/issues/2943):
   Add `aarch64` release artifacts for Windows.
+* [FEATURE #3048](https://github.com/BurntSushi/ripgrep/pull/3048):
+  Globs in ripgrep (and the `globset` crate) now support nested alternates.
 
 
 14.1.1 (2024-09-08)
