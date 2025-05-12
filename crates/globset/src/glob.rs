@@ -565,25 +565,23 @@ impl<'a> GlobBuilder<'a> {
         let mut p = Parser {
             glob: &self.glob,
             alternates_stack: Vec::new(),
-            stack: vec![Tokens::default()],
+            branches: vec![Tokens::default()],
             chars: self.glob.chars().peekable(),
             prev: None,
             cur: None,
             opts: &self.opts,
         };
         p.parse()?;
-        if p.stack.is_empty() {
-            Err(Error {
-                glob: Some(self.glob.to_string()),
-                kind: ErrorKind::UnopenedAlternates,
-            })
-        } else if p.stack.len() > 1 {
+        if p.branches.is_empty() {
+            // This is literally impossible given how the the branches/alternate_stack are managed.
+            unreachable!()
+        } else if p.branches.len() > 1 {
             Err(Error {
                 glob: Some(self.glob.to_string()),
                 kind: ErrorKind::UnclosedAlternates,
             })
         } else {
-            let tokens = p.stack.pop().unwrap();
+            let tokens = p.branches.pop().unwrap();
             Ok(Glob {
                 glob: self.glob.to_string(),
                 re: tokens.to_regex_with(&self.opts),
@@ -758,9 +756,11 @@ fn bytes_to_escaped_literal(bs: &[u8]) -> String {
 
 struct Parser<'a> {
     glob: &'a str,
-    // Markes the index in `stack` where the alternation started
+    // Marks the index in `stack` where the alternation started.
     alternates_stack: Vec<usize>,
-    stack: Vec<Tokens>,
+    // The set of active alternation branches being parsed.
+    // Tokens are added to the end of the last one.
+    branches: Vec<Tokens>,
     chars: std::iter::Peekable<std::str::Chars<'a>>,
     prev: Option<char>,
     cur: Option<char>,
@@ -789,8 +789,8 @@ impl<'a> Parser<'a> {
     }
 
     fn push_alternate(&mut self) -> Result<(), Error> {
-        self.alternates_stack.push(self.stack.len());
-        self.stack.push(Tokens::default());
+        self.alternates_stack.push(self.branches.len());
+        self.branches.push(Tokens::default());
         Ok(())
     }
 
@@ -798,27 +798,28 @@ impl<'a> Parser<'a> {
         let Some(start) = self.alternates_stack.pop() else {
             return Err(self.error(ErrorKind::UnopenedAlternates));
         };
-        let alts = Token::Alternates(self.stack.drain(start..).collect());
+        assert!(start <= self.branches.len());
+        let alts = Token::Alternates(self.branches.drain(start..).collect());
         self.push_token(alts)?;
         Ok(())
     }
 
     fn push_token(&mut self, tok: Token) -> Result<(), Error> {
-        if let Some(ref mut pat) = self.stack.last_mut() {
+        if let Some(ref mut pat) = self.branches.last_mut() {
             return Ok(pat.push(tok));
         }
         Err(self.error(ErrorKind::UnopenedAlternates))
     }
 
     fn pop_token(&mut self) -> Result<Token, Error> {
-        if let Some(ref mut pat) = self.stack.last_mut() {
+        if let Some(ref mut pat) = self.branches.last_mut() {
             return Ok(pat.pop().unwrap());
         }
         Err(self.error(ErrorKind::UnopenedAlternates))
     }
 
     fn have_tokens(&self) -> Result<bool, Error> {
-        match self.stack.last() {
+        match self.branches.last() {
             None => Err(self.error(ErrorKind::UnopenedAlternates)),
             Some(ref pat) => Ok(!pat.is_empty()),
         }
@@ -827,11 +828,11 @@ impl<'a> Parser<'a> {
     fn parse_comma(&mut self) -> Result<(), Error> {
         // If we aren't inside a group alternation, then don't
         // treat commas specially. Otherwise, we need to start
-        // a new alternate.
-        if self.stack.len() <= 1 {
+        // a new alternate branch.
+        if self.alternates_stack.is_empty() {
             self.push_token(Token::Literal(','))
         } else {
-            Ok(self.stack.push(Tokens::default()))
+            Ok(self.branches.push(Tokens::default()))
         }
     }
 
@@ -868,7 +869,7 @@ impl<'a> Parser<'a> {
         }
 
         if !prev.map(is_separator).unwrap_or(false) {
-            if self.stack.len() <= 1
+            if self.branches.len() <= 1
                 || (prev != Some(',') && prev != Some('{'))
             {
                 self.push_token(Token::ZeroOrMore)?;
@@ -881,7 +882,7 @@ impl<'a> Parser<'a> {
                 assert!(self.bump().is_none());
                 true
             }
-            Some(',') | Some('}') if self.stack.len() >= 2 => true,
+            Some(',') | Some('}') if self.branches.len() >= 2 => true,
             Some(c) if is_separator(c) => {
                 assert!(self.bump().map(is_separator).unwrap_or(false));
                 false
