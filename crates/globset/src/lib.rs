@@ -169,8 +169,11 @@ pub enum ErrorKind {
     UnopenedAlternates,
     /// Occurs when a `{` is found without a matching `}`.
     UnclosedAlternates,
-    /// Occurs when an alternating group is nested inside another alternating
-    /// group, e.g., `{{a,b},{c,d}}`.
+    /// **DEPRECATED**.
+    ///
+    /// This error used to occur when an alternating group was nested inside
+    /// another alternating group, e.g., `{{a,b},{c,d}}`. However, is now
+    /// supported and as such this error is impossible.
     NestedAlternates,
     /// Occurs when an unescaped '\' is found at the end of a glob.
     DanglingEscape,
@@ -222,7 +225,7 @@ impl ErrorKind {
                 (maybe escape '{' with '[{]'?)"
             }
             ErrorKind::NestedAlternates => {
-                "nested alternate groups are not allowed"
+                unreachable!()
             }
             ErrorKind::DanglingEscape => "dangling '\\'",
             ErrorKind::Regex(ref err) => err,

@@ -564,6 +564,7 @@ impl<'a> GlobBuilder<'a> {
     pub fn build(&self) -> Result<Glob, Error> {
         let mut p = Parser {
             glob: &self.glob,
+            alternates_stack: Vec::new(),
             stack: vec![Tokens::default()],
             chars: self.glob.chars().peekable(),
             prev: None,
@@ -757,6 +758,8 @@ fn bytes_to_escaped_literal(bs: &[u8]) -> String {
 
 struct Parser<'a> {
     glob: &'a str,
+    // Markes the index in `stack` where the alternation started
+    alternates_stack: Vec<usize>,
     stack: Vec<Tokens>,
     chars: std::iter::Peekable<std::str::Chars<'a>>,
     prev: Option<char>,
@@ -786,18 +789,18 @@ impl<'a> Parser<'a> {
     }
 
     fn push_alternate(&mut self) -> Result<(), Error> {
-        if self.stack.len() > 1 {
-            return Err(self.error(ErrorKind::NestedAlternates));
-        }
-        Ok(self.stack.push(Tokens::default()))
+        self.alternates_stack.push(self.stack.len());
+        self.stack.push(Tokens::default());
+        Ok(())
     }
 
     fn pop_alternate(&mut self) -> Result<(), Error> {
-        let mut alts = vec![];
-        while self.stack.len() >= 2 {
-            alts.push(self.stack.pop().unwrap());
-        }
-        self.push_token(Token::Alternates(alts))
+        let Some(start) = self.alternates_stack.pop() else {
+            return Err(self.error(ErrorKind::UnopenedAlternates));
+        };
+        let alts = Token::Alternates(self.stack.drain(start..).collect());
+        self.push_token(alts)?;
+        Ok(())
     }
 
     fn push_token(&mut self, tok: Token) -> Result<(), Error> {
@@ -1206,6 +1209,10 @@ mod tests {
     syntaxerr!(err_unclosed4, "[!]", ErrorKind::UnclosedClass);
     syntaxerr!(err_range1, "[z-a]", ErrorKind::InvalidRange('z', 'a'));
     syntaxerr!(err_range2, "[z--]", ErrorKind::InvalidRange('z', '-'));
+    syntaxerr!(err_alt1, "{a,b", ErrorKind::UnclosedAlternates);
+    syntaxerr!(err_alt2, "{a,{b,c}", ErrorKind::UnclosedAlternates);
+    syntaxerr!(err_alt3, "a,b}", ErrorKind::UnopenedAlternates);
+    syntaxerr!(err_alt4, "{a,b}}", ErrorKind::UnopenedAlternates);
 
     const CASEI: Options =
         Options { casei: Some(true), litsep: None, bsesc: None, ealtre: None };
@@ -1265,7 +1272,9 @@ mod tests {
     toregex!(re32, "/a**", r"^/a.*.*$");
     toregex!(re33, "/**a", r"^/.*.*a$");
     toregex!(re34, "/a**b", r"^/a.*.*b$");
-    toregex!(re35, "{a,b}", r"^(?:b|a)$");
+    toregex!(re35, "{a,b}", r"^(?:a|b)$");
+    toregex!(re36, "{a,{b,c}}", r"^(?:a|(?:b|c))$");
+    toregex!(re37, "{{a,b},{c,d}}", r"^(?:(?:a|b)|(?:c|d))$");
 
     matches!(match1, "a", "a");
     matches!(match2, "a*b", "a_b");
@@ -1353,6 +1362,9 @@ mod tests {
     matches!(matchalt14, "foo{,.txt}", "foo.txt");
     nmatches!(matchalt15, "foo{,.txt}", "foo");
     matches!(matchalt16, "foo{,.txt}", "foo", EALTRE);
+    matches!(matchalt17, "{a,b{c,d}}", "bc");
+    matches!(matchalt18, "{a,b{c,d}}", "bd");
+    matches!(matchalt19, "{a,b{c,d}}", "a");
 
     matches!(matchslash1, "abc/def", "abc/def", SLASHLIT);
     #[cfg(unix)]
