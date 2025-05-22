@@ -312,7 +312,7 @@ $ sudo yum install ripgrep
 ```
 
 If you're a **Nix** user, you can install ripgrep from
-[nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/tools/text/ripgrep/default.nix):
+[nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/ri/ripgrep/package.nix):
 
 ```
 $ nix-env --install ripgrep
