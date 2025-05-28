@@ -342,7 +342,7 @@ $ rg 'fn run' --type rust
 or, more succinctly,
 
 ```
-$ rg 'fn run' -trust
+$ rg 'fn run' -t rust
 ```
 
 The way the `--type` flag functions is simple. It acts as a name that is
@@ -370,7 +370,7 @@ $ rg clap --type-not rust
 or, more succinctly,
 
 ```
-$ rg clap -Trust
+$ rg clap -T rust
 ```
 
 That is, `-t` means "include files of this type" where as `-T` means "exclude
