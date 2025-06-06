@@ -238,7 +238,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["seed7"], &["*.sd7", "*.s7i"]),
     (&["sh"], &[
         // Portable/misc. init files
-        ".login", ".logout", ".profile", "profile",
+        ".env", ".login", ".logout", ".profile", "profile",
         // bash-specific init files
         ".bash_login", "bash_login",
         ".bash_logout", "bash_logout",
@@ -257,7 +257,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
         ".zprofile", "zprofile",
         ".zshrc", "zshrc",
         // Extensions
-        "*.bash", "*.csh", "*.ksh", "*.sh", "*.tcsh", "*.zsh",
+        "*.bash", "*.csh", "*.env", "*.ksh", "*.sh", "*.tcsh", "*.zsh",
     ]),
     (&["slim"], &["*.skim", "*.slim", "*.slime"]),
     (&["smarty"], &["*.tpl"]),
