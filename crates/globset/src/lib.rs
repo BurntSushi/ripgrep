@@ -410,7 +410,9 @@ impl GlobSet {
         into.dedup();
     }
 
-    fn new(pats: &[Glob]) -> Result<GlobSet, Error> {
+    /// Builds a new matcher from a collection of Glob patterns.
+    pub fn new(pats: impl AsRef<[Glob]>) -> Result<GlobSet, Error> {
+        let pats = pats.as_ref();
         if pats.is_empty() {
             return Ok(GlobSet { len: 0, strats: vec![] });
         }
