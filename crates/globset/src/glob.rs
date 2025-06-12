@@ -80,6 +80,12 @@ pub struct Glob {
     tokens: Tokens,
 }
 
+impl AsRef<Glob> for Glob {
+    fn as_ref(&self) -> &Glob {
+        self
+    }
+}
+
 impl PartialEq for Glob {
     fn eq(&self, other: &Glob) -> bool {
         self.glob == other.glob && self.opts == other.opts

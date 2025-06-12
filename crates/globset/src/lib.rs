@@ -455,10 +455,20 @@ impl GlobSet {
         into.dedup();
     }
 
-    fn new(pats: &[Glob]) -> Result<GlobSet, Error> {
-        if pats.is_empty() {
-            return Ok(GlobSet { len: 0, strats: vec![] });
+    /// Builds a new matcher from a collection of Glob patterns.
+    ///
+    /// Once a matcher is built, no new patterns can be added to it.
+    pub fn new<I, G>(globs: I) -> Result<GlobSet, Error>
+    where
+        I: IntoIterator<Item = G>,
+        G: AsRef<Glob>,
+    {
+        let mut it = globs.into_iter().peekable();
+        if it.peek().is_none() {
+            return Ok(GlobSet::empty());
         }
+
+        let mut len = 0;
         let mut lits = LiteralStrategy::new();
         let mut base_lits = BasenameLiteralStrategy::new();
         let mut exts = ExtensionStrategy::new();
@@ -466,7 +476,10 @@ impl GlobSet {
         let mut suffixes = MultiStrategyBuilder::new();
         let mut required_exts = RequiredExtensionStrategyBuilder::new();
         let mut regexes = MultiStrategyBuilder::new();
-        for (i, p) in pats.iter().enumerate() {
+        for (i, p) in it.enumerate() {
+            len += 1;
+
+            let p = p.as_ref();
             match MatchStrategy::new(p) {
                 MatchStrategy::Literal(lit) => {
                     lits.add(i, lit);
@@ -532,7 +545,7 @@ impl GlobSet {
             strats.push(GlobSetMatchStrategy::Regex(regexes.regex_set()?));
         }
 
-        Ok(GlobSet { len: pats.len(), strats })
+        Ok(GlobSet { len, strats })
     }
 }
 
@@ -562,7 +575,7 @@ impl GlobSetBuilder {
     ///
     /// Once a matcher is built, no new patterns can be added to it.
     pub fn build(&self) -> Result<GlobSet, Error> {
-        GlobSet::new(&self.pats)
+        GlobSet::new(self.pats.iter())
     }
 
     /// Add a new pattern to this set.
