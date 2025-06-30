@@ -152,6 +152,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     ]),
     (&["lilypond"], &["*.ly", "*.ily"]),
     (&["lisp"], &["*.el", "*.jl", "*.lisp", "*.lsp", "*.sc", "*.scm"]),
+    (&["llvm"], &["*.ll"]),
     (&["lock"], &["*.lock", "package-lock.json"]),
     (&["log"], &["*.log"]),
     (&["lua"], &["*.lua"]),
