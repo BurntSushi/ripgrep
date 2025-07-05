@@ -82,7 +82,9 @@ pub struct Glob {
 
 impl PartialEq for Glob {
     fn eq(&self, other: &Glob) -> bool {
-        self.id == other.id && self.glob == other.glob && self.opts == other.opts
+        self.id == other.id
+            && self.glob == other.glob
+            && self.opts == other.opts
     }
 }
 

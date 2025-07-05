@@ -427,7 +427,10 @@ impl GlobSet {
     ///
     /// This takes a Candidate as input, which can be used to amortize the
     /// cost of preparing a path for matching.
-    pub fn get_match_id_candidate(&self, path: &Candidate<'_>) -> Option<String> {
+    pub fn get_match_id_candidate(
+        &self,
+        path: &Candidate<'_>,
+    ) -> Option<String> {
         if self.is_empty() {
             return None;
         }
@@ -437,7 +440,7 @@ impl GlobSet {
         }
         matches.sort();
         matches.dedup();
-        
+
         // Return the ID of the first matching glob
         if let Some(&first_match) = matches.first() {
             if first_match < self.ids.len() {
@@ -1034,25 +1037,25 @@ mod tests {
     fn glob_id_basic() {
         let mut builder = GlobSetBuilder::new();
         builder.add(
-            GlobBuilder::new("*.rs")
-                .with_id("rust_files")
-                .build()
-                .unwrap(),
+            GlobBuilder::new("*.rs").with_id("rust_files").build().unwrap(),
         );
         builder.add(
-            GlobBuilder::new("*.txt")
-                .with_id("text_files")
-                .build()
-                .unwrap(),
+            GlobBuilder::new("*.txt").with_id("text_files").build().unwrap(),
         );
         builder.add(Glob::new("*.toml").unwrap()); // No ID
         let set = builder.build().unwrap();
 
-        assert_eq!(Some("rust_files".to_string()), set.get_match_id("main.rs"));
-        assert_eq!(Some("text_files".to_string()), set.get_match_id("readme.txt"));
+        assert_eq!(
+            Some("rust_files".to_string()),
+            set.get_match_id("main.rs")
+        );
+        assert_eq!(
+            Some("text_files".to_string()),
+            set.get_match_id("readme.txt")
+        );
         assert_eq!(None, set.get_match_id("Cargo.toml")); // Matches but no ID
         assert_eq!(None, set.get_match_id("script.py")); // No match
-        
+
         // Verify existing functionality still works
         assert!(set.is_match("main.rs"));
         assert!(set.is_match("Cargo.toml"));
@@ -1063,10 +1066,7 @@ mod tests {
     fn glob_id_multiple_matches() {
         let mut builder = GlobSetBuilder::new();
         builder.add(
-            GlobBuilder::new("*.rs")
-                .with_id("rust_files")
-                .build()
-                .unwrap(),
+            GlobBuilder::new("*.rs").with_id("rust_files").build().unwrap(),
         );
         builder.add(
             GlobBuilder::new("src/**/*.rs")
@@ -1077,8 +1077,11 @@ mod tests {
         let set = builder.build().unwrap();
 
         // Should return the first matching pattern's ID
-        assert_eq!(Some("rust_files".to_string()), set.get_match_id("src/main.rs"));
-        
+        assert_eq!(
+            Some("rust_files".to_string()),
+            set.get_match_id("src/main.rs")
+        );
+
         // Verify both patterns match
         let matches = set.matches("src/main.rs");
         assert_eq!(2, matches.len());
@@ -1102,13 +1105,11 @@ mod tests {
 
     #[test]
     fn glob_id_from_individual_glob() {
-        let glob = GlobBuilder::new("*.rs")
-            .with_id("test_id")
-            .build()
-            .unwrap();
-        
+        let glob =
+            GlobBuilder::new("*.rs").with_id("test_id").build().unwrap();
+
         assert_eq!(Some("test_id"), glob.id());
-        
+
         let glob_no_id = Glob::new("*.txt").unwrap();
         assert_eq!(None, glob_no_id.id());
     }
