@@ -73,6 +73,7 @@ impl MatchStrategy {
 /// to a regular expression string or a matcher.
 #[derive(Clone, Debug, Eq)]
 pub struct Glob {
+    id: Option<String>,
     glob: String,
     re: String,
     opts: GlobOptions,
@@ -81,12 +82,13 @@ pub struct Glob {
 
 impl PartialEq for Glob {
     fn eq(&self, other: &Glob) -> bool {
-        self.glob == other.glob && self.opts == other.opts
+        self.id == other.id && self.glob == other.glob && self.opts == other.opts
     }
 }
 
 impl std::hash::Hash for Glob {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
         self.glob.hash(state);
         self.opts.hash(state);
     }
@@ -191,6 +193,8 @@ pub struct GlobBuilder<'a> {
     glob: &'a str,
     /// Options for the pattern.
     opts: GlobOptions,
+    /// Optional ID for the pattern.
+    id: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -271,6 +275,11 @@ impl Glob {
         let re =
             new_regex(&self.re).expect("regex compilation shouldn't fail");
         GlobStrategic { strategy, re }
+    }
+
+    /// Returns the ID associated with this glob, if any.
+    pub fn id(&self) -> Option<&str> {
+        self.id.as_deref()
     }
 
     /// Returns the original glob pattern used to build this pattern.
@@ -557,7 +566,15 @@ impl<'a> GlobBuilder<'a> {
     ///
     /// The pattern is not compiled until `build` is called.
     pub fn new(glob: &'a str) -> GlobBuilder<'a> {
-        GlobBuilder { glob, opts: GlobOptions::default() }
+        GlobBuilder { glob, opts: GlobOptions::default(), id: None }
+    }
+
+    /// Set an ID for this pattern.
+    ///
+    /// The ID can be retrieved later if this pattern matches against a path.
+    pub fn with_id<S: Into<String>>(&mut self, id: S) -> &mut GlobBuilder<'a> {
+        self.id = Some(id.into());
+        self
     }
 
     /// Parses and builds the pattern.
@@ -584,6 +601,7 @@ impl<'a> GlobBuilder<'a> {
         } else {
             let tokens = p.stack.pop().unwrap();
             Ok(Glob {
+                id: self.id.clone(),
                 glob: self.glob.to_string(),
                 re: tokens.to_regex_with(&self.opts),
                 opts: self.opts,

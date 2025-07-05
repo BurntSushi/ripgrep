@@ -301,6 +301,8 @@ fn new_regex_set(pats: Vec<String>) -> Result<Regex, Error> {
 pub struct GlobSet {
     len: usize,
     strats: Vec<GlobSetMatchStrategy>,
+    /// Maps global index to the original pattern ID (if any)
+    ids: Vec<Option<String>>,
 }
 
 impl GlobSet {
@@ -315,7 +317,7 @@ impl GlobSet {
     /// Create an empty `GlobSet`. An empty set matches nothing.
     #[inline]
     pub fn empty() -> GlobSet {
-        GlobSet { len: 0, strats: vec![] }
+        GlobSet { len: 0, strats: vec![], ids: vec![] }
     }
 
     /// Returns true if this set is empty, and therefore matches nothing.
@@ -410,9 +412,47 @@ impl GlobSet {
         into.dedup();
     }
 
+    /// Returns the ID of the first glob pattern that matches the given path.
+    ///
+    /// Returns `None` if no glob pattern matches or if the matching glob
+    /// has no ID associated with it.
+    pub fn get_match_id<P: AsRef<Path>>(&self, path: P) -> Option<String> {
+        self.get_match_id_candidate(&Candidate::new(path.as_ref()))
+    }
+
+    /// Returns the ID of the first glob pattern that matches the given path.
+    ///
+    /// Returns `None` if no glob pattern matches or if the matching glob
+    /// has no ID associated with it.
+    ///
+    /// This takes a Candidate as input, which can be used to amortize the
+    /// cost of preparing a path for matching.
+    pub fn get_match_id_candidate(&self, path: &Candidate<'_>) -> Option<String> {
+        if self.is_empty() {
+            return None;
+        }
+        let mut matches = vec![];
+        for strat in &self.strats {
+            strat.matches_into(path, &mut matches);
+        }
+        matches.sort();
+        matches.dedup();
+        
+        // Return the ID of the first matching glob
+        if let Some(&first_match) = matches.first() {
+            if first_match < self.ids.len() {
+                self.ids[first_match].clone()
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
     fn new(pats: &[Glob]) -> Result<GlobSet, Error> {
         if pats.is_empty() {
-            return Ok(GlobSet { len: 0, strats: vec![] });
+            return Ok(GlobSet { len: 0, strats: vec![], ids: vec![] });
         }
         let mut lits = LiteralStrategy::new();
         let mut base_lits = BasenameLiteralStrategy::new();
@@ -421,7 +461,9 @@ impl GlobSet {
         let mut suffixes = MultiStrategyBuilder::new();
         let mut required_exts = RequiredExtensionStrategyBuilder::new();
         let mut regexes = MultiStrategyBuilder::new();
+        let mut ids = Vec::with_capacity(pats.len());
         for (i, p) in pats.iter().enumerate() {
+            ids.push(p.id().map(|s| s.to_string()));
             match MatchStrategy::new(p) {
                 MatchStrategy::Literal(lit) => {
                     lits.add(i, lit);
@@ -463,6 +505,7 @@ impl GlobSet {
         );
         Ok(GlobSet {
             len: pats.len(),
+            ids,
             strats: vec![
                 GlobSetMatchStrategy::Extension(exts),
                 GlobSetMatchStrategy::BasenameLiteral(base_lits),
@@ -962,7 +1005,7 @@ pub fn escape(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::glob::Glob;
+    use crate::glob::{Glob, GlobBuilder};
 
     use super::{GlobSet, GlobSetBuilder};
 
@@ -985,6 +1028,89 @@ mod tests {
         assert_eq!(2, matches.len());
         assert_eq!(0, matches[0]);
         assert_eq!(2, matches[1]);
+    }
+
+    #[test]
+    fn glob_id_basic() {
+        let mut builder = GlobSetBuilder::new();
+        builder.add(
+            GlobBuilder::new("*.rs")
+                .with_id("rust_files")
+                .build()
+                .unwrap(),
+        );
+        builder.add(
+            GlobBuilder::new("*.txt")
+                .with_id("text_files")
+                .build()
+                .unwrap(),
+        );
+        builder.add(Glob::new("*.toml").unwrap()); // No ID
+        let set = builder.build().unwrap();
+
+        assert_eq!(Some("rust_files".to_string()), set.get_match_id("main.rs"));
+        assert_eq!(Some("text_files".to_string()), set.get_match_id("readme.txt"));
+        assert_eq!(None, set.get_match_id("Cargo.toml")); // Matches but no ID
+        assert_eq!(None, set.get_match_id("script.py")); // No match
+        
+        // Verify existing functionality still works
+        assert!(set.is_match("main.rs"));
+        assert!(set.is_match("Cargo.toml"));
+        assert!(!set.is_match("script.py"));
+    }
+
+    #[test]
+    fn glob_id_multiple_matches() {
+        let mut builder = GlobSetBuilder::new();
+        builder.add(
+            GlobBuilder::new("*.rs")
+                .with_id("rust_files")
+                .build()
+                .unwrap(),
+        );
+        builder.add(
+            GlobBuilder::new("src/**/*.rs")
+                .with_id("src_rust")
+                .build()
+                .unwrap(),
+        );
+        let set = builder.build().unwrap();
+
+        // Should return the first matching pattern's ID
+        assert_eq!(Some("rust_files".to_string()), set.get_match_id("src/main.rs"));
+        
+        // Verify both patterns match
+        let matches = set.matches("src/main.rs");
+        assert_eq!(2, matches.len());
+        assert!(matches.contains(&0)); // *.rs
+        assert!(matches.contains(&1)); // src/**/*.rs
+    }
+
+    #[test]
+    fn glob_id_empty_string() {
+        let mut builder = GlobSetBuilder::new();
+        builder.add(
+            GlobBuilder::new("*.md")
+                .with_id("") // Empty string ID
+                .build()
+                .unwrap(),
+        );
+        let set = builder.build().unwrap();
+
+        assert_eq!(Some("".to_string()), set.get_match_id("README.md"));
+    }
+
+    #[test]
+    fn glob_id_from_individual_glob() {
+        let glob = GlobBuilder::new("*.rs")
+            .with_id("test_id")
+            .build()
+            .unwrap();
+        
+        assert_eq!(Some("test_id"), glob.id());
+        
+        let glob_no_id = Glob::new("*.txt").unwrap();
+        assert_eq!(None, glob_no_id.id());
     }
 
     #[test]
