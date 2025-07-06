@@ -135,6 +135,7 @@ pub(crate) struct MultiLine<'s, M, S> {
     core: Core<'s, M, S>,
     slice: &'s [u8],
     last_match: Option<Range>,
+    match_count: u64,
 }
 
 impl<'s, M: Matcher, S: Sink> MultiLine<'s, M, S> {
@@ -151,6 +152,7 @@ impl<'s, M: Matcher, S: Sink> MultiLine<'s, M, S> {
             core: Core::new(searcher, matcher, write_to, true),
             slice,
             last_match: None,
+            match_count: 0,
         }
     }
 
@@ -208,6 +210,7 @@ impl<'s, M: Matcher, S: Sink> MultiLine<'s, M, S> {
             }
         };
         self.advance(&mat);
+        self.match_count += 1;
 
         let line =
             lines::locate(self.slice, self.config.line_term.as_byte(), mat);
@@ -234,7 +237,12 @@ impl<'s, M: Matcher, S: Sink> MultiLine<'s, M, S> {
                 //
                 // See: https://github.com/BurntSushi/ripgrep/issues/1311
                 // And also the associated commit fixing #1311.
-                if last_match.end() >= line.start() {
+                //
+                // Also check if we've reached max_matches. If so, we need to
+                // sink the last match before stopping.
+                let reached_max_matches = self.config.max_matches
+                    .map_or(false, |max| self.match_count >= max);
+                if last_match.end() >= line.start() && !reached_max_matches {
                     self.last_match = Some(last_match.with_end(line.end()));
                     Ok(true)
                 } else {

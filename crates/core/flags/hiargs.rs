@@ -714,7 +714,8 @@ impl HiArgs {
             .line_number(self.line_number)
             .multi_line(self.multiline)
             .memory_map(self.mmap_choice.clone())
-            .stop_on_nonmatch(self.stop_on_nonmatch);
+            .stop_on_nonmatch(self.stop_on_nonmatch)
+            .max_matches(self.max_count);
         match self.context {
             ContextMode::Passthru => {
                 builder.passthru(true);

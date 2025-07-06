@@ -2890,6 +2890,33 @@ Holmeses, success in the province of detective work must always
     }
 
     #[test]
+    fn max_matches_multi_line3() {
+        let matcher =
+            RegexMatcher::new(r"line 2\nline 3").unwrap();
+        let mut printer = StandardBuilder::new()
+            .max_matches(Some(1))
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(false)
+            .multi_line(true)
+            .max_matches(Some(1))
+            .build()
+            .search_reader(
+                &matcher,
+                "line 2\nline 3 x\nline 2\nline 3\n".as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "\
+line 2
+line 3 x
+";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
     fn only_matching() {
         let matcher = RegexMatcher::new("Doctor Watsons|Sherlock").unwrap();
         let mut printer = StandardBuilder::new()

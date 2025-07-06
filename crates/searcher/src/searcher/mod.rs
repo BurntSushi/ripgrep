@@ -180,6 +180,14 @@ pub struct Config {
     /// Whether to stop searching when a non-matching line is found after a
     /// matching line.
     stop_on_nonmatch: bool,
+    /// The maximum number of matches to find before stopping the search.
+    /// When None, no limit is enforced.
+    /// 
+    /// This field is only used by the MultiLine searcher, because it can find
+    /// multiple matches on adjacent lines and delay passing them to the sink.
+    /// This provides a way to stop searching earlier, without looking for other
+    /// adjacent matches.
+    max_matches: Option<u64>,
 }
 
 impl Default for Config {
@@ -198,6 +206,7 @@ impl Default for Config {
             encoding: None,
             bom_sniffing: true,
             stop_on_nonmatch: false,
+            max_matches: None,
         }
     }
 }
@@ -562,6 +571,22 @@ impl SearcherBuilder {
         stop_on_nonmatch: bool,
     ) -> &mut SearcherBuilder {
         self.config.stop_on_nonmatch = stop_on_nonmatch;
+        self
+    }
+
+    /// Set the maximum number of matches to find before stopping the search.
+    ///
+    /// When None (the default), no limit is enforced.
+    ///
+    /// This setting is only used by the MultiLine searcher, because it can find
+    /// multiple matches on adjacent lines and delay passing them to the sink.
+    /// This provides a way to stop searching earlier, without looking for other
+    /// adjacent matches.
+    pub fn max_matches(
+        &mut self,
+        max_matches: Option<u64>,
+    ) -> &mut SearcherBuilder {
+        self.config.max_matches = max_matches;
         self
     }
 }
