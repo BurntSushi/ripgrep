@@ -2848,6 +2848,7 @@ and exhibited clearly, with a label attached.
         SearcherBuilder::new()
             .line_number(false)
             .multi_line(true)
+            .max_matches(Some(1))
             .build()
             .search_reader(
                 &matcher,
@@ -2873,6 +2874,7 @@ For the Doctor Watsons of this world, as opposed to the Sherlock
         SearcherBuilder::new()
             .line_number(false)
             .multi_line(true)
+            .max_matches(Some(1))
             .build()
             .search_reader(
                 &matcher,
