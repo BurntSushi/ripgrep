@@ -2891,8 +2891,7 @@ Holmeses, success in the province of detective work must always
 
     #[test]
     fn max_matches_multi_line3() {
-        let matcher =
-            RegexMatcher::new(r"line 2\nline 3").unwrap();
+        let matcher = RegexMatcher::new(r"line 2\nline 3").unwrap();
         let mut printer = StandardBuilder::new()
             .max_matches(Some(1))
             .build(NoColor::new(vec![]));

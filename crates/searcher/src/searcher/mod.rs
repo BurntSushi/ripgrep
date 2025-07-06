@@ -182,7 +182,7 @@ pub struct Config {
     stop_on_nonmatch: bool,
     /// The maximum number of matches to find before stopping the search.
     /// When None, no limit is enforced.
-    /// 
+    ///
     /// This field is only used by the MultiLine searcher, because it can find
     /// multiple matches on adjacent lines and delay passing them to the sink.
     /// This provides a way to stop searching earlier, without looking for other

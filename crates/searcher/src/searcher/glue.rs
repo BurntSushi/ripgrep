@@ -240,7 +240,9 @@ impl<'s, M: Matcher, S: Sink> MultiLine<'s, M, S> {
                 //
                 // Also check if we've reached max_matches. If so, we need to
                 // sink the last match before stopping.
-                let reached_max_matches = self.config.max_matches
+                let reached_max_matches = self
+                    .config
+                    .max_matches
                     .map_or(false, |max| self.match_count >= max);
                 if last_match.end() >= line.start() && !reached_max_matches {
                     self.last_match = Some(last_match.with_end(line.end()));
