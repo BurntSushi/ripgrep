@@ -47,6 +47,8 @@ Feature enhancements:
   Add `highlight` color type, for styling non-matching text in a matching line.
 * [FEATURE #3048](https://github.com/BurntSushi/ripgrep/pull/3048):
   Globs in ripgrep (and the `globset` crate) now support nested alternates.
+* [FEATURE #3096](https://github.com/BurntSushi/ripgrep/pull/3096):
+  Improve completions for `--hyperlink-format` in bash and fish.
 
 
 14.1.1 (2024-09-08)
