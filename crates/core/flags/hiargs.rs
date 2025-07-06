@@ -617,7 +617,6 @@ impl HiArgs {
             .hyperlink(self.hyperlink_config.clone())
             .max_columns_preview(self.max_columns_preview)
             .max_columns(self.max_columns)
-            .max_matches(self.max_count)
             .only_matching(self.only_matching)
             .path(self.with_filename)
             .path_terminator(self.path_terminator.clone())
@@ -719,6 +718,7 @@ impl HiArgs {
         };
         let mut builder = grep::searcher::SearcherBuilder::new();
         builder
+            .max_matches(self.max_count)
             .line_terminator(line_term)
             .invert_match(self.invert_match)
             .line_number(self.line_number)

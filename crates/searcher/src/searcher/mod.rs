@@ -180,6 +180,8 @@ pub struct Config {
     /// Whether to stop searching when a non-matching line is found after a
     /// matching line.
     stop_on_nonmatch: bool,
+    /// The maximum number of matches this searcher should emit.
+    max_matches: Option<u64>,
 }
 
 impl Default for Config {
@@ -198,6 +200,7 @@ impl Default for Config {
             encoding: None,
             bom_sniffing: true,
             stop_on_nonmatch: false,
+            max_matches: None,
         }
     }
 }
@@ -564,6 +567,23 @@ impl SearcherBuilder {
         self.config.stop_on_nonmatch = stop_on_nonmatch;
         self
     }
+
+    /// Sets the maximum number of matches that should be emitted by this
+    /// searcher.
+    ///
+    /// If multi line search is enabled and a match spans multiple lines, then
+    /// that match is counted exactly once for the purposes of enforcing this
+    /// limit, regardless of how many lines it spans.
+    ///
+    /// Note that `0` is a legal value. This will cause the searcher to
+    /// immediately quick without searching anything.
+    ///
+    /// By default, no limit is set.
+    #[inline]
+    pub fn max_matches(&mut self, limit: Option<u64>) -> &mut SearcherBuilder {
+        self.config.max_matches = limit;
+        self
+    }
 }
 
 /// A searcher executes searches over a haystack and writes results to a caller
@@ -845,11 +865,25 @@ impl Searcher {
         self.config.multi_line
     }
 
-    /// Returns true if and only if this searcher is configured to stop when in
+    /// Returns true if and only if this searcher is configured to stop when it
     /// finds a non-matching line after a matching one.
     #[inline]
     pub fn stop_on_nonmatch(&self) -> bool {
         self.config.stop_on_nonmatch
+    }
+
+    /// Returns the maximum number of matches emitted by this searcher, if
+    /// such a limit was set.
+    ///
+    /// If multi line search is enabled and a match spans multiple lines, then
+    /// that match is counted exactly once for the purposes of enforcing this
+    /// limit, regardless of how many lines it spans.
+    ///
+    /// Note that `0` is a legal value. This will cause the searcher to
+    /// immediately quick without searching anything.
+    #[inline]
+    pub fn max_matches(&self) -> Option<u64> {
+        self.config.max_matches
     }
 
     /// Returns true if and only if this searcher will choose a multi-line

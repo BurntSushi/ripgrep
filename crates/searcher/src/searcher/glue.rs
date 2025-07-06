@@ -325,11 +325,9 @@ impl<'s, M: Matcher, S: Sink> MultiLine<'s, M, S> {
     }
 
     fn find(&mut self) -> Result<Option<Range>, S::Error> {
-        match self.core.matcher().find(&self.slice[self.core.pos()..]) {
-            Err(err) => Err(S::Error::error_message(err)),
-            Ok(None) => Ok(None),
-            Ok(Some(m)) => Ok(Some(m.offset(self.core.pos()))),
-        }
+        self.core
+            .find(&self.slice[self.core.pos()..])
+            .map(|m| m.map(|m| m.offset(self.core.pos())))
     }
 
     /// Advance the search position based on the previous match.

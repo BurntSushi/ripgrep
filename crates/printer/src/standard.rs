@@ -11,8 +11,7 @@ use {
     bstr::ByteSlice,
     grep_matcher::{Match, Matcher},
     grep_searcher::{
-        LineStep, Searcher, Sink, SinkContext, SinkContextKind, SinkFinish,
-        SinkMatch,
+        LineStep, Searcher, Sink, SinkContext, SinkFinish, SinkMatch,
     },
     termcolor::{ColorSpec, NoColor, WriteColor},
 };
@@ -46,7 +45,6 @@ struct Config {
     replacement: Arc<Option<Vec<u8>>>,
     max_columns: Option<u64>,
     max_columns_preview: bool,
-    max_matches: Option<u64>,
     column: bool,
     byte_offset: bool,
     trim_ascii: bool,
@@ -72,7 +70,6 @@ impl Default for Config {
             replacement: Arc::new(None),
             max_columns: None,
             max_columns_preview: false,
-            max_matches: None,
             column: false,
             byte_offset: false,
             trim_ascii: false,
@@ -326,16 +323,6 @@ impl StandardBuilder {
         self
     }
 
-    /// Set the maximum amount of matching lines that are printed.
-    ///
-    /// If multi line search is enabled and a match spans multiple lines, then
-    /// that match is counted exactly once for the purposes of enforcing this
-    /// limit, regardless of how many lines it spans.
-    pub fn max_matches(&mut self, limit: Option<u64>) -> &mut StandardBuilder {
-        self.config.max_matches = limit;
-        self
-    }
-
     /// Print the column number of the first match in a line.
     ///
     /// This option is convenient for use with `per_match` which will print a
@@ -541,7 +528,6 @@ impl<W: WriteColor> Standard<W> {
             path: None,
             start_time: Instant::now(),
             match_count: 0,
-            after_context_remaining: 0,
             binary_byte_offset: None,
             stats,
             needs_match_granularity,
@@ -578,7 +564,6 @@ impl<W: WriteColor> Standard<W> {
             path: Some(ppath),
             start_time: Instant::now(),
             match_count: 0,
-            after_context_remaining: 0,
             binary_byte_offset: None,
             stats,
             needs_match_granularity,
@@ -659,7 +644,6 @@ pub struct StandardSink<'p, 's, M: Matcher, W> {
     path: Option<PrinterPath<'p>>,
     start_time: Instant,
     match_count: u64,
-    after_context_remaining: u64,
     binary_byte_offset: Option<u64>,
     stats: Option<Stats>,
     needs_match_granularity: bool,
@@ -774,32 +758,6 @@ impl<'p, 's, M: Matcher, W: WriteColor> StandardSink<'p, 's, M, W> {
         }
         Ok(())
     }
-
-    /// Returns true if this printer should quit.
-    ///
-    /// This implements the logic for handling quitting after seeing a certain
-    /// amount of matches. In most cases, the logic is simple, but we must
-    /// permit all "after" contextual lines to print after reaching the limit.
-    fn should_quit(&self) -> bool {
-        let limit = match self.standard.config.max_matches {
-            None => return false,
-            Some(limit) => limit,
-        };
-        if self.match_count < limit {
-            return false;
-        }
-        self.after_context_remaining == 0
-    }
-
-    /// Returns whether the current match count exceeds the configured limit.
-    /// If there is no limit, then this always returns false.
-    fn match_more_than_limit(&self) -> bool {
-        let limit = match self.standard.config.max_matches {
-            None => return false,
-            Some(limit) => limit,
-        };
-        self.match_count > limit
-    }
 }
 
 impl<'p, 's, M: Matcher, W: WriteColor> Sink for StandardSink<'p, 's, M, W> {
@@ -811,19 +769,6 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for StandardSink<'p, 's, M, W> {
         mat: &SinkMatch<'_>,
     ) -> Result<bool, io::Error> {
         self.match_count += 1;
-        // When we've exceeded our match count, then the remaining context
-        // lines should not be reset, but instead, decremented. This avoids a
-        // bug where we display more matches than a configured limit. The main
-        // idea here is that 'matched' might be called again while printing
-        // an after-context line. In that case, we should treat this as a
-        // contextual line rather than a matching line for the purposes of
-        // termination.
-        if self.match_more_than_limit() {
-            self.after_context_remaining =
-                self.after_context_remaining.saturating_sub(1);
-        } else {
-            self.after_context_remaining = searcher.after_context() as u64;
-        }
 
         self.record_matches(
             searcher,
@@ -841,9 +786,8 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for StandardSink<'p, 's, M, W> {
                 return Ok(false);
             }
         }
-
         StandardImpl::from_match(searcher, self, mat).sink()?;
-        Ok(!self.should_quit())
+        Ok(true)
     }
 
     fn context(
@@ -854,10 +798,6 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for StandardSink<'p, 's, M, W> {
         self.standard.matches.clear();
         self.replacer.clear();
 
-        if ctx.kind() == &SinkContextKind::After {
-            self.after_context_remaining =
-                self.after_context_remaining.saturating_sub(1);
-        }
         if searcher.invert_match() {
             self.record_matches(searcher, ctx.bytes(), 0..ctx.bytes().len())?;
             self.replace(searcher, ctx.bytes(), 0..ctx.bytes().len())?;
@@ -869,7 +809,7 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for StandardSink<'p, 's, M, W> {
         }
 
         StandardImpl::from_context(searcher, self, ctx).sink()?;
-        Ok(!self.should_quit())
+        Ok(true)
     }
 
     fn context_break(
@@ -902,11 +842,7 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for StandardSink<'p, 's, M, W> {
         self.standard.wtr.borrow_mut().reset_count();
         self.start_time = Instant::now();
         self.match_count = 0;
-        self.after_context_remaining = 0;
         self.binary_byte_offset = None;
-        if self.standard.config.max_matches == Some(0) {
-            return Ok(false);
-        }
         Ok(true)
     }
 
@@ -1450,7 +1386,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     }
 
     fn write_binary_message(&self, offset: u64) -> io::Result<()> {
-        if self.sink.match_count == 0 {
+        if !self.sink.has_match() {
             return Ok(());
         }
 
@@ -2742,11 +2678,10 @@ and exhibited clearly, with a label attached.
     #[test]
     fn max_matches() {
         let matcher = RegexMatcher::new("Sherlock").unwrap();
-        let mut printer = StandardBuilder::new()
-            .max_matches(Some(1))
-            .build(NoColor::new(vec![]));
+        let mut printer = StandardBuilder::new().build(NoColor::new(vec![]));
         SearcherBuilder::new()
             .line_number(false)
+            .max_matches(Some(1))
             .build()
             .search_reader(
                 &matcher,
@@ -2766,10 +2701,9 @@ For the Doctor Watsons of this world, as opposed to the Sherlock
     fn max_matches_context() {
         // after context: 1
         let matcher = RegexMatcher::new("Doctor Watsons").unwrap();
-        let mut printer = StandardBuilder::new()
-            .max_matches(Some(1))
-            .build(NoColor::new(vec![]));
+        let mut printer = StandardBuilder::new().build(NoColor::new(vec![]));
         SearcherBuilder::new()
+            .max_matches(Some(1))
             .line_number(false)
             .after_context(1)
             .build()
@@ -2788,10 +2722,9 @@ Holmeses, success in the province of detective work must always
         assert_eq_printed!(expected, got);
 
         // after context: 4
-        let mut printer = StandardBuilder::new()
-            .max_matches(Some(1))
-            .build(NoColor::new(vec![]));
+        let mut printer = StandardBuilder::new().build(NoColor::new(vec![]));
         SearcherBuilder::new()
+            .max_matches(Some(1))
             .line_number(false)
             .after_context(4)
             .build()
@@ -2814,10 +2747,9 @@ but Doctor Watson has to have it taken out for him and dusted,
 
         // after context: 1, max matches: 2
         let matcher = RegexMatcher::new("Doctor Watsons|but Doctor").unwrap();
-        let mut printer = StandardBuilder::new()
-            .max_matches(Some(2))
-            .build(NoColor::new(vec![]));
+        let mut printer = StandardBuilder::new().build(NoColor::new(vec![]));
         SearcherBuilder::new()
+            .max_matches(Some(2))
             .line_number(false)
             .after_context(1)
             .build()
@@ -2839,10 +2771,114 @@ and exhibited clearly, with a label attached.
         assert_eq_printed!(expected, got);
 
         // after context: 4, max matches: 2
-        let mut printer = StandardBuilder::new()
-            .max_matches(Some(2))
-            .build(NoColor::new(vec![]));
+        let mut printer = StandardBuilder::new().build(NoColor::new(vec![]));
         SearcherBuilder::new()
+            .max_matches(Some(2))
+            .line_number(false)
+            .after_context(4)
+            .build()
+            .search_reader(
+                &matcher,
+                SHERLOCK.as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+Holmeses, success in the province of detective work must always
+be, to a very large extent, the result of luck. Sherlock Holmes
+can extract a clew from a wisp of straw or a flake of cigar ash;
+but Doctor Watson has to have it taken out for him and dusted,
+and exhibited clearly, with a label attached.
+";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn max_matches_context_invert() {
+        // after context: 1
+        let matcher =
+            RegexMatcher::new("success|extent|clew|dusted|exhibited").unwrap();
+        let mut printer = StandardBuilder::new().build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .invert_match(true)
+            .max_matches(Some(1))
+            .line_number(false)
+            .after_context(1)
+            .build()
+            .search_reader(
+                &matcher,
+                SHERLOCK.as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+Holmeses, success in the province of detective work must always
+";
+        assert_eq_printed!(expected, got);
+
+        // after context: 4
+        let mut printer = StandardBuilder::new().build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .invert_match(true)
+            .max_matches(Some(1))
+            .line_number(false)
+            .after_context(4)
+            .build()
+            .search_reader(
+                &matcher,
+                SHERLOCK.as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+Holmeses, success in the province of detective work must always
+be, to a very large extent, the result of luck. Sherlock Holmes
+can extract a clew from a wisp of straw or a flake of cigar ash;
+but Doctor Watson has to have it taken out for him and dusted,
+";
+        assert_eq_printed!(expected, got);
+
+        // after context: 1, max matches: 2
+        let matcher =
+            RegexMatcher::new("success|extent|clew|exhibited").unwrap();
+        let mut printer = StandardBuilder::new().build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .invert_match(true)
+            .max_matches(Some(2))
+            .line_number(false)
+            .after_context(1)
+            .build()
+            .search_reader(
+                &matcher,
+                SHERLOCK.as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+Holmeses, success in the province of detective work must always
+--
+but Doctor Watson has to have it taken out for him and dusted,
+and exhibited clearly, with a label attached.
+";
+        assert_eq_printed!(expected, got);
+
+        // after context: 4, max matches: 2
+        let mut printer = StandardBuilder::new().build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .invert_match(true)
+            .max_matches(Some(2))
             .line_number(false)
             .after_context(4)
             .build()
@@ -2868,12 +2904,11 @@ and exhibited clearly, with a label attached.
     #[test]
     fn max_matches_multi_line1() {
         let matcher = RegexMatcher::new("(?s:.{0})Sherlock").unwrap();
-        let mut printer = StandardBuilder::new()
-            .max_matches(Some(1))
-            .build(NoColor::new(vec![]));
+        let mut printer = StandardBuilder::new().build(NoColor::new(vec![]));
         SearcherBuilder::new()
             .line_number(false)
             .multi_line(true)
+            .max_matches(Some(1))
             .build()
             .search_reader(
                 &matcher,
@@ -2893,12 +2928,11 @@ For the Doctor Watsons of this world, as opposed to the Sherlock
     fn max_matches_multi_line2() {
         let matcher =
             RegexMatcher::new(r"(?s)Watson.+?(Holmeses|clearly)").unwrap();
-        let mut printer = StandardBuilder::new()
-            .max_matches(Some(1))
-            .build(NoColor::new(vec![]));
+        let mut printer = StandardBuilder::new().build(NoColor::new(vec![]));
         SearcherBuilder::new()
             .line_number(false)
             .multi_line(true)
+            .max_matches(Some(1))
             .build()
             .search_reader(
                 &matcher,
@@ -2911,6 +2945,55 @@ For the Doctor Watsons of this world, as opposed to the Sherlock
         let expected = "\
 For the Doctor Watsons of this world, as opposed to the Sherlock
 Holmeses, success in the province of detective work must always
+";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn max_matches_multi_line3() {
+        let matcher = RegexMatcher::new(r"line 2\nline 3").unwrap();
+        let mut printer = StandardBuilder::new().build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(false)
+            .multi_line(true)
+            .max_matches(Some(1))
+            .build()
+            .search_reader(
+                &matcher,
+                "line 2\nline 3 x\nline 2\nline 3\n".as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "\
+line 2
+line 3 x
+";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn max_matches_multi_line4() {
+        let matcher =
+            RegexMatcher::new(r"line 2\nline 3|x\nline 2\n").unwrap();
+        let mut printer = StandardBuilder::new().build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(false)
+            .multi_line(true)
+            .max_matches(Some(1))
+            .build()
+            .search_reader(
+                &matcher,
+                "line 2\nline 3 x\nline 2\nline 3 x\n".as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "\
+line 2
+line 3 x
 ";
         assert_eq_printed!(expected, got);
     }
@@ -3847,10 +3930,9 @@ e
 ";
 
         let matcher = RegexMatcherBuilder::new().build(r"d").unwrap();
-        let mut printer = StandardBuilder::new()
-            .max_matches(Some(1))
-            .build(NoColor::new(vec![]));
+        let mut printer = StandardBuilder::new().build(NoColor::new(vec![]));
         SearcherBuilder::new()
+            .max_matches(Some(1))
             .line_number(true)
             .after_context(2)
             .build()

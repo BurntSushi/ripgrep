@@ -3877,6 +3877,10 @@ impl Flag for MaxCount {
         r"
 Limit the number of matching lines per file searched to \fINUM\fP.
 .sp
+When \flag{multiline} is used, a single match that spans multiple lines is only
+counted once for the purposes of this limit. Multiple matches in a single line
+are counted only once, as they would be in non-multiline mode.
+.sp
 Note that \fB0\fP is a legal value but not likely to be useful. When used,
 ripgrep won't search anything.
 "
