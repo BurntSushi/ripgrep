@@ -322,7 +322,7 @@ impl GlobSet {
 
     /// Create an empty `GlobSet`. An empty set matches nothing.
     #[inline]
-    pub fn empty() -> GlobSet {
+    pub const fn empty() -> GlobSet {
         GlobSet { len: 0, strats: vec![] }
     }
 
