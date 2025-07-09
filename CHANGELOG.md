@@ -27,6 +27,8 @@ Bug fixes:
   Fix a bug where ripgrep would mishandle globs that ended with a `.`.
 * [BUG #3076](https://github.com/BurntSushi/ripgrep/issues/3076):
   Fix bug with `-m/--max-count` and `-U/--multiline` showing too many matches.
+* [BUG #3100](https://github.com/BurntSushi/ripgrep/pull/3100):
+  Preserve line terminators when using `-r/--replace` flag.
 * [BUG #3108](https://github.com/BurntSushi/ripgrep/issues/3108):
   Fix a bug where `-q --files-without-match` inverted the exit code.
 * [BUG #3140](https://github.com/BurntSushi/ripgrep/issues/3140):
