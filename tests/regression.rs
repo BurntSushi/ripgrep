@@ -569,6 +569,64 @@ rgtest!(r807, |dir: Dir, mut cmd: TestCommand| {
     eqnice!(".a/c/file:test\n", cmd.arg("--hidden").arg("test").stdout());
 });
 
+// See: https://github.com/BurntSushi/ripgrep/pull/2711
+//
+// Note that this isn't a regression test. In particular, this didn't fail
+// with ripgrep 14.1.1. I couldn't figure out how to turn what the OP gave me
+// into a failing test.
+rgtest!(r2711, |dir: Dir, _cmd: TestCommand| {
+    dir.create_dir("a/b");
+    dir.create("a/.ignore", ".foo");
+    dir.create("a/b/.foo", "");
+
+    {
+        let mut cmd = dir.command();
+        eqnice!("a/.ignore\n", cmd.arg("--hidden").arg("--files").stdout());
+    }
+    {
+        let mut cmd = dir.command();
+        eqnice!(
+            "./a/.ignore\n",
+            cmd.arg("--hidden").arg("--files").arg("./").stdout()
+        );
+    }
+
+    {
+        let mut cmd = dir.command();
+        eqnice!(
+            "a/.ignore\n",
+            cmd.arg("--hidden").arg("--files").arg("a").stdout()
+        );
+    }
+    {
+        let mut cmd = dir.command();
+        cmd.arg("--hidden").arg("--files").arg("a/b").assert_err();
+    }
+    {
+        let mut cmd = dir.command();
+        eqnice!(
+            "./a/.ignore\n",
+            cmd.arg("--hidden").arg("--files").arg("./a").stdout()
+        );
+    }
+
+    {
+        let mut cmd = dir.command();
+        cmd.current_dir(dir.path().join("a"));
+        eqnice!(".ignore\n", cmd.arg("--hidden").arg("--files").stdout());
+    }
+    {
+        let mut cmd = dir.command();
+        cmd.current_dir(dir.path().join("a").join("b"));
+        cmd.arg("--hidden").arg("--files").assert_err();
+    }
+    {
+        let mut cmd = dir.command();
+        cmd.current_dir(dir.path().join("./a"));
+        eqnice!(".ignore\n", cmd.arg("--hidden").arg("--files").stdout());
+    }
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/829
 rgtest!(r829_original, |dir: Dir, _cmd: TestCommand| {
     dir.create_dir("a/b");
