@@ -319,7 +319,7 @@ _rg() {
     '--field-context-separator[set string to delimit fields in context lines]'
     '--field-match-separator[set string to delimit fields in matching lines]'
     '--hostname-bin=[executable for getting system hostname]:hostname executable:_command_names -e'
-    '--hyperlink-format=[specify pattern for hyperlinks]:pattern'
+    '--hyperlink-format=[specify pattern for hyperlinks]: :_rg_hyperlink_formats'
     '--trace[show more verbose debug messages]'
     '--dfa-size-limit=[specify upper size limit of generated DFA]:DFA size (bytes)'
     "(1 stats)--files[show each file that would be searched (but don't search)]"
@@ -410,6 +410,7 @@ _rg() {
 }
 
 # Complete encodings
+(( $+functions[_rg_encodings] )) ||
 _rg_encodings() {
   local -a expl
   local -aU _encodings
@@ -422,6 +423,7 @@ _rg_encodings() {
 }
 
 # Complete file types
+(( $+functions[_rg_types] )) ||
 _rg_types() {
   local -a expl
   local -aU _types
@@ -433,6 +435,49 @@ _rg_types() {
   else
     _wanted types expl 'file type' compadd "$@" - ${(@)_types%%:*}
   fi
+}
+
+# Complete hyperlink format-string aliases
+(( $+functions[_rg_hyperlink_format_aliases] )) ||
+_rg_hyperlink_format_aliases() {
+  _describe -t format-aliases 'hyperlink format alias' '(
+!HYPERLINK_ALIASES!
+  )'
+}
+
+# Complete custom hyperlink format strings
+(( $+functions[_rg_hyperlink_format_strings] )) ||
+_rg_hyperlink_format_strings() {
+  local op='{' ed='}'
+  local -a pfx sfx rmv
+
+  compquote op ed
+
+  sfx=( -S $ed )
+  rmv=( -r ${(q)ed[1]} )
+
+  compset -S "$op*"
+  compset -S "$ed*" && sfx=( -S '' )
+  compset -P "*$ed"
+  compset -p ${#PREFIX%$op*}
+  compset -P $op || pfx=( -P $op )
+
+  WSL_DISTRO_NAME=${WSL_DISTRO_NAME:-\$WSL_DISTRO_NAME} \
+  _describe -t format-variables 'hyperlink format variable' '(
+    path:"absolute path to file containing match (required)"
+    host:"system host name or output of --hostname-bin executable"
+    line:"line number of match"
+    column:"column of match (requires {line})"
+    wslprefix:"\"wsl$/$WSL_DISTRO_NAME\" (for WSL share)"
+  )' "${(@)pfx}" "${(@)sfx}" "${(@)rmv}"
+}
+
+# Complete hyperlink formats
+(( $+functions[_rg_hyperlink_formats] )) ||
+_rg_hyperlink_formats() {
+  _alternative \
+    'format-string-aliases: :_rg_hyperlink_format_aliases' \
+    'format-strings: :_rg_hyperlink_format_strings'
 }
 
 # Don't run the completion function when being sourced by itself.

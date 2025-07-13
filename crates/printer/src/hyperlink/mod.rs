@@ -190,6 +190,7 @@ impl std::fmt::Display for HyperlinkFormat {
 #[derive(Clone, Debug)]
 pub struct HyperlinkAlias {
     name: &'static str,
+    description: &'static str,
     format: &'static str,
     display_priority: Option<i16>,
 }
@@ -198,6 +199,11 @@ impl HyperlinkAlias {
     /// Returns the name of the alias.
     pub const fn name(&self) -> &str {
         self.name
+    }
+
+    /// Returns a very short description of this hyperlink alias.
+    pub const fn description(&self) -> &str {
+        self.description
     }
 
     /// Returns the display priority of this alias.

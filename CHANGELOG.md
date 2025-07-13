@@ -49,6 +49,8 @@ Feature enhancements:
   Globs in ripgrep (and the `globset` crate) now support nested alternates.
 * [FEATURE #3096](https://github.com/BurntSushi/ripgrep/pull/3096):
   Improve completions for `--hyperlink-format` in bash and fish.
+* [FEATURE #3102](https://github.com/BurntSushi/ripgrep/pull/3102):
+  Improve completions for `--hyperlink-format` in zsh.
 
 
 14.1.1 (2024-09-08)
