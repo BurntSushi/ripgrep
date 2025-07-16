@@ -63,8 +63,8 @@ assert_eq!(output, expected);
 pub use crate::{
     color::{default_color_specs, ColorError, ColorSpecs, UserColorSpec},
     hyperlink::{
-        HyperlinkConfig, HyperlinkEnvironment, HyperlinkFormat,
-        HyperlinkFormatError,
+        hyperlink_aliases, HyperlinkAlias, HyperlinkConfig,
+        HyperlinkEnvironment, HyperlinkFormat, HyperlinkFormatError,
     },
     path::{PathPrinter, PathPrinterBuilder},
     standard::{Standard, StandardBuilder, StandardSink},
@@ -92,7 +92,6 @@ mod macros;
 mod color;
 mod counter;
 mod hyperlink;
-mod hyperlink_aliases;
 #[cfg(feature = "serde")]
 mod json;
 #[cfg(feature = "serde")]

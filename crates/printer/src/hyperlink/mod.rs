@@ -5,7 +5,11 @@ use {
     termcolor::{HyperlinkSpec, WriteColor},
 };
 
-use crate::{hyperlink_aliases, util::DecimalFormatter};
+use crate::util::DecimalFormatter;
+
+use self::aliases::HYPERLINK_PATTERN_ALIASES;
+
+mod aliases;
 
 /// Hyperlink configuration.
 ///
@@ -107,8 +111,8 @@ impl std::str::FromStr for HyperlinkFormat {
         }
 
         let mut builder = FormatBuilder::new();
-        let input = match hyperlink_aliases::find(s) {
-            Some(format) => format,
+        let input = match HyperlinkAlias::find(s) {
+            Some(alias) => alias.format(),
             None => s,
         };
         let mut name = String::new();
@@ -176,6 +180,57 @@ impl std::fmt::Display for HyperlinkFormat {
             part.fmt(f)?;
         }
         Ok(())
+    }
+}
+
+/// An alias for a hyperlink format.
+///
+/// Hyperlink aliases are built-in formats, therefore they hold static values.
+/// Some of their features are usable in const blocks.
+#[derive(Clone, Debug)]
+pub struct HyperlinkAlias {
+    name: &'static str,
+    format: &'static str,
+    display_priority: Option<i16>,
+}
+
+impl HyperlinkAlias {
+    /// Returns the name of the alias.
+    pub const fn name(&self) -> &str {
+        self.name
+    }
+
+    /// Returns the display priority of this alias.
+    ///
+    /// If no priority is set, then `None` is returned.
+    ///
+    /// The display priority is meant to reflect some special status associated
+    /// with an alias. For example, the `default` and `none` aliases have a
+    /// display priority. This is meant to encourage listing them first in
+    /// documentation.
+    ///
+    /// A lower display priority implies the alias should be shown before
+    /// aliases with a higher (or absent) display priority.
+    ///
+    /// Callers cannot rely on any specific display priority value to remain
+    /// stable across semver compatible releases of this crate.
+    pub const fn display_priority(&self) -> Option<i16> {
+        self.display_priority
+    }
+
+    /// Returns the format string of the alias.
+    const fn format(&self) -> &'static str {
+        self.format
+    }
+
+    /// Looks for the hyperlink alias defined by the given name.
+    ///
+    /// If one does not exist, `None` is returned.
+    fn find(name: &str) -> Option<&HyperlinkAlias> {
+        HYPERLINK_PATTERN_ALIASES
+            .binary_search_by_key(&name, |alias| alias.name())
+            .map(|i| &HYPERLINK_PATTERN_ALIASES[i])
+            .ok()
     }
 }
 
@@ -255,15 +310,18 @@ impl std::fmt::Display for HyperlinkFormatError {
 
         match self.kind {
             NoVariables => {
-                let aliases = hyperlink_aliases::iter()
-                    .map(|(name, _)| name)
-                    .collect::<Vec<&str>>()
-                    .join(", ");
+                let mut aliases = hyperlink_aliases();
+                aliases.sort_by_key(|alias| {
+                    alias.display_priority().unwrap_or(i16::MAX)
+                });
+                let names: Vec<&str> =
+                    aliases.iter().map(|alias| alias.name()).collect();
                 write!(
                     f,
                     "at least a {{path}} variable is required in a \
-                     hyperlink format, or otherwise use a valid alias: {}",
-                    aliases,
+                     hyperlink format, or otherwise use a valid alias: \
+                     {aliases}",
+                    aliases = names.join(", "),
                 )
             }
             NoPathVariable => {
@@ -863,6 +921,26 @@ impl HyperlinkPath {
     }
 }
 
+/// Returns the set of hyperlink aliases supported by this crate.
+///
+/// Aliases are supported by the `FromStr` trait implementation of a
+/// [`HyperlinkFormat`]. That is, if an alias is seen, then it is automatically
+/// replaced with the corresponding format. For example, the `vscode` alias
+/// maps to `vscode://file{path}:{line}:{column}`.
+///
+/// This is exposed to allow callers to include hyperlink aliases in
+/// documentation in a way that is guaranteed to match what is actually
+/// supported.
+///
+/// The list returned is guaranteed to be sorted lexicographically
+/// by the alias name. Callers may want to re-sort the list using
+/// [`HyperlinkAlias::display_priority`] via a stable sort when showing the
+/// list to users. This will cause special aliases like `none` and `default` to
+/// appear first.
+pub fn hyperlink_aliases() -> Vec<HyperlinkAlias> {
+    HYPERLINK_PATTERN_ALIASES.iter().cloned().collect()
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -1035,5 +1113,47 @@ mod tests {
             convert(r"\\?\UNC\server\dir\file.txt"),
             "//server/dir/file.txt"
         );
+    }
+
+    #[test]
+    fn aliases_are_sorted() {
+        let aliases = hyperlink_aliases();
+        let mut prev =
+            aliases.first().expect("aliases should be non-empty").name();
+        for alias in aliases.iter().skip(1) {
+            let name = alias.name();
+            assert!(
+                name > prev,
+                "'{prev}' should come before '{name}' in \
+                 HYPERLINK_PATTERN_ALIASES",
+            );
+            prev = name;
+        }
+    }
+
+    #[test]
+    fn alias_names_are_reasonable() {
+        for alias in hyperlink_aliases() {
+            // There's no hard rule here, but if we want to define an alias
+            // with a name that doesn't pass this assert, then we should
+            // probably flag it as worthy of consideration. For example, we
+            // really do not want to define an alias that contains `{` or `}`,
+            // which might confuse it for a variable.
+            assert!(alias.name().chars().all(|c| c.is_alphanumeric()
+                || c == '+'
+                || c == '-'
+                || c == '.'));
+        }
+    }
+
+    #[test]
+    fn aliases_are_valid_formats() {
+        for alias in hyperlink_aliases() {
+            let (name, format) = (alias.name(), alias.format());
+            assert!(
+                format.parse::<HyperlinkFormat>().is_ok(),
+                "invalid hyperlink alias '{name}': {format}",
+            );
+        }
     }
 }
