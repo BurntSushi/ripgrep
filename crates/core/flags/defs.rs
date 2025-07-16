@@ -18,7 +18,7 @@ same encoding state in ripgrep.
 */
 
 use std::path::PathBuf;
-
+use std::sync::LazyLock;
 use {anyhow::Context as AnyhowContext, bstr::ByteVec};
 
 use crate::flags::{
@@ -2862,7 +2862,10 @@ impl Flag for HyperlinkFormat {
         r"Set the format of hyperlinks."
     }
     fn doc_long(&self) -> &'static str {
-        r#"
+        static DOC: LazyLock<String> = LazyLock::new(|| {
+            let mut doc = String::new();
+            doc.push_str(
+                r#"
 Set the format of hyperlinks to use when printing results. Hyperlinks make
 certain elements of ripgrep's output, such as file paths, clickable. This
 generally only works in terminal emulators that support OSC-8 hyperlinks. For
@@ -2870,10 +2873,19 @@ example, the format \fBfile://{host}{path}\fP will emit an RFC 8089 hyperlink.
 To see the format that ripgrep is using, pass the \flag{debug} flag.
 .sp
 Alternatively, a format string may correspond to one of the following aliases:
-\fBdefault\fP, \fBnone\fP, \fBfile\fP, \fBgrep+\fP, \fBkitty\fP, \fBmacvim\fP,
-\fBtextmate\fP, \fBvscode\fP, \fBvscode-insiders\fP, \fBvscodium\fP. The
-alias will be replaced with a format string that is intended to work for the
-corresponding application.
+"#,
+            );
+            let aliases = grep::printer::HyperlinkAlias::all_names_display();
+            for (idx, &name) in aliases.iter().enumerate() {
+                doc.push_str(r"\fB");
+                doc.push_str(name);
+                doc.push_str(r"\fP");
+                doc.push_str(if idx < aliases.len() - 1 { ", " } else { "." });
+            }
+            doc.push_str(
+                r#"
+The alias will be replaced with a format string that is intended to work for
+the corresponding application.
 .sp
 The following variables are available in the format string:
 .sp
@@ -2950,7 +2962,11 @@ in the output. To make the path appear, and thus also a hyperlink, use the
 .sp
 For more information on hyperlinks in terminal emulators, see:
 https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda
-"#
+"#,
+            );
+            doc
+        });
+        &DOC
     }
 
     fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {

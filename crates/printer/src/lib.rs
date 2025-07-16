@@ -63,8 +63,8 @@ assert_eq!(output, expected);
 pub use crate::{
     color::{default_color_specs, ColorError, ColorSpecs, UserColorSpec},
     hyperlink::{
-        HyperlinkConfig, HyperlinkEnvironment, HyperlinkFormat,
-        HyperlinkFormatError,
+        HyperlinkAlias, HyperlinkConfig, HyperlinkEnvironment,
+        HyperlinkFormat, HyperlinkFormatError,
     },
     path::{PathPrinter, PathPrinterBuilder},
     standard::{Standard, StandardBuilder, StandardSink},
