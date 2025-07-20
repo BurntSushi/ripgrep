@@ -90,6 +90,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["fsharp"], &["*.fs", "*.fsx", "*.fsi"]),
     (&["fut"], &["*.fut"]),
     (&["gap"], &["*.g", "*.gap", "*.gi", "*.gd", "*.tst"]),
+    (&["gleam"], &["*.gleam"]),
     (&["gn"], &["*.gn", "*.gni"]),
     (&["go"], &["*.go"]),
     (&["gprbuild"], &["*.gpr"]),
