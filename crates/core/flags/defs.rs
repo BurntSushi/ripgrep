@@ -751,7 +751,8 @@ the \flag{colors} flag to manually set all color styles to \fBnone\fP:
     \-\-colors 'path:none' \\
     \-\-colors 'line:none' \\
     \-\-colors 'column:none' \\
-    \-\-colors 'match:none'
+    \-\-colors 'match:none' \\
+    \-\-colors 'highlight:none'
 .EE
 .sp
 "
@@ -829,7 +830,7 @@ impl Flag for Colors {
         "Configure color settings and styles."
     }
     fn doc_long(&self) -> &'static str {
-        r"
+        r#"
 This flag specifies color settings for use in the output. This flag may be
 provided multiple times. Settings are applied iteratively. Pre-existing color
 labels are limited to one of eight choices: \fBred\fP, \fBblue\fP, \fBgreen\fP,
@@ -839,11 +840,11 @@ are limited to \fBnobold\fP, \fBbold\fP, \fBnointense\fP, \fBintense\fP,
 .sp
 The format of the flag is
 \fB{\fP\fItype\fP\fB}:{\fP\fIattribute\fP\fB}:{\fP\fIvalue\fP\fB}\fP.
-\fItype\fP should be one of \fBpath\fP, \fBline\fP, \fBcolumn\fP or
-\fBmatch\fP. \fIattribute\fP can be \fBfg\fP, \fBbg\fP or \fBstyle\fP.
-\fIvalue\fP is either a color (for \fBfg\fP and \fBbg\fP) or a text style. A
-special format, \fB{\fP\fItype\fP\fB}:none\fP, will clear all color settings
-for \fItype\fP.
+\fItype\fP should be one of \fBpath\fP, \fBline\fP, \fBcolumn\fP,
+\fBhighlight\fP or \fBmatch\fP. \fIattribute\fP can be \fBfg\fP, \fBbg\fP or
+\fBstyle\fP. \fIvalue\fP is either a color (for \fBfg\fP and \fBbg\fP) or a
+text style. A special format, \fB{\fP\fItype\fP\fB}:none\fP, will clear all
+color settings for \fItype\fP.
 .sp
 For example, the following command will change the match color to magenta and
 the background color for line numbers to yellow:
@@ -851,6 +852,17 @@ the background color for line numbers to yellow:
 .EX
     rg \-\-colors 'match:fg:magenta' \-\-colors 'line:bg:yellow'
 .EE
+.sp
+Another example, the following command will "highlight" the non-matching text
+in matching lines:
+.sp
+.EX
+    rg \-\-colors 'highlight:bg:yellow' \-\-colors 'highlight:fg:black'
+.EE
+.sp
+The "highlight" color type is particularly useful for contrasting matching
+lines with surrounding context printed by the \flag{before-context},
+\flag{after-context}, \flag{context} or \flag{passthru} flags.
 .sp
 Extended colors can be used for \fIvalue\fP when the tty supports ANSI color
 sequences. These are specified as either \fIx\fP (256-color) or
@@ -874,7 +886,7 @@ or, equivalently,
 .sp
 Note that the \fBintense\fP and \fBnointense\fP styles will have no effect when
 used alongside these extended color codes.
-"
+"#
     }
 
     fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
@@ -906,6 +918,24 @@ fn test_colors() {
         vec![
             "match:fg:magenta".parse().unwrap(),
             "line:bg:yellow".parse().unwrap()
+        ]
+    );
+
+    let args = parse_low_raw(["--colors", "highlight:bg:240"]).unwrap();
+    assert_eq!(args.colors, vec!["highlight:bg:240".parse().unwrap()]);
+
+    let args = parse_low_raw([
+        "--colors",
+        "match:fg:magenta",
+        "--colors",
+        "highlight:bg:blue",
+    ])
+    .unwrap();
+    assert_eq!(
+        args.colors,
+        vec![
+            "match:fg:magenta".parse().unwrap(),
+            "highlight:bg:blue".parse().unwrap()
         ]
     );
 }

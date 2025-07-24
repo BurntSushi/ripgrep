@@ -285,8 +285,8 @@ As a special case, `--colors '{type}:none'` will clear all colors and styles
 associated with `{type}`, which lets you start with a clean slate (instead of
 building on top of ripgrep's default color settings).
 
-Here's an example that makes highlights the matches with a nice blue background
-with bolded white text:
+Here's an example that highlights the matches with a nice blue background with
+bolded white text:
 
 ```
 $ rg somepattern \

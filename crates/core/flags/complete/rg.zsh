@@ -363,10 +363,11 @@ _rg() {
           'column:specify coloring for column numbers'
           'line:specify coloring for line numbers'
           'match:specify coloring for match text'
+          'highlight:specify coloring for matching lines'
           'path:specify coloring for file names'
         )
         descr='color/style type'
-      elif [[ ${IPREFIX#--*=}$PREFIX == (column|line|match|path):[^:]# ]]; then
+      elif [[ ${IPREFIX#--*=}$PREFIX == (column|line|match|highlight|path):[^:]# ]]; then
         suf=( -qS: )
         tmp=(
           'none:clear color/style for type'

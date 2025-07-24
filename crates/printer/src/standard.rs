@@ -1320,6 +1320,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
             self.write(&bytes[line])?;
             return Ok(());
         }
+        self.start_line_highlight()?;
         while !line.is_empty() {
             if matches[*match_index].end() <= line.start() {
                 if *match_index + 1 < matches.len() {
@@ -1346,6 +1347,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
             }
         }
         self.end_color_match()?;
+        self.end_line_highlight()?;
         Ok(())
     }
 
@@ -1547,8 +1549,34 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         if !self.in_color_match.get() {
             return Ok(());
         }
-        self.wtr().borrow_mut().reset()?;
+        if self.highlight_on() {
+            self.wtr()
+                .borrow_mut()
+                .set_color(self.config().colors.highlight())?;
+        } else {
+            self.wtr().borrow_mut().reset()?;
+        }
         self.in_color_match.set(false);
+        Ok(())
+    }
+
+    fn highlight_on(&self) -> bool {
+        !self.config().colors.highlight().is_none() && !self.is_context()
+    }
+
+    fn start_line_highlight(&self) -> io::Result<()> {
+        if self.highlight_on() {
+            self.wtr()
+                .borrow_mut()
+                .set_color(self.config().colors.highlight())?;
+        }
+        Ok(())
+    }
+
+    fn end_line_highlight(&self) -> io::Result<()> {
+        if self.highlight_on() {
+            self.wtr().borrow_mut().reset()?;
+        }
         Ok(())
     }
 
