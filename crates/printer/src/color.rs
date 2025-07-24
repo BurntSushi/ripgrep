@@ -51,7 +51,7 @@ impl std::fmt::Display for ColorError {
             ColorError::UnrecognizedOutType(ref name) => write!(
                 f,
                 "unrecognized output type '{}'. Choose from: \
-                 path, line, column, match.",
+                path, line, column, match, highlight.",
                 name,
             ),
             ColorError::UnrecognizedSpecType(ref name) => write!(
@@ -64,14 +64,14 @@ impl std::fmt::Display for ColorError {
             ColorError::UnrecognizedStyle(ref name) => write!(
                 f,
                 "unrecognized style attribute '{}'. Choose from: \
-                 nobold, bold, nointense, intense, nounderline, \
-                 underline.",
+                nobold, bold, nointense, intense, nounderline, \
+                underline.",
                 name,
             ),
             ColorError::InvalidFormat(ref original) => write!(
                 f,
                 "invalid color spec format: '{}'. Valid format \
-                 is '(path|line|column|match):(fg|bg|style):(value)'.",
+                is '(path|line|column|match|highlight):(fg|bg|style):(value)'.",
                 original,
             ),
         }
@@ -90,6 +90,7 @@ pub struct ColorSpecs {
     line: ColorSpec,
     column: ColorSpec,
     matched: ColorSpec,
+    highlight: ColorSpec,
 }
 
 /// A single color specification provided by the user.
@@ -99,7 +100,7 @@ pub struct ColorSpecs {
 /// The format of a `Spec` is a triple: `{type}:{attribute}:{value}`. Each
 /// component is defined as follows:
 ///
-/// * `{type}` can be one of `path`, `line`, `column` or `match`.
+/// * `{type}` can be one of `path`, `line`, `column`, `match` or `highlight`.
 /// * `{attribute}` can be one of `fg`, `bg` or `style`. `{attribute}` may also
 ///   be the special value `none`, in which case, `{value}` can be omitted.
 /// * `{value}` is either a color name (for `fg`/`bg`) or a style instruction.
@@ -181,6 +182,7 @@ enum OutType {
     Line,
     Column,
     Match,
+    Highlight,
 }
 
 /// The specification type.
@@ -214,6 +216,7 @@ impl ColorSpecs {
                 OutType::Line => spec.merge_into(&mut merged.line),
                 OutType::Column => spec.merge_into(&mut merged.column),
                 OutType::Match => spec.merge_into(&mut merged.matched),
+                OutType::Highlight => spec.merge_into(&mut merged.highlight),
             }
         }
         merged
@@ -246,6 +249,11 @@ impl ColorSpecs {
     /// Return the color specification for coloring matched text.
     pub fn matched(&self) -> &ColorSpec {
         &self.matched
+    }
+
+    /// Return the color specification for coloring entire line if there is a matched text.
+    pub fn highlight(&self) -> &ColorSpec {
+        &self.highlight
     }
 }
 
@@ -340,6 +348,7 @@ impl std::str::FromStr for OutType {
             "line" => Ok(OutType::Line),
             "column" => Ok(OutType::Column),
             "match" => Ok(OutType::Match),
+            "highlight" => Ok(OutType::Highlight),
             _ => Err(ColorError::UnrecognizedOutType(s.to_string())),
         }
     }
