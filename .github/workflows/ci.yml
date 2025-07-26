@@ -53,7 +53,7 @@ jobs:
         include:
         - build: pinned
           os: ubuntu-latest
-          rust: 1.74.0
+          rust: 1.88.0
         - build: stable
           os: ubuntu-latest
           rust: stable
