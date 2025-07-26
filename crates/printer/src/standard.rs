@@ -762,10 +762,8 @@ impl<'p, 's, M: Matcher, W: WriteColor> StandardSink<'p, 's, M, W> {
     ) -> io::Result<()> {
         self.replacer.clear();
         if self.standard.config.replacement.is_some() {
-            let replacement = (*self.standard.config.replacement)
-                .as_ref()
-                .map(|r| &*r)
-                .unwrap();
+            let replacement =
+                (*self.standard.config.replacement).as_ref().unwrap();
             self.replacer.replace_all(
                 searcher,
                 &self.matcher,
