@@ -468,7 +468,7 @@ fn print_stats<W: Write>(
 {bytes_printed} bytes printed
 {bytes_searched} bytes searched
 {search_time:0.6} seconds spent searching
-{process_time:0.6} seconds
+{process_time:0.6} seconds total
 ",
             matches = stats.matches(),
             lines = stats.matched_lines(),
