@@ -2848,6 +2848,7 @@ and exhibited clearly, with a label attached.
         SearcherBuilder::new()
             .line_number(false)
             .multi_line(true)
+            .max_matches(Some(1))
             .build()
             .search_reader(
                 &matcher,
@@ -2873,6 +2874,7 @@ For the Doctor Watsons of this world, as opposed to the Sherlock
         SearcherBuilder::new()
             .line_number(false)
             .multi_line(true)
+            .max_matches(Some(1))
             .build()
             .search_reader(
                 &matcher,
@@ -2885,6 +2887,32 @@ For the Doctor Watsons of this world, as opposed to the Sherlock
         let expected = "\
 For the Doctor Watsons of this world, as opposed to the Sherlock
 Holmeses, success in the province of detective work must always
+";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn max_matches_multi_line3() {
+        let matcher = RegexMatcher::new(r"line 2\nline 3").unwrap();
+        let mut printer = StandardBuilder::new()
+            .max_matches(Some(1))
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(false)
+            .multi_line(true)
+            .max_matches(Some(1))
+            .build()
+            .search_reader(
+                &matcher,
+                "line 2\nline 3 x\nline 2\nline 3\n".as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "\
+line 2
+line 3 x
 ";
         assert_eq_printed!(expected, got);
     }
