@@ -3839,4 +3839,41 @@ e
         let expected = "4:d\n5-e\n6:d\n";
         assert_eq_printed!(expected, got);
     }
+
+    #[test]
+    fn regression_crlf_preserve() {
+        let haystack = "hello\nworld\r\n";
+        let matcher =
+            RegexMatcherBuilder::new().crlf(true).build(r".").unwrap();
+        let mut printer = StandardBuilder::new().build(NoColor::new(vec![]));
+        let mut searcher = SearcherBuilder::new()
+            .line_number(false)
+            .line_terminator(LineTerminator::crlf())
+            .build();
+
+        searcher
+            .search_reader(
+                &matcher,
+                haystack.as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+        let got = printer_contents(&mut printer);
+        let expected = "hello\nworld\r\n";
+        assert_eq_printed!(expected, got);
+
+        let mut printer = StandardBuilder::new()
+            .replacement(Some(b"$0".to_vec()))
+            .build(NoColor::new(vec![]));
+        searcher
+            .search_reader(
+                &matcher,
+                haystack.as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+        let got = printer_contents(&mut printer);
+        let expected = "hello\nworld\r\n";
+        assert_eq_printed!(expected, got);
+    }
 }

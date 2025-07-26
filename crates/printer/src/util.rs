@@ -59,19 +59,23 @@ impl<M: Matcher> Replacer<M> {
         // See the giant comment in 'find_iter_at_in_context' below for why we
         // do this dance.
         let is_multi_line = searcher.multi_line_with_matcher(&matcher);
-        if is_multi_line {
+        // Get the line_terminator that was removed (if any) so we can add it back
+        let line_terminator = if is_multi_line {
             if haystack[range.end..].len() >= MAX_LOOK_AHEAD {
                 haystack = &haystack[..range.end + MAX_LOOK_AHEAD];
             }
+            &[]
         } else {
             // When searching a single line, we should remove the line
             // terminator. Otherwise, it's possible for the regex (via
             // look-around) to observe the line terminator and not match
             // because of it.
             let mut m = Match::new(0, range.end);
-            trim_line_terminator(searcher, haystack, &mut m);
+            let line_terminator =
+                trim_line_terminator(searcher, haystack, &mut m);
             haystack = &haystack[..m.end()];
-        }
+            line_terminator
+        };
         {
             let &mut Space { ref mut dst, ref mut caps, ref mut matches } =
                 self.allocate(matcher)?;
@@ -96,6 +100,7 @@ impl<M: Matcher> Replacer<M> {
                     matches.push(Match::new(start, end));
                     true
                 },
+                line_terminator,
             )
             .map_err(io::Error::error_message)?;
         }
@@ -508,6 +513,7 @@ where
         // Otherwise, it's possible for the regex (via look-around) to observe
         // the line terminator and not match because of it.
         let mut m = Match::new(0, range.end);
+        // No need to rember the line terminator as we aren't doing a replace here
         trim_line_terminator(searcher, bytes, &mut m);
         bytes = &bytes[..m.end()];
     }
@@ -523,19 +529,23 @@ where
 
 /// Given a buf and some bounds, if there is a line terminator at the end of
 /// the given bounds in buf, then the bounds are trimmed to remove the line
-/// terminator.
-pub(crate) fn trim_line_terminator(
+/// terminator, returning the bounds of the removed line terminator (if any).
+pub(crate) fn trim_line_terminator<'b>(
     searcher: &Searcher,
-    buf: &[u8],
+    buf: &'b [u8],
     line: &mut Match,
-) {
+) -> &'b [u8] {
     let lineterm = searcher.line_terminator();
     if lineterm.is_suffix(&buf[*line]) {
         let mut end = line.end() - 1;
         if lineterm.is_crlf() && end > 0 && buf.get(end - 1) == Some(&b'\r') {
             end -= 1;
         }
+        let orig_end = line.end();
         *line = line.with_end(end);
+        &buf[end..orig_end]
+    } else {
+        &[]
     }
 }
 
@@ -549,6 +559,7 @@ fn replace_with_captures_in_context<M, F>(
     caps: &mut M::Captures,
     dst: &mut Vec<u8>,
     mut append: F,
+    line_terminator: &[u8],
 ) -> Result<(), M::Error>
 where
     M: Matcher,
@@ -566,6 +577,7 @@ where
     })?;
     let end = std::cmp::min(bytes.len(), range.end);
     dst.extend(&bytes[last_match..end]);
+    dst.extend(line_terminator); // Add back any line terminator
     Ok(())
 }
 
