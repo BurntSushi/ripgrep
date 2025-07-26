@@ -122,6 +122,10 @@ jobs:
           os: windows-latest
           rust: nightly-x86_64-gnu
           target: x86_64-pc-windows-gnu
+        - build: winaarch64-msvc
+          os: windows-11-arm
+          rust: nightly
+          target: aarch64-pc-windows-msvc
         - build: win32-msvc
           os: windows-latest
           rust: nightly
@@ -175,7 +179,7 @@ jobs:
       shell: bash
       run: |
         ${{ env.CARGO }} build --verbose --release --features pcre2 ${{ env.TARGET_FLAGS }}
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+        if [[ "${{ matrix.os }}" == windows-* ]]; then
           bin="target/${{ matrix.target }}/release/rg.exe"
         else
           bin="target/${{ matrix.target }}/release/rg"
@@ -258,7 +262,7 @@ jobs:
 
     - name: Build archive (Windows)
       shell: bash
-      if: matrix.os == 'windows-latest'
+      if: startsWith(matrix.os, 'windows')
       run: |
         7z a "$ARCHIVE.zip" "$ARCHIVE"
         certutil -hashfile "$ARCHIVE.zip" SHA256 > "$ARCHIVE.zip.sha256"
@@ -267,7 +271,7 @@ jobs:
 
     - name: Build archive (Unix)
       shell: bash
-      if: matrix.os != 'windows-latest'
+      if: ${{ !startsWith(matrix.os, 'windows') }}
       run: |
         tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
         shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
