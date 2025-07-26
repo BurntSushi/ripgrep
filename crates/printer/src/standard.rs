@@ -1322,6 +1322,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
             self.write(&bytes[line])?;
             return Ok(());
         }
+        self.start_line_highlight()?;
         while !line.is_empty() {
             if matches[*match_index].end() <= line.start() {
                 if *match_index + 1 < matches.len() {
@@ -1348,6 +1349,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
             }
         }
         self.end_color_match()?;
+        self.end_line_highlight()?;
         Ok(())
     }
 
@@ -1462,7 +1464,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
             }
             let remainder = format!(
                 "WARNING: stopped searching binary file after match \
-                 (found {:?} byte around offset {})\n",
+                (found {:?} byte around offset {})\n",
                 [byte].as_bstr(),
                 offset,
             );
@@ -1540,7 +1542,12 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         if self.in_color_match.get() {
             return Ok(());
         }
-        self.wtr().borrow_mut().set_color(self.config().colors.matched())?;
+        let color_spec = if self.highlight_on() {
+            self.match_spec_with_highlight()
+        } else {
+            self.config().colors.matched().clone()
+        };
+        self.wtr().borrow_mut().set_color(&color_spec)?;
         self.in_color_match.set(true);
         Ok(())
     }
@@ -1549,8 +1556,54 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         if !self.in_color_match.get() {
             return Ok(());
         }
-        self.wtr().borrow_mut().reset()?;
+        if self.highlight_on() {
+            self.wtr()
+                .borrow_mut()
+                .set_color(self.config().colors.highlight())?;
+        } else {
+            self.wtr().borrow_mut().reset()?;
+        }
         self.in_color_match.set(false);
+        Ok(())
+    }
+
+    fn highlight_on(&self) -> bool {
+        return !self.is_context()
+            && !self.config().colors.highlight().is_none();
+    }
+
+    fn match_spec_with_highlight(&self) -> ColorSpec {
+        let spec = self.config().colors.matched().clone();
+
+        if spec.bg().is_some()
+            || self.is_context()
+            || self.config().colors.highlight().is_none()
+        {
+            return spec;
+        }
+
+        if let Some(bg) = self.config().colors.highlight().bg() {
+            let mut match_spec = spec;
+            match_spec.set_bg(Some(*bg));
+            match_spec
+        } else {
+            spec
+        }
+    }
+
+    fn start_line_highlight(&self) -> io::Result<()> {
+        if self.highlight_on() {
+            self.wtr()
+                .borrow_mut()
+                .set_color(self.config().colors.highlight())?;
+        }
+        Ok(())
+    }
+
+    fn end_line_highlight(&self) -> io::Result<()> {
+        if self.highlight_on() {
+            self.wtr().borrow_mut().reset()?;
+        }
         Ok(())
     }
 

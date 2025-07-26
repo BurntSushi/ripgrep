@@ -751,7 +751,8 @@ the \flag{colors} flag to manually set all color styles to \fBnone\fP:
     \-\-colors 'path:none' \\
     \-\-colors 'line:none' \\
     \-\-colors 'column:none' \\
-    \-\-colors 'match:none'
+    \-\-colors 'match:none' \\
+    \-\-colors 'highlight:none'
 .EE
 .sp
 "
@@ -839,7 +840,7 @@ are limited to \fBnobold\fP, \fBbold\fP, \fBnointense\fP, \fBintense\fP,
 .sp
 The format of the flag is
 \fB{\fP\fItype\fP\fB}:{\fP\fIattribute\fP\fB}:{\fP\fIvalue\fP\fB}\fP.
-\fItype\fP should be one of \fBpath\fP, \fBline\fP, \fBcolumn\fP or
+\fItype\fP should be one of \fBpath\fP, \fBline\fP, \fBcolumn\fP, \fBhighlight\fP or
 \fBmatch\fP. \fIattribute\fP can be \fBfg\fP, \fBbg\fP or \fBstyle\fP.
 \fIvalue\fP is either a color (for \fBfg\fP and \fBbg\fP) or a text style. A
 special format, \fB{\fP\fItype\fP\fB}:none\fP, will clear all color settings
@@ -906,6 +907,24 @@ fn test_colors() {
         vec![
             "match:fg:magenta".parse().unwrap(),
             "line:bg:yellow".parse().unwrap()
+        ]
+    );
+
+    let args = parse_low_raw(["--colors", "highlight:bg:240"]).unwrap();
+    assert_eq!(args.colors, vec!["highlight:bg:240".parse().unwrap()]);
+
+    let args = parse_low_raw([
+        "--colors",
+        "match:fg:magenta",
+        "--colors",
+        "highlight:bg:blue",
+    ])
+    .unwrap();
+    assert_eq!(
+        args.colors,
+        vec![
+            "match:fg:magenta".parse().unwrap(),
+            "highlight:bg:blue".parse().unwrap()
         ]
     );
 }
