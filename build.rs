@@ -37,10 +37,22 @@ fn set_git_revision_hash() {
     use std::process::Command;
 
     let args = &["rev-parse", "--short=10", "HEAD"];
-    let Ok(output) = Command::new("git").args(args).output() else { return };
-    let rev = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if rev.is_empty() {
-        return;
+    let output = Command::new("git").args(args).output();
+    match output {
+        Ok(output) => {
+            let rev =
+                String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if rev.is_empty() {
+                return;
+            }
+            println!("cargo:rustc-env=RIPGREP_BUILD_GIT_HASH={}", rev);
+        }
+        Err(e) => {
+            eprintln!(
+                "cargo:warning=git not found, skipping commit hash embed (error: {}).",
+                e
+            );
+            return;
+        }
     }
-    println!("cargo:rustc-env=RIPGREP_BUILD_GIT_HASH={}", rev);
 }
