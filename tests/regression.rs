@@ -955,6 +955,43 @@ rgtest!(r1319, |dir: Dir, mut cmd: TestCommand| {
     );
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/1332
+rgtest!(r1334_invert_empty_patterns, |dir: Dir, _cmd: TestCommand| {
+    dir.create("zero-patterns", "");
+    dir.create("one-pattern", "\n");
+    dir.create("haystack", "one\ntwo\nthree\n");
+
+    // zero patterns matches nothing
+    {
+        let mut cmd = dir.command();
+        cmd.arg("-f").arg("zero-patterns").arg("haystack").assert_err();
+    }
+    // one pattern that matches empty string matches everything
+    {
+        let mut cmd = dir.command();
+        eqnice!(
+            "one\ntwo\nthree\n",
+            cmd.arg("-f").arg("one-pattern").arg("haystack").stdout()
+        );
+    }
+
+    // inverting zero patterns matches everything
+    // (This is the regression. ripgrep used to match nothing because of an
+    // incorrect optimization.)
+    {
+        let mut cmd = dir.command();
+        eqnice!(
+            "one\ntwo\nthree\n",
+            cmd.arg("-vf").arg("zero-patterns").arg("haystack").stdout()
+        );
+    }
+    // inverting one pattern that matches empty string matches nothing
+    {
+        let mut cmd = dir.command();
+        cmd.arg("-vf").arg("one-pattern").arg("haystack").assert_err();
+    }
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/1334
 rgtest!(r1334_crazy_literals, |dir: Dir, mut cmd: TestCommand| {
     dir.create("patterns", &"1.208.0.0/12\n".repeat(40));

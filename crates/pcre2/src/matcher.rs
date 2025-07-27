@@ -55,7 +55,12 @@ impl RegexMatcherBuilder {
                 format!("(?:{})", p.as_ref())
             });
         }
-        let mut singlepat = pats.join("|");
+        let mut singlepat = if patterns.is_empty() {
+            // A way to spell a pattern that can never match anything.
+            r"[^\S\s]".to_string()
+        } else {
+            pats.join("|")
+        };
         if self.case_smart && !has_uppercase_literal(&singlepat) {
             builder.caseless(true);
         }
