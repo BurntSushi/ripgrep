@@ -164,7 +164,7 @@ impl HiArgs {
         };
         let path_terminator = if low.null { Some(b'\x00') } else { None };
         let quit_after_match = stats.is_none() && low.quiet;
-        let threads = if low.sort.is_some() || paths.is_one_file {
+        let threads = if paths.is_one_file {
             1
         } else if let Some(threads) = low.threads {
             threads
@@ -902,12 +902,16 @@ impl HiArgs {
         // Otherwise, sorting is done by collecting all paths, sorting them and
         // then searching them.
         if let Some(ref sort) = self.sort {
-            assert_eq!(1, self.threads, "sorting implies single threaded");
             if !sort.reverse && matches!(sort.kind, SortModeKind::Path) {
                 builder.sort_by_file_name(|a, b| a.cmp(b));
             }
         }
         Ok(builder)
+    }
+
+    /// Returns the configured sort specification, if any.
+    pub(crate) fn sort_spec(&self) -> Option<(bool, SortModeKind)> {
+        self.sort.map(|s| (s.reverse, s.kind))
     }
 }
 

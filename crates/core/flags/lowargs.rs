@@ -685,7 +685,7 @@ pub(crate) enum PatternSource {
 }
 
 /// The sort criteria, if present.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub(crate) struct SortMode {
     /// Whether to reverse the sort criteria (i.e., descending order).
     pub(crate) reverse: bool,
@@ -694,7 +694,7 @@ pub(crate) struct SortMode {
 }
 
 /// The criteria to use for sorting.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub(crate) enum SortModeKind {
     /// Sort by path.
     Path,

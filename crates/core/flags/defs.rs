@@ -6134,8 +6134,9 @@ impl Flag for SortFiles {
 DEPRECATED. Use \fB\-\-sort=path\fP instead.
 .sp
 This flag instructs ripgrep to sort search results by file path
-lexicographically in ascending order. Note that this currently disables all
-parallelism and runs search in a single thread.
+lexicographically in ascending order. When sorting is requested, ripgrep may
+buffer results in memory and print them at the end. Searching itself may still
+run in parallel.
 .sp
 This flag overrides \flag{sort} and \flag{sortr}.
 "
@@ -6227,19 +6228,19 @@ for this flag are:
 (Default) Do not sort results. Fastest. Can be multi-threaded.
 .TP 12
 \fBpath\fP
-Sort by file path. Always single-threaded. The order is determined by sorting
+Sort by file path. The order is determined by sorting
 files in each directory entry during traversal. This means that given the files
 \fBa/b\fP and \fBa+\fP, the latter will sort after the former even though
 \fB+\fP would normally sort before \fB/\fP.
 .TP 12
 \fBmodified\fP
-Sort by the last modified time on a file. Always single-threaded.
+Sort by the last modified time on a file.
 .TP 12
 \fBaccessed\fP
-Sort by the last accessed time on a file. Always single-threaded.
+Sort by the last accessed time on a file.
 .TP 12
 \fBcreated\fP
-Sort by the creation time on a file. Always single-threaded.
+Sort by the creation time on a file.
 .PP
 If the chosen (manually or by-default) sorting criteria isn't available on your
 system (for example, creation time is not available on ext4 file systems), then
@@ -6248,8 +6249,9 @@ ripgrep will attempt to detect this, print an error and exit without searching.
 To sort results in reverse or descending order, use the \flag{sortr} flag.
 Also, this flag overrides \flag{sortr}.
 .sp
-Note that sorting results currently always forces ripgrep to abandon
-parallelism and run in a single thread.
+When sorting is requested, ripgrep may buffer results in memory and print them
+at the end in the requested order. This can increase memory usage and reduce
+streaming behavior, but searching itself may still run in parallel.
 "
     }
     fn doc_choices(&self) -> &'static [&'static str] {
@@ -6328,20 +6330,20 @@ for this flag are:
 (Default) Do not sort results. Fastest. Can be multi-threaded.
 .TP 12
 \fBpath\fP
-Sort by file path. Always single-threaded. The order is determined by sorting
+Sort by file path. The order is determined by sorting
 files in each directory entry during traversal. This means that given the files
 \fBa/b\fP and \fBa+\fP, the latter will sort before the former even though
 \fB+\fP would normally sort after \fB/\fP when doing a reverse lexicographic
 sort.
 .TP 12
 \fBmodified\fP
-Sort by the last modified time on a file. Always single-threaded.
+Sort by the last modified time on a file.
 .TP 12
 \fBaccessed\fP
-Sort by the last accessed time on a file. Always single-threaded.
+Sort by the last accessed time on a file.
 .TP 12
 \fBcreated\fP
-Sort by the creation time on a file. Always single-threaded.
+Sort by the creation time on a file.
 .PP
 If the chosen (manually or by-default) sorting criteria isn't available on your
 system (for example, creation time is not available on ext4 file systems), then
@@ -6350,8 +6352,9 @@ ripgrep will attempt to detect this, print an error and exit without searching.
 To sort results in ascending order, use the \flag{sort} flag. Also, this flag
 overrides \flag{sort}.
 .sp
-Note that sorting results currently always forces ripgrep to abandon
-parallelism and run in a single thread.
+When sorting is requested, ripgrep may buffer results in memory and print them
+at the end in the requested order. This can increase memory usage and reduce
+streaming behavior, but searching itself may still run in parallel.
 "
     }
     fn doc_choices(&self) -> &'static [&'static str] {

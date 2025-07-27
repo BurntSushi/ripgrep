@@ -249,21 +249,21 @@ _rg() {
     {-r+,--replace=}'[specify string used to replace matches]:replace string'
 
     + '(sort)' # File-sorting options
-    '(threads)--sort=[sort results in ascending order (disables parallelism)]:sort method:((
+    '(threads)--sort=[sort results in ascending order (buffers results; higher memory)]:sort method:((
       none\:"no sorting"
       path\:"sort by file path"
       modified\:"sort by last modified time"
       accessed\:"sort by last accessed time"
       created\:"sort by creation time"
     ))'
-    '(threads)--sortr=[sort results in descending order (disables parallelism)]:sort method:((
+    '(threads)--sortr=[sort results in descending order (buffers results; higher memory)]:sort method:((
       none\:"no sorting"
       path\:"sort by file path"
       modified\:"sort by last modified time"
       accessed\:"sort by last accessed time"
       created\:"sort by creation time"
     ))'
-    '(threads)--sort-files[DEPRECATED: sort results by file path (disables parallelism)]'
+    '(threads)--sort-files[DEPRECATED: sort results by file path (buffers results; higher memory)]'
     $no"--no-sort-files[DEPRECATED: do not sort results]"
 
     + '(stats)' # Statistics options

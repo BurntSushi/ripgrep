@@ -85,6 +85,9 @@ fn run(result: crate::flags::ParseResult<HiArgs>) -> anyhow::Result<ExitCode> {
     let matched = match args.mode() {
         Mode::Search(_) if !args.matches_possible() => false,
         Mode::Search(mode) if args.threads() == 1 => search(&args, mode)?,
+        Mode::Search(mode) if args.sort_spec().is_some() => {
+            search_parallel_sorted(&args, mode)?
+        }
         Mode::Search(mode) => search_parallel(&args, mode)?,
         Mode::Files if args.threads() == 1 => files(&args)?,
         Mode::Files => files_parallel(&args)?,
@@ -154,9 +157,6 @@ fn search(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
 ///
 /// The parallelism is itself achieved by the recursive directory traversal.
 /// All we need to do is feed it a worker for performing a search on each file.
-///
-/// Requesting a sorted output from ripgrep (such as with `--sort path`) will
-/// automatically disable parallelism and hence sorting is not handled here.
 fn search_parallel(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
     use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -228,6 +228,162 @@ fn search_parallel(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
     Ok(matched.load(Ordering::SeqCst))
 }
 
+/// A parallel search that buffers results and prints them at the end in a
+/// deterministic order when `--sort`/`--sortr` is in effect.
+fn search_parallel_sorted(
+    args: &HiArgs,
+    mode: SearchMode,
+) -> anyhow::Result<bool> {
+    use std::{
+        cmp::Ordering as CmpOrdering,
+        io,
+        sync::atomic::{AtomicBool, Ordering},
+        sync::mpsc,
+        time::SystemTime,
+    };
+
+    struct AggItem {
+        path: std::path::PathBuf,
+        time: Option<SystemTime>,
+        buf: termcolor::Buffer,
+        has_match: bool,
+    }
+
+    let (reverse, kind) = args.sort_spec().unwrap();
+    let started_at = std::time::Instant::now();
+    let haystack_builder = args.haystack_builder();
+    let bufwtr = args.buffer_writer();
+    let stats = args.stats().map(std::sync::Mutex::new);
+    let matched = AtomicBool::new(false);
+    let searched = AtomicBool::new(false);
+
+    let mut searcher = args.search_worker(
+        args.matcher()?,
+        args.searcher()?,
+        args.printer(mode, bufwtr.buffer()),
+    )?;
+    let (tx, rx) = mpsc::channel::<AggItem>();
+    args.walk_builder()?.build_parallel().run(|| {
+        let tx = tx.clone();
+        let haystack_builder = &haystack_builder;
+        let stats = &stats;
+        let matched = &matched;
+        let searched = &searched;
+        let bufwtr = &bufwtr;
+        let mut searcher = searcher.clone();
+
+        Box::new(move |result| {
+            let haystack = match haystack_builder.build_from_result(result) {
+                Some(h) => h,
+                None => return WalkState::Continue,
+            };
+            searched.store(true, Ordering::SeqCst);
+            // Clear buffer and search.
+            searcher.printer().get_mut().clear();
+            let search_result = match searcher.search(&haystack) {
+                Ok(res) => res,
+                // A broken pipe means graceful termination.
+                Err(err) if err.kind() == std::io::ErrorKind::BrokenPipe => {
+                    return WalkState::Quit
+                }
+                Err(err) => {
+                    err_message!("{}: {}", haystack.path().display(), err);
+                    return WalkState::Continue;
+                }
+            };
+            if search_result.has_match() {
+                matched.store(true, Ordering::SeqCst);
+            }
+            if let Some(ref locked_stats) = *stats {
+                let mut st = locked_stats.lock().unwrap();
+                *st += search_result.stats().unwrap();
+            }
+
+            // Compute timestamp if needed.
+            let time = match kind {
+                crate::flags::SortModeKind::Path => None,
+                crate::flags::SortModeKind::LastModified => {
+                    haystack.path().metadata().and_then(|m| m.modified()).ok()
+                }
+                crate::flags::SortModeKind::LastAccessed => {
+                    haystack.path().metadata().and_then(|m| m.accessed()).ok()
+                }
+                crate::flags::SortModeKind::Created => {
+                    haystack.path().metadata().and_then(|m| m.created()).ok()
+                }
+            };
+
+            // Move the buffer out of the printer by replacing it with a fresh
+            // buffer, so we can send the original to the coordinator.
+            let newbuf = bufwtr.buffer();
+            // Above uses ANSI buffer. However, BufferWriter::buffer() yields a
+            // buffer appropriate for the target terminal. Prefer to use that.
+            // If creating from BufferWriter fails to be accessible here due to
+            // ownership, fall back to ansi. We'll try using ansi-replacement
+            // here; the original buffer is moved out regardless.
+            let oldbuf =
+                std::mem::replace(searcher.printer().get_mut(), newbuf);
+
+            let item = AggItem {
+                path: haystack.path().to_path_buf(),
+                time,
+                buf: oldbuf,
+                has_match: search_result.has_match(),
+            };
+            if args.quit_after_match() && item.has_match {
+                let _ = tx.send(item);
+                WalkState::Quit
+            } else if tx.send(item).is_ok() {
+                WalkState::Continue
+            } else {
+                WalkState::Quit
+            }
+        })
+    });
+    drop(tx);
+
+    let mut items: Vec<AggItem> = rx.into_iter().collect();
+    // Sorting logic mirrors hiargs.rs behavior.
+    items.sort_by(|a, b| {
+        let ord = match kind {
+            crate::flags::SortModeKind::Path => a.path.cmp(&b.path),
+            _ => match (a.time, b.time) {
+                (Some(t1), Some(t2)) => t1.cmp(&t2),
+                (Some(_), None) => CmpOrdering::Less,
+                (None, Some(_)) => CmpOrdering::Greater,
+                (None, None) => CmpOrdering::Equal,
+            },
+        };
+        if reverse {
+            ord.reverse()
+        } else {
+            ord
+        }
+    });
+
+    // Print in order.
+    for item in items.iter_mut() {
+        // Printing an empty buffer should be a no-op.
+        if let Err(err) = bufwtr.print(&mut item.buf) {
+            if err.kind() == io::ErrorKind::BrokenPipe {
+                break;
+            }
+            err_message!("{}: {}", item.path.display(), err);
+        }
+    }
+
+    if args.has_implicit_path() && !searched.load(Ordering::SeqCst) {
+        eprint_nothing_searched();
+    }
+    if let Some(ref locked_stats) = stats {
+        let stats = locked_stats.lock().unwrap();
+        let mut wtr = searcher.printer().get_mut();
+        let _ = print_stats(mode, &stats, started_at, &mut wtr);
+        let _ = bufwtr.print(&mut wtr);
+    }
+    Ok(matched.load(Ordering::SeqCst))
+}
+
 /// The top-level entry point for file listing without searching.
 ///
 /// This recursively steps through the file list (current directory by default)
@@ -266,8 +422,8 @@ fn files(args: &HiArgs) -> anyhow::Result<bool> {
 /// This recursively steps through the file list (current directory by default)
 /// and prints each path sequentially using multiple threads.
 ///
-/// Requesting a sorted output from ripgrep (such as with `--sort path`) will
-/// automatically disable parallelism and hence sorting is not handled here.
+/// When sorting is requested, ripgrep runs in parallel but buffers paths and
+/// prints in sorted order at the end.
 fn files_parallel(args: &HiArgs) -> anyhow::Result<bool> {
     use std::{
         sync::{
@@ -280,18 +436,91 @@ fn files_parallel(args: &HiArgs) -> anyhow::Result<bool> {
     let haystack_builder = args.haystack_builder();
     let mut path_printer = args.path_printer_builder().build(args.stdout());
     let matched = AtomicBool::new(false);
-    let (tx, rx) = mpsc::channel::<crate::haystack::Haystack>();
+    // If sorting is requested, we collect and then print in order.
+    if let Some((reverse, kind)) = args.sort_spec() {
+        use std::{cmp::Ordering as CmpOrdering, time::SystemTime};
+        struct FileItem {
+            path: std::path::PathBuf,
+            time: Option<SystemTime>,
+        }
 
-    // We spawn a single printing thread to make sure we don't tear writes.
-    // We use a channel here under the presumption that it's probably faster
-    // than using a mutex in the worker threads below, but this has never been
-    // seriously litigated.
+        let (txf, rxf) = mpsc::channel::<FileItem>();
+        args.walk_builder()?.build_parallel().run(|| {
+            let haystack_builder = &haystack_builder;
+            let matched = &matched;
+            let txf = txf.clone();
+            Box::new(move |result| {
+                let haystack = match haystack_builder.build_from_result(result)
+                {
+                    Some(h) => h,
+                    None => return WalkState::Continue,
+                };
+                matched.store(true, Ordering::SeqCst);
+                let time = match kind {
+                    crate::flags::SortModeKind::Path => None,
+                    crate::flags::SortModeKind::LastModified => haystack
+                        .path()
+                        .metadata()
+                        .and_then(|m| m.modified())
+                        .ok(),
+                    crate::flags::SortModeKind::LastAccessed => haystack
+                        .path()
+                        .metadata()
+                        .and_then(|m| m.accessed())
+                        .ok(),
+                    crate::flags::SortModeKind::Created => haystack
+                        .path()
+                        .metadata()
+                        .and_then(|m| m.created())
+                        .ok(),
+                };
+                let item =
+                    FileItem { path: haystack.path().to_path_buf(), time };
+                if txf.send(item).is_ok() {
+                    WalkState::Continue
+                } else {
+                    WalkState::Quit
+                }
+            })
+        });
+        drop(txf);
+        let mut items: Vec<FileItem> = rxf.into_iter().collect();
+        items.sort_by(|a, b| {
+            let ord = match kind {
+                crate::flags::SortModeKind::Path => a.path.cmp(&b.path),
+                _ => match (a.time, b.time) {
+                    (Some(t1), Some(t2)) => t1.cmp(&t2),
+                    (Some(_), None) => CmpOrdering::Less,
+                    (None, Some(_)) => CmpOrdering::Greater,
+                    (None, None) => CmpOrdering::Equal,
+                },
+            };
+            if reverse {
+                ord.reverse()
+            } else {
+                ord
+            }
+        });
+        for item in items {
+            if let Err(err) = path_printer.write(&item.path) {
+                if err.kind() == std::io::ErrorKind::BrokenPipe {
+                    break;
+                }
+                return Err(err.into());
+            }
+        }
+        return Ok(matched.load(Ordering::SeqCst));
+    }
+
+    // Fall back to unsorted parallel listing with a single printing thread.
+    let (tx, rx) = mpsc::channel::<crate::haystack::Haystack>();
     let print_thread = thread::spawn(move || -> std::io::Result<()> {
         for haystack in rx.iter() {
             path_printer.write(haystack.path())?;
         }
         Ok(())
     });
+
     args.walk_builder()?.build_parallel().run(|| {
         let haystack_builder = &haystack_builder;
         let matched = &matched;

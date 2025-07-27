@@ -1013,8 +1013,9 @@ used options that will likely impact how you use ripgrep on a regular basis.
 * `-z/--search-zip`: Search compressed files (gzip, bzip2, lzma, xz, lz4,
   brotli, zstd). This is disabled by default.
 * `-C/--context`: Show the lines surrounding a match.
-* `--sort path`: Force ripgrep to sort its output by file name. (This disables
-  parallelism, so it might be slower.)
+* `--sort path`: Force ripgrep to sort its output by file name. (ripgrep will
+  buffer results and print them at the end; this can increase memory usage and
+  reduce streaming, and might be slower on some workloads.)
 * `-L/--follow`: Follow symbolic links while recursively searching.
 * `-M/--max-columns`: Limit the length of lines printed by ripgrep.
 * `--debug`: Shows ripgrep's debug output. This is useful for understanding
