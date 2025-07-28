@@ -81,7 +81,6 @@ Standard Unix-style glob syntax is supported:
   the pattern, then it matches zero or more directories. Using `**` anywhere
   else is illegal (N.B. the glob `**` is allowed and means "match everything").
 * `{a,b}` matches `a` or `b` where `a` and `b` are arbitrary glob patterns.
-  (N.B. Nesting `{...}` is not currently allowed.)
 * `[ab]` matches `a` or `b` where `a` and `b` are characters. Use
   `[!ab]` to match any character except for `a` and `b`.
 * Metacharacters such as `*` and `?` can be escaped with character class
@@ -169,8 +168,10 @@ pub enum ErrorKind {
     UnopenedAlternates,
     /// Occurs when a `{` is found without a matching `}`.
     UnclosedAlternates,
-    /// Occurs when an alternating group is nested inside another alternating
-    /// group, e.g., `{{a,b},{c,d}}`.
+    /// **DEPRECATED**
+    ///
+    /// This error used to occur when an alternating group is nested inside
+    /// another alternating group, e.g., `{{a,b},{c,d}}`. This is now allowed.
     NestedAlternates,
     /// Occurs when an unescaped '\' is found at the end of a glob.
     DanglingEscape,
