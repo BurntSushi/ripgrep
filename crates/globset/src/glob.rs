@@ -564,7 +564,7 @@ impl<'a> GlobBuilder<'a> {
     pub fn build(&self) -> Result<Glob, Error> {
         let mut p = Parser {
             glob: &self.glob,
-            stack: vec![Tokens::default()],
+            stack: vec![vec![Tokens::default()]],
             chars: self.glob.chars().peekable(),
             prev: None,
             cur: None,
@@ -582,7 +582,7 @@ impl<'a> GlobBuilder<'a> {
                 kind: ErrorKind::UnclosedAlternates,
             })
         } else {
-            let tokens = p.stack.pop().unwrap();
+            let tokens = p.stack.pop().unwrap().pop().unwrap();
             Ok(Glob {
                 glob: self.glob.to_string(),
                 re: tokens.to_regex_with(&self.opts),
@@ -757,7 +757,9 @@ fn bytes_to_escaped_literal(bs: &[u8]) -> String {
 
 struct Parser<'a> {
     glob: &'a str,
-    stack: Vec<Tokens>,
+    /// Stack of nested alternation groups. The first element is not an
+    /// alternation group, but just the top-level tokens.
+    stack: Vec<Vec<Tokens>>,
     chars: std::iter::Peekable<std::str::Chars<'a>>,
     prev: Option<char>,
     cur: Option<char>,
@@ -786,36 +788,37 @@ impl<'a> Parser<'a> {
     }
 
     fn push_alternate(&mut self) -> Result<(), Error> {
-        if self.stack.len() > 1 {
-            return Err(self.error(ErrorKind::NestedAlternates));
-        }
-        Ok(self.stack.push(Tokens::default()))
+        Ok(self.stack.push(vec![Tokens::default()]))
     }
 
     fn pop_alternate(&mut self) -> Result<(), Error> {
-        let mut alts = vec![];
-        while self.stack.len() >= 2 {
-            alts.push(self.stack.pop().unwrap());
+        if self.stack.len() <= 1 {
+            return Err(self.error(ErrorKind::UnopenedAlternates));
         }
+        let alts = self.stack.pop().unwrap();
         self.push_token(Token::Alternates(alts))
     }
 
     fn push_token(&mut self, tok: Token) -> Result<(), Error> {
-        if let Some(ref mut pat) = self.stack.last_mut() {
+        if let Some(ref mut pat) =
+            self.stack.last_mut().and_then(|g| g.last_mut())
+        {
             return Ok(pat.push(tok));
         }
         Err(self.error(ErrorKind::UnopenedAlternates))
     }
 
     fn pop_token(&mut self) -> Result<Token, Error> {
-        if let Some(ref mut pat) = self.stack.last_mut() {
+        if let Some(ref mut pat) =
+            self.stack.last_mut().and_then(|g| g.last_mut())
+        {
             return Ok(pat.pop().unwrap());
         }
         Err(self.error(ErrorKind::UnopenedAlternates))
     }
 
     fn have_tokens(&self) -> Result<bool, Error> {
-        match self.stack.last() {
+        match self.stack.last().and_then(|g| g.last()) {
             None => Err(self.error(ErrorKind::UnopenedAlternates)),
             Some(ref pat) => Ok(!pat.is_empty()),
         }
@@ -828,7 +831,7 @@ impl<'a> Parser<'a> {
         if self.stack.len() <= 1 {
             self.push_token(Token::Literal(','))
         } else {
-            Ok(self.stack.push(Tokens::default()))
+            Ok(self.stack.last_mut().unwrap().push(Tokens::default()))
         }
     }
 
@@ -1265,7 +1268,8 @@ mod tests {
     toregex!(re32, "/a**", r"^/a.*.*$");
     toregex!(re33, "/**a", r"^/.*.*a$");
     toregex!(re34, "/a**b", r"^/a.*.*b$");
-    toregex!(re35, "{a,b}", r"^(?:b|a)$");
+    toregex!(re35, "{a,b}", r"^(?:a|b)$");
+    toregex!(re36, "{*.{a,b},c,d.*}", "^(?:.*\\.(?:a|b)|c|d\\..*)$");
 
     matches!(match1, "a", "a");
     matches!(match2, "a*b", "a_b");
@@ -1353,6 +1357,9 @@ mod tests {
     matches!(matchalt14, "foo{,.txt}", "foo.txt");
     nmatches!(matchalt15, "foo{,.txt}", "foo");
     matches!(matchalt16, "foo{,.txt}", "foo", EALTRE);
+    matches!(matchalt17, "{*.{a,b},c,d.*}", "foo.a");
+    matches!(matchalt18, "{*.{a,b},c,d.*}", "c");
+    matches!(matchalt19, "{*.{a,b},c,d.*}", "d.bar");
 
     matches!(matchslash1, "abc/def", "abc/def", SLASHLIT);
     #[cfg(unix)]
