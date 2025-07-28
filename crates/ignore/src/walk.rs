@@ -2076,6 +2076,43 @@ mod tests {
     }
 
     #[test]
+    fn gitignore_in_jj() {
+        let td = tmpdir();
+        mkdirp(td.path().join(".jj"));
+        mkdirp(td.path().join("a"));
+        wfile(td.path().join(".gitignore"), "foo");
+        wfile(td.path().join("foo"), "");
+        wfile(td.path().join("a/foo"), "");
+        wfile(td.path().join("bar"), "");
+        wfile(td.path().join("a/bar"), "");
+
+        assert_paths(
+            td.path(),
+            &WalkBuilder::new(td.path()),
+            &["bar", "a", "a/bar"],
+        );
+    }
+
+    #[test]
+    fn gitignore_in_jj_child() {
+        let td = tmpdir();
+        mkdirp(td.path().join(".jj"));
+        mkdirp(td.path().join("a"));
+        wfile(td.path().join(".gitignore"), "foo");
+        wfile(td.path().join("foo"), "");
+        wfile(td.path().join("a/foo"), "");
+        wfile(td.path().join("bar"), "");
+        wfile(td.path().join("a/bar"), "");
+
+        let child_path = td.path().join("a");
+        assert_paths(
+            &child_path,
+            &WalkBuilder::new(child_path.clone()),
+            &["bar"],
+        );
+    }
+
+    #[test]
     fn explicit_ignore() {
         let td = tmpdir();
         let igpath = td.path().join(".not-an-ignore");
