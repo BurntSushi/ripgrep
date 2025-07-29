@@ -37,13 +37,22 @@ where
 
     pub(crate) fn run(mut self) -> Result<(), S::Error> {
         if self.core.begin()? {
-            while self.fill()? && self.core.match_by_line(self.rdr.buffer())? {
+            while self.fill()? {
+                if !self.core.match_by_line(self.rdr.buffer())? {
+                    self.consumed_remain();
+                    break;
+                }
             }
         }
         self.core.finish(
             self.rdr.absolute_byte_offset(),
             self.rdr.binary_byte_offset(),
         )
+    }
+
+    fn consumed_remain(&mut self) {
+        let consumed = self.core.pos();
+        self.rdr.consume(consumed);
     }
 
     fn fill(&mut self) -> Result<bool, S::Error> {
