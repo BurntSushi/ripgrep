@@ -288,9 +288,8 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["texinfo"], &["*.texi"]),
     (&["textile"], &["*.textile"]),
     (&["tf"], &[
-        "*.tf", "*.auto.tfvars", "terraform.tfvars", "*.tf.json",
-        "*.auto.tfvars.json", "terraform.tfvars.json", "*.terraformrc",
-        "terraform.rc", "*.tfrc", "*.terraform.lock.hcl",
+        "*.tf", "*.tf.json", "*.tfvars", "*.tfvars.json",
+        "*.terraformrc", "terraform.rc", "*.tfrc", "*.terraform.lock.hcl",
     ]),
     (&["thrift"], &["*.thrift"]),
     (&["toml"], &["*.toml", "Cargo.lock"]),
