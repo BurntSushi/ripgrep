@@ -3169,10 +3169,18 @@ directly on the command line, then use \flag{glob} instead.
 struct CursorIgnore;
 
 impl Flag for CursorIgnore {
-    fn is_switch(&self) -> bool { false }
-    fn name_long(&self) -> &'static str { "cursor-ignore" }
-    fn doc_variable(&self) -> Option<&'static str> { Some("PATH") }
-    fn doc_category(&self) -> Category { Category::Filter }
+    fn is_switch(&self) -> bool {
+        false
+    }
+    fn name_long(&self) -> &'static str {
+        "cursor-ignore"
+    }
+    fn doc_variable(&self) -> Option<&'static str> {
+        Some("PATH")
+    }
+    fn doc_category(&self) -> Category {
+        Category::Filter
+    }
     fn doc_short(&self) -> &'static str {
         r"Specify high-precedence ignore files (applied before -g/--glob)."
     }
@@ -3186,7 +3194,9 @@ may be specified by repeating this flag; later files have higher precedence.
 This behaves like \flag{ignore-file} except for its higher precedence.
 "
     }
-    fn completion_type(&self) -> CompletionType { CompletionType::Filename }
+    fn completion_type(&self) -> CompletionType {
+        CompletionType::Filename
+    }
     fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
         let path = PathBuf::from(v.unwrap_value());
         args.cursor_ignore.push(path);

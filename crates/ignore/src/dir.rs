@@ -383,8 +383,11 @@ impl Ignore {
         if !self.0.cursor_ignores.is_empty() {
             let mut m_cursor = Match::None;
             for gi in self.0.cursor_ignores.iter().rev() {
-                if !m_cursor.is_none() { break; }
-                m_cursor = gi.matched(path, is_dir).map(IgnoreMatch::gitignore);
+                if !m_cursor.is_none() {
+                    break;
+                }
+                m_cursor =
+                    gi.matched(path, is_dir).map(IgnoreMatch::gitignore);
             }
             if m_cursor.is_ignore() {
                 return m_cursor;
