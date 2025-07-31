@@ -120,6 +120,8 @@ struct IgnoreInner {
     absolute_base: Option<Arc<PathBuf>>,
     /// Explicit global ignore matchers specified by the caller.
     explicit_ignores: Arc<Vec<Gitignore>>,
+    /// High-precedence global ignore matchers applied before overrides.
+    cursor_ignores: Arc<Vec<Gitignore>>,
     /// Ignore files used in addition to `.ignore`
     custom_ignore_filenames: Arc<Vec<OsString>>,
     /// The matcher for custom ignore files
@@ -319,6 +321,7 @@ impl Ignore {
             is_absolute_parent: false,
             absolute_base: self.0.absolute_base.clone(),
             explicit_ignores: self.0.explicit_ignores.clone(),
+            cursor_ignores: self.0.cursor_ignores.clone(),
             custom_ignore_filenames: self.0.custom_ignore_filenames.clone(),
             custom_ignore_matcher: custom_ig_matcher,
             ignore_matcher: ig_matcher,
@@ -373,6 +376,23 @@ impl Ignore {
         if let Some(p) = strip_prefix("./", path) {
             path = p;
         }
+        // First, apply any high-precedence cursor ignore rules. If an ignore
+        // match is found here, it unconditionally takes effect regardless of
+        // any override globs from `-g/--glob`.
+        let mut whitelisted = Match::None;
+        if !self.0.cursor_ignores.is_empty() {
+            let mut m_cursor = Match::None;
+            for gi in self.0.cursor_ignores.iter().rev() {
+                if !m_cursor.is_none() { break; }
+                m_cursor = gi.matched(path, is_dir).map(IgnoreMatch::gitignore);
+            }
+            if m_cursor.is_ignore() {
+                return m_cursor;
+            } else if m_cursor.is_whitelist() {
+                whitelisted = m_cursor;
+            }
+        }
+
         // Match against the override patterns. If an override matches
         // regardless of whether it's whitelist/ignore, then we quit and
         // return that result immediately. Overrides have the highest
@@ -387,7 +407,8 @@ impl Ignore {
                 return mat;
             }
         }
-        let mut whitelisted = Match::None;
+        // Continue with standard ignore/type precedence, taking into account
+        // any whitelist from cursor-ignores above.
         if self.has_any_ignore_rules() {
             let mat = self.matched_ignore(path, is_dir);
             if mat.is_ignore() {
@@ -573,6 +594,8 @@ pub(crate) struct IgnoreBuilder {
     types: Arc<Types>,
     /// Explicit global ignore matchers.
     explicit_ignores: Vec<Gitignore>,
+    /// High-precedence global ignore matchers applied before overrides.
+    cursor_ignores: Vec<Gitignore>,
     /// Ignore files in addition to .ignore.
     custom_ignore_filenames: Vec<OsString>,
     /// Ignore config.
@@ -590,6 +613,7 @@ impl IgnoreBuilder {
             overrides: Arc::new(Override::empty()),
             types: Arc::new(Types::empty()),
             explicit_ignores: vec![],
+            cursor_ignores: vec![],
             custom_ignore_filenames: vec![],
             opts: IgnoreOptions {
                 hidden: true,
@@ -632,6 +656,7 @@ impl IgnoreBuilder {
             is_absolute_parent: true,
             absolute_base: None,
             explicit_ignores: Arc::new(self.explicit_ignores.clone()),
+            cursor_ignores: Arc::new(self.cursor_ignores.clone()),
             custom_ignore_filenames: Arc::new(
                 self.custom_ignore_filenames.clone(),
             ),
@@ -671,6 +696,16 @@ impl IgnoreBuilder {
     /// Adds a new global ignore matcher from the ignore file path given.
     pub(crate) fn add_ignore(&mut self, ig: Gitignore) -> &mut IgnoreBuilder {
         self.explicit_ignores.push(ig);
+        self
+    }
+
+    /// Adds a new high-precedence global ignore matcher that is applied
+    /// before overrides from `-g/--glob`.
+    pub(crate) fn add_cursor_ignore(
+        &mut self,
+        ig: Gitignore,
+    ) -> &mut IgnoreBuilder {
+        self.cursor_ignores.push(ig);
         self
     }
 

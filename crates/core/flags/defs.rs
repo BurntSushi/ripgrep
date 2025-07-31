@@ -82,6 +82,7 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &IGlob,
     &IgnoreCase,
     &IgnoreFile,
+    &CursorIgnore,
     &IgnoreFileCaseInsensitive,
     &IncludeZero,
     &InvertMatch,
@@ -3159,6 +3160,36 @@ directly on the command line, then use \flag{glob} instead.
     fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
         let path = PathBuf::from(v.unwrap_value());
         args.ignore_file.push(path);
+        Ok(())
+    }
+}
+
+/// --cursor-ignore
+#[derive(Debug)]
+struct CursorIgnore;
+
+impl Flag for CursorIgnore {
+    fn is_switch(&self) -> bool { false }
+    fn name_long(&self) -> &'static str { "cursor-ignore" }
+    fn doc_variable(&self) -> Option<&'static str> { Some("PATH") }
+    fn doc_category(&self) -> Category { Category::Filter }
+    fn doc_short(&self) -> &'static str {
+        r"Specify high-precedence ignore files (applied before -g/--glob)."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Specifies a path to one or more gitignore-formatted rules files that are
+applied with higher precedence than -g/--glob overrides. These rules can
+exclude files even when a glob would otherwise include them. Multiple files
+may be specified by repeating this flag; later files have higher precedence.
+.sp
+This behaves like \flag{ignore-file} except for its higher precedence.
+"
+    }
+    fn completion_type(&self) -> CompletionType { CompletionType::Filename }
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        let path = PathBuf::from(v.unwrap_value());
+        args.cursor_ignore.push(path);
         Ok(())
     }
 }

@@ -670,6 +670,28 @@ impl WalkBuilder {
         errs.into_error_option()
     }
 
+    /// Add a high-precedence cursor ignore file to the matcher.
+    ///
+    /// These rules are applied before override globs from `-g/--glob` and
+    /// therefore can filter entries even when a glob would otherwise match.
+    pub fn add_cursor_ignore<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+    ) -> Option<Error> {
+        let mut builder = GitignoreBuilder::new("");
+        let mut errs = PartialErrorBuilder::default();
+        errs.maybe_push(builder.add(path));
+        match builder.build() {
+            Ok(gi) => {
+                self.ig_builder.add_cursor_ignore(gi);
+            }
+            Err(err) => {
+                errs.push(err);
+            }
+        }
+        errs.into_error_option()
+    }
+
     /// Add a custom ignore file name
     ///
     /// These ignore files have higher precedence than all other ignore files.

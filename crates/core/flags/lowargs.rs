@@ -63,6 +63,8 @@ pub(crate) struct LowArgs {
     pub(crate) hyperlink_format: HyperlinkFormat,
     pub(crate) iglobs: Vec<String>,
     pub(crate) ignore_file: Vec<PathBuf>,
+    /// Additional high-precedence ignore files (see --cursor-ignore)
+    pub(crate) cursor_ignore: Vec<PathBuf>,
     pub(crate) ignore_file_case_insensitive: bool,
     pub(crate) include_zero: bool,
     pub(crate) invert_match: bool,

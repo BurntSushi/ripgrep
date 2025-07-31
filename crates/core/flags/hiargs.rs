@@ -59,6 +59,8 @@ pub(crate) struct HiArgs {
     hyperlink_config: grep::printer::HyperlinkConfig,
     ignore_file_case_insensitive: bool,
     ignore_file: Vec<PathBuf>,
+    /// Additional high-precedence ignore files (see --cursor-ignore)
+    cursor_ignore: Vec<PathBuf>,
     include_zero: bool,
     invert_match: bool,
     is_terminal_stdout: bool,
@@ -274,6 +276,7 @@ impl HiArgs {
             hidden: low.hidden,
             hyperlink_config,
             ignore_file: low.ignore_file,
+            cursor_ignore: low.cursor_ignore,
             ignore_file_case_insensitive: low.ignore_file_case_insensitive,
             include_zero: low.include_zero,
             invert_match: low.invert_match,
@@ -873,6 +876,12 @@ impl HiArgs {
         if !self.no_ignore_files {
             for path in self.ignore_file.iter() {
                 if let Some(err) = builder.add_ignore(path) {
+                    ignore_message!("{err}");
+                }
+            }
+            // Apply high-precedence cursor ignore files
+            for path in self.cursor_ignore.iter() {
+                if let Some(err) = builder.add_cursor_ignore(path) {
                     ignore_message!("{err}");
                 }
             }
