@@ -24,7 +24,7 @@ exclude = [
 build = "build.rs"
 autotests = false
 edition = "2021"
-rust-version = "1.72"
+rust-version = "1.88"
 
 [[bin]]
 bench = false
