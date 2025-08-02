@@ -5,7 +5,9 @@ use {
     termcolor::{HyperlinkSpec, WriteColor},
 };
 
-use crate::{hyperlink_aliases, util::DecimalFormatter};
+use crate::{
+    hyperlink_aliases::HYPERLINK_PATTERN_ALIASES, util::DecimalFormatter,
+};
 
 /// Hyperlink configuration.
 ///
@@ -90,12 +92,13 @@ impl HyperlinkFormat {
     pub(crate) fn is_line_dependent(&self) -> bool {
         self.is_line_dependent
     }
-}
 
-impl std::str::FromStr for HyperlinkFormat {
-    type Err = HyperlinkFormatError;
-
-    fn from_str(s: &str) -> Result<HyperlinkFormat, HyperlinkFormatError> {
+    /// Tries to create a hyperlink format from the given string.
+    ///
+    /// This does not look into the alias list. Aliases are resolved by `FromStr`.
+    pub(crate) fn parse(
+        input: &str,
+    ) -> Result<HyperlinkFormat, HyperlinkFormatError> {
         use self::HyperlinkFormatErrorKind::*;
 
         #[derive(Debug)]
@@ -107,10 +110,6 @@ impl std::str::FromStr for HyperlinkFormat {
         }
 
         let mut builder = FormatBuilder::new();
-        let input = match hyperlink_aliases::find(s) {
-            Some(format) => format,
-            None => s,
-        };
         let mut name = String::new();
         let mut state = State::Verbatim;
         let err = |kind| HyperlinkFormatError { kind };
@@ -170,12 +169,101 @@ impl std::str::FromStr for HyperlinkFormat {
     }
 }
 
+impl std::str::FromStr for HyperlinkFormat {
+    type Err = HyperlinkFormatError;
+
+    fn from_str(s: &str) -> Result<HyperlinkFormat, HyperlinkFormatError> {
+        let input = match HyperlinkAlias::find(s) {
+            Some(alias) => alias.format(),
+            None => s,
+        };
+        HyperlinkFormat::parse(input)
+    }
+}
+
 impl std::fmt::Display for HyperlinkFormat {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         for part in self.parts.iter() {
             part.fmt(f)?;
         }
         Ok(())
+    }
+}
+
+/// An alias for a hyperlink format.
+///
+/// Hyperlink aliases are built-in formats, therefore they hold static values.
+/// Some of their features are usable in const blocks.
+#[derive(Clone, Debug)]
+pub struct HyperlinkAlias {
+    name: &'static str,
+    format: &'static str,
+}
+
+impl HyperlinkAlias {
+    /// Creates a new alias with the given name and format string.
+    pub(crate) const fn new(
+        name: &'static str,
+        format: &'static str,
+    ) -> HyperlinkAlias {
+        HyperlinkAlias { name, format }
+    }
+
+    /// Returns the name of the alias.
+    pub const fn name(&self) -> &'static str {
+        self.name
+    }
+
+    /// Returns the format string of the alias.
+    pub const fn format(&self) -> &'static str {
+        self.format
+    }
+
+    /// Returns a slice of all built-in aliases in alphabetical order.
+    pub const fn all_aliases() -> &'static [HyperlinkAlias] {
+        HYPERLINK_PATTERN_ALIASES
+    }
+
+    /// Returns a slice of all built-in alias names in alphabetical order.
+    pub const fn all_names() -> &'static [&'static str] {
+        const ALIAS_NAMES: &[&str] = &{
+            const ALIASES: &[HyperlinkAlias] = HYPERLINK_PATTERN_ALIASES;
+            let mut names = [""; ALIASES.len()];
+            let mut i = 0;
+
+            while i < ALIASES.len() {
+                names[i] = ALIASES[i].name();
+                i += 1;
+            }
+
+            names
+        };
+        ALIAS_NAMES
+    }
+
+    /// Returns all available alias names in an order most suitable for display.
+    ///
+    /// "default" and "none" come first, as they could be considered as special
+    /// cases, and the rest of the names are sorted alphabetically.
+    pub fn all_names_display() -> Vec<&'static str> {
+        let mut names = Self::all_names().to_vec();
+        names.sort_by_key(|&name| match name {
+            "default" => 0,
+            "none" => 1,
+            _ => 2, // sort_by_key is a stable sort.
+        });
+        names
+    }
+
+    /// Looks for the hyperlink alias defined by the given name.
+    ///
+    /// If one does not exist, `None` is returned.
+    pub fn find(name: &str) -> Option<&HyperlinkAlias> {
+        let aliases = Self::all_aliases();
+        aliases
+            .binary_search_by_key(&name, |alias| alias.name())
+            .map(|i| &aliases[i])
+            .ok()
     }
 }
 
@@ -255,15 +343,11 @@ impl std::fmt::Display for HyperlinkFormatError {
 
         match self.kind {
             NoVariables => {
-                let aliases = hyperlink_aliases::iter()
-                    .map(|(name, _)| name)
-                    .collect::<Vec<&str>>()
-                    .join(", ");
+                let aliases = HyperlinkAlias::all_names().join(", ");
                 write!(
                     f,
                     "at least a {{path}} variable is required in a \
-                     hyperlink format, or otherwise use a valid alias: {}",
-                    aliases,
+                     hyperlink format, or otherwise use a valid alias: {aliases}"
                 )
             }
             NoPathVariable => {
@@ -1005,5 +1089,48 @@ mod tests {
             HyperlinkFormat::from_str("foo://{bar{{}").unwrap_err(),
             err(InvalidVariable("bar{{".to_string())),
         );
+    }
+
+    #[test]
+    fn aliases_are_sorted() {
+        let mut prev = HyperlinkAlias::all_aliases()
+            .first()
+            .expect("aliases should be non-empty")
+            .name();
+        for alias in HyperlinkAlias::all_aliases().iter().skip(1) {
+            let name = alias.name();
+            assert!(
+                name > prev,
+                "'{prev}' should come before '{name}' in \
+                 HYPERLINK_PATTERN_ALIASES",
+            );
+            prev = name;
+        }
+    }
+
+    #[test]
+    fn alias_names_are_reasonable() {
+        for alias in HyperlinkAlias::all_aliases() {
+            // There's no hard rule here, but if we want to define an alias
+            // with a name that doesn't pass this assert, then we should
+            // probably flag it as worthy of consideration. For example, we
+            // really do not want to define an alias that contains `{` or `}`,
+            // which might confuse it for a variable.
+            assert!(alias.name().chars().all(|c| c.is_alphanumeric()
+                || c == '+'
+                || c == '-'
+                || c == '.'));
+        }
+    }
+
+    #[test]
+    fn aliases_are_valid_formats() {
+        for alias in HyperlinkAlias::all_aliases() {
+            let (name, format) = (alias.name(), alias.format());
+            assert!(
+                format.parse::<HyperlinkFormat>().is_ok(),
+                "invalid hyperlink alias '{name}': {format}",
+            );
+        }
     }
 }
