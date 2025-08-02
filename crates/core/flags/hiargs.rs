@@ -561,7 +561,9 @@ impl HiArgs {
         search_mode: SearchMode,
         wtr: W,
     ) -> Printer<W> {
-        let summary_kind = if self.quiet && !matches!(search_mode, SearchMode::FilesWithoutMatch) {
+        let summary_kind = if self.quiet
+            && !matches!(search_mode, SearchMode::FilesWithoutMatch)
+        {
             SummaryKind::Quiet
         } else {
             match search_mode {
