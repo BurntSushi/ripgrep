@@ -314,11 +314,18 @@ $ sudo yum install ripgrep
 If you're a **Nix** user, you can install ripgrep from
 [nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/ri/ripgrep/package.nix):
 
-Add this to your NixOS or Home-Manager config.
+Add this to your NixOS or Home-Manager config
+
 ```nix
   environment.systemPackages = [
     pkgs.ripgrep
   ];
+```
+
+To temporarily add it to your `$PATH`
+
+```bash
+$ nix-shell -p ripgrep
 ```
 
 If you're a **Flox** user, you can install ripgrep as follows:
