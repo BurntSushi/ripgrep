@@ -2752,6 +2752,10 @@ ripgrep.
 A file or directory is considered hidden if its base name starts with a dot
 character (\fB.\fP). On operating systems which support a "hidden" file
 attribute, like Windows, files with this attribute are also considered hidden.
+.sp
+Note that \flag{hidden} will include files and folders like \fB.git\fP
+regardless of \flag{no-ignore-vcs}. To exclude such paths when using
+\flag{hidden}, you must explicit ignore them using another flag or ignore file.
 "#
     }
 
@@ -4608,6 +4612,10 @@ are not respected. By default, ripgrep respects \fBgit\fP's ignore rules for
 automatic filtering. In some cases, it may not be desirable to respect the
 source control's ignore rules and instead only respect rules in \fB.ignore\fP
 or \fB.rgignore\fP.
+.sp
+Note that this flag does not directly affect the filtering of source control files
+or folders that start with a dot (\fB.\fP), like \fB.git\fP. These are affected by
+\flag{hidden} and its related flags instead.
 .sp
 This flag implies \flag{no-ignore-parent} for source control ignore files as
 well.
