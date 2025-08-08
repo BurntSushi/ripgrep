@@ -2755,7 +2755,8 @@ attribute, like Windows, files with this attribute are also considered hidden.
 .sp
 Note that \flag{hidden} will include files and folders like \fB.git\fP
 regardless of \flag{no-ignore-vcs}. To exclude such paths when using
-\flag{hidden}, you must explicit ignore them using another flag or ignore file.
+\flag{hidden}, you must explicitly ignore them using another flag or ignore
+file.
 "#
     }
 
