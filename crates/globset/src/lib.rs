@@ -163,6 +163,7 @@ pub struct Error {
 
 /// The kind of error that can occur when parsing a glob pattern.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum ErrorKind {
     /// **DEPRECATED**.
     ///
@@ -192,13 +193,6 @@ pub enum ErrorKind {
     DanglingEscape,
     /// An error associated with parsing or compiling a regex.
     Regex(String),
-    /// Hints that destructuring should not be exhaustive.
-    ///
-    /// This enum may grow additional variants, so this makes sure clients
-    /// don't count on exhaustive matching. (Otherwise, adding a new variant
-    /// could break existing code.)
-    #[doc(hidden)]
-    __Nonexhaustive,
 }
 
 impl std::error::Error for Error {
@@ -242,7 +236,6 @@ impl ErrorKind {
             }
             ErrorKind::DanglingEscape => "dangling '\\'",
             ErrorKind::Regex(ref err) => err,
-            ErrorKind::__Nonexhaustive => unreachable!(),
         }
     }
 }
@@ -271,7 +264,6 @@ impl std::fmt::Display for ErrorKind {
             ErrorKind::InvalidRange(s, e) => {
                 write!(f, "invalid range; '{}' > '{}'", s, e)
             }
-            ErrorKind::__Nonexhaustive => unreachable!(),
         }
     }
 }
