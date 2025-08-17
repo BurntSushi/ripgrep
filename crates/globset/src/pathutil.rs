@@ -4,21 +4,25 @@ use bstr::{ByteSlice, ByteVec};
 
 /// The final component of the path, if it is a normal file.
 ///
-/// If the path terminates in `.`, `..`, or consists solely of a root of
-/// prefix, file_name will return None.
+/// If the path terminates in `..`, or consists solely of a root of prefix,
+/// file_name will return `None`.
 pub(crate) fn file_name<'a>(path: &Cow<'a, [u8]>) -> Option<Cow<'a, [u8]>> {
-    if path.last_byte().map_or(true, |b| b == b'.') {
+    if path.is_empty() {
         return None;
     }
     let last_slash = path.rfind_byte(b'/').map(|i| i + 1).unwrap_or(0);
-    Some(match *path {
+    let got = match *path {
         Cow::Borrowed(path) => Cow::Borrowed(&path[last_slash..]),
         Cow::Owned(ref path) => {
             let mut path = path.clone();
             path.drain_bytes(..last_slash);
             Cow::Owned(path)
         }
-    })
+    };
+    if got == &b".."[..] {
+        return None;
+    }
+    Some(got)
 }
 
 /// Return a file extension given a path's file name.

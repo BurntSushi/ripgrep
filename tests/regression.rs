@@ -1461,3 +1461,19 @@ rgtest!(r2944_incorrect_bytes_searched, |dir: Dir, mut cmd: TestCommand| {
     let got = cmd.args(&["--stats", "-m2", "foo", "."]).stdout();
     assert!(got.contains("10 bytes searched\n"));
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/2990
+#[cfg(unix)]
+rgtest!(r2990_trip_over_trailing_dot, |dir: Dir, _cmd: TestCommand| {
+    dir.create_dir("asdf");
+    dir.create_dir("asdf.");
+    dir.create("asdf/foo", "");
+    dir.create("asdf./foo", "");
+
+    let got = dir.command().args(&["--files", "-g", "!asdf/"]).stdout();
+    eqnice!("asdf./foo\n", got);
+
+    // This used to ignore the glob given and included `asdf./foo` in output.
+    let got = dir.command().args(&["--files", "-g", "!asdf./"]).stdout();
+    eqnice!("asdf/foo\n", got);
+});

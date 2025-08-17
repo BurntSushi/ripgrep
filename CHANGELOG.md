@@ -23,6 +23,8 @@ Bug fixes:
   Ignore a UTF-8 BOM marker at the start of `.gitignore` (and similar files).
 * [BUG #2944](https://github.com/BurntSushi/ripgrep/pull/2944):
   Fix a bug where the "bytes searched" in `--stats` output could be incorrect.
+* [BUG #2990](https://github.com/BurntSushi/ripgrep/issues/2990):
+  Fix a bug where ripgrep would mishandle globs that ended with a `.`.
 
 Feature enhancements:
 
