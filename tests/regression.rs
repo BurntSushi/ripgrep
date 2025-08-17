@@ -1454,3 +1454,10 @@ rgtest!(r2658_null_data_line_regexp, |dir: Dir, mut cmd: TestCommand| {
     let got = cmd.args(&["--null-data", "--line-regexp", r"bar"]).stdout();
     eqnice!("haystack:bar\0", got);
 });
+
+// See: https://github.com/BurntSushi/ripgrep/pull/2944
+rgtest!(r2944_incorrect_bytes_searched, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("haystack", "foo1\nfoo2\nfoo3\nfoo4\nfoo5\n");
+    let got = cmd.args(&["--stats", "-m2", "foo", "."]).stdout();
+    assert!(got.contains("10 bytes searched\n"));
+});
