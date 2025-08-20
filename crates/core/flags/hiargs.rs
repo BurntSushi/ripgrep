@@ -562,7 +562,16 @@ impl HiArgs {
         wtr: W,
     ) -> Printer<W> {
         let summary_kind = if self.quiet {
-            SummaryKind::Quiet
+            match search_mode {
+                SearchMode::FilesWithMatches
+                | SearchMode::Count
+                | SearchMode::CountMatches
+                | SearchMode::JSON
+                | SearchMode::Standard => SummaryKind::QuietWithMatch,
+                SearchMode::FilesWithoutMatch => {
+                    SummaryKind::QuietWithoutMatch
+                }
+            }
         } else {
             match search_mode {
                 SearchMode::FilesWithMatches => SummaryKind::PathWithMatch,

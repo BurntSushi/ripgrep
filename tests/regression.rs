@@ -1477,3 +1477,44 @@ rgtest!(r2990_trip_over_trailing_dot, |dir: Dir, _cmd: TestCommand| {
     let got = dir.command().args(&["--files", "-g", "!asdf./"]).stdout();
     eqnice!("asdf/foo\n", got);
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3108
+rgtest!(r3108_files_without_match_quiet_exit, |dir: Dir, _: TestCommand| {
+    dir.create("yes-match", "abc");
+    dir.create("non-match", "xyz");
+
+    dir.command().args(&["-q", "abc", "non-match"]).assert_exit_code(1);
+    dir.command().args(&["-q", "abc", "yes-match"]).assert_exit_code(0);
+    dir.command()
+        .args(&["--files-with-matches", "-q", "abc", "non-match"])
+        .assert_exit_code(1);
+    dir.command()
+        .args(&["--files-with-matches", "-q", "abc", "yes-match"])
+        .assert_exit_code(0);
+
+    dir.command()
+        .args(&["--files-without-match", "abc", "non-match"])
+        .assert_exit_code(0);
+    dir.command()
+        .args(&["--files-without-match", "abc", "yes-match"])
+        .assert_exit_code(1);
+
+    let got = dir
+        .command()
+        .args(&["--files-without-match", "abc", "non-match"])
+        .stdout();
+    eqnice!("non-match\n", got);
+
+    dir.command()
+        .args(&["--files-without-match", "-q", "abc", "non-match"])
+        .assert_exit_code(0);
+    dir.command()
+        .args(&["--files-without-match", "-q", "abc", "yes-match"])
+        .assert_exit_code(1);
+
+    let got = dir
+        .command()
+        .args(&["--files-without-match", "-q", "abc", "non-match"])
+        .stdout();
+    eqnice!("", got);
+});

@@ -25,6 +25,8 @@ Bug fixes:
   Fix a bug where the "bytes searched" in `--stats` output could be incorrect.
 * [BUG #2990](https://github.com/BurntSushi/ripgrep/issues/2990):
   Fix a bug where ripgrep would mishandle globs that ended with a `.`.
+* [BUG #3108](https://github.com/BurntSushi/ripgrep/issues/3108):
+  Fix a bug where `-q --files-without-match` inverted the exit code.
 
 Feature enhancements:
 
