@@ -6,6 +6,7 @@ const HYPERLINK_PATTERN_ALIASES: &[(&str, &str)] = &[
     ("default", "file://{host}{path}"),
     #[cfg(windows)]
     ("default", "file://{path}"),
+    ("emacs", "emacs://{path}:{line}:{column}"),
     ("file", "file://{host}{path}"),
     // https://github.com/misaki-web/grepp
     ("grep+", "grep+://{path}:{line}"),
