@@ -579,7 +579,7 @@ web:*.{html,css,js}*
 
 # or
 --glob
-!.git/*
+!.git/
 
 # Set the colors.
 --colors=line:none
