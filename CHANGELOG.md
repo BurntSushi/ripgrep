@@ -27,6 +27,8 @@ Bug fixes:
   Fix a bug where ripgrep would mishandle globs that ended with a `.`.
 * [BUG #3108](https://github.com/BurntSushi/ripgrep/issues/3108):
   Fix a bug where `-q --files-without-match` inverted the exit code.
+* [BUG #3140](https://github.com/BurntSushi/ripgrep/issues/3140):
+  Ensure hyphens in flag names are escaped in the roff text for the man page.
 
 Feature enhancements:
 

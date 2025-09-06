@@ -5576,9 +5576,9 @@ don't need preprocessing. For example, given the following shell script,
     pdftotext "$1" -
 .EE
 .sp
-then it is possible to use \fB\-\-pre\fP \fIpre-pdftotext\fP \fB--pre-glob
-'\fP\fI*.pdf\fP\fB'\fP to make it so ripgrep only executes the
-\fIpre-pdftotext\fP command on files with a \fI.pdf\fP extension.
+then it is possible to use \fB\-\-pre\fP \fIpre-pdftotext\fP
+\fB\-\-pre\-glob\fP '\fI*.pdf\fP' to make it so ripgrep only executes
+the \fIpre-pdftotext\fP command on files with a \fI.pdf\fP extension.
 .sp
 Multiple \flag{pre-glob} flags may be used. Globbing rules match
 \fBgitignore\fP globs. Precede a glob with a \fB!\fP to exclude it.
