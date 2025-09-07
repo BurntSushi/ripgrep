@@ -216,6 +216,8 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["py", "python"], &["*.py", "*.pyi"]),
     (&["qmake"], &["*.pro", "*.pri", "*.prf"]),
     (&["qml"], &["*.qml"]),
+    (&["qrc"], &["*.qrc"]),
+    (&["qui"], &["*.ui"]),
     (&["r"], &["*.R", "*.r", "*.Rmd", "*.Rnw"]),
     (&["racket"], &["*.rkt"]),
     (&["raku"], &[
