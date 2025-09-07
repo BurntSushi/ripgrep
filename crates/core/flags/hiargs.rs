@@ -798,7 +798,7 @@ impl HiArgs {
                 attach_timestamps(haystacks, |md| md.created()).collect()
             }
         };
-        with_timestamps.sort_by(|(_, ref t1), (_, ref t2)| {
+        with_timestamps.sort_by(|(_, t1), (_, t2)| {
             let ordering = match (*t1, *t2) {
                 // Both have metadata, do the obvious thing.
                 (Some(t1), Some(t2)) => t1.cmp(&t2),
@@ -1188,7 +1188,7 @@ fn types(low: &LowArgs) -> anyhow::Result<ignore::types::Types> {
     let mut builder = ignore::types::TypesBuilder::new();
     builder.add_defaults();
     for tychange in low.type_changes.iter() {
-        match tychange {
+        match *tychange {
             TypeChange::Clear { ref name } => {
                 builder.clear(name);
             }

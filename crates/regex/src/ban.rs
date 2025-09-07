@@ -9,7 +9,7 @@ pub(crate) fn check(expr: &Hir, byte: u8) -> Result<(), Error> {
     assert!(byte.is_ascii(), "ban byte must be ASCII");
     let ch = char::from(byte);
     let invalid = || Err(Error::new(ErrorKind::Banned(byte)));
-    match expr.kind() {
+    match *expr.kind() {
         HirKind::Empty => {}
         HirKind::Literal(hir::Literal(ref lit)) => {
             if lit.iter().find(|&&b| b == byte).is_some() {

@@ -12,7 +12,7 @@ readme = "README.md"
 keywords = ["regex", "pattern", "trait"]
 license = "Unlicense OR MIT"
 autotests = false
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 memchr = "2.6.3"

@@ -482,7 +482,7 @@ impl FormatBuilder {
         let err_invalid_scheme = HyperlinkFormatError {
             kind: HyperlinkFormatErrorKind::InvalidScheme,
         };
-        let Some(Part::Text(ref part)) = self.parts.first() else {
+        let Some(Part::Text(part)) = self.parts.first() else {
             return Err(err_invalid_scheme);
         };
         let Some(colon) = part.find_byte(b':') else {
@@ -538,7 +538,7 @@ impl Part {
         values: &Values,
         dest: &mut Vec<u8>,
     ) {
-        match self {
+        match *self {
             Part::Text(ref text) => dest.extend_from_slice(text),
             Part::Host => dest.extend_from_slice(
                 env.host.as_ref().map(|s| s.as_bytes()).unwrap_or(b""),

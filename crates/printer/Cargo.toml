@@ -12,7 +12,7 @@ repository = "https://github.com/BurntSushi/ripgrep/tree/master/crates/printer"
 readme = "README.md"
 keywords = ["grep", "pattern", "print", "printer", "sink"]
 license = "Unlicense OR MIT"
-edition = "2021"
+edition = "2024"
 
 [features]
 default = ["serde"]
