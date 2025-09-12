@@ -206,6 +206,10 @@ struct GlobOptions {
     /// Whether or not an empty case in an alternate will be removed.
     /// e.g., when enabled, `{,a}` will match "" and "a".
     empty_alternates: bool,
+
+    /// Whether or not an unclosed character class will be treated as literals.
+    /// e.g., when enabled, `[abc` will be parsed as the literals "[abc".
+    literal_unclosed_class: bool,
 }
 
 impl GlobOptions {
@@ -215,6 +219,7 @@ impl GlobOptions {
             literal_separator: false,
             backslash_escape: !is_separator('\\'),
             empty_alternates: false,
+            literal_unclosed_class: false,
         }
     }
 }
@@ -631,6 +636,21 @@ impl<'a> GlobBuilder<'a> {
         self.opts.empty_alternates = yes;
         self
     }
+
+    /// Toggle whether unclosed character classes are treated as literal characters.
+    ///
+    /// For example, if this is set then the glob `[abc` will be treated as the
+    /// literal string `[abc` instead of returning an error. This can be useful
+    /// in contexts where patterns may include unmatched bracket characters.
+    ///
+    /// By default, this is false.
+    pub fn literal_unclosed_class(
+        &mut self,
+        yes: bool,
+    ) -> &mut GlobBuilder<'a> {
+        self.opts.literal_unclosed_class = yes;
+        self
+    }
 }
 
 impl Tokens {
@@ -908,6 +928,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_class(&mut self) -> Result<(), Error> {
+        // Save parser state for potential rollback to literal '[' parsing
+        let saved_chars = self.chars.clone();
+        let saved_prev = self.prev;
+        let saved_cur = self.cur;
+
         fn add_to_last_range(
             glob: &str,
             r: &mut (char, char),
@@ -937,9 +962,17 @@ impl<'a> Parser<'a> {
         loop {
             let c = match self.bump() {
                 Some(c) => c,
-                // The only way to successfully break this loop is to observe
-                // a ']'.
-                None => return Err(self.error(ErrorKind::UnclosedClass)),
+                None => {
+                    if self.opts.literal_unclosed_class == true {
+                        self.chars = saved_chars;
+                        self.cur = saved_cur;
+                        self.prev = saved_prev;
+
+                        return self.push_token(Token::Literal('['));
+                    } else {
+                        return Err(self.error(ErrorKind::UnclosedClass));
+                    }
+                }
             };
             match c {
                 ']' => {
@@ -1024,6 +1057,7 @@ mod tests {
         litsep: Option<bool>,
         bsesc: Option<bool>,
         ealtre: Option<bool>,
+        lituncls: Option<bool>,
     }
 
     macro_rules! syntax {
@@ -1066,6 +1100,10 @@ mod tests {
                 if let Some(ealtre) = $options.ealtre {
                     builder.empty_alternates(ealtre);
                 }
+                if let Some(lituncls) = $options.lituncls {
+                    builder.literal_unclosed_class(lituncls);
+                }
+
                 let pat = builder.build().unwrap();
                 assert_eq!(format!("(?-u){}", $re), pat.regex());
             }
@@ -1207,24 +1245,63 @@ mod tests {
     syntaxerr!(err_range1, "[z-a]", ErrorKind::InvalidRange('z', 'a'));
     syntaxerr!(err_range2, "[z--]", ErrorKind::InvalidRange('z', '-'));
 
-    const CASEI: Options =
-        Options { casei: Some(true), litsep: None, bsesc: None, ealtre: None };
-    const SLASHLIT: Options =
-        Options { casei: None, litsep: Some(true), bsesc: None, ealtre: None };
+    const CASEI: Options = Options {
+        casei: Some(true),
+        litsep: None,
+        bsesc: None,
+        ealtre: None,
+        lituncls: None,
+    };
+    const SLASHLIT: Options = Options {
+        casei: None,
+        litsep: Some(true),
+        bsesc: None,
+        ealtre: None,
+        lituncls: None,
+    };
     const NOBSESC: Options = Options {
         casei: None,
         litsep: None,
         bsesc: Some(false),
         ealtre: None,
+        lituncls: None,
     };
-    const BSESC: Options =
-        Options { casei: None, litsep: None, bsesc: Some(true), ealtre: None };
+    const BSESC: Options = Options {
+        casei: None,
+        litsep: None,
+        bsesc: Some(true),
+        ealtre: None,
+        lituncls: None,
+    };
     const EALTRE: Options = Options {
         casei: None,
         litsep: None,
         bsesc: Some(true),
         ealtre: Some(true),
+        lituncls: None,
     };
+    const LITUNCLS: Options = Options {
+        casei: None,
+        litsep: None,
+        bsesc: None,
+        ealtre: None,
+        lituncls: Some(true),
+    };
+
+    toregex!(literal_unclosed_class_single, "[", "^\\[$", &LITUNCLS);
+    toregex!(literal_unclosed_class_empty, "[]", "^\\[\\]$", &LITUNCLS);
+    toregex!(
+        literal_unclosed_class_negated_unclosed,
+        "[!",
+        "^\\[!$",
+        &LITUNCLS
+    );
+    toregex!(
+        literal_unclosed_class_negated_empty,
+        "[!]",
+        "^\\[!\\]$",
+        &LITUNCLS
+    );
 
     toregex!(re_casei, "a", "(?i)^a$", &CASEI);
 
