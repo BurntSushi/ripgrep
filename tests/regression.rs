@@ -1519,3 +1519,28 @@ rgtest!(r3108_files_without_match_quiet_exit, |dir: Dir, _: TestCommand| {
         .stdout();
     eqnice!("", got);
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3127
+rgtest!(
+    r3127_gitignore_allow_unclosed_class,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create_dir(".git");
+        dir.create(".gitignore", "[abc");
+        dir.create("[abc", "");
+        dir.create("test", "");
+
+        let got = cmd.args(&["--files"]).stdout();
+        eqnice!("test\n", got);
+    }
+);
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3127
+rgtest!(
+    r3127_glob_flag_not_allow_unclosed_class,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create("[abc", "");
+        dir.create("test", "");
+
+        cmd.args(&["--files", "-g", "[abc"]).assert_err();
+    }
+);

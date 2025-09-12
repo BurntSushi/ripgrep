@@ -229,6 +229,11 @@ struct GlobOptions {
     /// Whether or not an empty case in an alternate will be removed.
     /// e.g., when enabled, `{,a}` will match "" and "a".
     empty_alternates: bool,
+    /// Whether or not an unclosed character class is allowed. When an unclosed
+    /// character class is found, the opening `[` is treated as a literal `[`.
+    /// When this isn't enabled, an opening `[` without a corresponding `]` is
+    /// treated as an error.
+    allow_unclosed_class: bool,
 }
 
 impl GlobOptions {
@@ -238,6 +243,7 @@ impl GlobOptions {
             literal_separator: false,
             backslash_escape: !is_separator('\\'),
             empty_alternates: false,
+            allow_unclosed_class: false,
         }
     }
 }
@@ -594,6 +600,7 @@ impl<'a> GlobBuilder<'a> {
             chars: self.glob.chars().peekable(),
             prev: None,
             cur: None,
+            found_unclosed_class: false,
             opts: &self.opts,
         };
         p.parse()?;
@@ -655,6 +662,22 @@ impl<'a> GlobBuilder<'a> {
     /// By default this is false.
     pub fn empty_alternates(&mut self, yes: bool) -> &mut GlobBuilder<'a> {
         self.opts.empty_alternates = yes;
+        self
+    }
+
+    /// Toggle whether unclosed character classes are allowed. When allowed,
+    /// a `[` without a matching `]` is treated literally instead of resulting
+    /// in a parse error.
+    ///
+    /// For example, if this is set then the glob `[abc` will be treated as the
+    /// literal string `[abc` instead of returning an error.
+    ///
+    /// By default, this is false. Generally speaking, enabling this leads to
+    /// worse failure modes since the glob parser becomes more permissive. You
+    /// might want to enable this when compatibility (e.g., with POSIX glob
+    /// implementations) is more important than good error messages.
+    pub fn allow_unclosed_class(&mut self, yes: bool) -> &mut GlobBuilder<'a> {
+        self.opts.allow_unclosed_class = yes;
         self
     }
 }
@@ -782,15 +805,29 @@ fn bytes_to_escaped_literal(bs: &[u8]) -> String {
 }
 
 struct Parser<'a> {
+    /// The glob to parse.
     glob: &'a str,
-    // Marks the index in `stack` where the alternation started.
+    /// Marks the index in `stack` where the alternation started.
     alternates_stack: Vec<usize>,
-    // The set of active alternation branches being parsed.
-    // Tokens are added to the end of the last one.
+    /// The set of active alternation branches being parsed.
+    /// Tokens are added to the end of the last one.
     branches: Vec<Tokens>,
+    /// A character iterator over the glob pattern to parse.
     chars: std::iter::Peekable<std::str::Chars<'a>>,
+    /// The previous character seen.
     prev: Option<char>,
+    /// The current character.
     cur: Option<char>,
+    /// Whether we failed to find a closing `]` for a character
+    /// class. This can only be true when `GlobOptions::allow_unclosed_class`
+    /// is enabled. When enabled, it is impossible to ever parse another
+    /// character class with this glob. That's because classes cannot be
+    /// nested *and* the only way this happens is when there is never a `]`.
+    ///
+    /// We track this state so that we don't end up spending quadratic time
+    /// trying to parse something like `[[[[[[[[[[[[[[[[[[[[[[[...`.
+    found_unclosed_class: bool,
+    /// Glob options, which may influence parsing.
     opts: &'a GlobOptions,
 }
 
@@ -804,7 +841,7 @@ impl<'a> Parser<'a> {
             match c {
                 '?' => self.push_token(Token::Any)?,
                 '*' => self.parse_star()?,
-                '[' => self.parse_class()?,
+                '[' if !self.found_unclosed_class => self.parse_class()?,
                 '{' => self.push_alternate()?,
                 '}' => self.pop_alternate()?,
                 ',' => self.parse_comma()?,
@@ -939,6 +976,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_class(&mut self) -> Result<(), Error> {
+        // Save parser state for potential rollback to literal '[' parsing.
+        let saved_chars = self.chars.clone();
+        let saved_prev = self.prev;
+        let saved_cur = self.cur;
+
         fn add_to_last_range(
             glob: &str,
             r: &mut (char, char),
@@ -966,11 +1008,17 @@ impl<'a> Parser<'a> {
         let mut first = true;
         let mut in_range = false;
         loop {
-            let c = match self.bump() {
-                Some(c) => c,
-                // The only way to successfully break this loop is to observe
-                // a ']'.
-                None => return Err(self.error(ErrorKind::UnclosedClass)),
+            let Some(c) = self.bump() else {
+                return if self.opts.allow_unclosed_class == true {
+                    self.chars = saved_chars;
+                    self.cur = saved_cur;
+                    self.prev = saved_prev;
+                    self.found_unclosed_class = true;
+
+                    self.push_token(Token::Literal('['))
+                } else {
+                    Err(self.error(ErrorKind::UnclosedClass))
+                };
             };
             match c {
                 ']' => {
@@ -1055,6 +1103,7 @@ mod tests {
         litsep: Option<bool>,
         bsesc: Option<bool>,
         ealtre: Option<bool>,
+        unccls: Option<bool>,
     }
 
     macro_rules! syntax {
@@ -1097,6 +1146,10 @@ mod tests {
                 if let Some(ealtre) = $options.ealtre {
                     builder.empty_alternates(ealtre);
                 }
+                if let Some(unccls) = $options.unccls {
+                    builder.allow_unclosed_class(unccls);
+                }
+
                 let pat = builder.build().unwrap();
                 assert_eq!(format!("(?-u){}", $re), pat.regex());
             }
@@ -1242,24 +1295,73 @@ mod tests {
     syntaxerr!(err_alt3, "a,b}", ErrorKind::UnopenedAlternates);
     syntaxerr!(err_alt4, "{a,b}}", ErrorKind::UnopenedAlternates);
 
-    const CASEI: Options =
-        Options { casei: Some(true), litsep: None, bsesc: None, ealtre: None };
-    const SLASHLIT: Options =
-        Options { casei: None, litsep: Some(true), bsesc: None, ealtre: None };
+    const CASEI: Options = Options {
+        casei: Some(true),
+        litsep: None,
+        bsesc: None,
+        ealtre: None,
+        unccls: None,
+    };
+    const SLASHLIT: Options = Options {
+        casei: None,
+        litsep: Some(true),
+        bsesc: None,
+        ealtre: None,
+        unccls: None,
+    };
     const NOBSESC: Options = Options {
         casei: None,
         litsep: None,
         bsesc: Some(false),
         ealtre: None,
+        unccls: None,
     };
-    const BSESC: Options =
-        Options { casei: None, litsep: None, bsesc: Some(true), ealtre: None };
+    const BSESC: Options = Options {
+        casei: None,
+        litsep: None,
+        bsesc: Some(true),
+        ealtre: None,
+        unccls: None,
+    };
     const EALTRE: Options = Options {
         casei: None,
         litsep: None,
         bsesc: Some(true),
         ealtre: Some(true),
+        unccls: None,
     };
+    const UNCCLS: Options = Options {
+        casei: None,
+        litsep: None,
+        bsesc: None,
+        ealtre: None,
+        unccls: Some(true),
+    };
+
+    toregex!(allow_unclosed_class_single, r"[", r"^\[$", &UNCCLS);
+    toregex!(allow_unclosed_class_many, r"[abc", r"^\[abc$", &UNCCLS);
+    toregex!(allow_unclosed_class_empty1, r"[]", r"^\[\]$", &UNCCLS);
+    toregex!(allow_unclosed_class_empty2, r"[][", r"^\[\]\[$", &UNCCLS);
+    toregex!(allow_unclosed_class_negated_unclosed, r"[!", r"^\[!$", &UNCCLS);
+    toregex!(allow_unclosed_class_negated_empty, r"[!]", r"^\[!\]$", &UNCCLS);
+    toregex!(
+        allow_unclosed_class_brace1,
+        r"{[abc,xyz}",
+        r"^(?:\[abc|xyz)$",
+        &UNCCLS
+    );
+    toregex!(
+        allow_unclosed_class_brace2,
+        r"{[abc,[xyz}",
+        r"^(?:\[abc|\[xyz)$",
+        &UNCCLS
+    );
+    toregex!(
+        allow_unclosed_class_brace3,
+        r"{[abc],[xyz}",
+        r"^(?:[abc]|\[xyz)$",
+        &UNCCLS
+    );
 
     toregex!(re_empty, "", "^$");
 

@@ -308,6 +308,7 @@ pub struct GitignoreBuilder {
     root: PathBuf,
     globs: Vec<Glob>,
     case_insensitive: bool,
+    allow_unclosed_class: bool,
 }
 
 impl GitignoreBuilder {
@@ -324,6 +325,7 @@ impl GitignoreBuilder {
             root: strip_prefix("./", root).unwrap_or(root).to_path_buf(),
             globs: vec![],
             case_insensitive: false,
+            allow_unclosed_class: true,
         }
     }
 
@@ -511,6 +513,7 @@ impl GitignoreBuilder {
             .literal_separator(true)
             .case_insensitive(self.case_insensitive)
             .backslash_escape(true)
+            .allow_unclosed_class(self.allow_unclosed_class)
             .build()
             .map_err(|err| Error::Glob {
                 glob: Some(glob.original.clone()),
@@ -535,6 +538,26 @@ impl GitignoreBuilder {
         // release.
         self.case_insensitive = yes;
         Ok(self)
+    }
+
+    /// Toggle whether unclosed character classes are allowed. When allowed,
+    /// a `[` without a matching `]` is treated literally instead of resulting
+    /// in a parse error.
+    ///
+    /// For example, if this is set then the glob `[abc` will be treated as the
+    /// literal string `[abc` instead of returning an error.
+    ///
+    /// By default, this is true in order to match established `gitignore`
+    /// semantics. Generally speaking, enabling this leads to worse failure
+    /// modes since the glob parser becomes more permissive. You might want to
+    /// enable this when compatibility (e.g., with POSIX glob implementations)
+    /// is more important than good error messages.
+    pub fn allow_unclosed_class(
+        &mut self,
+        yes: bool,
+    ) -> &mut GitignoreBuilder {
+        self.allow_unclosed_class = yes;
+        self
     }
 }
 
