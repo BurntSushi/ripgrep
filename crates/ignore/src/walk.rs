@@ -543,9 +543,12 @@ impl WalkBuilder {
         let follow_links = self.follow_links;
         let max_depth = self.max_depth;
         let sorter = self.sorter.clone();
+        let ig_root = self.ig_builder.build();
+        let ig = ig_root.clone();
         let its = self
             .paths
             .iter()
+            .filter(move |p| return !ig.matched(p, p.is_dir()).is_ignore())
             .map(move |p| {
                 if p == Path::new("-") {
                     (p.to_path_buf(), None)
@@ -575,7 +578,6 @@ impl WalkBuilder {
             })
             .collect::<Vec<_>>()
             .into_iter();
-        let ig_root = self.ig_builder.build();
         Walk {
             its,
             it: None,
@@ -1232,6 +1234,7 @@ impl WalkParallel {
         {
             let mut visitor = builder.build();
             let mut paths = Vec::new().into_iter();
+            let ig = self.ig_root.clone();
             std::mem::swap(&mut paths, &mut self.paths);
             // Send the initial set of root paths to the pool of workers. Note
             // that we only send directories. For files, we send to them the
@@ -1239,6 +1242,8 @@ impl WalkParallel {
             for path in paths {
                 let (dent, root_device) = if path == Path::new("-") {
                     (DirEntry::new_stdin(), None)
+                } else if ig.matched(&path, path.is_dir()).is_ignore() {
+                    continue;
                 } else {
                     let root_device = if !self.same_file_system {
                         None
