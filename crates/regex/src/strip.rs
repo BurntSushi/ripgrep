@@ -122,7 +122,7 @@ fn strip_from_match_ascii(expr: Hir, byte: u8) -> Result<Hir, Error> {
 mod tests {
     use regex_syntax::Parser;
 
-    use super::{strip_from_match, LineTerminator};
+    use super::{LineTerminator, strip_from_match};
     use crate::error::Error;
 
     fn roundtrip(pattern: &str, byte: u8) -> String {

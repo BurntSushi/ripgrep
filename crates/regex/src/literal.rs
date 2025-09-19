@@ -1,9 +1,8 @@
 use {
     regex_automata::meta::Regex,
     regex_syntax::hir::{
-        self,
+        self, Hir,
         literal::{Literal, Seq},
-        Hir,
     },
 };
 
@@ -223,11 +222,7 @@ impl Extractor {
             // extracting prefixes or suffixes.
             seq = self.cross(seq, self.extract(hir));
         }
-        if let Some(prev) = prev {
-            prev.choose(seq)
-        } else {
-            seq
-        }
+        if let Some(prev) = prev { prev.choose(seq) } else { seq }
     }
 
     /// Extract a sequence from the given alternation.

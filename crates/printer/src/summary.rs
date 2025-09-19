@@ -17,7 +17,7 @@ use crate::{
     counter::CounterWriter,
     hyperlink::{self, HyperlinkConfig},
     stats::Stats,
-    util::{find_iter_at_in_context, PrinterPath},
+    util::{PrinterPath, find_iter_at_in_context},
 };
 
 /// The configuration for the summary printer.

@@ -8,7 +8,7 @@ use {
     },
 };
 
-use crate::{hyperlink::HyperlinkPath, MAX_LOOK_AHEAD};
+use crate::{MAX_LOOK_AHEAD, hyperlink::HyperlinkPath};
 
 /// A type for handling replacements while amortizing allocation.
 pub(crate) struct Replacer<M: Matcher> {

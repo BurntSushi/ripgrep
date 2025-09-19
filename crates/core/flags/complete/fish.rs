@@ -2,11 +2,10 @@
 Provides completions for ripgrep's CLI for the fish shell.
 */
 
-use crate::flags::{defs::FLAGS, CompletionType};
+use crate::flags::{CompletionType, defs::FLAGS};
 
 const TEMPLATE: &'static str = "complete -c rg !SHORT! -l !LONG! -d '!DOC!'";
-const TEMPLATE_NEGATED: &'static str =
-    "complete -c rg -l !NEGATED! -n '__rg_contains_opt !LONG! !SHORT!' -d '!DOC!'\n";
+const TEMPLATE_NEGATED: &'static str = "complete -c rg -l !NEGATED! -n '__rg_contains_opt !LONG! !SHORT!' -d '!DOC!'\n";
 
 /// Generate completions for Fish.
 ///

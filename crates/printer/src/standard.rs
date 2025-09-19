@@ -22,8 +22,8 @@ use crate::{
     hyperlink::{self, HyperlinkConfig},
     stats::Stats,
     util::{
-        find_iter_at_in_context, trim_ascii_prefix, trim_line_terminator,
         DecimalFormatter, PrinterPath, Replacer, Sunk,
+        find_iter_at_in_context, trim_ascii_prefix, trim_line_terminator,
     },
 };
 

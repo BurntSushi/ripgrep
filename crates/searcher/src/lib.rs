@@ -90,8 +90,8 @@ pub use crate::{
         SearcherBuilder,
     },
     sink::{
-        sinks, Sink, SinkContext, SinkContextKind, SinkError, SinkFinish,
-        SinkMatch,
+        Sink, SinkContext, SinkContextKind, SinkError, SinkFinish, SinkMatch,
+        sinks,
     },
 };
 

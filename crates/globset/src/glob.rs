@@ -1,9 +1,9 @@
 use std::fmt::Write;
-use std::path::{is_separator, Path};
+use std::path::{Path, is_separator};
 
 use regex_automata::meta::Regex;
 
-use crate::{new_regex, Candidate, Error, ErrorKind};
+use crate::{Candidate, Error, ErrorKind, new_regex};
 
 /// Describes a matching strategy for a particular pattern.
 ///
@@ -340,11 +340,7 @@ impl Glob {
             let Token::Literal(c) = *t else { return None };
             lit.push(c);
         }
-        if lit.is_empty() {
-            None
-        } else {
-            Some(lit)
-        }
+        if lit.is_empty() { None } else { Some(lit) }
     }
 
     /// Returns an extension if this pattern matches a file path if and only
@@ -385,11 +381,7 @@ impl Glob {
                 _ => return None,
             }
         }
-        if lit.is_empty() {
-            None
-        } else {
-            Some(lit)
-        }
+        if lit.is_empty() { None } else { Some(lit) }
     }
 
     /// This is like `ext`, but returns an extension even if it isn't sufficient
@@ -452,11 +444,7 @@ impl Glob {
         if need_sep {
             lit.push('/');
         }
-        if lit.is_empty() {
-            None
-        } else {
-            Some(lit)
-        }
+        if lit.is_empty() { None } else { Some(lit) }
     }
 
     /// Returns a literal suffix of this pattern if the entire pattern matches
@@ -505,11 +493,7 @@ impl Glob {
             let Token::Literal(c) = *t else { return None };
             lit.push(c);
         }
-        if lit.is_empty() || lit == "/" {
-            None
-        } else {
-            Some((lit, entire))
-        }
+        if lit.is_empty() || lit == "/" { None } else { Some((lit, entire)) }
     }
 
     /// If this pattern only needs to inspect the basename of a file path,

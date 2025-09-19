@@ -4,8 +4,8 @@ use std::io;
 use std::process;
 
 use grep_regex::RegexMatcher;
-use grep_searcher::sinks::UTF8;
 use grep_searcher::Searcher;
+use grep_searcher::sinks::UTF8;
 
 fn main() {
     if let Err(err) = example() {
@@ -18,7 +18,7 @@ fn example() -> Result<(), Box<dyn Error>> {
     let pattern = match env::args().nth(1) {
         Some(pattern) => pattern,
         None => {
-            return Err(From::from(format!("Usage: search-stdin <pattern>")))
+            return Err(From::from(format!("Usage: search-stdin <pattern>")));
         }
     };
     let matcher = RegexMatcher::new(&pattern)?;

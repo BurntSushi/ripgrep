@@ -133,19 +133,19 @@ mod wtr;
 
 pub use crate::{
     decompress::{
-        resolve_binary, DecompressionMatcher, DecompressionMatcherBuilder,
-        DecompressionReader, DecompressionReaderBuilder,
+        DecompressionMatcher, DecompressionMatcherBuilder,
+        DecompressionReader, DecompressionReaderBuilder, resolve_binary,
     },
     escape::{escape, escape_os, unescape, unescape_os},
     hostname::hostname,
-    human::{parse_human_readable_size, ParseSizeError},
+    human::{ParseSizeError, parse_human_readable_size},
     pattern::{
-        pattern_from_bytes, pattern_from_os, patterns_from_path,
-        patterns_from_reader, patterns_from_stdin, InvalidPatternError,
+        InvalidPatternError, pattern_from_bytes, pattern_from_os,
+        patterns_from_path, patterns_from_reader, patterns_from_stdin,
     },
     process::{CommandError, CommandReader, CommandReaderBuilder},
     wtr::{
-        stdout, stdout_buffered_block, stdout_buffered_line, StandardStream,
+        StandardStream, stdout, stdout_buffered_block, stdout_buffered_line,
     },
 };
 

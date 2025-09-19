@@ -7,10 +7,10 @@ use std::{borrow::Cow, collections::BTreeSet, ffi::OsString};
 use anyhow::Context;
 
 use crate::flags::{
+    Flag, FlagValue,
     defs::FLAGS,
     hiargs::HiArgs,
     lowargs::{LoggingMode, LowArgs, SpecialMode},
-    Flag, FlagValue,
 };
 
 /// The result of parsing CLI arguments.

@@ -13,8 +13,8 @@ use {
 
 use crate::{
     line_buffer::{
-        self, alloc_error, BufferAllocation, LineBuffer, LineBufferBuilder,
-        LineBufferReader, DEFAULT_BUFFER_CAPACITY,
+        self, BufferAllocation, DEFAULT_BUFFER_CAPACITY, LineBuffer,
+        LineBufferBuilder, LineBufferReader, alloc_error,
     },
     searcher::glue::{MultiLine, ReadByLine, SliceByLine},
     sink::{Sink, SinkError},

@@ -16,7 +16,7 @@ use std::{ffi::OsString, io};
 pub fn hostname() -> io::Result<OsString> {
     #[cfg(windows)]
     {
-        use winapi_util::sysinfo::{get_computer_name, ComputerNameKind};
+        use winapi_util::sysinfo::{ComputerNameKind, get_computer_name};
         get_computer_name(ComputerNameKind::PhysicalDnsHostname)
     }
     #[cfg(unix)]

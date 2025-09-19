@@ -10,7 +10,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use bstr::{io::BufReadExt, ByteSlice};
+use bstr::{ByteSlice, io::BufReadExt};
 
 /// Return a sequence of arguments derived from ripgrep rc configuration files.
 pub fn args() -> Vec<OsString> {

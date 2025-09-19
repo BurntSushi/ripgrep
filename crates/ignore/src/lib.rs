@@ -477,11 +477,7 @@ impl<T> Match<T> {
 
     /// Return the match if it is not none. Otherwise, return other.
     pub fn or(self, other: Self) -> Self {
-        if self.is_none() {
-            other
-        } else {
-            self
-        }
+        if self.is_none() { other } else { self }
     }
 }
 

@@ -144,7 +144,7 @@ fn is_valid_cap_letter(b: &u8) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{find_cap_ref, interpolate, CaptureRef};
+    use super::{CaptureRef, find_cap_ref, interpolate};
 
     macro_rules! find {
         ($name:ident, $text:expr) => {

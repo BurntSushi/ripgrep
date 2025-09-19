@@ -4,8 +4,8 @@ use std::{
     fs::{self, FileType, Metadata},
     io,
     path::{Path, PathBuf},
-    sync::atomic::{AtomicBool, AtomicUsize, Ordering as AtomicOrdering},
     sync::Arc,
+    sync::atomic::{AtomicBool, AtomicUsize, Ordering as AtomicOrdering},
 };
 
 use {
@@ -15,11 +15,11 @@ use {
 };
 
 use crate::{
+    Error, PartialErrorBuilder,
     dir::{Ignore, IgnoreBuilder},
     gitignore::GitignoreBuilder,
     overrides::Override,
     types::Types,
-    Error, PartialErrorBuilder,
 };
 
 /// A directory entry with a possible error attached.
@@ -1894,7 +1894,7 @@ fn device_num<P: AsRef<Path>>(path: P) -> io::Result<u64> {
 
 #[cfg(windows)]
 fn device_num<P: AsRef<Path>>(path: P) -> io::Result<u64> {
-    use winapi_util::{file, Handle};
+    use winapi_util::{Handle, file};
 
     let h = Handle::from_path_any(path)?;
     file::information(h).map(|info| info.volume_serial_number())
@@ -1940,11 +1940,7 @@ mod tests {
     }
 
     fn normal_path(unix: &str) -> String {
-        if cfg!(windows) {
-            unix.replace("\\", "/")
-        } else {
-            unix.to_string()
-        }
+        if cfg!(windows) { unix.replace("\\", "/") } else { unix.to_string() }
     }
 
     fn walk_collect(prefix: &Path, builder: &WalkBuilder) -> Vec<String> {

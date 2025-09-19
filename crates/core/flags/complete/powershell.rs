@@ -34,8 +34,7 @@ Register-ArgumentCompleter -Native -CommandName 'rg' -ScriptBlock {
 }
 ";
 
-const TEMPLATE_FLAG: &'static str =
-    "[CompletionResult]::new('!DASH_NAME!', '!NAME!', [CompletionResultType]::ParameterName, '!DOC!')";
+const TEMPLATE_FLAG: &'static str = "[CompletionResult]::new('!DASH_NAME!', '!NAME!', [CompletionResultType]::ParameterName, '!DOC!')";
 
 /// Generate completions for PowerShell.
 ///

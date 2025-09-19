@@ -1,5 +1,5 @@
 use crate::hay::{SHERLOCK, SHERLOCK_CRLF};
-use crate::util::{sort_lines, Dir, TestCommand};
+use crate::util::{Dir, TestCommand, sort_lines};
 
 // See: https://github.com/BurntSushi/ripgrep/issues/1
 rgtest!(f1_sjis, |dir: Dir, mut cmd: TestCommand| {

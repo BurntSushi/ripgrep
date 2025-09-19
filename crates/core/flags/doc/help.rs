@@ -8,7 +8,7 @@ is used when the `--help` flag is given.
 
 use std::{collections::BTreeMap, fmt::Write};
 
-use crate::flags::{defs::FLAGS, doc::version, Category, Flag};
+use crate::flags::{Category, Flag, defs::FLAGS, doc::version};
 
 const TEMPLATE_SHORT: &'static str = include_str!("template.short.help");
 const TEMPLATE_LONG: &'static str = include_str!("template.long.help");

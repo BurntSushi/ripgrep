@@ -891,7 +891,7 @@ mod tests {
     use std::{io::Write, path::Path};
 
     use crate::{
-        dir::IgnoreBuilder, gitignore::Gitignore, tests::TempDir, Error,
+        Error, dir::IgnoreBuilder, gitignore::Gitignore, tests::TempDir,
     };
 
     fn wfile<P: AsRef<Path>>(path: P, contents: &str) {

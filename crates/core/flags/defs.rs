@@ -22,13 +22,13 @@ use std::{path::PathBuf, sync::LazyLock};
 use {anyhow::Context as AnyhowContext, bstr::ByteVec};
 
 use crate::flags::{
+    Category, Flag, FlagValue,
     lowargs::{
         BinaryMode, BoundaryMode, BufferMode, CaseMode, ColorChoice,
         ContextMode, EncodingMode, EngineChoice, GenerateMode, LoggingMode,
         LowArgs, MmapMode, Mode, PatternSource, SearchMode, SortMode,
         SortModeKind, SpecialMode, TypeChange,
     },
-    Category, Flag, FlagValue,
 };
 
 #[cfg(test)]

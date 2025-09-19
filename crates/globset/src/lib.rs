@@ -120,11 +120,11 @@ use std::{
 
 use {
     aho_corasick::AhoCorasick,
-    bstr::{ByteSlice, ByteVec, B},
+    bstr::{B, ByteSlice, ByteVec},
     regex_automata::{
+        PatternSet,
         meta::Regex,
         util::pool::{Pool, PoolGuard},
-        PatternSet,
     },
 };
 
@@ -634,11 +634,7 @@ impl<'a> Candidate<'a> {
     }
 
     fn path_prefix(&self, max: usize) -> &[u8] {
-        if self.path.len() <= max {
-            &*self.path
-        } else {
-            &self.path[..max]
-        }
+        if self.path.len() <= max { &*self.path } else { &self.path[..max] }
     }
 
     fn path_suffix(&self, max: usize) -> &[u8] {

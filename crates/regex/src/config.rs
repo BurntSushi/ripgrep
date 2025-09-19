@@ -341,11 +341,7 @@ impl ConfiguredHIR {
 
     /// Returns the "end line" anchor for this configuration.
     fn line_anchor_end(&self) -> hir::Look {
-        if self.config.crlf {
-            hir::Look::EndCRLF
-        } else {
-            hir::Look::EndLF
-        }
+        if self.config.crlf { hir::Look::EndCRLF } else { hir::Look::EndLF }
     }
 }
 

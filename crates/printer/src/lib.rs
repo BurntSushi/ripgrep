@@ -61,10 +61,10 @@ assert_eq!(output, expected);
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 pub use crate::{
-    color::{default_color_specs, ColorError, ColorSpecs, UserColorSpec},
+    color::{ColorError, ColorSpecs, UserColorSpec, default_color_specs},
     hyperlink::{
-        hyperlink_aliases, HyperlinkAlias, HyperlinkConfig,
-        HyperlinkEnvironment, HyperlinkFormat, HyperlinkFormatError,
+        HyperlinkAlias, HyperlinkConfig, HyperlinkEnvironment,
+        HyperlinkFormat, HyperlinkFormatError, hyperlink_aliases,
     },
     path::{PathPrinter, PathPrinterBuilder},
     standard::{Standard, StandardBuilder, StandardSink},
@@ -73,7 +73,7 @@ pub use crate::{
 };
 
 #[cfg(feature = "serde")]
-pub use crate::json::{JSONBuilder, JSONSink, JSON};
+pub use crate::json::{JSON, JSONBuilder, JSONSink};
 
 // The maximum number of bytes to execute a search to account for look-ahead.
 //

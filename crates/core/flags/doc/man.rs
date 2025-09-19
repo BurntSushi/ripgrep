@@ -4,7 +4,7 @@ Provides routines for generating ripgrep's man page in `roff` format.
 
 use std::{collections::BTreeMap, fmt::Write};
 
-use crate::flags::{defs::FLAGS, doc::version, Flag};
+use crate::flags::{Flag, defs::FLAGS, doc::version};
 
 const TEMPLATE: &'static str = include_str!("template.rg.1");
 

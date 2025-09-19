@@ -20,8 +20,8 @@ use {
 };
 
 use crate::{
-    pathutil::{is_file_name, strip_prefix},
     Error, Match, PartialErrorBuilder,
+    pathutil::{is_file_name, strip_prefix},
 };
 
 /// Glob represents a single glob in a gitignore file.

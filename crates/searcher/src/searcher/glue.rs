@@ -1,9 +1,9 @@
 use grep_matcher::Matcher;
 
 use crate::{
-    line_buffer::{LineBufferReader, DEFAULT_BUFFER_CAPACITY},
+    line_buffer::{DEFAULT_BUFFER_CAPACITY, LineBufferReader},
     lines::{self, LineStep},
-    searcher::{core::Core, Config, Range, Searcher},
+    searcher::{Config, Range, Searcher, core::Core},
     sink::{Sink, SinkError},
 };
 

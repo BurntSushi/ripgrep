@@ -4,8 +4,8 @@ use {
         NoError,
     },
     regex_automata::{
-        meta::Regex, util::captures::Captures as AutomataCaptures, Input,
-        PatternID,
+        Input, PatternID, meta::Regex,
+        util::captures::Captures as AutomataCaptures,
     },
 };
 
@@ -587,10 +587,12 @@ mod tests {
     // and the regex could not be modified to remove a line terminator.
     #[test]
     fn line_terminator_error() {
-        assert!(RegexMatcherBuilder::new()
-            .line_terminator(Some(b'\n'))
-            .build(r"a\nz")
-            .is_err())
+        assert!(
+            RegexMatcherBuilder::new()
+                .line_terminator(Some(b'\n'))
+                .build(r"a\nz")
+                .is_err()
+        )
     }
 
     // Test that enabling CRLF permits `$` to match at the end of a line.

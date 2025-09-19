@@ -14,8 +14,8 @@ use {
 };
 
 use crate::{
-    counter::CounterWriter, jsont, stats::Stats,
-    util::find_iter_at_in_context, util::Replacer,
+    counter::CounterWriter, jsont, stats::Stats, util::Replacer,
+    util::find_iter_at_in_context,
 };
 
 /// The configuration for the JSON printer.
@@ -969,7 +969,7 @@ mod tests {
     use grep_regex::{RegexMatcher, RegexMatcherBuilder};
     use grep_searcher::SearcherBuilder;
 
-    use super::{JSONBuilder, JSON};
+    use super::{JSON, JSONBuilder};
 
     const SHERLOCK: &'static [u8] = b"\
 For the Doctor Watsons of this world, as opposed to the Sherlock

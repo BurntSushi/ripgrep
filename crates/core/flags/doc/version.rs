@@ -169,9 +169,5 @@ fn features() -> Vec<String> {
 
 /// Returns `+` when `enabled` is `true` and `-` otherwise.
 fn sign(enabled: bool) -> &'static str {
-    if enabled {
-        "+"
-    } else {
-        "-"
-    }
+    if enabled { "+" } else { "-" }
 }

@@ -579,10 +579,10 @@ impl HiArgs {
                 SearchMode::Count => SummaryKind::Count,
                 SearchMode::CountMatches => SummaryKind::CountMatches,
                 SearchMode::JSON => {
-                    return Printer::JSON(self.printer_json(wtr))
+                    return Printer::JSON(self.printer_json(wtr));
                 }
                 SearchMode::Standard => {
-                    return Printer::Standard(self.printer_standard(wtr))
+                    return Printer::Standard(self.printer_standard(wtr));
                 }
             }
         };
@@ -809,11 +809,7 @@ impl HiArgs {
                 // When both error, we can't distinguish, so treat as equal.
                 (None, None) => Ordering::Equal,
             };
-            if sort.reverse {
-                ordering.reverse()
-            } else {
-                ordering
-            }
+            if sort.reverse { ordering.reverse() } else { ordering }
         });
         Box::new(with_timestamps.into_iter().map(|(s, _)| s))
     }
