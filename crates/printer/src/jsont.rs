@@ -190,7 +190,7 @@ impl<'a> Data<'a> {
     }
 
     #[cfg(not(unix))]
-    fn from_path(path: &Path) -> Data {
+    fn from_path(path: &Path) -> Data<'_> {
         // Using lossy conversion means some paths won't round trip precisely,
         // but it's not clear what we should actually do. Serde rejects
         // non-UTF-8 paths, and OsStr's are serialized as a sequence of UTF-16

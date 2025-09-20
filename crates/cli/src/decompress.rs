@@ -177,7 +177,7 @@ impl DecompressionMatcher {
     /// If there are multiple possible commands matching the given path, then
     /// the command added last takes precedence.
     pub fn command<P: AsRef<Path>>(&self, path: P) -> Option<Command> {
-        for i in self.globs.matches(path).into_iter().rev() {
+        if let Some(i) = self.globs.matches(path).into_iter().next_back() {
             let decomp_cmd = &self.commands[i];
             let mut cmd = Command::new(&decomp_cmd.bin);
             cmd.args(&decomp_cmd.args);
