@@ -1544,3 +1544,44 @@ rgtest!(
         cmd.args(&["--files", "-g", "[abc"]).assert_err();
     }
 );
+
+rgtest!(
+    r3139_multiline_lookahead_files_with_matches,
+    |dir: Dir, _cmd: TestCommand| {
+        // Only PCRE2 supports look-around.
+        if !dir.is_pcre2() {
+            return;
+        }
+        dir.create(
+            "test",
+            "\
+Start \n   \n\n   \
+XXXXXXXXXXXXXXXXXXXXXXXXXX\n   \
+YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY\n   \
+\n      thing2 \n\n",
+        );
+
+        let got = dir
+            .command()
+            .args(&[
+                "--multiline",
+                "--pcre2",
+                r"(?s)Start(?=.*thing2)",
+                "test",
+            ])
+            .stdout();
+        eqnice!("Start \n", got);
+
+        let got = dir
+            .command()
+            .args(&[
+                "--multiline",
+                "--pcre2",
+                "--files-with-matches",
+                r"(?s)Start(?=.*thing2)",
+                "test",
+            ])
+            .stdout();
+        eqnice!("test\n", got);
+    }
+);

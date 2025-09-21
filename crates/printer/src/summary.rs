@@ -683,7 +683,11 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for SummarySink<'p, 's, M, W> {
                     true
                 },
             )?;
-            count
+            // Because of `find_iter_at_in_context` being a giant
+            // kludge internally, it's possible that it won't find
+            // *any* matches even though we clearly know that there is
+            // at least one. So make sure we record at least one here.
+            count.max(1)
         };
         if is_multi_line {
             self.match_count += sink_match_count;
