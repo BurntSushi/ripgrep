@@ -1276,6 +1276,14 @@ is a match. The \flag{with-filename} flag can be used to force printing the
 file path in this case. If you need a count to be printed regardless of whether
 there is a match, then use \flag{include-zero}.
 .sp
+Note that it is possible for this flag to have results inconsistent with
+the output of \flag{files-with-matches}. Notably, by default, ripgrep tries
+to avoid searching files with binary data. With this flag, ripgrep needs to
+search the entire content of files, which may include binary data. But with
+\flag{files-with-matches}, ripgrep can stop as soon as a match is observed,
+which may come well before any binary data. To avoid this inconsistency without
+disabling binary detection, use the \flag{binary} flag.
+.sp
 This overrides the \flag{count-matches} flag. Note that when \flag{count}
 is combined with \flag{only-matching}, then ripgrep behaves as if
 \flag{count-matches} was given.
@@ -2183,6 +2191,14 @@ impl Flag for FilesWithMatches {
     fn doc_long(&self) -> &'static str {
         r"
 Print only the paths with at least one match and suppress match contents.
+.sp
+Note that it is possible for this flag to have results inconsistent with the
+output of \flag{count}. Notably, by default, ripgrep tries to avoid searching
+files with binary data. With this flag, ripgrep might stop searching before
+the binary data is observed. But with \flag{count}, ripgrep has to search the
+entire contents to determine the match count, which means it might see binary
+data that causes it to skip searching that file. To avoid this inconsistency
+without disabling binary detection, use the \flag{binary} flag.
 .sp
 This overrides \flag{files-without-match}.
 "

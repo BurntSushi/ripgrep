@@ -31,6 +31,8 @@ Bug fixes:
   Preserve line terminators when using `-r/--replace` flag.
 * [BUG #3108](https://github.com/BurntSushi/ripgrep/issues/3108):
   Fix a bug where `-q --files-without-match` inverted the exit code.
+* [BUG #3131](https://github.com/BurntSushi/ripgrep/issues/3131):
+  Document inconsistency between `-c/--count` and `--files-with-matches`.
 * [BUG #3140](https://github.com/BurntSushi/ripgrep/issues/3140):
   Ensure hyphens in flag names are escaped in the roff text for the man page.
 * [BUG #3155](https://github.com/BurntSushi/ripgrep/issues/3155):

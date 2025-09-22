@@ -429,3 +429,40 @@ hay:1867:\"And yet you say he is not a medical student?\"
 ";
     eqnice!(expected, cmd.stdout());
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3131
+rgtest!(
+    matching_files_inconsistent_with_count,
+    |dir: Dir, _cmd: TestCommand| {
+        let mut file1 = String::new();
+        file1.push_str("cat here\n");
+        for _ in 0..150_000 {
+            file1.push_str("padding line\n");
+        }
+        file1.push_str("\x00");
+
+        dir.create("file1.txt", &file1);
+        dir.create("file2.txt", "cat here");
+
+        let got = dir.command().args(&["--sort=path", "-l", "cat"]).stdout();
+        eqnice!("file1.txt\nfile2.txt\n", got);
+
+        // This is the inconsistent result that can't really be avoided without
+        // either making `-l/--files-with-matches` much slower or changing
+        // what "binary filtering" means.
+        let got = dir.command().args(&["--sort=path", "-c", "cat"]).stdout();
+        eqnice!("file2.txt:1\n", got);
+
+        let got = dir
+            .command()
+            .args(&["--sort=path", "-c", "cat", "--binary"])
+            .stdout();
+        eqnice!("file1.txt:1\nfile2.txt:1\n", got);
+
+        let got = dir
+            .command()
+            .args(&["--sort=path", "-c", "cat", "--text"])
+            .stdout();
+        eqnice!("file1.txt:1\nfile2.txt:1\n", got);
+    }
+);

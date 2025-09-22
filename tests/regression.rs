@@ -1545,6 +1545,7 @@ rgtest!(
     }
 );
 
+// See: https://github.com/BurntSushi/ripgrep/issues/3139
 rgtest!(
     r3139_multiline_lookahead_files_with_matches,
     |dir: Dir, _cmd: TestCommand| {
