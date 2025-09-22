@@ -33,6 +33,8 @@ Bug fixes:
   Fix a bug where `-q --files-without-match` inverted the exit code.
 * [BUG #3140](https://github.com/BurntSushi/ripgrep/issues/3140):
   Ensure hyphens in flag names are escaped in the roff text for the man page.
+* [BUG #3155](https://github.com/BurntSushi/ripgrep/issues/3155):
+  Statically compile PCRE2 into macOS release artifacts on `aarch64`.
 
 Feature enhancements:
 

@@ -41,8 +41,6 @@
   > tool that recursively searches the current directory for a regex pattern.
   > By default, ripgrep will respect gitignore rules and automatically skip
   > hidden files/directories and binary files.
-* Run `git checkout {VERSION} && ci/build-and-publish-m2 {VERSION}` on a macOS
-  system with Apple silicon.
 * Run `cargo publish`.
 * Run `ci/sha256-releases {VERSION} >> pkg/brew/ripgrep-bin.rb`. Then edit
   `pkg/brew/ripgrep-bin.rb` to update the version number and sha256 hashes.
