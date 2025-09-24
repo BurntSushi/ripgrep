@@ -302,15 +302,30 @@ and **openSUSE Leap** since 15.1.
 $ sudo zypper install ripgrep
 ```
 
-If you're a **RHEL/CentOS/Rocky Linux 9** user, you can install ripgrep from
-the [EPEL](https://docs.fedoraproject.org/en-US/epel/) repository:
+If you're a **CentOS Stream 10** user, you can install ripgrep from the
+[EPEL](https://docs.fedoraproject.org/en-US/epel/getting-started/) repository:
 
 ```
 $ sudo dnf config-manager --set-enabled crb
-$ sudo dnf install -y \
-    https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
-    https://dl.fedoraproject.org/pub/epel/epel-next-release-latest-9.noarch.rpm
-$ sudo dnf install -y ripgrep
+$ sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm
+$ sudo dnf install ripgrep
+```
+
+If you're a **Red Hat 10** user, you can install ripgrep from the
+[EPEL](https://docs.fedoraproject.org/en-US/epel/getting-started/) repository:
+
+```
+$ sudo subscription-manager repos --enable codeready-builder-for-rhel-10-$(arch)-rpms
+$ sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm
+$ sudo dnf install ripgrep
+```
+
+If you're a **Rocky Linux 10** user, you can install ripgrep from the
+[EPEL](https://docs.fedoraproject.org/en-US/epel/getting-started/) repository:
+
+```
+$ sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm
+$ sudo dnf install ripgrep
 ```
 
 If you're a **Nix** user, you can install ripgrep from
