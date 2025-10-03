@@ -8,10 +8,7 @@ the `git` command line tool.
 */
 
 use std::{
-    fs::File,
-    io::{BufRead, BufReader, Read},
-    path::{Path, PathBuf},
-    sync::Arc,
+    env, fs::File, io::{BufRead, BufReader, Read}, path::{Path, PathBuf}, sync::Arc
 };
 
 use {
@@ -250,7 +247,13 @@ impl Gitignore {
         if self.is_empty() {
             return Match::None;
         }
-        let path = path.as_ref();
+                let path_buf: PathBuf = if path.as_ref().to_str().unwrap().is_empty() 
+        { 
+            env::current_dir().unwrap() 
+        } else { 
+            path.as_ref().to_path_buf() 
+        }; 
+        let path = path_buf.as_path();
         let mut matches = self.matches.as_ref().unwrap().get();
         let candidate = Candidate::new(path);
         self.set.matches_candidate_into(&candidate, &mut *matches);
