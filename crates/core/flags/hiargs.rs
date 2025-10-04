@@ -596,7 +596,6 @@ impl HiArgs {
     ) -> grep::printer::JSON<W> {
         grep::printer::JSONBuilder::new()
             .pretty(false)
-            .max_matches(self.max_count)
             .always_begin_end(false)
             .replacement(self.replace.clone().map(|r| r.into()))
             .build(wtr)
@@ -656,7 +655,6 @@ impl HiArgs {
             .exclude_zero(!self.include_zero)
             .hyperlink(self.hyperlink_config.clone())
             .kind(kind)
-            .max_matches(self.max_count)
             .path(self.with_filename)
             .path_terminator(self.path_terminator.clone())
             .separator_field(b":".to_vec())

@@ -32,7 +32,6 @@ struct Config {
     hyperlink: HyperlinkConfig,
     stats: bool,
     path: bool,
-    max_matches: Option<u64>,
     exclude_zero: bool,
     separator_field: Arc<Vec<u8>>,
     separator_path: Option<u8>,
@@ -47,7 +46,6 @@ impl Default for Config {
             hyperlink: HyperlinkConfig::default(),
             stats: false,
             path: true,
-            max_matches: None,
             exclude_zero: true,
             separator_field: Arc::new(b":".to_vec()),
             separator_path: None,
@@ -279,18 +277,6 @@ impl SummaryBuilder {
     /// This is enabled by default.
     pub fn path(&mut self, yes: bool) -> &mut SummaryBuilder {
         self.config.path = yes;
-        self
-    }
-
-    /// Set the maximum amount of matches that are printed.
-    ///
-    /// If multi line search is enabled and a match spans multiple lines, then
-    /// that match is counted exactly once for the purposes of enforcing this
-    /// limit, regardless of how many lines it spans.
-    ///
-    /// This is disabled by default.
-    pub fn max_matches(&mut self, limit: Option<u64>) -> &mut SummaryBuilder {
-        self.config.max_matches = limit;
         self
     }
 
@@ -555,19 +541,6 @@ impl<'p, 's, M: Matcher, W: WriteColor> SummarySink<'p, 's, M, W> {
         searcher.multi_line_with_matcher(&self.matcher)
     }
 
-    /// Returns true if this printer should quit.
-    ///
-    /// This implements the logic for handling quitting after seeing a certain
-    /// amount of matches. In most cases, the logic is simple, but we must
-    /// permit all "after" contextual lines to print after reaching the limit.
-    fn should_quit(&self) -> bool {
-        let limit = match self.summary.config.max_matches {
-            None => return false,
-            Some(limit) => limit,
-        };
-        self.match_count >= limit
-    }
-
     /// If this printer has a file path associated with it, then this will
     /// write that path to the underlying writer followed by a line terminator.
     /// (If a path terminator is set, then that is used instead of the line
@@ -700,7 +673,7 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for SummarySink<'p, 's, M, W> {
         } else if self.summary.config.kind.quit_early() {
             return Ok(false);
         }
-        Ok(!self.should_quit())
+        Ok(true)
     }
 
     fn binary_data(
@@ -731,10 +704,6 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for SummarySink<'p, 's, M, W> {
         self.start_time = Instant::now();
         self.match_count = 0;
         self.binary_byte_offset = None;
-        if self.summary.config.max_matches == Some(0) {
-            return Ok(false);
-        }
-
         Ok(true)
     }
 
@@ -1027,9 +996,9 @@ and exhibited clearly, with a label attached.
         let matcher = RegexMatcher::new(r"Watson").unwrap();
         let mut printer = SummaryBuilder::new()
             .kind(SummaryKind::Count)
-            .max_matches(Some(1))
             .build_no_color(vec![]);
         SearcherBuilder::new()
+            .max_matches(Some(1))
             .build()
             .search_reader(&matcher, SHERLOCK, printer.sink(&matcher))
             .unwrap();

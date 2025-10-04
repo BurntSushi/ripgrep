@@ -7,9 +7,7 @@ use std::{
 
 use {
     grep_matcher::{Match, Matcher},
-    grep_searcher::{
-        Searcher, Sink, SinkContext, SinkContextKind, SinkFinish, SinkMatch,
-    },
+    grep_searcher::{Searcher, Sink, SinkContext, SinkFinish, SinkMatch},
     serde_json as json,
 };
 
@@ -26,7 +24,6 @@ use crate::{
 #[derive(Debug, Clone)]
 struct Config {
     pretty: bool,
-    max_matches: Option<u64>,
     always_begin_end: bool,
     replacement: Arc<Option<Vec<u8>>>,
 }
@@ -35,7 +32,6 @@ impl Default for Config {
     fn default() -> Config {
         Config {
             pretty: false,
-            max_matches: None,
             always_begin_end: false,
             replacement: Arc::new(None),
         }
@@ -82,16 +78,6 @@ impl JSONBuilder {
     /// This is disabled by default.
     pub fn pretty(&mut self, yes: bool) -> &mut JSONBuilder {
         self.config.pretty = yes;
-        self
-    }
-
-    /// Set the maximum amount of matches that are printed.
-    ///
-    /// If multi line search is enabled and a match spans multiple lines, then
-    /// that match is counted exactly once for the purposes of enforcing this
-    /// limit, regardless of how many lines it spans.
-    pub fn max_matches(&mut self, limit: Option<u64>) -> &mut JSONBuilder {
-        self.config.max_matches = limit;
         self
     }
 
@@ -526,7 +512,6 @@ impl<W: io::Write> JSON<W> {
             path: None,
             start_time: Instant::now(),
             match_count: 0,
-            after_context_remaining: 0,
             binary_byte_offset: None,
             begin_printed: false,
             stats: Stats::new(),
@@ -553,7 +538,6 @@ impl<W: io::Write> JSON<W> {
             path: Some(path.as_ref()),
             start_time: Instant::now(),
             match_count: 0,
-            after_context_remaining: 0,
             binary_byte_offset: None,
             begin_printed: false,
             stats: Stats::new(),
@@ -616,7 +600,6 @@ pub struct JSONSink<'p, 's, M: Matcher, W> {
     path: Option<&'p Path>,
     start_time: Instant,
     match_count: u64,
-    after_context_remaining: u64,
     binary_byte_offset: Option<u64>,
     begin_printed: bool,
     stats: Stats,
@@ -721,32 +704,6 @@ impl<'p, 's, M: Matcher, W: io::Write> JSONSink<'p, 's, M, W> {
         Ok(())
     }
 
-    /// Returns true if this printer should quit.
-    ///
-    /// This implements the logic for handling quitting after seeing a certain
-    /// amount of matches. In most cases, the logic is simple, but we must
-    /// permit all "after" contextual lines to print after reaching the limit.
-    fn should_quit(&self) -> bool {
-        let limit = match self.json.config.max_matches {
-            None => return false,
-            Some(limit) => limit,
-        };
-        if self.match_count < limit {
-            return false;
-        }
-        self.after_context_remaining == 0
-    }
-
-    /// Returns whether the current match count exceeds the configured limit.
-    /// If there is no limit, then this always returns false.
-    fn match_more_than_limit(&self) -> bool {
-        let limit = match self.json.config.max_matches {
-            None => return false,
-            Some(limit) => limit,
-        };
-        self.match_count > limit
-    }
-
     /// Write the "begin" message.
     fn write_begin_message(&mut self) -> io::Result<()> {
         if self.begin_printed {
@@ -767,22 +724,8 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
         searcher: &Searcher,
         mat: &SinkMatch<'_>,
     ) -> Result<bool, io::Error> {
-        self.write_begin_message()?;
-
         self.match_count += 1;
-        // When we've exceeded our match count, then the remaining context
-        // lines should not be reset, but instead, decremented. This avoids a
-        // bug where we display more matches than a configured limit. The main
-        // idea here is that 'matched' might be called again while printing
-        // an after-context line. In that case, we should treat this as a
-        // contextual line rather than a matching line for the purposes of
-        // termination.
-        if self.match_more_than_limit() {
-            self.after_context_remaining =
-                self.after_context_remaining.saturating_sub(1);
-        } else {
-            self.after_context_remaining = searcher.after_context() as u64;
-        }
+        self.write_begin_message()?;
 
         self.record_matches(
             searcher,
@@ -806,7 +749,7 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
             submatches: submatches.as_slice(),
         });
         self.json.write_message(&msg)?;
-        Ok(!self.should_quit())
+        Ok(true)
     }
 
     fn context(
@@ -817,10 +760,6 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
         self.write_begin_message()?;
         self.json.matches.clear();
 
-        if ctx.kind() == &SinkContextKind::After {
-            self.after_context_remaining =
-                self.after_context_remaining.saturating_sub(1);
-        }
         let submatches = if searcher.invert_match() {
             self.record_matches(searcher, ctx.bytes(), 0..ctx.bytes().len())?;
             self.replace(searcher, ctx.bytes(), 0..ctx.bytes().len())?;
@@ -840,7 +779,7 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
             submatches: submatches.as_slice(),
         });
         self.json.write_message(&msg)?;
-        Ok(!self.should_quit())
+        Ok(true)
     }
 
     fn binary_data(
@@ -864,11 +803,7 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
         self.json.wtr.reset_count();
         self.start_time = Instant::now();
         self.match_count = 0;
-        self.after_context_remaining = 0;
         self.binary_byte_offset = None;
-        if self.json.config.max_matches == Some(0) {
-            return Ok(false);
-        }
 
         if !self.json.config.always_begin_end {
             return Ok(true);
@@ -1015,9 +950,9 @@ and exhibited clearly, with a label attached.\
     #[test]
     fn max_matches() {
         let matcher = RegexMatcher::new(r"Watson").unwrap();
-        let mut printer =
-            JSONBuilder::new().max_matches(Some(1)).build(vec![]);
+        let mut printer = JSONBuilder::new().build(vec![]);
         SearcherBuilder::new()
+            .max_matches(Some(1))
             .build()
             .search_reader(&matcher, SHERLOCK, printer.sink(&matcher))
             .unwrap();
@@ -1042,10 +977,10 @@ d
 e
 ";
         let matcher = RegexMatcher::new(r"d").unwrap();
-        let mut printer =
-            JSONBuilder::new().max_matches(Some(1)).build(vec![]);
+        let mut printer = JSONBuilder::new().build(vec![]);
         SearcherBuilder::new()
             .after_context(2)
+            .max_matches(Some(1))
             .build()
             .search_reader(
                 &matcher,
