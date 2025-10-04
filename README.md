@@ -385,6 +385,17 @@ If you're an **ALT** user, you can install ripgrep from the
 $ sudo apt-get install ripgrep
 ```
 
+If you're a **RISC-V Linux** user, precompiled binaries are available for
+`riscv64gc-unknown-linux-gnu` in the
+[releases](https://github.com/BurntSushi/ripgrep/releases). Download and
+extract the tarball, then move the binary to your PATH:
+
+```
+$ curl -LO https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-riscv64gc-unknown-linux-gnu.tar.gz
+$ tar xzf ripgrep-14.1.1-riscv64gc-unknown-linux-gnu.tar.gz
+$ sudo mv ripgrep-14.1.1-riscv64gc-unknown-linux-gnu/rg /usr/local/bin/
+```
+
 If you're a **FreeBSD** user, then you can install ripgrep from the
 [official ports](https://www.freshports.org/textproc/ripgrep/):
 
