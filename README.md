@@ -212,7 +212,8 @@ Summarizing, ripgrep is fast because:
 
 Check out this interactive walkthrough of the `ripgrep` codebase on CodeCanvas [here](https://www.code-canvas.com/?session=unauthenticatedGithub&repo=ripgrep&owner=BurntSushi&branch=master&OnboardingTutorial=true).
 
-<img width="1916" alt="CodeCanvas Screenshot" src="https://codecanvas-media-public.s3.amazonaws.com/images/codecanvas-readme-screenshot.png" />
+<img width="2860" height="1338" alt="image" src="https://github.com/user-attachments/assets/c05f25ac-0d68-4bf8-a17e-8ccc56386230" />
+
 
 
 ### Feature comparison
