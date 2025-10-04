@@ -8,7 +8,7 @@ target
 /wincolor/Cargo.lock
 /deployment
 /.idea
-
+/.vscode
 # Snapcraft files
 stage
 prime
