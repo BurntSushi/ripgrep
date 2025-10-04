@@ -95,6 +95,10 @@ jobs:
           os: ubuntu-latest
           rust: stable
           target: s390x-unknown-linux-gnu
+        - build: stable-riscv64
+          os: ubuntu-latest
+          rust: stable
+          target: riscv64gc-unknown-linux-gnu
         - build: macos
           os: macos-latest
           rust: nightly
