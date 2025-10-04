@@ -208,6 +208,15 @@ Summarizing, ripgrep is fast because:
   [`ignore`](https://docs.rs/ignore).
 
 
+### How does `ripgrep` work?
+
+Check out this interactive walkthrough of the `ripgrep` codebase on CodeCanvas [here](https://www.code-canvas.com/?session=unauthenticatedGithub&repo=ripgrep&owner=BurntSushi&branch=master&OnboardingTutorial=true).
+
+To update the diagram, follow the quick tutorial [here](https://docs.code-canvas.com/updating-diagram).
+
+<img width="1916" alt="CodeCanvas Screenshot" src="https://codecanvas-media-public.s3.amazonaws.com/images/codecanvas-readme-screenshot.png" />
+
+
 ### Feature comparison
 
 Andy Lester, author of [ack](https://beyondgrep.com/), has published an
