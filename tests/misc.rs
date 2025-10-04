@@ -922,6 +922,8 @@ be, to a very large extent, the result of luck. Sherlock Holmes
     eqnice!(expected, cmd.stdout());
 });
 
+// lz4 decompression tool doesn't work under RISC-V QEMU emulation in CI
+#[cfg(not(target_arch = "riscv64"))]
 rgtest!(compressed_lz4, |dir: Dir, mut cmd: TestCommand| {
     if !cmd_exists("lz4") {
         return;
@@ -952,6 +954,8 @@ be, to a very large extent, the result of luck. Sherlock Holmes
     eqnice!(expected, cmd.stdout());
 });
 
+// brotli decompression tool doesn't work under RISC-V QEMU emulation in CI
+#[cfg(not(target_arch = "riscv64"))]
 rgtest!(compressed_brotli, |dir: Dir, mut cmd: TestCommand| {
     if !cmd_exists("brotli") {
         return;
@@ -967,6 +971,8 @@ be, to a very large extent, the result of luck. Sherlock Holmes
     eqnice!(expected, cmd.stdout());
 });
 
+// zstd decompression tool doesn't work under RISC-V QEMU emulation in CI
+#[cfg(not(target_arch = "riscv64"))]
 rgtest!(compressed_zstd, |dir: Dir, mut cmd: TestCommand| {
     if !cmd_exists("zstd") {
         return;

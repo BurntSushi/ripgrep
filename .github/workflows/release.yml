@@ -110,6 +110,12 @@ jobs:
           target: s390x-unknown-linux-gnu
           strip: s390x-linux-gnu-strip
           qemu: qemu-s390x
+        - build: stable-riscv64
+          os: ubuntu-latest
+          rust: stable
+          target: riscv64gc-unknown-linux-gnu
+          strip: riscv64-linux-gnu-strip
+          qemu: qemu-riscv64
         - build: macos
           os: macos-latest
           rust: nightly

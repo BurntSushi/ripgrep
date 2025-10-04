@@ -67,6 +67,8 @@ Feature enhancements:
   Improve completions for `--hyperlink-format` in bash and fish.
 * [FEATURE #3102](https://github.com/BurntSushi/ripgrep/pull/3102):
   Improve completions for `--hyperlink-format` in zsh.
+* [FEATURE #3165](https://github.com/BurntSushi/ripgrep/pull/3165):
+  Add release binaries for `riscv64gc-unknown-linux-gnu`.
 
 
 14.1.1 (2024-09-08)
