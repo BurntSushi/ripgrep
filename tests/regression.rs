@@ -1586,3 +1586,24 @@ YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY\n   \
         eqnice!("test\n", got);
     }
 );
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3173
+rgtest!(r3173_hidden_whitelist_only_dot, |dir: Dir, _: TestCommand| {
+    dir.create_dir("subdir");
+    dir.create("subdir/.foo.txt", "text");
+    dir.create(".ignore", "!.foo.txt");
+
+    let cmd = || dir.command();
+    eqnice!(cmd().args(&["--files"]).stdout(), "subdir/.foo.txt\n");
+    eqnice!(cmd().args(&["--files", "."]).stdout(), "./subdir/.foo.txt\n");
+    eqnice!(cmd().args(&["--files", "./"]).stdout(), "./subdir/.foo.txt\n");
+
+    let cmd = || {
+        let mut cmd = dir.command();
+        cmd.current_dir(dir.path().join("subdir"));
+        cmd
+    };
+    eqnice!(cmd().args(&["--files"]).stdout(), ".foo.txt\n");
+    eqnice!(cmd().args(&["--files", "."]).stdout(), "./.foo.txt\n");
+    eqnice!(cmd().args(&["--files", "./"]).stdout(), "./.foo.txt\n");
+});

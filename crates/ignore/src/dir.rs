@@ -467,16 +467,20 @@ impl Ignore {
                         .take_while(|ig| !ig.0.is_absolute_parent)
                         .last()
                         .map_or(path, |ig| {
-                            strip_if_is_prefix(
-                                "/",
-                                strip_if_is_prefix(
-                                    strip_if_is_prefix(
-                                        "./",
-                                        ig.0.dir.as_path(),
-                                    ),
-                                    path,
-                                ),
-                            )
+                            // This is a weird special case when ripgrep users
+                            // search with just a `.`, as some tools do
+                            // automatically (like consult). In this case, if
+                            // we don't bail out now, the code below will strip
+                            // a leading `.` from `path`, which might mangle
+                            // a hidden file name!
+                            if ig.0.dir.as_path() == Path::new(".") {
+                                return path;
+                            }
+                            let without_dot_slash =
+                                strip_if_is_prefix("./", ig.0.dir.as_path());
+                            let relative_base =
+                                strip_if_is_prefix(without_dot_slash, path);
+                            strip_if_is_prefix("/", relative_base)
                         }),
                 );
 

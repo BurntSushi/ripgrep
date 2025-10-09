@@ -37,6 +37,8 @@ Bug fixes:
   Ensure hyphens in flag names are escaped in the roff text for the man page.
 * [BUG #3155](https://github.com/BurntSushi/ripgrep/issues/3155):
   Statically compile PCRE2 into macOS release artifacts on `aarch64`.
+* [BUG #3173](https://github.com/BurntSushi/ripgrep/issues/3173):
+  Fix ancestor ignore filter bug when searching whitelisted hidden files.
 
 Feature enhancements:
 
