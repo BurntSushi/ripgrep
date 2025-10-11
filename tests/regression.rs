@@ -1455,6 +1455,21 @@ rgtest!(r2658_null_data_line_regexp, |dir: Dir, mut cmd: TestCommand| {
     eqnice!("haystack:bar\0", got);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/2770
+rgtest!(r2770_gitignore_error, |dir: Dir, _cmd: TestCommand| {
+    dir.create(".git", "");
+    dir.create(".gitignore", "**/bar/*");
+    dir.create_dir("foo/bar");
+    dir.create("foo/bar/baz", "quux");
+
+    dir.command().arg("-l").arg("quux").assert_err();
+    dir.command()
+        .current_dir(dir.path().join("foo"))
+        .arg("-l")
+        .arg("quux")
+        .assert_err();
+});
+
 // See: https://github.com/BurntSushi/ripgrep/pull/2944
 rgtest!(r2944_incorrect_bytes_searched, |dir: Dir, mut cmd: TestCommand| {
     dir.create("haystack", "foo1\nfoo2\nfoo3\nfoo4\nfoo5\n");
