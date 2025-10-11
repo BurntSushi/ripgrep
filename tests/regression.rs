@@ -1459,7 +1459,6 @@ rgtest!(r2658_null_data_line_regexp, |dir: Dir, mut cmd: TestCommand| {
 rgtest!(r2944_incorrect_bytes_searched, |dir: Dir, mut cmd: TestCommand| {
     dir.create("haystack", "foo1\nfoo2\nfoo3\nfoo4\nfoo5\n");
     let got = cmd.args(&["--stats", "-m2", "foo", "."]).stdout();
-    println!("{got}");
     assert!(got.contains("10 bytes searched\n"));
 });
 
@@ -1477,6 +1476,19 @@ rgtest!(r2990_trip_over_trailing_dot, |dir: Dir, _cmd: TestCommand| {
     // This used to ignore the glob given and included `asdf./foo` in output.
     let got = dir.command().args(&["--files", "-g", "!asdf./"]).stdout();
     eqnice!("asdf/foo\n", got);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3067
+rgtest!(r3067_gitignore_error, |dir: Dir, mut cmd: TestCommand| {
+    dir.create(".git", "");
+    dir.create(".gitignore", "foobar/debug");
+    dir.create_dir("foobar/some/debug");
+    dir.create_dir("foobar/debug");
+    dir.create("foobar/some/debug/flag", "baz");
+    dir.create("foobar/debug/flag2", "baz");
+
+    let got = cmd.arg("baz").stdout();
+    eqnice!("foobar/some/debug/flag:baz\n", got);
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/3108

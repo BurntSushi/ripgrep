@@ -14,7 +14,8 @@ Bug fixes:
   [BUG #2747](https://github.com/BurntSushi/ripgrep/issues/2747),
   [BUG #2778](https://github.com/BurntSushi/ripgrep/issues/2778),
   [BUG #2836](https://github.com/BurntSushi/ripgrep/issues/2836),
-  [BUG #2933](https://github.com/BurntSushi/ripgrep/pull/2933):
+  [BUG #2933](https://github.com/BurntSushi/ripgrep/pull/2933),
+  [BUG #3067](https://github.com/BurntSushi/ripgrep/pull/3067):
   Fix bug related to gitignores from parent directories.
 * [BUG #1332](https://github.com/BurntSushi/ripgrep/issues/1332),
   [BUG #3001](https://github.com/BurntSushi/ripgrep/issues/3001):
