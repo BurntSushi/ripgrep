@@ -943,18 +943,18 @@ rgtest!(f2361_sort_nested_files, |dir: Dir, mut cmd: TestCommand| {
         return;
     }
     dir.create("foo", "1");
-    sleep(Duration::from_millis(100));
+    sleep(Duration::from_millis(200));
     dir.create_dir("dir");
-    sleep(Duration::from_millis(100));
+    sleep(Duration::from_millis(200));
     dir.create(dir.path().join("dir").join("bar"), "1");
 
     cmd.arg("--sort").arg("accessed").arg("--files");
     eqnice!("foo\ndir/bar\n", cmd.stdout());
 
     dir.create("foo", "2");
-    sleep(Duration::from_millis(100));
+    sleep(Duration::from_millis(200));
     dir.create(dir.path().join("dir").join("bar"), "2");
-    sleep(Duration::from_millis(100));
+    sleep(Duration::from_millis(200));
 
     cmd.arg("--sort").arg("accessed").arg("--files");
     eqnice!("foo\ndir/bar\n", cmd.stdout());
