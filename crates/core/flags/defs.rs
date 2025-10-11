@@ -3229,9 +3229,11 @@ impl Flag for IgnoreFile {
 Specifies a path to one or more \fBgitignore\fP formatted rules files.
 These patterns are applied after the patterns found in \fB.gitignore\fP,
 \fB.rgignore\fP and \fB.ignore\fP are applied and are matched relative to the
-current working directory. Multiple additional ignore files can be specified
-by using this flag repeatedly. When specifying multiple ignore files, earlier
-files have lower precedence than later files.
+current working directory. That is, files specified via this flag have lower
+precedence than files automatically found in the directory tree. Multiple
+additional ignore files can be specified by using this flag repeatedly. When
+specifying multiple ignore files, earlier files have lower precedence than
+later files.
 .sp
 If you are looking for a way to include or exclude files and directories
 directly on the command line, then use \flag{glob} instead.
