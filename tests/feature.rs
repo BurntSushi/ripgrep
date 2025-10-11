@@ -154,7 +154,7 @@ test
     // parent ignore files and manually specified ignore files.
     let mut cmd = dir.command();
     cmd.args(&["--ignore-file", "../.not-an-ignore", "-l", "test"]);
-    cmd.current_dir(dir.path().join("baz"));
+    cmd.current_dir("baz");
     let expected = "
 baz/bar/test
 test

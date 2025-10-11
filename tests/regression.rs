@@ -23,7 +23,7 @@ rgtest!(r25, |dir: Dir, mut cmd: TestCommand| {
     cmd.arg("test");
     eqnice!("src/llvm/foo:test\n", cmd.stdout());
 
-    cmd.current_dir(dir.path().join("src"));
+    cmd.current_dir("src");
     eqnice!("llvm/foo:test\n", cmd.stdout());
 });
 
@@ -244,7 +244,7 @@ rgtest!(r184, |dir: Dir, mut cmd: TestCommand| {
     cmd.arg("test");
     eqnice!("foo/bar/baz:test\n", cmd.stdout());
 
-    cmd.current_dir(dir.path().join("./foo/bar"));
+    cmd.current_dir("./foo/bar");
     eqnice!("baz:test\n", cmd.stdout());
 });
 
@@ -612,17 +612,17 @@ rgtest!(r2711, |dir: Dir, _cmd: TestCommand| {
 
     {
         let mut cmd = dir.command();
-        cmd.current_dir(dir.path().join("a"));
+        cmd.current_dir("a");
         eqnice!(".ignore\n", cmd.arg("--hidden").arg("--files").stdout());
     }
     {
         let mut cmd = dir.command();
-        cmd.current_dir(dir.path().join("a").join("b"));
+        cmd.current_dir("a/b");
         cmd.arg("--hidden").arg("--files").assert_err();
     }
     {
         let mut cmd = dir.command();
-        cmd.current_dir(dir.path().join("./a"));
+        cmd.current_dir("./a");
         eqnice!(".ignore\n", cmd.arg("--hidden").arg("--files").stdout());
     }
 });
@@ -643,7 +643,7 @@ rgtest!(r829_original, |dir: Dir, _cmd: TestCommand| {
     }
     {
         let mut cmd = dir.command();
-        cmd.current_dir(dir.path().join("a"));
+        cmd.current_dir("a");
         cmd.args(&["Sample"]).assert_err();
     }
 });
@@ -706,7 +706,7 @@ rgtest!(r829_2747, |dir: Dir, _cmd: TestCommand| {
     }
     {
         let mut cmd = dir.command();
-        cmd.current_dir(dir.path().join("a/src"));
+        cmd.current_dir("a/src");
         eqnice!("f/b/foo\n", cmd.arg("--files").stdout());
     }
 });
@@ -727,7 +727,7 @@ rgtest!(r829_2778, |dir: Dir, _cmd: TestCommand| {
     }
     {
         let mut cmd = dir.command();
-        cmd.current_dir(dir.path().join("parent"));
+        cmd.current_dir("parent");
         eqnice!("subdir/dont-ignore-me.txt\n", cmd.arg("--files").stdout());
     }
 });
@@ -744,7 +744,7 @@ rgtest!(r829_2836, |dir: Dir, _cmd: TestCommand| {
     }
     {
         let mut cmd = dir.command();
-        cmd.current_dir(dir.path().join("testdir"));
+        cmd.current_dir("testdir");
         cmd.arg("--files").assert_err();
     }
 });
@@ -756,7 +756,7 @@ rgtest!(r829_2933, |dir: Dir, mut cmd: TestCommand| {
     dir.create("testdir/sub/sub2/testfile", "needle");
 
     let args = &["--files-with-matches", "needle"];
-    cmd.current_dir(dir.path().join("testdir"));
+    cmd.current_dir("testdir");
     cmd.args(args).assert_err();
 });
 
@@ -1463,11 +1463,7 @@ rgtest!(r2770_gitignore_error, |dir: Dir, _cmd: TestCommand| {
     dir.create("foo/bar/baz", "quux");
 
     dir.command().arg("-l").arg("quux").assert_err();
-    dir.command()
-        .current_dir(dir.path().join("foo"))
-        .arg("-l")
-        .arg("quux")
-        .assert_err();
+    dir.command().current_dir("foo").arg("-l").arg("quux").assert_err();
 });
 
 // See: https://github.com/BurntSushi/ripgrep/pull/2944
@@ -1627,7 +1623,7 @@ rgtest!(r3173_hidden_whitelist_only_dot, |dir: Dir, _: TestCommand| {
 
     let cmd = || {
         let mut cmd = dir.command();
-        cmd.current_dir(dir.path().join("subdir"));
+        cmd.current_dir("subdir");
         cmd
     };
     eqnice!(cmd().args(&["--files"]).stdout(), ".foo.txt\n");

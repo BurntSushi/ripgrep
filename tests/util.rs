@@ -273,11 +273,14 @@ impl TestCommand {
 
     /// Set the working directory for this command.
     ///
+    /// The path given is interpreted relative to the directory that this
+    /// command was created for.
+    ///
     /// Note that this does not need to be called normally, since the creation
     /// of this TestCommand causes its working directory to be set to the
     /// test's directory automatically.
     pub fn current_dir<P: AsRef<Path>>(&mut self, dir: P) -> &mut TestCommand {
-        self.cmd.current_dir(dir);
+        self.cmd.current_dir(self.dir.path().join(dir));
         self
     }
 

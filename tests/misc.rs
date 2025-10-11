@@ -627,7 +627,7 @@ rgtest!(ignore_git_parent, |dir: Dir, mut cmd: TestCommand| {
 
     // Even though we search in foo/, which has no .gitignore, ripgrep will
     // traverse parent directories and respect the gitignore files found.
-    cmd.current_dir(dir.path().join("foo"));
+    cmd.current_dir("foo");
     cmd.assert_err();
 });
 
@@ -651,7 +651,7 @@ rgtest!(ignore_git_parent_stop, |dir: Dir, mut cmd: TestCommand| {
     dir.create_dir("foo/bar");
     dir.create("foo/bar/sherlock", SHERLOCK);
     cmd.arg("Sherlock");
-    cmd.current_dir(dir.path().join("foo").join("bar"));
+    cmd.current_dir("foo/bar");
 
     let expected = "\
 sherlock:For the Doctor Watsons of this world, as opposed to the Sherlock
@@ -682,7 +682,7 @@ rgtest!(ignore_git_parent_stop_file, |dir: Dir, mut cmd: TestCommand| {
     dir.create_dir("foo/bar");
     dir.create("foo/bar/sherlock", SHERLOCK);
     cmd.arg("Sherlock");
-    cmd.current_dir(dir.path().join("foo").join("bar"));
+    cmd.current_dir("foo/bar");
 
     let expected = "\
 sherlock:For the Doctor Watsons of this world, as opposed to the Sherlock
@@ -700,7 +700,7 @@ rgtest!(ignore_ripgrep_parent_no_stop, |dir: Dir, mut cmd: TestCommand| {
     dir.create_dir("foo/bar");
     dir.create("foo/bar/sherlock", SHERLOCK);
     cmd.arg("Sherlock");
-    cmd.current_dir(dir.path().join("foo").join("bar"));
+    cmd.current_dir("foo/bar");
 
     // The top-level .rgignore applies.
     cmd.assert_err();
@@ -733,7 +733,7 @@ rgtest!(no_parent_ignore_git, |dir: Dir, mut cmd: TestCommand| {
     dir.create("foo/sherlock", SHERLOCK);
     dir.create("foo/watson", SHERLOCK);
     cmd.arg("--no-ignore-parent").arg("Sherlock");
-    cmd.current_dir(dir.path().join("foo"));
+    cmd.current_dir("foo");
 
     let expected = "\
 sherlock:For the Doctor Watsons of this world, as opposed to the Sherlock
@@ -749,7 +749,7 @@ rgtest!(symlink_nofollow, |dir: Dir, mut cmd: TestCommand| {
     dir.create_dir("foo/baz");
     dir.create("foo/baz/sherlock", SHERLOCK);
     cmd.arg("Sherlock");
-    cmd.current_dir(dir.path().join("foo/bar"));
+    cmd.current_dir("foo/bar");
 
     cmd.assert_err();
 });
@@ -762,7 +762,7 @@ rgtest!(symlink_follow, |dir: Dir, mut cmd: TestCommand| {
     dir.create("foo/baz/sherlock", SHERLOCK);
     dir.link_dir("foo/baz", "foo/bar/baz");
     cmd.arg("-L").arg("Sherlock");
-    cmd.current_dir(dir.path().join("foo/bar"));
+    cmd.current_dir("foo/bar");
 
     let expected = "\
 baz/sherlock:For the Doctor Watsons of this world, as opposed to the Sherlock
