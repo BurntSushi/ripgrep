@@ -41,7 +41,6 @@ impl Default for Config {
 pub(crate) struct SearchWorkerBuilder {
     config: Config,
     command_builder: grep::cli::CommandReaderBuilder,
-    decomp_builder: grep::cli::DecompressionReaderBuilder,
 }
 
 impl Default for SearchWorkerBuilder {
@@ -53,17 +52,10 @@ impl Default for SearchWorkerBuilder {
 impl SearchWorkerBuilder {
     /// Create a new builder for configuring and constructing a search worker.
     pub(crate) fn new() -> SearchWorkerBuilder {
-        let mut cmd_builder = grep::cli::CommandReaderBuilder::new();
-        cmd_builder.async_stderr(true);
+        let mut command_builder = grep::cli::CommandReaderBuilder::new();
+        command_builder.async_stderr(true);
 
-        let mut decomp_builder = grep::cli::DecompressionReaderBuilder::new();
-        decomp_builder.async_stderr(true);
-
-        SearchWorkerBuilder {
-            config: Config::default(),
-            command_builder: cmd_builder,
-            decomp_builder,
-        }
+        SearchWorkerBuilder { config: Config::default(), command_builder }
     }
 
     /// Create a new search worker using the given searcher, matcher and
@@ -76,7 +68,12 @@ impl SearchWorkerBuilder {
     ) -> SearchWorker<W> {
         let config = self.config.clone();
         let command_builder = self.command_builder.clone();
-        let decomp_builder = self.decomp_builder.clone();
+        let decomp_builder = config.search_zip.then(|| {
+            let mut decomp_builder =
+                grep::cli::DecompressionReaderBuilder::new();
+            decomp_builder.async_stderr(true);
+            decomp_builder
+        });
         SearchWorker {
             config,
             command_builder,
@@ -233,7 +230,11 @@ impl<W: WriteColor> Printer<W> {
 pub(crate) struct SearchWorker<W> {
     config: Config,
     command_builder: grep::cli::CommandReaderBuilder,
-    decomp_builder: grep::cli::DecompressionReaderBuilder,
+    /// This is `None` when `search_zip` is not enabled, since in this case it
+    /// can never be used. We do this because building the reader can sometimes
+    /// do non-trivial work (like resolving the paths of decompression binaries
+    /// on Windows).
+    decomp_builder: Option<grep::cli::DecompressionReaderBuilder>,
     matcher: PatternMatcher,
     searcher: grep::searcher::Searcher,
     printer: Printer<W>,
@@ -273,10 +274,9 @@ impl<W: WriteColor> SearchWorker<W> {
     /// Returns true if and only if the given file path should be
     /// decompressed before searching.
     fn should_decompress(&self, path: &Path) -> bool {
-        if !self.config.search_zip {
-            return false;
-        }
-        self.decomp_builder.get_matcher().has_command(path)
+        self.decomp_builder.as_ref().is_some_and(|decomp_builder| {
+            decomp_builder.get_matcher().has_command(path)
+        })
     }
 
     /// Returns true if and only if the given file path should be run through
@@ -327,7 +327,10 @@ impl<W: WriteColor> SearchWorker<W> {
     /// result. If the given file path isn't recognized as a compressed file,
     /// then search it without doing any decompression.
     fn search_decompress(&mut self, path: &Path) -> io::Result<SearchResult> {
-        let mut rdr = self.decomp_builder.build(path)?;
+        let Some(ref decomp_builder) = self.decomp_builder else {
+            return self.search_path(path);
+        };
+        let mut rdr = decomp_builder.build(path)?;
         let result = self.search_reader(path, &mut rdr);
         let close_result = rdr.close();
         let search_result = result?;
