@@ -1654,3 +1654,16 @@ rgtest!(r3173_hidden_whitelist_only_dot, |dir: Dir, _: TestCommand| {
     eqnice!(cmd().args(&["--files", "."]).stdout(), "./.foo.txt\n");
     eqnice!(cmd().args(&["--files", "./"]).stdout(), "./.foo.txt\n");
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3180
+rgtest!(r3180_look_around_panic, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("haystack", " b b b b b b b b\nc\n");
+
+    let got = cmd
+        .arg(r#"(^|[^a-z])((([a-z]+)?)\s)?b(\s([a-z]+)?)($|[^a-z])"#)
+        .arg("haystack")
+        .arg("-U")
+        .arg("-rx")
+        .stdout();
+    eqnice!("xbxbx\n", got);
+});

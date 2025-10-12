@@ -4,6 +4,8 @@ Unreleased changes. Release notes have not yet been written.
 
 Performance improvements:
 
+* [PERF #2111](https://github.com/BurntSushi/ripgrep/issues/2111):
+  Don't resolve helper binaries on Windows when `-z/--search-zip` isn't used.
 * [PERF #2865](https://github.com/BurntSushi/ripgrep/pull/2865):
   Avoid using path canonicalization on Windows when emitting hyperlinks.
 
@@ -46,6 +48,8 @@ Bug fixes:
   Statically compile PCRE2 into macOS release artifacts on `aarch64`.
 * [BUG #3173](https://github.com/BurntSushi/ripgrep/issues/3173):
   Fix ancestor ignore filter bug when searching whitelisted hidden files.
+* [BUG #3180](https://github.com/BurntSushi/ripgrep/issues/3180):
+  Fix a panicking bug when using `-U/--multiline` and `-r/--replace`.
 
 Feature enhancements:
 

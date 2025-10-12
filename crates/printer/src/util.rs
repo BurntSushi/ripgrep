@@ -59,7 +59,8 @@ impl<M: Matcher> Replacer<M> {
         // See the giant comment in 'find_iter_at_in_context' below for why we
         // do this dance.
         let is_multi_line = searcher.multi_line_with_matcher(&matcher);
-        // Get the line_terminator that was removed (if any) so we can add it back
+        // Get the line_terminator that was removed (if any) so we can add it
+        // back.
         let line_terminator = if is_multi_line {
             if haystack[range.end..].len() >= MAX_LOOK_AHEAD {
                 haystack = &haystack[..range.end + MAX_LOOK_AHEAD];
@@ -513,7 +514,8 @@ where
         // Otherwise, it's possible for the regex (via look-around) to observe
         // the line terminator and not match because of it.
         let mut m = Match::new(0, range.end);
-        // No need to rember the line terminator as we aren't doing a replace here
+        // No need to rember the line terminator as we aren't doing a replace
+        // here.
         trim_line_terminator(searcher, bytes, &mut m);
         bytes = &bytes[..m.end()];
     }
@@ -575,9 +577,13 @@ where
         last_match = m.end();
         append(caps, dst)
     })?;
-    let end = std::cmp::min(bytes.len(), range.end);
+    let end = if last_match > range.end {
+        bytes.len()
+    } else {
+        std::cmp::min(bytes.len(), range.end)
+    };
     dst.extend(&bytes[last_match..end]);
-    // Add back any line terminator
+    // Add back any line terminator.
     dst.extend(line_terminator);
     Ok(())
 }
