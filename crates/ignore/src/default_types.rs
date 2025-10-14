@@ -219,7 +219,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["qml"], &["*.qml"]),
     (&["qrc"], &["*.qrc"]),
     (&["qui"], &["*.ui"]),
-    (&["r"], &["*.R", "*.r", "*.Rmd", "*.Rnw"]),
+    (&["r"], &["*.R", "*.r", "*.Rmd", "*.rmd", "*.Rnw", "*.rnw"]),
     (&["racket"], &["*.rkt"]),
     (&["raku"], &[
         "*.raku", "*.rakumod", "*.rakudoc", "*.rakutest",
