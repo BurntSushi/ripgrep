@@ -191,10 +191,14 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
             // separator (when before_context==0 and after_context>0), we
             // need to know something about the position of the previous
             // line visited, even if we're at the beginning of the buffer.
+            //
+            // ... however, we only need to find the N preceding lines based
+            // on before context. We can skip this (potentially costly, for
+            // large values of N) step when before_context==0.
             let context_start = lines::preceding(
                 buf,
                 self.config.line_term.as_byte(),
-                self.config.max_context(),
+                self.config.before_context,
             );
             let consumed =
                 std::cmp::max(context_start, self.last_line_visited);
