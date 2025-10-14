@@ -415,21 +415,26 @@ impl LineBuffer {
         assert_eq!(self.pos, 0);
         loop {
             self.ensure_capacity()?;
-            let readlen = rdr.read(self.free_buffer().as_bytes_mut())?;
-            if readlen == 0 {
-                // We're only done reading for good once the caller has
-                // consumed everything.
-                self.last_lineterm = self.end;
-                return Ok(!self.buffer().is_empty());
+            let oldend = self.end;
+            while !self.free_buffer().is_empty() {
+                let readlen = rdr.read(self.free_buffer())?;
+                if readlen == 0 {
+                    break;
+                }
+                self.end += readlen;
             }
 
             // Get a mutable view into the bytes we've just read. These are
             // the bytes that we do binary detection on, and also the bytes we
             // search to find the last line terminator. We need a mutable slice
             // in the case of binary conversion.
-            let oldend = self.end;
-            self.end += readlen;
             let newbytes = &mut self.buf[oldend..self.end];
+            if newbytes.is_empty() {
+                self.last_lineterm = self.end;
+                // We're only done reading for good once the caller has
+                // consumed everything.
+                return Ok(!self.buffer().is_empty());
+            }
 
             // Binary detection.
             match self.config.binary {

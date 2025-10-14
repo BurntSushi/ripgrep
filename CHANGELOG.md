@@ -8,6 +8,8 @@ Performance improvements:
   Don't resolve helper binaries on Windows when `-z/--search-zip` isn't used.
 * [PERF #2865](https://github.com/BurntSushi/ripgrep/pull/2865):
   Avoid using path canonicalization on Windows when emitting hyperlinks.
+* [PERF #3184](https://github.com/BurntSushi/ripgrep/pull/3184):
+  Improve performance of large values with `-A/--after-context`.
 
 Bug fixes:
 
