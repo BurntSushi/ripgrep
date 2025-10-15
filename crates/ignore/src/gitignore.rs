@@ -128,7 +128,10 @@ impl Gitignore {
     /// `$XDG_CONFIG_HOME/git/ignore` is read. If `$XDG_CONFIG_HOME` is not
     /// set or is empty, then `$HOME/.config/git/ignore` is used instead.
     pub fn global() -> (Gitignore, Option<Error>) {
-        GitignoreBuilder::new("").build_global()
+        match std::env::current_dir() {
+            Ok(cwd) => GitignoreBuilder::new(cwd).build_global(),
+            Err(err) => (Gitignore::empty(), Some(err.into())),
+        }
     }
 
     /// Creates a new empty gitignore matcher that never matches anything.

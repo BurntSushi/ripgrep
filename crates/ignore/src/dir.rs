@@ -118,6 +118,18 @@ struct IgnoreInner {
     /// The absolute base path of this matcher. Populated only if parent
     /// directories are added.
     absolute_base: Option<Arc<PathBuf>>,
+    /// The directory that gitignores should be interpreted relative to.
+    ///
+    /// Usually this is the directory containing the gitignore file. But in
+    /// some cases, like for global gitignores or for gitignores specified
+    /// explicitly, this should generally be set to the current working
+    /// directory. This is only used for global gitignores or "explicit"
+    /// gitignores.
+    ///
+    /// When `None`, this means the CWD could not be determined or is unknown.
+    /// In this case, global gitignore files are ignored because they otherwise
+    /// cannot be matched correctly.
+    global_gitignores_relative_to: Option<PathBuf>,
     /// Explicit global ignore matchers specified by the caller.
     explicit_ignores: Arc<Vec<Gitignore>>,
     /// Ignore files used in addition to `.ignore`
@@ -319,6 +331,10 @@ impl Ignore {
             parent: Some(self.clone()),
             is_absolute_parent: false,
             absolute_base: self.0.absolute_base.clone(),
+            global_gitignores_relative_to: self
+                .0
+                .global_gitignores_relative_to
+                .clone(),
             explicit_ignores: self.0.explicit_ignores.clone(),
             custom_ignore_filenames: self.0.custom_ignore_filenames.clone(),
             custom_ignore_matcher: custom_ig_matcher,
@@ -582,6 +598,16 @@ pub(crate) struct IgnoreBuilder {
     explicit_ignores: Vec<Gitignore>,
     /// Ignore files in addition to .ignore.
     custom_ignore_filenames: Vec<OsString>,
+    /// The directory that gitignores should be interpreted relative to.
+    ///
+    /// Usually this is the directory containing the gitignore file. But in
+    /// some cases, like for global gitignores or for gitignores specified
+    /// explicitly, this should generally be set to the current working
+    /// directory. This is only used for global gitignores or "explicit"
+    /// gitignores.
+    ///
+    /// When `None`, global gitignores are ignored.
+    global_gitignores_relative_to: Option<PathBuf>,
     /// Ignore config.
     opts: IgnoreOptions,
 }
@@ -589,8 +615,9 @@ pub(crate) struct IgnoreBuilder {
 impl IgnoreBuilder {
     /// Create a new builder for an `Ignore` matcher.
     ///
-    /// All relative file paths are resolved with respect to the current
-    /// working directory.
+    /// It is likely a bug to use this without also calling `current_dir()`
+    /// outside of tests. This isn't made mandatory because this is an internal
+    /// abstraction and it's annoying to update tests.
     pub(crate) fn new() -> IgnoreBuilder {
         IgnoreBuilder {
             dir: Path::new("").to_path_buf(),
@@ -598,6 +625,7 @@ impl IgnoreBuilder {
             types: Arc::new(Types::empty()),
             explicit_ignores: vec![],
             custom_ignore_filenames: vec![],
+            global_gitignores_relative_to: None,
             opts: IgnoreOptions {
                 hidden: true,
                 ignore: true,
@@ -616,10 +644,20 @@ impl IgnoreBuilder {
     /// The matcher returned won't match anything until ignore rules from
     /// directories are added to it.
     pub(crate) fn build(&self) -> Ignore {
+        self.build_with_cwd(None)
+    }
+
+    /// Builds a new `Ignore` matcher using the given CWD directory.
+    ///
+    /// The matcher returned won't match anything until ignore rules from
+    /// directories are added to it.
+    pub(crate) fn build_with_cwd(&self, cwd: Option<PathBuf>) -> Ignore {
+        let global_gitignores_relative_to =
+            cwd.or_else(|| self.global_gitignores_relative_to.clone());
         let git_global_matcher = if !self.opts.git_global {
             Gitignore::empty()
-        } else {
-            let mut builder = GitignoreBuilder::new("");
+        } else if let Some(ref cwd) = global_gitignores_relative_to {
+            let mut builder = GitignoreBuilder::new(cwd);
             builder
                 .case_insensitive(self.opts.ignore_case_insensitive)
                 .unwrap();
@@ -628,6 +666,11 @@ impl IgnoreBuilder {
                 log::debug!("{}", err);
             }
             gi
+        } else {
+            log::debug!(
+                "ignoring global gitignore file because CWD is not known"
+            );
+            Gitignore::empty()
         };
 
         Ignore(Arc::new(IgnoreInner {
@@ -638,6 +681,7 @@ impl IgnoreBuilder {
             parent: None,
             is_absolute_parent: true,
             absolute_base: None,
+            global_gitignores_relative_to,
             explicit_ignores: Arc::new(self.explicit_ignores.clone()),
             custom_ignore_filenames: Arc::new(
                 self.custom_ignore_filenames.clone(),
@@ -650,6 +694,15 @@ impl IgnoreBuilder {
             has_git: false,
             opts: self.opts,
         }))
+    }
+
+    /// Set the current directory used for matching global gitignores.
+    pub(crate) fn current_dir(
+        &mut self,
+        cwd: impl Into<PathBuf>,
+    ) -> &mut IgnoreBuilder {
+        self.global_gitignores_relative_to = Some(cwd.into());
+        self
     }
 
     /// Add an override matcher.

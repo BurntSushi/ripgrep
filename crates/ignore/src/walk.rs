@@ -4,8 +4,8 @@ use std::{
     fs::{self, FileType, Metadata},
     io,
     path::{Path, PathBuf},
-    sync::Arc,
     sync::atomic::{AtomicBool, AtomicUsize, Ordering as AtomicOrdering},
+    sync::{Arc, OnceLock},
 };
 
 use {
@@ -492,6 +492,18 @@ pub struct WalkBuilder {
     threads: usize,
     skip: Option<Arc<Handle>>,
     filter: Option<Filter>,
+    /// The directory that gitignores should be interpreted relative to.
+    ///
+    /// Usually this is the directory containing the gitignore file. But in
+    /// some cases, like for global gitignores or for gitignores specified
+    /// explicitly, this should generally be set to the current working
+    /// directory. This is only used for global gitignores or "explicit"
+    /// gitignores.
+    ///
+    /// When `None`, the CWD is fetched from `std::env::current_dir()`. If
+    /// that fails, then global gitignores are ignored (an error is logged).
+    global_gitignores_relative_to:
+        OnceLock<Result<PathBuf, Arc<std::io::Error>>>,
 }
 
 #[derive(Clone)]
@@ -512,8 +524,15 @@ impl std::fmt::Debug for WalkBuilder {
             .field("min_depth", &self.min_depth)
             .field("max_filesize", &self.max_filesize)
             .field("follow_links", &self.follow_links)
+            .field("same_file_system", &self.same_file_system)
+            .field("sorter", &"<...>")
             .field("threads", &self.threads)
             .field("skip", &self.skip)
+            .field("filter", &"<...>")
+            .field(
+                "global_gitignores_relative_to",
+                &self.global_gitignores_relative_to,
+            )
             .finish()
     }
 }
@@ -538,6 +557,7 @@ impl WalkBuilder {
             threads: 0,
             skip: None,
             filter: None,
+            global_gitignores_relative_to: OnceLock::new(),
         }
     }
 
@@ -582,7 +602,10 @@ impl WalkBuilder {
             })
             .collect::<Vec<_>>()
             .into_iter();
-        let ig_root = self.ig_builder.build();
+        let ig_root = self
+            .get_or_set_current_dir()
+            .map(|cwd| self.ig_builder.build_with_cwd(Some(cwd.to_path_buf())))
+            .unwrap_or_else(|| self.ig_builder.build());
         Walk {
             its,
             it: None,
@@ -600,9 +623,13 @@ impl WalkBuilder {
     /// Instead, the returned value must be run with a closure. e.g.,
     /// `builder.build_parallel().run(|| |path| { println!("{path:?}"); WalkState::Continue })`.
     pub fn build_parallel(&self) -> WalkParallel {
+        let ig_root = self
+            .get_or_set_current_dir()
+            .map(|cwd| self.ig_builder.build_with_cwd(Some(cwd.to_path_buf())))
+            .unwrap_or_else(|| self.ig_builder.build());
         WalkParallel {
             paths: self.paths.clone().into_iter(),
-            ig_root: self.ig_builder.build(),
+            ig_root,
             max_depth: self.max_depth,
             min_depth: self.min_depth,
             max_filesize: self.max_filesize,
@@ -679,12 +706,25 @@ impl WalkBuilder {
     ///
     /// This has lower precedence than all other sources of ignore rules.
     ///
+    /// # Errors
+    ///
     /// If there was a problem adding the ignore file, then an error is
     /// returned. Note that the error may indicate *partial* failure. For
     /// example, if an ignore file contains an invalid glob, all other globs
     /// are still applied.
+    ///
+    /// An error will also occur if this walker could not get the current
+    /// working directory (and `WalkBuilder::current_dir` isn't set).
     pub fn add_ignore<P: AsRef<Path>>(&mut self, path: P) -> Option<Error> {
-        let mut builder = GitignoreBuilder::new("");
+        let path = path.as_ref();
+        let Some(cwd) = self.get_or_set_current_dir() else {
+            let err = std::io::Error::other(format!(
+                "CWD is not known, ignoring global gitignore {}",
+                path.display()
+            ));
+            return Some(err.into());
+        };
+        let mut builder = GitignoreBuilder::new(cwd);
         let mut errs = PartialErrorBuilder::default();
         errs.maybe_push(builder.add(path));
         match builder.build() {
@@ -936,6 +976,55 @@ impl WalkBuilder {
     {
         self.filter = Some(Filter(Arc::new(filter)));
         self
+    }
+
+    /// Set the current working directory used for matching global gitignores.
+    ///
+    /// If this is not set, then this walker will attempt to discover the
+    /// correct path from the environment's current working directory. If
+    /// that fails, then global gitignore files will be ignored.
+    ///
+    /// Global gitignore files come from things like a user's git configuration
+    /// or from gitignore files added via [`WalkBuilder::add_ignore`].
+    pub fn current_dir(
+        &mut self,
+        cwd: impl Into<PathBuf>,
+    ) -> &mut WalkBuilder {
+        let cwd = cwd.into();
+        self.ig_builder.current_dir(cwd.clone());
+        if let Err(cwd) = self.global_gitignores_relative_to.set(Ok(cwd)) {
+            // OK because `Err` from `set` implies a value exists.
+            *self.global_gitignores_relative_to.get_mut().unwrap() = cwd;
+        }
+        self
+    }
+
+    /// Gets the currently configured CWD on this walk builder.
+    ///
+    /// This is "lazy." That is, we only ask for the CWD from the environment
+    /// if `WalkBuilder::current_dir` hasn't been called yet. And we ensure
+    /// that we only do it once.
+    fn get_or_set_current_dir(&self) -> Option<&Path> {
+        let result = self.global_gitignores_relative_to.get_or_init(|| {
+            let result = std::env::current_dir().map_err(Arc::new);
+            match result {
+                Ok(ref path) => {
+                    log::trace!(
+                        "automatically discovered CWD: {}",
+                        path.display()
+                    );
+                }
+                Err(ref err) => {
+                    log::debug!(
+                        "failed to find CWD \
+                         (global gitignores will be ignored): \
+                         {err}"
+                    );
+                }
+            }
+            result
+        });
+        result.as_ref().ok().map(|path| &**path)
     }
 }
 

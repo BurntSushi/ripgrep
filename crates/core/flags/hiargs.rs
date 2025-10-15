@@ -45,6 +45,7 @@ pub(crate) struct HiArgs {
     context: ContextMode,
     context_separator: ContextSeparator,
     crlf: bool,
+    cwd: PathBuf,
     dfa_size_limit: Option<usize>,
     encoding: EncodingMode,
     engine: EngineChoice,
@@ -262,6 +263,7 @@ impl HiArgs {
             context: low.context,
             context_separator: low.context_separator,
             crlf: low.crlf,
+            cwd: state.cwd,
             dfa_size_limit: low.dfa_size_limit,
             encoding: low.encoding,
             engine: low.engine,
@@ -897,7 +899,8 @@ impl HiArgs {
             .git_ignore(!self.no_ignore_vcs)
             .git_exclude(!self.no_ignore_vcs && !self.no_ignore_exclude)
             .require_git(!self.no_require_git)
-            .ignore_case_insensitive(self.ignore_file_case_insensitive);
+            .ignore_case_insensitive(self.ignore_file_case_insensitive)
+            .current_dir(&self.cwd);
         if !self.no_ignore_dot {
             builder.add_custom_ignore_filename(".rgignore");
         }
@@ -947,10 +950,12 @@ impl State {
     fn new() -> anyhow::Result<State> {
         use std::io::IsTerminal;
 
+        let cwd = current_dir()?;
+        log::debug!("read CWD from environment: {}", cwd.display());
         Ok(State {
             is_terminal_stdout: std::io::stdout().is_terminal(),
             stdin_consumed: false,
-            cwd: current_dir()?,
+            cwd,
         })
     }
 }

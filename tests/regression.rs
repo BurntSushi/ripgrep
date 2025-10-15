@@ -1655,6 +1655,56 @@ rgtest!(r3173_hidden_whitelist_only_dot, |dir: Dir, _: TestCommand| {
     eqnice!(cmd().args(&["--files", "./"]).stdout(), "./.foo.txt\n");
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/3179
+rgtest!(r3179_global_gitignore_cwd, |dir: Dir, mut cmd: TestCommand| {
+    dir.create_dir("a/b/c");
+    dir.create("a/b/c/haystack", "");
+    dir.create(".test.gitignore", "/haystack");
+
+    // I'm not sure in which cases this can fail. If it
+    // does and it's unavoidable, feel free to submit a
+    // patch that skips this test when this canonicalization
+    // fails.
+    //
+    // The reason we canonicalize here is strange, and it is
+    // perhaps papering over a bug in ripgrep. But on macOS,
+    // `TMPDIR` is set to `/var/blah/blah`. However, `/var`
+    // is symlinked to `/private/var`. So the CWD detected by
+    // the process is `/private/var`. So it turns out that the
+    // CWD is not a proper prefix of `dir.path()` here. So we
+    // cheat around this by forcing our path to be canonicalized
+    // so it's `/private/var` everywhere.
+    //
+    // Arguably, ripgrep should still work here without
+    // canonicalization. But it's not actually quite clear
+    // to me how to do it. I *believe* the solution here is
+    // that gitignore matching should be relative to the directory
+    // path given to `WalkBuider::{add,new}`, and *not* to the
+    // CWD. But this is a very big change to how `ignore` works
+    // I think. At least conceptually. So that will need to be
+    // something we do when we rewrite `ignore`. Sigh.
+    //
+    // ...  but, on Windows, path canonicalization seems to
+    // totally fuck things up, so skip it there. HEAVY sigh.
+    let dir_path = if cfg!(windows) {
+        dir.path().to_path_buf()
+    } else {
+        dir.path().canonicalize().unwrap()
+    };
+    let ignore_file_path = dir_path.join(".test.gitignore");
+    cmd.current_dir("a/b/c")
+        .arg("--files")
+        .arg("--ignore-file")
+        .arg(ignore_file_path.display().to_string())
+        // This is a key part of the reproduction. When just providing `.`
+        // to ignore's walker (as ripgrep does when a path to search isn't
+        // provided), then everything works as one expects. Because there's
+        // nothing to strip off of the paths being searched. But when one
+        // provides an absolute path, the stripping didn't work.
+        .arg(&dir_path)
+        .assert_err();
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/3180
 rgtest!(r3180_look_around_panic, |dir: Dir, mut cmd: TestCommand| {
     dir.create("haystack", " b b b b b b b b\nc\n");
