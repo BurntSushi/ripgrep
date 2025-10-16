@@ -817,10 +817,6 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
         _searcher: &Searcher,
         finish: &SinkFinish,
     ) -> Result<(), io::Error> {
-        if !self.begin_printed {
-            return Ok(());
-        }
-
         self.binary_byte_offset = finish.binary_byte_offset();
         self.stats.add_elapsed(self.start_time.elapsed());
         self.stats.add_searches(1);
@@ -830,6 +826,9 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
         self.stats.add_bytes_searched(finish.byte_count());
         self.stats.add_bytes_printed(self.json.wtr.count());
 
+        if !self.begin_printed {
+            return Ok(());
+        }
         let msg = jsont::Message::End(jsont::End {
             path: self.path,
             binary_offset: finish.binary_byte_offset(),

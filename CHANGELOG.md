@@ -50,6 +50,8 @@ Bug fixes:
   Statically compile PCRE2 into macOS release artifacts on `aarch64`.
 * [BUG #3173](https://github.com/BurntSushi/ripgrep/issues/3173):
   Fix ancestor ignore filter bug when searching whitelisted hidden files.
+* [BUG #3178](https://github.com/BurntSushi/ripgrep/discussions/3178):
+  Fix bug causing incorrect summary statistics with `--json` flag.
 * [BUG #3179](https://github.com/BurntSushi/ripgrep/issues/3179):
   Fix gitignore bug when searching absolute paths with global gitignores.
 * [BUG #3180](https://github.com/BurntSushi/ripgrep/issues/3180):
