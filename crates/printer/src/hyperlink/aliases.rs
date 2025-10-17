@@ -4,6 +4,11 @@ use crate::hyperlink::HyperlinkAlias;
 ///
 /// These need to be sorted by name.
 pub(super) const HYPERLINK_PATTERN_ALIASES: &[HyperlinkAlias] = &[
+    alias(
+        "cursor",
+        "Cursor scheme (cursor://)",
+        "cursor://file{path}:{line}:{column}",
+    ),
     prioritized_alias(
         0,
         "default",
@@ -18,11 +23,6 @@ pub(super) const HYPERLINK_PATTERN_ALIASES: &[HyperlinkAlias] = &[
                 "file://{path}"
             }
         },
-    ),
-    alias(
-        "cursor",
-        "Cursor scheme (cursor://)",
-        "cursor://file{path}:{line}:{column}",
     ),
     alias(
         "file",
