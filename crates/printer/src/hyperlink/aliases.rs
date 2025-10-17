@@ -60,6 +60,11 @@ pub(super) const HYPERLINK_PATTERN_ALIASES: &[HyperlinkAlias] = &[
         "VSCodium scheme (vscodium://)",
         "vscodium://file{path}:{line}:{column}",
     ),
+    alias(
+        "cursor",
+        "Cursor scheme (cursor://)",
+        "cursor://file{path}:{line}:{column}",
+    ),
 ];
 
 /// Creates a [`HyperlinkAlias`].
