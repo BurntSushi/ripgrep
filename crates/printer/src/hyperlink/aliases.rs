@@ -20,6 +20,11 @@ pub(super) const HYPERLINK_PATTERN_ALIASES: &[HyperlinkAlias] = &[
         },
     ),
     alias(
+        "cursor",
+        "Cursor scheme (cursor://)",
+        "cursor://file{path}:{line}:{column}",
+    ),
+    alias(
         "file",
         "RFC 8089 scheme (file://) with host",
         "file://{host}{path}",
@@ -59,11 +64,6 @@ pub(super) const HYPERLINK_PATTERN_ALIASES: &[HyperlinkAlias] = &[
         "vscodium",
         "VSCodium scheme (vscodium://)",
         "vscodium://file{path}:{line}:{column}",
-    ),
-    alias(
-        "cursor",
-        "Cursor scheme (cursor://)",
-        "cursor://file{path}:{line}:{column}",
     ),
 ];
 
