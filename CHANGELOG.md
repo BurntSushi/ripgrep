@@ -1,6 +1,11 @@
-TBD
-===
+15.0.1
+======
 Unreleased changes. Release notes have not yet been written.
+
+Bug fixes:
+
+* [BUG #3194](https://github.com/BurntSushi/ripgrep/issues/3194):
+  Fix a regression with `--line-buffered` introduced in ripgrep 15.0.0.
 
 
 15.0.0 (2025-10-15)
@@ -37,8 +42,6 @@ Performance improvements:
   Don't resolve helper binaries on Windows when `-z/--search-zip` isn't used.
 * [PERF #2865](https://github.com/BurntSushi/ripgrep/pull/2865):
   Avoid using path canonicalization on Windows when emitting hyperlinks.
-* [PERF #3184](https://github.com/BurntSushi/ripgrep/pull/3184):
-  Improve performance of large values with `-A/--after-context`.
 
 Bug fixes:
 

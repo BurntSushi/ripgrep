@@ -737,7 +737,7 @@ d
         // Namely, it will *always* detect binary data in the current buffer
         // before searching it. Thus, the total number of bytes searched is
         // smaller than below.
-        let exp = "0:a\n\nbyte count:262142\nbinary offset:262153\n";
+        let exp = "0:a\n\nbyte count:262146\nbinary offset:262153\n";
         // In contrast, the slice readers (for multi line as well) will only
         // look for binary data in the initial chunk of bytes. After that
         // point, it only looks for binary data in matches. Note though that
@@ -771,7 +771,7 @@ d
         haystack.push_str("a\x00a\n");
         haystack.push_str("a\n");
 
-        let exp = "0:a\n\nbyte count:262142\nbinary offset:262149\n";
+        let exp = "0:a\n\nbyte count:262146\nbinary offset:262149\n";
         // The binary offset for the Slice readers corresponds to the binary
         // data in `a\x00a\n` since the first line with binary data
         // (`b\x00b\n`) isn't part of a match, and is therefore undetected.
