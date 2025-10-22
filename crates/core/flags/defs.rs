@@ -7536,7 +7536,7 @@ impl Flag for WordRegexp {
         r"
 When enabled, ripgrep will only show matches surrounded by word boundaries.
 This is equivalent to surrounding every pattern with \fB\\b{start-half}\fP
-and \fB\\b{end-half}\fP.
+and \fB\{end-half}\b\fP.
 .sp
 This overrides the \flag{line-regexp} flag.
 "
