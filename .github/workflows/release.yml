@@ -172,6 +172,12 @@ jobs:
         echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
         echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
 
+    - name: Set jemalloc page size for aarch64-unknown-linux-musl
+      if: matrix.target == 'aarch64-unknown-linux-musl'
+      shell: bash
+      run: |
+        echo "JEMALLOC_SYS_WITH_LG_PAGE=20" >> $GITHUB_ENV
+
     - name: Show command used for Cargo
       shell: bash
       run: |
