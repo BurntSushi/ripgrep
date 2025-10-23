@@ -1,6 +1,6 @@
 [package]
 name = "ripgrep"
-version = "15.1.0"  #:version
+version = "15.1.999"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 ripgrep is a line-oriented search tool that recursively searches the current
