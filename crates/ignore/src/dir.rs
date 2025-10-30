@@ -256,14 +256,15 @@ impl Ignore {
 
     /// Like add_child, but takes a full path and returns an IgnoreInner.
     fn add_child_path(&self, dir: &Path) -> (IgnoreInner, Option<Error>) {
-        let git_type = if self.0.opts.require_git
-            && (self.0.opts.git_ignore || self.0.opts.git_exclude)
-        {
+        let check_vcs_dir = self.0.opts.require_git
+            && (self.0.opts.git_ignore || self.0.opts.git_exclude);
+        let git_type = if check_vcs_dir {
             dir.join(".git").metadata().ok().map(|md| md.file_type())
         } else {
             None
         };
-        let has_git = git_type.is_some() || dir.join(".jj").exists();
+        let has_git =
+            check_vcs_dir && (git_type.is_some() || dir.join(".jj").exists());
 
         let mut errs = PartialErrorBuilder::default();
         let custom_ig_matcher = if self.0.custom_ignore_filenames.is_empty() {
