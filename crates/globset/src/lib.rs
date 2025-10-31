@@ -84,6 +84,12 @@ Standard Unix-style glob syntax is supported:
   (N.B. Nesting `{...}` is not currently allowed.)
 * `[ab]` matches `a` or `b` where `a` and `b` are characters. Use
   `[!ab]` to match any character except for `a` and `b`.
+* `[[:alpha:]]`, `[[:digit:]]`, etc. are POSIX character classes that match
+  specific character sets. Supported classes include `alnum`, `alpha`, `blank`,
+  `cntrl`, `digit`, `graph`, `lower`, `print`, `punct`, `space`, `upper`, and
+  `xdigit`. These use ASCII-only definitions (not locale-dependent). POSIX
+  classes can be combined with regular character ranges, e.g., `[[:digit:]a-f]`
+  matches hexadecimal digits.
 * Metacharacters such as `*` and `?` can be escaped with character class
   notation. e.g., `[*]` matches `*`.
 * When backslash escapes are enabled, a backslash (`\`) will escape all meta
