@@ -4146,7 +4146,7 @@ impl Flag for Multiline {
     }
     fn doc_long(&self) -> &'static str {
         r#"
-This flag enable searching across multiple lines.
+This flag enables searching across multiple lines.
 .sp
 When multiline mode is enabled, ripgrep will lift the restriction that a
 match cannot include a line terminator. For example, when multiline mode
