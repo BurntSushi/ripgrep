@@ -791,8 +791,8 @@ One common example is searching PDFs. PDFs are first and foremost meant to be
 displayed to users. But PDFs often have text streams in them that can be useful
 to search. In our case, we want to search Bruce Watson's excellent
 dissertation,
-[Taxonomies and Toolkits of Regular Language Algorithms](https://burntsushi.net/stuff/1995-watson.pdf).
-After downloading it, let's try searching it:
+[Taxonomies and Toolkits of Regular Language Algorithms](https://www.cs.tufts.edu/~nr/cs257/archive/bruce-watson/taxonomies.pdf).
+After downloading it, rename it as `1995-watson.pdf` , then, let's try searching it:
 
 ```
 $ rg 'The Commentz-Walter algorithm' 1995-watson.pdf
