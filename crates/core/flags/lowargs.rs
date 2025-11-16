@@ -76,6 +76,7 @@ pub(crate) struct LowArgs {
     pub(crate) mmap: MmapMode,
     pub(crate) multiline: bool,
     pub(crate) multiline_dotall: bool,
+    pub(crate) mtime: Option<MtimeFilter>,
     pub(crate) no_config: bool,
     pub(crate) no_ignore_dot: bool,
     pub(crate) no_ignore_exclude: bool,
@@ -349,6 +350,49 @@ impl ColorChoice {
             ColorChoice::Auto => termcolor::ColorChoice::Auto,
             ColorChoice::Always => termcolor::ColorChoice::Always,
             ColorChoice::Ansi => termcolor::ColorChoice::AlwaysAnsi,
+        }
+    }
+}
+
+/// Indicates how to filter files based on their modification time.
+///
+/// This mirrors the behavior of find's -mtime flag:
+/// - Exactly(n): file was modified exactly n*24 hours ago
+/// - LessThan(n): file was modified less than n*24 hours ago (within last n days)
+/// - MoreThan(n): file was modified more than n*24 hours ago (older than n days)
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum MtimeFilter {
+    /// Files modified exactly n days ago.
+    Exactly(u64),
+    /// Files modified less than n days ago (within last n days).
+    LessThan(u64),
+    /// Files modified more than n days ago (older than n days).
+    MoreThan(u64),
+}
+
+impl MtimeFilter {
+    /// Check if a file's modification time matches this filter.
+    ///
+    /// Returns true if the file should be included based on its mtime.
+    pub(crate) fn matches(&self, file_mtime: std::time::SystemTime) -> bool {
+        use std::time::SystemTime;
+        
+        let now = SystemTime::now();
+        let days_ago = match now.duration_since(file_mtime) {
+            Ok(duration) => {
+                // Truncate to whole days (ignore fractional part)
+                duration.as_secs() / (24 * 60 * 60)
+            }
+            Err(_) => {
+                // File modified in the future? Don't match any filter
+                return false;
+            }
+        };
+        
+        match *self {
+            MtimeFilter::Exactly(n) => days_ago == n,
+            MtimeFilter::LessThan(n) => days_ago < n,
+            MtimeFilter::MoreThan(n) => days_ago > n,
         }
     }
 }

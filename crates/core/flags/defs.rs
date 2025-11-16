@@ -96,6 +96,7 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &MaxDepth,
     &MaxFilesize,
     &Mmap,
+    &Mtime,
     &Multiline,
     &MultilineDotall,
     &NoConfig,
@@ -4269,6 +4270,107 @@ fn test_multiline_dotall() {
     let args = parse_low_raw(["--multiline-dotall", "--no-multiline-dotall"])
         .unwrap();
     assert_eq!(false, args.multiline_dotall);
+}
+
+/// --mtime
+#[derive(Debug)]
+struct Mtime;
+
+impl Flag for Mtime {
+    fn is_switch(&self) -> bool {
+        false
+    }
+    fn name_long(&self) -> &'static str {
+        "mtime"
+    }
+    fn doc_variable(&self) -> Option<&'static str> {
+        Some("DAYS")
+    }
+    fn doc_category(&self) -> Category {
+        Category::Filter
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Filter files by modification time."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Filter files based on their modification time, similar to the \fBfind\fP
+command's \fB-mtime\fP option.
+.sp
+The value can be specified in three formats:
+.sp
+.IP \(bu
+\fBN\fP - Files modified exactly N days ago (N*24 hours ago, ignoring
+fractional parts).
+.IP \(bu
+\fB-N\fP - Files modified less than N days ago (within the last N days).
+.IP \(bu
+\fB+N\fP - Files modified more than N days ago (older than N days).
+.sp
+For example:
+.sp
+.IP \(bu
+\fB--mtime 1\fP matches files modified exactly 1 day ago.
+.IP \(bu
+\fB--mtime -1\fP matches files modified within the last day (less than 24
+hours old).
+.IP \(bu
+\fB--mtime +7\fP matches files modified more than 7 days ago.
+.sp
+When ripgrep figures out how many 24-hour periods ago the file was last
+modified, any fractional part is ignored. So to match \fB--mtime +1\fP, a file
+has to have been modified at least two days ago.
+.sp
+This flag only affects which files are searched, not what is printed. It is
+typically combined with search patterns or the \flag{files} mode.
+"
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        use crate::flags::lowargs::MtimeFilter;
+
+        let value = v.unwrap_value();
+        let value_str = value.to_str()
+            .ok_or_else(|| anyhow::anyhow!("invalid UTF-8 in mtime value"))?;
+
+        let filter = if let Some(stripped) = value_str.strip_prefix('+') {
+            // +N means more than N days ago
+            let days: u64 = stripped.parse()
+                .context("mtime value must be a number")?;
+            MtimeFilter::MoreThan(days)
+        } else if let Some(stripped) = value_str.strip_prefix('-') {
+            // -N means less than N days ago
+            let days: u64 = stripped.parse()
+                .context("mtime value must be a number")?;
+            MtimeFilter::LessThan(days)
+        } else {
+            // N means exactly N days ago
+            let days: u64 = value_str.parse()
+                .context("mtime value must be a number")?;
+            MtimeFilter::Exactly(days)
+        };
+
+        args.mtime = Some(filter);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_mtime() {
+    use crate::flags::lowargs::MtimeFilter;
+
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(None, args.mtime);
+
+    let args = parse_low_raw(["--mtime", "5"]).unwrap();
+    assert_eq!(Some(MtimeFilter::Exactly(5)), args.mtime);
+
+    let args = parse_low_raw(["--mtime", "-3"]).unwrap();
+    assert_eq!(Some(MtimeFilter::LessThan(3)), args.mtime);
+
+    let args = parse_low_raw(["--mtime", "+7"]).unwrap();
+    assert_eq!(Some(MtimeFilter::MoreThan(7)), args.mtime);
 }
 
 /// --no-config

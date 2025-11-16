@@ -17,7 +17,7 @@ use crate::{
         BinaryMode, BoundaryMode, BufferMode, CaseMode, ColorChoice,
         ContextMode, ContextSeparator, EncodingMode, EngineChoice,
         FieldContextSeparator, FieldMatchSeparator, LowArgs, MmapMode, Mode,
-        PatternSource, SearchMode, SortMode, SortModeKind, TypeChange,
+        MtimeFilter, PatternSource, SearchMode, SortMode, SortModeKind, TypeChange,
     },
     haystack::{Haystack, HaystackBuilder},
     search::{PatternMatcher, Printer, SearchWorker, SearchWorkerBuilder},
@@ -73,6 +73,7 @@ pub(crate) struct HiArgs {
     mode: Mode,
     multiline: bool,
     multiline_dotall: bool,
+    mtime: Option<MtimeFilter>,
     no_ignore_dot: bool,
     no_ignore_exclude: bool,
     no_ignore_files: bool,
@@ -289,6 +290,7 @@ impl HiArgs {
             mmap_choice,
             multiline: low.multiline,
             multiline_dotall: low.multiline_dotall,
+            mtime: low.mtime,
             no_ignore_dot: low.no_ignore_dot,
             no_ignore_exclude: low.no_ignore_exclude,
             no_ignore_files: low.no_ignore_files,
@@ -357,6 +359,7 @@ impl HiArgs {
     pub(crate) fn haystack_builder(&self) -> HaystackBuilder {
         let mut builder = HaystackBuilder::new();
         builder.strip_dot_prefix(self.paths.has_implicit_path);
+        builder.mtime_filter(self.mtime);
         builder
     }
 
@@ -860,6 +863,11 @@ impl HiArgs {
     /// user for this specific invocation.
     pub(crate) fn types(&self) -> &ignore::types::Types {
         &self.types
+    }
+
+    /// Returns true if modification times should be displayed.
+    pub(crate) fn mtime(&self) -> Option<MtimeFilter> {
+        self.mtime
     }
 
     /// Create a new builder for recursive directory traversal.

@@ -11,16 +11,22 @@ level logic around it.
 
 use std::path::Path;
 
+use crate::flags::MtimeFilter;
+
 /// A builder for constructing things to search over.
 #[derive(Clone, Debug)]
 pub(crate) struct HaystackBuilder {
     strip_dot_prefix: bool,
+    mtime_filter: Option<MtimeFilter>,
 }
 
 impl HaystackBuilder {
     /// Return a new haystack builder with a default configuration.
     pub(crate) fn new() -> HaystackBuilder {
-        HaystackBuilder { strip_dot_prefix: false }
+        HaystackBuilder {
+            strip_dot_prefix: false,
+            mtime_filter: None,
+        }
     }
 
     /// Create a new haystack from a possibly missing directory entry.
@@ -60,22 +66,60 @@ impl HaystackBuilder {
         // file. This omits symlinks. (If ripgrep was configured to follow
         // symlinks, then they have already been followed by the directory
         // traversal.)
-        if hay.is_file() {
-            return Some(hay);
+        if !hay.is_file() {
+            // We got nothing. Emit a debug message, but only if this isn't a
+            // directory. Otherwise, emitting messages for directories is just
+            // noisy.
+            if !hay.is_dir() {
+                log::debug!(
+                    "ignoring {}: failed to pass haystack filter: \
+                     file type: {:?}, metadata: {:?}",
+                    hay.dent.path().display(),
+                    hay.dent.file_type(),
+                    hay.dent.metadata()
+                );
+            }
+            return None;
         }
-        // We got nothing. Emit a debug message, but only if this isn't a
-        // directory. Otherwise, emitting messages for directories is just
-        // noisy.
-        if !hay.is_dir() {
-            log::debug!(
-                "ignoring {}: failed to pass haystack filter: \
-                 file type: {:?}, metadata: {:?}",
-                hay.dent.path().display(),
-                hay.dent.file_type(),
-                hay.dent.metadata()
-            );
+        
+        // Apply mtime filter if configured
+        if let Some(filter) = self.mtime_filter {
+            // Try to get metadata and modification time
+            let modified = match hay.dent.metadata() {
+                Ok(metadata) => metadata.modified(),
+                Err(err) => {
+                    log::debug!(
+                        "ignoring {}: could not read metadata: {}",
+                        hay.dent.path().display(),
+                        err
+                    );
+                    return None;
+                }
+            };
+            
+            match modified {
+                Ok(mtime) => {
+                    if !filter.matches(mtime) {
+                        log::debug!(
+                            "ignoring {}: does not match mtime filter",
+                            hay.dent.path().display()
+                        );
+                        return None;
+                    }
+                }
+                Err(err) => {
+                    // If we can't get modified time, skip the file
+                    log::debug!(
+                        "ignoring {}: could not read modification time: {}",
+                        hay.dent.path().display(),
+                        err
+                    );
+                    return None;
+                }
+            }
         }
-        None
+        
+        Some(hay)
     }
 
     /// When enabled, if the haystack's file path starts with `./` then it is
@@ -87,6 +131,18 @@ impl HaystackBuilder {
         yes: bool,
     ) -> &mut HaystackBuilder {
         self.strip_dot_prefix = yes;
+        self
+    }
+
+    /// Set the mtime filter for the haystack builder.
+    ///
+    /// When set, only files whose modification time matches the filter will
+    /// be searched.
+    pub(crate) fn mtime_filter(
+        &mut self,
+        filter: Option<MtimeFilter>,
+    ) -> &mut HaystackBuilder {
+        self.mtime_filter = filter;
         self
     }
 }
