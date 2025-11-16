@@ -360,7 +360,7 @@ impl HiArgs {
     pub(crate) fn haystack_builder(&self) -> HaystackBuilder {
         let mut builder = HaystackBuilder::new();
         builder.strip_dot_prefix(self.paths.has_implicit_path);
-        builder.mtime_filter(self.mtime);
+        builder.mtime_filter(self.mtime.clone());
         builder
     }
 

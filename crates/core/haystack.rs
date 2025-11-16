@@ -80,7 +80,7 @@ impl HaystackBuilder {
         }
 
         // Apply mtime filter if configured
-        if let Some(filter) = self.mtime_filter {
+        if let Some(filter) = &self.mtime_filter {
             // Try to get metadata and modification time
             let modified = match hay.dent.metadata() {
                 Ok(metadata) => metadata.modified(),

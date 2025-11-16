@@ -4284,7 +4284,7 @@ impl Flag for Mtime {
         "mtime"
     }
     fn doc_variable(&self) -> Option<&'static str> {
-        Some("DAYS")
+        Some("WHEN")
     }
     fn doc_category(&self) -> Category {
         Category::Filter
@@ -4294,28 +4294,49 @@ impl Flag for Mtime {
     }
     fn doc_long(&self) -> &'static str {
         r"
-Filter files based on their modification time, similar to the \fBfind\fP
-command's \fB-mtime\fP option.
+Filter files based on their modification time. Accepts flexible time
+specifications including relative times, absolute timestamps, and natural
+language.
 .sp
-The value can be specified in three formats:
+Relative time formats (from now):
 .sp
 .IP \(bu
-\fBN\fP - Files modified exactly N days ago (N*24 hours ago, ignoring
-fractional parts).
+\fB7d\fP or \fB7 days\fP - within the last 7 days
 .IP \(bu
-\fB-N\fP - Files modified less than N days ago (within the last N days).
+\fB2w\fP or \fB2 weeks\fP - within the last 2 weeks  
 .IP \(bu
-\fB+N\fP - Files modified more than N days ago (older than N days).
+\fB3h\fP or \fB3 hours\fP - within the last 3 hours
+.IP \(bu
+\fB1y\fP or \fB1 year\fP - within the last year
 .sp
-For example: \fB--mtime 1\fP (exactly 1 day ago), \fB--mtime (minus)-7\fP (within
-the last week), or \fB--mtime (plus)30\fP (more than 30 days ago).
+Absolute timestamps:
 .sp
-When ripgrep figures out how many 24-hour periods ago the file was last
-modified, any fractional part is ignored. So to match \fB--mtime (plus)1\fP, a file
-has to have been modified at least two days ago.
+.IP \(bu
+\fB2024-11-16\fP - files modified after this date
+.IP \(bu
+\fB2024-11-16T10:30:00\fP - files modified after this specific time
 .sp
-This flag only affects which files are searched, not what is printed. It is
-typically combined with search patterns or the \flag{files} mode.
+Find-style syntax (for compatibility):
+.sp
+.IP \(bu
+\fB+7d\fP - files older than 7 days
+.IP \(bu
+(minus)\fB7d\fP - files newer than 7 days (within last 7 days)
+.sp
+Natural language:
+.sp
+.IP \(bu
+\fByesterday\fP - files modified within the last day
+.sp
+Time units: s (seconds), m (minutes), h (hours), d (days), w (weeks),
+M (months), y (years).
+.sp
+Examples: \fB--mtime 7d\fP finds files from the past week. The form
+\fB--mtime 2024-11-01\fP finds files modified after November 1st, 2024.
+Use \fB--mtime +30d\fP for files older than 30 days.
+.sp
+This flag uses timezone-aware datetime handling and properly accounts for
+daylight saving time transitions.
 "
     }
 
@@ -4327,23 +4348,7 @@ typically combined with search patterns or the \flag{files} mode.
             .to_str()
             .ok_or_else(|| anyhow::anyhow!("invalid UTF-8 in mtime value"))?;
 
-        let filter = if let Some(stripped) = value_str.strip_prefix('+') {
-            // +N means more than N days ago
-            let days: u64 =
-                stripped.parse().context("mtime value must be a number")?;
-            MtimeFilter::MoreThan(days)
-        } else if let Some(stripped) = value_str.strip_prefix('-') {
-            // -N means less than N days ago
-            let days: u64 =
-                stripped.parse().context("mtime value must be a number")?;
-            MtimeFilter::LessThan(days)
-        } else {
-            // N means exactly N days ago
-            let days: u64 =
-                value_str.parse().context("mtime value must be a number")?;
-            MtimeFilter::Exactly(days)
-        };
-
+        let filter = MtimeFilter::parse(value_str)?;
         args.mtime = Some(filter);
         Ok(())
     }
@@ -4357,14 +4362,20 @@ fn test_mtime() {
     let args = parse_low_raw(None::<&str>).unwrap();
     assert_eq!(None, args.mtime);
 
-    let args = parse_low_raw(["--mtime", "5"]).unwrap();
-    assert_eq!(Some(MtimeFilter::Exactly(5)), args.mtime);
+    // Test relative time
+    let args = parse_low_raw(["--mtime", "7d"]).unwrap();
+    assert!(args.mtime.is_some());
 
-    let args = parse_low_raw(["--mtime", "-3"]).unwrap();
-    assert_eq!(Some(MtimeFilter::LessThan(3)), args.mtime);
+    // Test find-style syntax
+    let args = parse_low_raw(["--mtime", "+7d"]).unwrap();
+    assert!(matches!(args.mtime, Some(MtimeFilter::Before(_))));
 
-    let args = parse_low_raw(["--mtime", "+7"]).unwrap();
-    assert_eq!(Some(MtimeFilter::MoreThan(7)), args.mtime);
+    let args = parse_low_raw(["--mtime", "-7d"]).unwrap();
+    assert!(matches!(args.mtime, Some(MtimeFilter::After(_))));
+
+    // Test absolute date
+    let args = parse_low_raw(["--mtime", "2024-01-01"]).unwrap();
+    assert!(matches!(args.mtime, Some(MtimeFilter::After(_))));
 }
 
 /// --no-config

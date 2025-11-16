@@ -356,43 +356,224 @@ impl ColorChoice {
 
 /// Indicates how to filter files based on their modification time.
 ///
-/// This mirrors the behavior of find's -mtime flag:
-/// - Exactly(n): file was modified exactly n*24 hours ago
-/// - LessThan(n): file was modified less than n*24 hours ago (within last n days)
-/// - MoreThan(n): file was modified more than n*24 hours ago (older than n days)
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+/// Uses jiff for flexible and accurate time handling that accounts for
+/// timezones, DST, and various time formats.
+#[derive(Clone, Debug)]
 pub(crate) enum MtimeFilter {
-    /// Files modified exactly n days ago.
-    Exactly(u64),
-    /// Files modified less than n days ago (within last n days).
-    LessThan(u64),
-    /// Files modified more than n days ago (older than n days).
-    MoreThan(u64),
+    /// Files modified after a specific timestamp (newer than)
+    After(jiff::Timestamp),
+    /// Files modified before a specific timestamp (older than)
+    Before(jiff::Timestamp),
+    /// Files modified within a span from now (e.g., "within 7 days")
+    Within(jiff::Span),
 }
 
 impl MtimeFilter {
+    /// Parse a time specification into an MtimeFilter.
+    ///
+    /// Supports various formats:
+    /// - Relative: "7d", "2w", "3h", "1y" (from now)
+    /// - Absolute: "2024-11-16", "2024-11-16T10:30:00"
+    /// - Natural: "yesterday", "last week"
+    /// - Prefixed: "+7d" (older than), "-7d" (newer than)
+    pub(crate) fn parse(spec: &str) -> anyhow::Result<Self> {
+        use jiff::{civil, Timestamp, Zoned};
+
+        let spec = spec.trim();
+
+        // Handle find-style +/- prefixes (for backwards compatibility)
+        if let Some(stripped) = spec.strip_prefix('+') {
+            // +N means "older than N"
+            let span = Self::parse_span(stripped)?;
+            let cutoff = Zoned::now().checked_sub(span)?;
+            return Ok(MtimeFilter::Before(cutoff.timestamp()));
+        } else if let Some(stripped) = spec.strip_prefix('-') {
+            // -N means "newer than N"
+            let span = Self::parse_span(stripped)?;
+            let cutoff = Zoned::now().checked_sub(span)?;
+            return Ok(MtimeFilter::After(cutoff.timestamp()));
+        }
+
+        // Try parsing as absolute timestamp (ISO 8601 with time)
+        if let Ok(timestamp) = spec.parse::<Timestamp>() {
+            return Ok(MtimeFilter::After(timestamp));
+        }
+
+        // Try parsing as Zoned datetime (with timezone)
+        if let Ok(zoned) = spec.parse::<Zoned>() {
+            return Ok(MtimeFilter::After(zoned.timestamp()));
+        }
+
+        // Try parsing as civil date (YYYY-MM-DD)
+        if let Ok(date) = spec.parse::<civil::Date>() {
+            // Convert to midnight at start of day in UTC
+            let zoned = date.at(0, 0, 0, 0).to_zoned(jiff::tz::TimeZone::UTC)?;
+            return Ok(MtimeFilter::After(zoned.timestamp()));
+        }
+
+        // Try parsing as civil datetime (YYYY-MM-DD HH:MM:SS)
+        if let Ok(datetime) = spec.parse::<civil::DateTime>() {
+            let zoned = datetime.to_zoned(jiff::tz::TimeZone::UTC)?;
+            return Ok(MtimeFilter::After(zoned.timestamp()));
+        }
+
+        // Try common date formats manually
+        if let Some(ts) = Self::parse_common_date_formats(spec)? {
+            return Ok(MtimeFilter::After(ts));
+        }
+
+        // Try parsing as a span (relative time)
+        if let Ok(span) = Self::parse_span(spec) {
+            return Ok(MtimeFilter::Within(span));
+        }
+
+        anyhow::bail!(
+            "invalid time specification: '{}'. \
+             Expected formats: '7d', '2w', 'YYYY-MM-DD', 'YYYY-MM-DD HH:MM:SS', or 'yesterday'",
+            spec
+        )
+    }
+
+    /// Try parsing common date formats that jiff might not handle directly
+    fn parse_common_date_formats(spec: &str) -> anyhow::Result<Option<jiff::Timestamp>> {
+        use jiff::civil;
+
+        // Try YYYY-MM-DD with various separators
+        for sep in &["-", "/", "."] {
+            let parts: Vec<&str> = spec.split(sep).collect();
+            if parts.len() == 3 {
+                if let (Ok(year), Ok(month), Ok(day)) = (
+                    parts[0].parse::<i16>(),
+                    parts[1].parse::<i8>(),
+                    parts[2].parse::<i8>(),
+                ) {
+                    if let Ok(date) = civil::Date::new(year, month, day) {
+                        let zoned = date.at(0, 0, 0, 0).to_zoned(jiff::tz::TimeZone::UTC)?;
+                        return Ok(Some(zoned.timestamp()));
+                    }
+                }
+            }
+        }
+
+        // Try YYYY/MM/DD HH:MM:SS or YYYY-MM-DD HH:MM:SS
+        let datetime_parts: Vec<&str> = spec.split_whitespace().collect();
+        if datetime_parts.len() == 2 {
+            let date_part = datetime_parts[0];
+            let time_part = datetime_parts[1];
+
+            // Parse date
+            for sep in &["-", "/", "."] {
+                let date_parts: Vec<&str> = date_part.split(sep).collect();
+                if date_parts.len() == 3 {
+                    if let (Ok(year), Ok(month), Ok(day)) = (
+                        date_parts[0].parse::<i16>(),
+                        date_parts[1].parse::<i8>(),
+                        date_parts[2].parse::<i8>(),
+                    ) {
+                        // Parse time
+                        let time_parts: Vec<&str> = time_part.split(':').collect();
+                        if time_parts.len() >= 2 {
+                            let hour = time_parts[0].parse::<i8>().ok();
+                            let minute = time_parts[1].parse::<i8>().ok();
+                            let second = if time_parts.len() > 2 {
+                                time_parts[2].parse::<i8>().ok()
+                            } else {
+                                Some(0)
+                            };
+
+                            if let (Some(h), Some(m), Some(s)) = (hour, minute, second) {
+                                if let Ok(date) = civil::Date::new(year, month, day) {
+                                    let datetime = date.at(h, m, s, 0);
+                                    let zoned = datetime.to_zoned(jiff::tz::TimeZone::UTC)?;
+                                    return Ok(Some(zoned.timestamp()));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
+    /// Parse a span from various formats
+    fn parse_span(spec: &str) -> anyhow::Result<jiff::Span> {
+        let spec = spec.trim();
+
+        // Try jiff's built-in span parsing first
+        if let Ok(span) = spec.parse::<jiff::Span>() {
+            return Ok(span);
+        }
+
+        // Handle common shorthand: "7d", "2w", "3h", etc.
+        if spec.len() >= 2 {
+            let (num_str, unit_str) = spec.split_at(spec.len() - 1);
+            if let Ok(num) = num_str.parse::<i64>() {
+                let span = match unit_str {
+                    "s" => jiff::Span::new().seconds(num),
+                    "m" => jiff::Span::new().minutes(num),
+                    "h" => jiff::Span::new().hours(num),
+                    "d" => jiff::Span::new().days(num),
+                    "w" => jiff::Span::new().weeks(num),
+                    "M" => jiff::Span::new().months(num),
+                    "y" => jiff::Span::new().years(num),
+                    _ => anyhow::bail!("unknown time unit: {}", unit_str),
+                };
+                return Ok(span);
+            }
+        }
+
+        // Handle full words
+        match spec.to_lowercase().as_str() {
+            "yesterday" => Ok(jiff::Span::new().days(1)),
+            "today" => Ok(jiff::Span::new().hours(0)),
+            _ => {
+                // Try with "N days", "N weeks" etc.
+                let parts: Vec<&str> = spec.split_whitespace().collect();
+                if parts.len() == 2 {
+                    if let Ok(num) = parts[0].parse::<i64>() {
+                        let span = match parts[1].to_lowercase().as_str() {
+                            "second" | "seconds" => jiff::Span::new().seconds(num),
+                            "minute" | "minutes" => jiff::Span::new().minutes(num),
+                            "hour" | "hours" => jiff::Span::new().hours(num),
+                            "day" | "days" => jiff::Span::new().days(num),
+                            "week" | "weeks" => jiff::Span::new().weeks(num),
+                            "month" | "months" => jiff::Span::new().months(num),
+                            "year" | "years" => jiff::Span::new().years(num),
+                            _ => anyhow::bail!("unknown time unit: {}", parts[1]),
+                        };
+                        return Ok(span);
+                    }
+                }
+                anyhow::bail!("could not parse span: {}", spec)
+            }
+        }
+    }
+
     /// Check if a file's modification time matches this filter.
     ///
     /// Returns true if the file should be included based on its mtime.
     pub(crate) fn matches(&self, file_mtime: std::time::SystemTime) -> bool {
-        use std::time::SystemTime;
+        use jiff::Timestamp;
 
-        let now = SystemTime::now();
-        let days_ago = match now.duration_since(file_mtime) {
-            Ok(duration) => {
-                // Truncate to whole days (ignore fractional part)
-                duration.as_secs() / (24 * 60 * 60)
-            }
-            Err(_) => {
-                // File modified in the future? Don't match any filter
-                return false;
-            }
+        // Convert SystemTime to jiff Timestamp
+        let file_ts = match Timestamp::try_from(file_mtime) {
+            Ok(ts) => ts,
+            Err(_) => return false, // Invalid timestamp
         };
 
-        match *self {
-            MtimeFilter::Exactly(n) => days_ago == n,
-            MtimeFilter::LessThan(n) => days_ago < n,
-            MtimeFilter::MoreThan(n) => days_ago > n,
+        match self {
+            MtimeFilter::After(cutoff) => file_ts > *cutoff,
+            MtimeFilter::Before(cutoff) => file_ts < *cutoff,
+            MtimeFilter::Within(span) => {
+                let now = jiff::Timestamp::now();
+                if let Ok(cutoff) = now.checked_sub(*span) {
+                    file_ts >= cutoff && file_ts <= now
+                } else {
+                    false
+                }
+            }
         }
     }
 }

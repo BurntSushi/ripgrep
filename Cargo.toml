@@ -54,6 +54,7 @@ anyhow = "1.0.75"
 bstr = "1.7.0"
 grep = { version = "0.4.1", path = "crates/grep" }
 ignore = { version = "0.4.24", path = "crates/ignore" }
+jiff = "0.1"
 lexopt = "0.3.0"
 log = "0.4.5"
 serde_json = "1.0.23"

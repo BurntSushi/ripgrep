@@ -217,7 +217,7 @@ _rg() {
     $no"(--no-multiline)--no-multiline-dotall[don't allow \".\" to match newline (with -U)]"
 
     + '(mtime)' # Mtime options
-    '--mtime+[filter files by modification time]:days (N, -N, or +N)'
+    '--mtime=[filter files by modification time]:time specification:(7d 2w 3h yesterday +7d -7d 2024-11-16)'
 
     + '(only)' # Only-match options
     {-o,--only-matching}'[show only matching part of each line]'
