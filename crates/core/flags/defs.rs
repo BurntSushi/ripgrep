@@ -4307,18 +4307,11 @@ fractional parts).
 .IP \(bu
 \fB+N\fP - Files modified more than N days ago (older than N days).
 .sp
-For example:
-.sp
-.IP \(bu
-\fB--mtime 1\fP matches files modified exactly 1 day ago.
-.IP \(bu
-\fB--mtime -1\fP matches files modified within the last day (less than 24
-hours old).
-.IP \(bu
-\fB--mtime +7\fP matches files modified more than 7 days ago.
+For example: \fB--mtime 1\fP (exactly 1 day ago), \fB--mtime (minus)-7\fP (within
+the last week), or \fB--mtime (plus)30\fP (more than 30 days ago).
 .sp
 When ripgrep figures out how many 24-hour periods ago the file was last
-modified, any fractional part is ignored. So to match \fB--mtime +1\fP, a file
+modified, any fractional part is ignored. So to match \fB--mtime (plus)1\fP, a file
 has to have been modified at least two days ago.
 .sp
 This flag only affects which files are searched, not what is printed. It is
