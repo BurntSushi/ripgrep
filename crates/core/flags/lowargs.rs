@@ -358,7 +358,7 @@ impl ColorChoice {
 ///
 /// Uses jiff for flexible and accurate time handling that accounts for
 /// timezones, DST, and various time formats.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) enum MtimeFilter {
     /// Files modified after a specific timestamp (newer than)
     After(jiff::Timestamp),
@@ -377,7 +377,7 @@ impl MtimeFilter {
     /// - Natural: "yesterday", "last week"
     /// - Prefixed: "+7d" (older than), "-7d" (newer than)
     pub(crate) fn parse(spec: &str) -> anyhow::Result<Self> {
-        use jiff::{civil, Timestamp, Zoned};
+        use jiff::{Timestamp, Zoned, civil};
 
         let spec = spec.trim();
 
@@ -407,7 +407,8 @@ impl MtimeFilter {
         // Try parsing as civil date (YYYY-MM-DD)
         if let Ok(date) = spec.parse::<civil::Date>() {
             // Convert to midnight at start of day in UTC
-            let zoned = date.at(0, 0, 0, 0).to_zoned(jiff::tz::TimeZone::UTC)?;
+            let zoned =
+                date.at(0, 0, 0, 0).to_zoned(jiff::tz::TimeZone::UTC)?;
             return Ok(MtimeFilter::After(zoned.timestamp()));
         }
 
@@ -435,7 +436,9 @@ impl MtimeFilter {
     }
 
     /// Try parsing common date formats that jiff might not handle directly
-    fn parse_common_date_formats(spec: &str) -> anyhow::Result<Option<jiff::Timestamp>> {
+    fn parse_common_date_formats(
+        spec: &str,
+    ) -> anyhow::Result<Option<jiff::Timestamp>> {
         use jiff::civil;
 
         // Try YYYY-MM-DD with various separators
@@ -448,7 +451,9 @@ impl MtimeFilter {
                     parts[2].parse::<i8>(),
                 ) {
                     if let Ok(date) = civil::Date::new(year, month, day) {
-                        let zoned = date.at(0, 0, 0, 0).to_zoned(jiff::tz::TimeZone::UTC)?;
+                        let zoned = date
+                            .at(0, 0, 0, 0)
+                            .to_zoned(jiff::tz::TimeZone::UTC)?;
                         return Ok(Some(zoned.timestamp()));
                     }
                 }
@@ -471,7 +476,8 @@ impl MtimeFilter {
                         date_parts[2].parse::<i8>(),
                     ) {
                         // Parse time
-                        let time_parts: Vec<&str> = time_part.split(':').collect();
+                        let time_parts: Vec<&str> =
+                            time_part.split(':').collect();
                         if time_parts.len() >= 2 {
                             let hour = time_parts[0].parse::<i8>().ok();
                             let minute = time_parts[1].parse::<i8>().ok();
@@ -481,10 +487,15 @@ impl MtimeFilter {
                                 Some(0)
                             };
 
-                            if let (Some(h), Some(m), Some(s)) = (hour, minute, second) {
-                                if let Ok(date) = civil::Date::new(year, month, day) {
+                            if let (Some(h), Some(m), Some(s)) =
+                                (hour, minute, second)
+                            {
+                                if let Ok(date) =
+                                    civil::Date::new(year, month, day)
+                                {
                                     let datetime = date.at(h, m, s, 0);
-                                    let zoned = datetime.to_zoned(jiff::tz::TimeZone::UTC)?;
+                                    let zoned = datetime
+                                        .to_zoned(jiff::tz::TimeZone::UTC)?;
                                     return Ok(Some(zoned.timestamp()));
                                 }
                             }
@@ -534,14 +545,23 @@ impl MtimeFilter {
                 if parts.len() == 2 {
                     if let Ok(num) = parts[0].parse::<i64>() {
                         let span = match parts[1].to_lowercase().as_str() {
-                            "second" | "seconds" => jiff::Span::new().seconds(num),
-                            "minute" | "minutes" => jiff::Span::new().minutes(num),
+                            "second" | "seconds" => {
+                                jiff::Span::new().seconds(num)
+                            }
+                            "minute" | "minutes" => {
+                                jiff::Span::new().minutes(num)
+                            }
                             "hour" | "hours" => jiff::Span::new().hours(num),
                             "day" | "days" => jiff::Span::new().days(num),
                             "week" | "weeks" => jiff::Span::new().weeks(num),
-                            "month" | "months" => jiff::Span::new().months(num),
+                            "month" | "months" => {
+                                jiff::Span::new().months(num)
+                            }
                             "year" | "years" => jiff::Span::new().years(num),
-                            _ => anyhow::bail!("unknown time unit: {}", parts[1]),
+                            _ => anyhow::bail!(
+                                "unknown time unit: {}",
+                                parts[1]
+                            ),
                         };
                         return Ok(span);
                     }
