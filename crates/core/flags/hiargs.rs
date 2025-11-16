@@ -17,7 +17,8 @@ use crate::{
         BinaryMode, BoundaryMode, BufferMode, CaseMode, ColorChoice,
         ContextMode, ContextSeparator, EncodingMode, EngineChoice,
         FieldContextSeparator, FieldMatchSeparator, LowArgs, MmapMode, Mode,
-        MtimeFilter, PatternSource, SearchMode, SortMode, SortModeKind, TypeChange,
+        MtimeFilter, PatternSource, SearchMode, SortMode, SortModeKind,
+        TypeChange,
     },
     haystack::{Haystack, HaystackBuilder},
     search::{PatternMatcher, Printer, SearchWorker, SearchWorkerBuilder},
@@ -863,11 +864,6 @@ impl HiArgs {
     /// user for this specific invocation.
     pub(crate) fn types(&self) -> &ignore::types::Types {
         &self.types
-    }
-
-    /// Returns true if modification times should be displayed.
-    pub(crate) fn mtime(&self) -> Option<MtimeFilter> {
-        self.mtime
     }
 
     /// Create a new builder for recursive directory traversal.

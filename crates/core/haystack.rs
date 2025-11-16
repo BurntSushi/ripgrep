@@ -23,10 +23,7 @@ pub(crate) struct HaystackBuilder {
 impl HaystackBuilder {
     /// Return a new haystack builder with a default configuration.
     pub(crate) fn new() -> HaystackBuilder {
-        HaystackBuilder {
-            strip_dot_prefix: false,
-            mtime_filter: None,
-        }
+        HaystackBuilder { strip_dot_prefix: false, mtime_filter: None }
     }
 
     /// Create a new haystack from a possibly missing directory entry.
@@ -81,7 +78,7 @@ impl HaystackBuilder {
             }
             return None;
         }
-        
+
         // Apply mtime filter if configured
         if let Some(filter) = self.mtime_filter {
             // Try to get metadata and modification time
@@ -96,7 +93,7 @@ impl HaystackBuilder {
                     return None;
                 }
             };
-            
+
             match modified {
                 Ok(mtime) => {
                     if !filter.matches(mtime) {
@@ -118,7 +115,7 @@ impl HaystackBuilder {
                 }
             }
         }
-        
+
         Some(hay)
     }
 
@@ -134,7 +131,7 @@ impl HaystackBuilder {
         self
     }
 
-    /// Set the mtime filter for the haystack builder.
+    /// Set the mtime filter for this haystack builder.
     ///
     /// When set, only files whose modification time matches the filter will
     /// be searched.

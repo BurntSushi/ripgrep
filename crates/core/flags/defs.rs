@@ -4330,23 +4330,24 @@ typically combined with search patterns or the \flag{files} mode.
         use crate::flags::lowargs::MtimeFilter;
 
         let value = v.unwrap_value();
-        let value_str = value.to_str()
+        let value_str = value
+            .to_str()
             .ok_or_else(|| anyhow::anyhow!("invalid UTF-8 in mtime value"))?;
 
         let filter = if let Some(stripped) = value_str.strip_prefix('+') {
             // +N means more than N days ago
-            let days: u64 = stripped.parse()
-                .context("mtime value must be a number")?;
+            let days: u64 =
+                stripped.parse().context("mtime value must be a number")?;
             MtimeFilter::MoreThan(days)
         } else if let Some(stripped) = value_str.strip_prefix('-') {
             // -N means less than N days ago
-            let days: u64 = stripped.parse()
-                .context("mtime value must be a number")?;
+            let days: u64 =
+                stripped.parse().context("mtime value must be a number")?;
             MtimeFilter::LessThan(days)
         } else {
             // N means exactly N days ago
-            let days: u64 = value_str.parse()
-                .context("mtime value must be a number")?;
+            let days: u64 =
+                value_str.parse().context("mtime value must be a number")?;
             MtimeFilter::Exactly(days)
         };
 

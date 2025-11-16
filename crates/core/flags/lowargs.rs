@@ -376,7 +376,7 @@ impl MtimeFilter {
     /// Returns true if the file should be included based on its mtime.
     pub(crate) fn matches(&self, file_mtime: std::time::SystemTime) -> bool {
         use std::time::SystemTime;
-        
+
         let now = SystemTime::now();
         let days_ago = match now.duration_since(file_mtime) {
             Ok(duration) => {
@@ -388,7 +388,7 @@ impl MtimeFilter {
                 return false;
             }
         };
-        
+
         match *self {
             MtimeFilter::Exactly(n) => days_ago == n,
             MtimeFilter::LessThan(n) => days_ago < n,
