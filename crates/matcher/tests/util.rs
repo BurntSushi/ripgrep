@@ -54,7 +54,7 @@ impl Matcher for RegexMatcher {
     }
 
     fn capture_index(&self, name: &str) -> Option<usize> {
-        self.names.get(name).map(|i| *i)
+        self.names.get(name).copied()
     }
 
     // We purposely don't implement any other methods, so that we test the
