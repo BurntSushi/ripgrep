@@ -252,7 +252,6 @@ pub(crate) enum BinaryMode {
     AsText,
 }
 
-
 /// Indicates what kind of boundary mode to use (line or word).
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) enum BoundaryMode {
@@ -284,7 +283,6 @@ pub(crate) enum BufferMode {
     Block,
 }
 
-
 /// Indicates the case mode for how to interpret all patterns given to ripgrep.
 ///
 /// The default is `Sensitive`.
@@ -300,7 +298,6 @@ pub(crate) enum CaseMode {
     /// `a` will match `A` but `A` will not match `a`.
     Smart,
 }
-
 
 /// Indicates whether ripgrep should include color/hyperlinks in its output.
 ///
@@ -323,7 +320,6 @@ pub(crate) enum ColorChoice {
     /// ripgrep to use ANSI coloring.
     Ansi,
 }
-
 
 impl ColorChoice {
     /// Convert this color choice to the corresponding termcolor type.
@@ -526,7 +522,6 @@ pub(crate) enum EncodingMode {
     Disabled,
 }
 
-
 /// The regex engine to use.
 ///
 /// The default is `Default`.
@@ -546,7 +541,6 @@ pub(crate) enum EngineChoice {
     /// Uses the PCRE2 regex engine if it's available.
     PCRE2,
 }
-
 
 /// The field context separator to use to between metadata for each contextual
 /// line.
@@ -642,7 +636,6 @@ pub(crate) enum MmapMode {
     /// contents of a file on to the heap before searching it.
     Never,
 }
-
 
 /// Represents a source of patterns that ripgrep should search for.
 ///
