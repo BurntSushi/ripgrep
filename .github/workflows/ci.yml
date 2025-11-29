@@ -262,3 +262,17 @@ jobs:
       - name: Verify fuzz targets build
         run: cargo check
         working-directory: fuzz
+
+  clippy:
+    permissions:
+      checks: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: clippy
+      - run: cargo clippy --all-features --all-targets --workspace -- --allow warnings
