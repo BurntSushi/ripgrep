@@ -229,8 +229,7 @@ pub(crate) enum GenerateMode {
 }
 
 /// Indicates how ripgrep should treat binary data.
-#[derive(Debug, Eq, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub(crate) enum BinaryMode {
     /// Automatically determine the binary mode to use. Essentially, when
     /// a file is searched explicitly, then it will be searched using the
@@ -266,8 +265,7 @@ pub(crate) enum BoundaryMode {
 /// Indicates the buffer mode that ripgrep should use when printing output.
 ///
 /// The default is `Auto`.
-#[derive(Debug, Eq, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub(crate) enum BufferMode {
     /// Select the buffer mode, 'line' or 'block', automatically based on
     /// whether stdout is connected to a tty.
@@ -290,8 +288,7 @@ pub(crate) enum BufferMode {
 /// Indicates the case mode for how to interpret all patterns given to ripgrep.
 ///
 /// The default is `Sensitive`.
-#[derive(Debug, Eq, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub(crate) enum CaseMode {
     /// Patterns are matched case sensitively. i.e., `a` does not match `A`.
     #[default]
@@ -308,8 +305,7 @@ pub(crate) enum CaseMode {
 /// Indicates whether ripgrep should include color/hyperlinks in its output.
 ///
 /// The default is `Auto`.
-#[derive(Debug, Eq, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub(crate) enum ColorChoice {
     /// Color and hyperlinks will never be used.
     Never,
@@ -517,8 +513,7 @@ impl ContextSeparator {
 /// The encoding mode the searcher will use.
 ///
 /// The default is `Auto`.
-#[derive(Debug, Eq, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub(crate) enum EncodingMode {
     /// Use only BOM sniffing to auto-detect an encoding.
     #[default]
@@ -535,8 +530,7 @@ pub(crate) enum EncodingMode {
 /// The regex engine to use.
 ///
 /// The default is `Default`.
-#[derive(Debug, Eq, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub(crate) enum EngineChoice {
     /// Uses the default regex engine: Rust's `regex` crate.
     ///
@@ -633,8 +627,7 @@ pub(crate) enum LoggingMode {
 /// Indicates when to use memory maps.
 ///
 /// The default is `Auto`.
-#[derive(Debug, Eq, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub(crate) enum MmapMode {
     /// This instructs ripgrep to use heuristics for selecting when to and not
     /// to use memory maps for searching.
