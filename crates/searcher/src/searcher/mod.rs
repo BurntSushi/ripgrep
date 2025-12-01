@@ -576,7 +576,7 @@ impl SearcherBuilder {
     /// limit, regardless of how many lines it spans.
     ///
     /// Note that `0` is a legal value. This will cause the searcher to
-    /// immediately quick without searching anything.
+    /// immediately quit without searching anything.
     ///
     /// By default, no limit is set.
     #[inline]
@@ -880,7 +880,7 @@ impl Searcher {
     /// limit, regardless of how many lines it spans.
     ///
     /// Note that `0` is a legal value. This will cause the searcher to
-    /// immediately quick without searching anything.
+    /// immediately quit without searching anything.
     #[inline]
     pub fn max_matches(&self) -> Option<u64> {
         self.config.max_matches
