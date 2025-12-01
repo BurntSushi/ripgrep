@@ -3958,6 +3958,13 @@ impl Flag for HeadBytes {
         r"
 Limit the number of bytes per file or stream searched to \fINUM\fP.
 .sp
+This only limits how many bytes are read and searched from each haystack. It
+does not affect which files are discovered or filtered by ripgrep.
+.sp
+When combined with \fB--max-count\fP (for example, \fB--max-count 1\fP), this
+can substantially speed up searches where matches are expected to appear only
+near the beginning of each file, such as HTTP headers in large cache files.
+.sp
 Note that \fB0\fP is a legal value but not likely to be useful. When used,
 ripgrep won't search anything.
 "

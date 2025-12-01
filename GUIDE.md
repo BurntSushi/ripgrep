@@ -1017,6 +1017,10 @@ used options that will likely impact how you use ripgrep on a regular basis.
   parallelism, so it might be slower.)
 * `-L/--follow`: Follow symbolic links while recursively searching.
 * `-M/--max-columns`: Limit the length of lines printed by ripgrep.
+* `--max-bytes NUM`: Limit how many bytes are read and searched from each file
+  or stream. This is useful when matches are known to appear only in a header
+  region near the beginning of very large files, and pairs well with
+  `--max-count 1`.
 * `--debug`: Shows ripgrep's debug output. This is useful for understanding
   why a particular file might be ignored from search, or what kinds of
   configuration ripgrep is loading from the environment.
