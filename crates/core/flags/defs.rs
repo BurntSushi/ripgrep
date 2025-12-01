@@ -93,6 +93,7 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &MaxColumns,
     &MaxColumnsPreview,
     &MaxCount,
+    &HeadBytes,
     &MaxDepth,
     &MaxFilesize,
     &Mmap,
@@ -3931,6 +3932,57 @@ fn test_max_count() {
     assert_eq!(Some(10), args.max_count);
     let args = parse_low_raw(["-m0"]).unwrap();
     assert_eq!(Some(0), args.max_count);
+}
+
+/// --max-bytes
+#[derive(Debug)]
+struct HeadBytes;
+
+impl Flag for HeadBytes {
+    fn is_switch(&self) -> bool {
+        false
+    }
+    fn name_long(&self) -> &'static str {
+        "max-bytes"
+    }
+    fn doc_variable(&self) -> Option<&'static str> {
+        Some("NUM")
+    }
+    fn doc_category(&self) -> Category {
+        Category::Search
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Limit the number of bytes examined."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Limit the number of bytes per file or stream searched to \fINUM\fP.
+.sp
+Note that \fB0\fP is a legal value but not likely to be useful. When used,
+ripgrep won't search anything.
+"
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        args.head_bytes = Some(convert::u64(&v.unwrap_value())?);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_max_bytes() {
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(None, args.head_bytes);
+
+    let args = parse_low_raw(["--max-bytes", "5"]).unwrap();
+    assert_eq!(Some(5), args.head_bytes);
+
+    let args =
+        parse_low_raw(["--max-bytes", "5", "--max-bytes=10"]).unwrap();
+    assert_eq!(Some(10), args.head_bytes);
+    let args = parse_low_raw(["--max-bytes=0"]).unwrap();
+    assert_eq!(Some(0), args.head_bytes);
 }
 
 /// --max-depth
