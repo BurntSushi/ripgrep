@@ -592,7 +592,10 @@ impl SearcherBuilder {
     ///
     /// When `None`, no explicit limit is applied. When set, searches will only
     /// consider up to this number of bytes from each input source.
-    pub fn head_bytes(&mut self, head_bytes: Option<u64>) -> &mut SearcherBuilder {
+    pub fn head_bytes(
+        &mut self,
+        head_bytes: Option<u64>,
+    ) -> &mut SearcherBuilder {
         self.config.head_bytes = head_bytes;
         self
     }
@@ -700,8 +703,7 @@ impl Searcher {
     {
         if let Some(mmap) = self.config.mmap.open(file, path) {
             let slice = if let Some(head) = self.config.head_bytes {
-                let head_limit =
-                    usize::try_from(head).unwrap_or(usize::MAX);
+                let head_limit = usize::try_from(head).unwrap_or(usize::MAX);
                 let max = cmp::min(head_limit, mmap.len());
                 log::trace!(
                     "{:?}: only analyzing the first {} bytes (maximum: {})",

@@ -9,10 +9,7 @@ For the Doctor Watsons of this world, as opposed to the Sherlock
 ";
     eqnice!(
         expected,
-        cmd.arg("Sherlock")
-            .arg("sherlock")
-            .arg("--max-bytes=64")
-            .stdout()
+        cmd.arg("Sherlock").arg("sherlock").arg("--max-bytes=64").stdout()
     );
 });
 
@@ -48,9 +45,5 @@ rgtest!(head_bytes_binary_quick, |dir: Dir, mut cmd: TestCommand| {
 
     // With a small byte cap, we still see that it is a binary match and exit
     // quickly without scanning the entire file.
-    cmd.arg("--max-bytes=64")
-        .arg("Sherlock")
-        .arg("bin")
-        .assert_exit_code(0);
+    cmd.arg("--max-bytes=64").arg("Sherlock").arg("bin").assert_exit_code(0);
 });
-

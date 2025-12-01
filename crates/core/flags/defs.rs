@@ -3985,8 +3985,7 @@ fn test_max_bytes() {
     let args = parse_low_raw(["--max-bytes", "5"]).unwrap();
     assert_eq!(Some(5), args.head_bytes);
 
-    let args =
-        parse_low_raw(["--max-bytes", "5", "--max-bytes=10"]).unwrap();
+    let args = parse_low_raw(["--max-bytes", "5", "--max-bytes=10"]).unwrap();
     assert_eq!(Some(10), args.head_bytes);
     let args = parse_low_raw(["--max-bytes=0"]).unwrap();
     assert_eq!(Some(0), args.head_bytes);
