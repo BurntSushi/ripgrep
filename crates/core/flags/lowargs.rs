@@ -68,6 +68,7 @@ pub(crate) struct LowArgs {
     pub(crate) invert_match: bool,
     pub(crate) line_number: Option<bool>,
     pub(crate) logging: Option<LoggingMode>,
+    pub(crate) max_bytes: Option<u64>,
     pub(crate) max_columns: Option<u64>,
     pub(crate) max_columns_preview: bool,
     pub(crate) max_count: Option<u64>,

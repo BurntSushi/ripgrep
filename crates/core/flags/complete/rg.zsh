@@ -340,6 +340,9 @@ _rg() {
     '(-m --max-count)'{-m+,--max-count=}'[specify max number of matches per file]: :\
       _numbers -dunlimited -l0 "max matches per file"
     '
+    '--max-bytes=[limit how many bytes are searched per file]: :\
+      _numbers -ubytes -d0 -l0 "max bytes searched"
+    '
     '--max-filesize=[specify size above which files should be ignored]: :\
       _numbers -ubytes -dunlimited -l0 "max file size" K M G
     '
