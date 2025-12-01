@@ -999,8 +999,14 @@ impl Searcher {
         if self.config.heap_limit.is_none() {
             let mut buf = self.multi_line_buffer.borrow_mut();
             buf.clear();
-            let cap =
-                file.metadata().map(|m| m.len() as usize + 1).unwrap_or(0);
+            let file_len = file.metadata().map(|m| m.len()).unwrap_or(0);
+            let capped_len = if head_limit == u64::MAX {
+                file_len
+            } else {
+                std::cmp::min(file_len, head_limit)
+            };
+            let cap = usize::try_from(capped_len.saturating_add(1))
+                .unwrap_or(usize::MAX);
             buf.reserve(cap);
             read_from.read_to_end(&mut *buf).map_err(S::Error::error_io)?;
             return Ok(());
