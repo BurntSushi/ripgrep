@@ -273,10 +273,10 @@ impl SpecValue {
         match *self {
             SpecValue::None => cspec.clear(),
             SpecValue::Fg(ref color) => {
-                cspec.set_fg(Some(color.clone()));
+                cspec.set_fg(Some(*color));
             }
             SpecValue::Bg(ref color) => {
-                cspec.set_bg(Some(color.clone()));
+                cspec.set_bg(Some(*color));
             }
             SpecValue::Style(ref style) => match *style {
                 Style::Bold => {
