@@ -199,6 +199,7 @@ _rg() {
     + '(messages)' # Error-message options
     '(--no-ignore-messages)--no-messages[suppress some error messages]'
     $no"--messages[don't suppress error messages affected by --no-messages]"
+    '--suppress-error=[control how permission-denied errors affect messages and exit status]:kind'
 
     + '(messages-ignore)' # Ignore-error message options
     "--no-ignore-messages[don't show ignore-file parse error messages]"

@@ -315,7 +315,11 @@ mod tests {
         assert!(!crate::messages::errored());
 
         let err = std::io::Error::from(std::io::ErrorKind::NotFound);
-        handle_search_error(Some(SuppressErrorMode::PermissionSkip), &err, std::path::Path::new("p"));
+        handle_search_error(
+            Some(SuppressErrorMode::PermissionSkip),
+            &err,
+            std::path::Path::new("p"),
+        );
 
         assert!(crate::messages::errored());
     }

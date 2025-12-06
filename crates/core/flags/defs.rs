@@ -181,7 +181,8 @@ The only supported value for now is 'permission' related behavior. When set to
 non-zero exit status when they occur. When set to \fBnopermission\fP,
 permission denied errors are not printed and do not cause a non-zero exit
 status by themselves.
-"}
+"
+    }
     fn doc_choices(&self) -> &'static [&'static str] {
         &["permission", "nopermission"]
     }
@@ -209,10 +210,7 @@ fn test_suppress_error() {
     );
 
     let args = parse_low_raw(["--suppress-error=nopermission"]).unwrap();
-    assert_eq!(
-        Some(SuppressErrorMode::PermissionSkip),
-        args.suppress_error
-    );
+    assert_eq!(Some(SuppressErrorMode::PermissionSkip), args.suppress_error);
 }
 
 /// -A/--after-context
