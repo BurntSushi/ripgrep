@@ -1,0 +1,15 @@
+I want to:
+Add a new CLI flag called --suppress-error with options like =permission or =nopermission
+Implement error filtering in the search pipeline to silently skip files with permission errors
+
+Consider:
+2 variants of the flag:
+- One that silences the errors (exit code stays 2)
+- One that skips files entirely (exits successfully)
+
+Files to modify:
+- crates/cli/src/args.rs
+- crates/core/main.rs
+- crates/searcher/src/searcher/glue.rs
+
+Add tests

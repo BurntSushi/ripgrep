@@ -16,6 +16,32 @@ mod haystack;
 mod logger;
 mod search;
 
+fn handle_search_error(
+    suppress: Option<crate::flags::SuppressErrorMode>,
+    err: &std::io::Error,
+    path: &std::path::Path,
+) {
+    use crate::flags::SuppressErrorMode;
+
+    let mut handled = false;
+    if err.kind() == std::io::ErrorKind::PermissionDenied {
+        if let Some(mode) = suppress {
+            match mode {
+                SuppressErrorMode::PermissionSkip => {
+                    handled = true;
+                }
+                SuppressErrorMode::PermissionSilence => {
+                    crate::messages::set_errored();
+                    handled = true;
+                }
+            }
+        }
+    }
+    if !handled {
+        err_message!("{}: {}", path.display(), err);
+    }
+}
+
 // Since Rust no longer uses jemalloc by default, ripgrep will, by default,
 // use the system allocator. On Linux, this would normally be glibc's
 // allocator, which is pretty good. In particular, ripgrep does not have a
@@ -128,7 +154,11 @@ fn search(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
             // A broken pipe means graceful termination.
             Err(err) if err.kind() == std::io::ErrorKind::BrokenPipe => break,
             Err(err) => {
-                err_message!("{}: {}", haystack.path().display(), err);
+                handle_search_error(
+                    args.suppress_error(),
+                    &err,
+                    haystack.path(),
+                );
                 continue;
             }
         };
@@ -190,7 +220,11 @@ fn search_parallel(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
             let search_result = match searcher.search(&haystack) {
                 Ok(search_result) => search_result,
                 Err(err) => {
-                    err_message!("{}: {}", haystack.path().display(), err);
+                    handle_search_error(
+                        args.suppress_error(),
+                        &err,
+                        haystack.path(),
+                    );
                     return WalkState::Continue;
                 }
             };
@@ -226,6 +260,65 @@ fn search_parallel(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
         let _ = bufwtr.print(&mut wtr);
     }
     Ok(matched.load(Ordering::SeqCst))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::flags::SuppressErrorMode;
+
+    #[test]
+    fn handle_search_error_default_sets_errored_for_permission() {
+        crate::messages::reset_errored();
+        assert!(!crate::messages::errored());
+
+        let err = std::io::Error::from(std::io::ErrorKind::PermissionDenied);
+        handle_search_error(None, &err, std::path::Path::new("p"));
+
+        assert!(crate::messages::errored());
+    }
+
+    #[test]
+    fn handle_search_error_permission_silence_sets_errored() {
+        crate::messages::reset_errored();
+        assert!(!crate::messages::errored());
+
+        let err = std::io::Error::from(std::io::ErrorKind::PermissionDenied);
+        handle_search_error(
+            Some(SuppressErrorMode::PermissionSilence),
+            &err,
+            std::path::Path::new("p"),
+        );
+
+        assert!(crate::messages::errored());
+    }
+
+    #[test]
+    fn handle_search_error_permission_skip_does_not_set_errored() {
+        crate::messages::reset_errored();
+        assert!(!crate::messages::errored());
+
+        let err = std::io::Error::from(std::io::ErrorKind::PermissionDenied);
+        handle_search_error(
+            Some(SuppressErrorMode::PermissionSkip),
+            &err,
+            std::path::Path::new("p"),
+        );
+
+        assert!(!crate::messages::errored());
+    }
+
+    #[test]
+    fn handle_search_error_non_permission_always_sets_errored() {
+        crate::messages::reset_errored();
+        assert!(!crate::messages::errored());
+
+        let err = std::io::Error::from(std::io::ErrorKind::NotFound);
+        handle_search_error(Some(SuppressErrorMode::PermissionSkip), &err, std::path::Path::new("p"));
+
+        assert!(crate::messages::errored());
+    }
 }
 
 /// The top-level entry point for file listing without searching.

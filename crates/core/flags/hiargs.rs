@@ -17,7 +17,8 @@ use crate::{
         BinaryMode, BoundaryMode, BufferMode, CaseMode, ColorChoice,
         ContextMode, ContextSeparator, EncodingMode, EngineChoice,
         FieldContextSeparator, FieldMatchSeparator, LowArgs, MmapMode, Mode,
-        PatternSource, SearchMode, SortMode, SortModeKind, TypeChange,
+        PatternSource, SearchMode, SortMode, SortModeKind, SuppressErrorMode,
+        TypeChange,
     },
     haystack::{Haystack, HaystackBuilder},
     search::{PatternMatcher, Printer, SearchWorker, SearchWorkerBuilder},
@@ -103,6 +104,7 @@ pub(crate) struct HiArgs {
     types: ignore::types::Types,
     vimgrep: bool,
     with_filename: bool,
+    suppress_error: Option<SuppressErrorMode>,
 }
 
 impl HiArgs {
@@ -318,7 +320,12 @@ impl HiArgs {
             types,
             vimgrep: low.vimgrep,
             with_filename,
+            suppress_error: low.suppress_error,
         })
+    }
+
+    pub(crate) fn suppress_error(&self) -> Option<SuppressErrorMode> {
+        self.suppress_error
     }
 
     /// Returns a writer for printing buffers to stdout.

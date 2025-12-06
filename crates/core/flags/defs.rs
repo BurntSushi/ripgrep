@@ -27,7 +27,7 @@ use crate::flags::{
         BinaryMode, BoundaryMode, BufferMode, CaseMode, ColorChoice,
         ContextMode, EncodingMode, EngineChoice, GenerateMode, LoggingMode,
         LowArgs, MmapMode, Mode, PatternSource, SearchMode, SortMode,
-        SortModeKind, SpecialMode, TypeChange,
+        SortModeKind, SpecialMode, SuppressErrorMode, TypeChange,
     },
 };
 
@@ -130,6 +130,7 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &Sortr,
     &Stats,
     &StopOnNonmatch,
+    &SuppressError,
     &Text,
     &Threads,
     &Trace,
@@ -150,6 +151,69 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &NoPcre2Unicode,
     &SortFiles,
 ];
+
+/// --suppress-error
+#[derive(Debug)]
+struct SuppressError;
+
+impl Flag for SuppressError {
+    fn is_switch(&self) -> bool {
+        false
+    }
+    fn name_long(&self) -> &'static str {
+        "suppress-error"
+    }
+    fn doc_variable(&self) -> Option<&'static str> {
+        Some("KIND")
+    }
+    fn doc_category(&self) -> Category {
+        Category::Logging
+    }
+    fn doc_short(&self) -> &'static str {
+        "Control how certain errors affect messages and exit status."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Control how certain errors affect messages and exit status.
+.sp
+The only supported value for now is 'permission' related behavior. When set to
+\fBpermission\fP, permission denied errors are not printed but still cause a
+non-zero exit status when they occur. When set to \fBnopermission\fP,
+permission denied errors are not printed and do not cause a non-zero exit
+status by themselves.
+"}
+    fn doc_choices(&self) -> &'static [&'static str] {
+        &["permission", "nopermission"]
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        let binding = v.unwrap_value();
+        let value = convert::str(&binding)?;
+        let mode = match value {
+            "permission" => SuppressErrorMode::PermissionSilence,
+            "nopermission" => SuppressErrorMode::PermissionSkip,
+            unk => anyhow::bail!("choice '{unk}' is unrecognized"),
+        };
+        args.suppress_error = Some(mode);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_suppress_error() {
+    let args = parse_low_raw(["--suppress-error", "permission"]).unwrap();
+    assert_eq!(
+        Some(SuppressErrorMode::PermissionSilence),
+        args.suppress_error
+    );
+
+    let args = parse_low_raw(["--suppress-error=nopermission"]).unwrap();
+    assert_eq!(
+        Some(SuppressErrorMode::PermissionSkip),
+        args.suppress_error
+    );
+}
 
 /// -A/--after-context
 #[derive(Debug)]

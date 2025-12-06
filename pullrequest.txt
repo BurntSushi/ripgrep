@@ -1,0 +1,210 @@
+Title: Add --suppress-error flag for permission-denied handling
+
+## Summary
+
+This change adds a new CLI flag, `--suppress-error`, that gives users explicit control over how permission-denied errors affect ripgrep’s output and exit status. The new flag is intentionally narrow in scope: it only applies to `io::ErrorKind::PermissionDenied` errors encountered while traversing and searching files.
+
+The default behavior for all other error kinds is unchanged.
+
+## Motivation
+
+Today, when ripgrep encounters a permission-denied error while walking or searching files, it:
+- emits an error message via `err_message!`, and
+- marks the global "errored" flag, which contributes to an exit code of 2.
+
+This is generally desirable, but in some environments (e.g., CI, large monorepos, or locked-down system directories), permission-denied errors are expected noise. Users may want:
+- the ability to **silence** permission-denied messages without changing exit status semantics, or
+- the ability to **treat permission-denied files as skipped**, so they do not force a non-zero exit code.
+
+The new `--suppress-error` flag addresses these use cases while keeping the default behavior unchanged.
+
+## CLI changes
+
+### New flag
+
+- **Flag**: `--suppress-error KIND`
+- **Allowed values**:
+  - `permission`
+  - `nopermission`
+
+### Semantics
+
+These semantics apply **only** to `io::ErrorKind::PermissionDenied`. All other error kinds behave exactly as before.
+
+- **No flag (current default)**
+  - Permission-denied errors are printed via `err_message!("{path}: {err}")`.
+  - The global error flag is set via `messages::set_errored()`.
+  - Exit status may be `2` when such errors occur.
+
+- **`--suppress-error=permission`**
+  - Permission-denied errors are **not printed**.
+  - `messages::set_errored()` is still called.
+  - Exit status behavior matches the current default: permission-denied errors can still lead to exit code `2`, they are just silent.
+
+- **`--suppress-error=nopermission`**
+  - Permission-denied errors are **not printed**.
+  - `messages::errored()` is **not** set for these errors.
+  - Exit status is determined purely by match results and any non-permission errors:
+    - `0` if matches were found and no other errors occurred.
+    - `1` if no matches were found and no other errors occurred.
+    - `2` only if some non-permission error occurred (as before).
+
+## Implementation overview
+
+### New low-level argument type
+
+File: `crates/core/flags/lowargs.rs`
+
+- Added a new enum representing the suppression mode:
+
+  - `SuppressErrorMode` with variants:
+    - `PermissionSilence`
+    - `PermissionSkip`
+
+- Extended `LowArgs` with a new optional field:
+
+  - `suppress_error: Option<SuppressErrorMode>`
+
+This keeps the new flag consistent with other low-level argument representations.
+
+### New CLI flag definition
+
+File: `crates/core/flags/defs.rs`
+
+- Reused `SuppressErrorMode` from `lowargs`.
+- Added `&SuppressError,` to the global `FLAGS` list so it participates in parsing, help, and docs generation.
+- Implemented `Flag` for `SuppressError`:
+  - `name_long() -> "suppress-error"`
+  - `doc_variable() -> Some("KIND")`
+  - `doc_category() -> Category::Logging`
+  - `doc_choices() -> &["permission", "nopermission"]`
+  - `doc_long()` explains the two behaviors in the same mandoc-style used by existing flags.
+  - `update()` converts `KIND` into a `SuppressErrorMode`:
+    - `"permission"`   → `SuppressErrorMode::PermissionSilence`
+    - `"nopermission"` → `SuppressErrorMode::PermissionSkip`
+
+- Added a focused parsing test:
+
+  - `test_suppress_error()` verifies that both `--suppress-error permission` and `--suppress-error=nopermission` parse correctly into the appropriate `SuppressErrorMode` values.
+
+### High-level arguments
+
+File: `crates/core/flags/hiargs.rs`
+
+- Imported `SuppressErrorMode` from `lowargs`.
+- Extended `HiArgs` to carry the suppression mode:
+
+  - Field: `suppress_error: Option<SuppressErrorMode>`
+
+- In `HiArgs::from_low_args`, the field is set from the low-level args:
+
+  - `suppress_error: low.suppress_error,`
+
+- Added a small accessor used by the search pipeline:
+
+  - `pub(crate) fn suppress_error(&self) -> Option<SuppressErrorMode>`
+
+### Public re-export
+
+File: `crates/core/flags/mod.rs`
+
+- Publicly re-exported `SuppressErrorMode` alongside the other core enums:
+
+  - `lowargs::{GenerateMode, Mode, SearchMode, SpecialMode, SuppressErrorMode},`
+
+This allows other modules (such as `main.rs`) to refer to `crate::flags::SuppressErrorMode` without directly depending on the private `lowargs` module.
+
+### Shared error-handling helper
+
+File: `crates/core/main.rs`
+
+To avoid duplicating logic between single-threaded and multi-threaded search, the permission-denied handling is centralized in a helper:
+
+- `fn handle_search_error(suppress: Option<crate::flags::SuppressErrorMode>, err: &std::io::Error, path: &std::path::Path)`
+
+Behavior:
+- If `err.kind() == io::ErrorKind::PermissionDenied` **and** a suppression mode is present:
+  - `PermissionSkip` → mark the error as handled (no message, no `set_errored()`).
+  - `PermissionSilence` → call `messages::set_errored()` but do not print anything.
+- For all other cases (including non-permission errors), fall back to:
+  - `err_message!("{}: {}", path.display(), err);`
+
+Both search entrypoints now delegate to this helper:
+
+- `fn search(args: &HiArgs, mode: SearchMode)`
+  - On `Err(err)` from `searcher.search(&haystack)` (non-broken-pipe):
+    - Calls `handle_search_error(args.suppress_error(), &err, haystack.path());`
+
+- `fn search_parallel(args: &HiArgs, mode: SearchMode)`
+  - In the parallel closure, on `Err(err)` from `searcher.search(&haystack)`:
+    - Calls the same helper and continues walking.
+
+This ensures consistent behavior across both single-threaded and multi-threaded code paths.
+
+### Global error flag utilities
+
+File: `crates/core/messages.rs`
+
+- Existing functions:
+  - `messages()`, `set_messages()`
+  - `ignore_messages()`, `set_ignore_messages()`
+  - `errored()`, `set_errored()`
+
+- Added a **test-only** helper to reset the global error flag:
+
+  - `#[cfg(test)] pub(crate) fn reset_errored()`
+
+This is used by unit tests to assert on the exact behavior of `handle_search_error` without leaking state across tests.
+
+## Tests
+
+### Flag parsing tests
+
+File: `crates/core/flags/defs.rs`
+
+- `test_suppress_error()`
+  - Ensures that:
+    - `--suppress-error permission` → `LowArgs::suppress_error == Some(PermissionSilence)`
+    - `--suppress-error=nopermission` → `LowArgs::suppress_error == Some(PermissionSkip)`
+  - Catches invalid values via an error.
+
+### Error-handling tests
+
+File: `crates/core/main.rs`
+
+A new test module verifies that `handle_search_error` sets `messages::errored()` correctly for different modes and error kinds:
+
+- `handle_search_error_default_sets_errored_for_permission`
+  - No suppression mode (`None`), permission-denied error → `messages::errored() == true`.
+
+- `handle_search_error_permission_silence_sets_errored`
+  - Mode `PermissionSilence`, permission-denied error → `messages::errored() == true`.
+
+- `handle_search_error_permission_skip_does_not_set_errored`
+  - Mode `PermissionSkip`, permission-denied error → `messages::errored() == false`.
+
+- `handle_search_error_non_permission_always_sets_errored`
+  - Any non-permission error (e.g., `NotFound`), regardless of suppression mode → `messages::errored() == true`.
+
+These tests use `messages::reset_errored()` to ensure a clean state.
+
+### Integration
+
+- `cd crates/core && cargo test --tests` passes:
+  - All existing core tests still pass (regression, feature, JSON, multiline, misc, etc.).
+  - New tests for `--suppress-error` behavior are included and passing.
+
+## Backwards compatibility
+
+- Existing behavior is preserved **by default**:
+  - Users not passing `--suppress-error` see the same messages and exit codes as before.
+- The new flag is opt-in and narrowly scoped to `io::ErrorKind::PermissionDenied`.
+- All other CLI flags, modes, and error semantics remain unchanged.
+
+## Notes
+
+- The implementation follows the existing ripgrep style:
+  - Low-level/hi-level flags separation (`LowArgs` → `HiArgs`).
+  - Centralized helper for search error handling to avoid duplication.
+  - Tests are focused, narrow, and use existing patterns (e.g., `parse_low_raw`, global state helpers).
+- Documentation strings for the new flag are written in the same mandoc-style as existing flags and should integrate smoothly into the generated help/man page output.

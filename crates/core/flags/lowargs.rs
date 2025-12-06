@@ -101,12 +101,19 @@ pub(crate) struct LowArgs {
     pub(crate) sort: Option<SortMode>,
     pub(crate) stats: bool,
     pub(crate) stop_on_nonmatch: bool,
+    pub(crate) suppress_error: Option<SuppressErrorMode>,
     pub(crate) threads: Option<usize>,
     pub(crate) trim: bool,
     pub(crate) type_changes: Vec<TypeChange>,
     pub(crate) unrestricted: usize,
     pub(crate) vimgrep: bool,
     pub(crate) with_filename: Option<bool>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum SuppressErrorMode {
+    PermissionSilence,
+    PermissionSkip,
 }
 
 /// A "special" mode that supercedes everything else.

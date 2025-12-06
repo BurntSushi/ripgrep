@@ -137,3 +137,8 @@ pub(crate) fn errored() -> bool {
 pub(crate) fn set_errored() {
     ERRORED.store(true, Ordering::Relaxed);
 }
+
+#[cfg(test)]
+pub(crate) fn reset_errored() {
+    ERRORED.store(false, Ordering::Relaxed);
+}
