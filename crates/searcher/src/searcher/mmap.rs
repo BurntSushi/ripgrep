@@ -77,7 +77,17 @@ impl MmapChoice {
         match unsafe { Mmap::map(file) } {
             Ok(mmap) => {
                 #[cfg(target_os = "macos")]
-                let _ = mmap.advise(memmap::Advice::Sequential);
+                if let Err(err) = mmap.advise(memmap::Advice::Sequential) {
+                    if let Some(path) = path {
+                        log::debug!(
+                            "{}: madvise failed: {}",
+                            path.display(),
+                            err
+                        );
+                    } else {
+                        log::debug!("madvise failed: {}", err);
+                    }
+                }
                 Some(mmap)
             }
             Err(err) => {
