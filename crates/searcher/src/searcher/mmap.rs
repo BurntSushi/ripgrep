@@ -71,7 +71,10 @@ impl MmapChoice {
             return None;
         }
         if cfg!(target_os = "macos") {
-            // I guess memory maps on macOS aren't great. Should re-evaluate.
+            // I guess memory maps on macOS aren't great.
+            //
+            // See: https://github.com/BurntSushi/ripgrep/issues/36
+            // See: https://github.com/BurntSushi/ripgrep/pull/3246
             return None;
         }
         // SAFETY: This is acceptable because the only way `MmapChoiceImpl` can
@@ -79,7 +82,23 @@ impl MmapChoice {
         // is itself not safe. Thus, this is a propagation of the caller's
         // assertion that using memory maps is safe.
         match unsafe { Mmap::map(file) } {
-            Ok(mmap) => Some(mmap),
+            Ok(mmap) => {
+                // Hint to the kernel that we'll read sequentially. This is
+                // only available on Unix.
+                #[cfg(unix)]
+                if let Err(err) = mmap.advise(memmap::Advice::Sequential) {
+                    if let Some(path) = path {
+                        log::debug!(
+                            "{}: madvise failed: {}",
+                            path.display(),
+                            err
+                        );
+                    } else {
+                        log::debug!("madvise failed: {}", err);
+                    }
+                }
+                Some(mmap)
+            }
             Err(err) => {
                 if let Some(path) = path {
                     log::debug!(
