@@ -76,7 +76,11 @@ impl MmapChoice {
         // assertion that using memory maps is safe.
         match unsafe { Mmap::map(file) } {
             Ok(mmap) => {
-                #[cfg(target_os = "macos")]
+                // Hint to the kernel that we'll read sequentially. This is
+                // particularly important on macOS where mmap was historically
+                // ~2x slower than regular reads without this hint.
+                // See: https://github.com/BurntSushi/ripgrep/issues/36
+                #[cfg(unix)]
                 if let Err(err) = mmap.advise(memmap::Advice::Sequential) {
                     if let Some(path) = path {
                         log::debug!(
