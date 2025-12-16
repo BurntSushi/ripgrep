@@ -69,6 +69,8 @@ serde_derive = "1.0.77"
 walkdir = "2"
 
 [features]
+default = ["cli"]
+cli = []
 pcre2 = ["grep/pcre2"]
 
 [profile.release]

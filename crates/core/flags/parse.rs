@@ -9,9 +9,11 @@ use anyhow::Context;
 use crate::flags::{
     Flag, FlagValue,
     defs::FLAGS,
-    hiargs::HiArgs,
-    lowargs::{LoggingMode, LowArgs, SpecialMode},
+    lowargs::{LowArgs, SpecialMode},
 };
+
+#[cfg(feature = "cli")]
+use crate::flags::{hiargs::HiArgs, lowargs::LoggingMode};
 
 /// The result of parsing CLI arguments.
 ///
@@ -23,6 +25,7 @@ use crate::flags::{
 /// quickly as is reasonable. For example, it lets CLI parsing avoid reading
 /// ripgrep's configuration and converting low level arguments into a higher
 /// level representation.
+#[cfg(feature = "cli")]
 #[derive(Debug)]
 pub(crate) enum ParseResult<T> {
     Special(SpecialMode),
@@ -30,6 +33,7 @@ pub(crate) enum ParseResult<T> {
     Err(anyhow::Error),
 }
 
+#[cfg(feature = "cli")]
 impl<T> ParseResult<T> {
     /// If this result is `Ok`, then apply `then` to it. Otherwise, return this
     /// result unchanged.
@@ -46,6 +50,7 @@ impl<T> ParseResult<T> {
 }
 
 /// Parse CLI arguments and convert then to their high level representation.
+#[cfg(feature = "cli")]
 pub(crate) fn parse() -> ParseResult<HiArgs> {
     parse_low().and_then(|low| match HiArgs::from_low_args(low) {
         Ok(hi) => ParseResult::Ok(hi),
@@ -61,6 +66,7 @@ pub(crate) fn parse() -> ParseResult<HiArgs> {
 ///
 /// This will also set one-time global state flags, such as the log level and
 /// whether messages should be printed.
+#[cfg(feature = "cli")]
 fn parse_low() -> ParseResult<LowArgs> {
     if let Err(err) = crate::logger::Logger::init() {
         let err = anyhow::anyhow!("failed to initialize logger: {err}");
@@ -113,6 +119,7 @@ fn parse_low() -> ParseResult<LowArgs> {
 }
 
 /// Sets global state flags that control logging based on low-level arguments.
+#[cfg(feature = "cli")]
 fn set_log_levels(low: &LowArgs) {
     crate::messages::set_messages(!low.no_messages);
     crate::messages::set_ignore_messages(!low.no_ignore_messages);
