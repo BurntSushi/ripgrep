@@ -26,11 +26,18 @@ build = "build.rs"
 autotests = false
 edition = "2024"
 rust-version = "1.85"
+default-run = "rg"
 
 [[bin]]
 bench = false
 path = "crates/core/main.rs"
 name = "rg"
+required-features = ["cli"]
+
+[[bin]]
+path = "crates/core/gen.rs"
+name = "rg-gen"
+test = false
 
 [[test]]
 name = "integration"
