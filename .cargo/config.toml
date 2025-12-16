@@ -1,3 +1,6 @@
+[alias]
+rg-gen = "build --bin rg-gen --no-default-features"
+
 # On Windows MSVC, statically link the C runtime so that the resulting EXE does
 # not depend on the vcruntime DLL.
 #
