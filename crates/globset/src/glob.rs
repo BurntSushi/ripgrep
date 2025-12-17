@@ -265,6 +265,63 @@ impl std::ops::DerefMut for Tokens {
     }
 }
 
+/// A POSIX character class like [:space:] or [:digit:].
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum PosixClass {
+    Alnum,
+    Alpha,
+    Blank,
+    Cntrl,
+    Digit,
+    Graph,
+    Lower,
+    Print,
+    Punct,
+    Space,
+    Upper,
+    Xdigit,
+}
+
+impl PosixClass {
+    /// Parse a POSIX class name and return the corresponding enum variant.
+    fn from_name(name: &str) -> Option<PosixClass> {
+        match name {
+            "alnum" => Some(PosixClass::Alnum),
+            "alpha" => Some(PosixClass::Alpha),
+            "blank" => Some(PosixClass::Blank),
+            "cntrl" => Some(PosixClass::Cntrl),
+            "digit" => Some(PosixClass::Digit),
+            "graph" => Some(PosixClass::Graph),
+            "lower" => Some(PosixClass::Lower),
+            "print" => Some(PosixClass::Print),
+            "punct" => Some(PosixClass::Punct),
+            "space" => Some(PosixClass::Space),
+            "upper" => Some(PosixClass::Upper),
+            "xdigit" => Some(PosixClass::Xdigit),
+            _ => None,
+        }
+    }
+
+    /// Convert a POSIX class to its ASCII character set as a regex pattern.
+    /// This uses ASCII-only definitions to avoid locale-dependent behavior.
+    fn to_char_set(&self) -> &'static str {
+        match self {
+            PosixClass::Alnum => "0-9A-Za-z",
+            PosixClass::Alpha => "A-Za-z",
+            PosixClass::Blank => " \\t",
+            PosixClass::Cntrl => "\\x00-\\x1F\\x7F",
+            PosixClass::Digit => "0-9",
+            PosixClass::Graph => "!-~",
+            PosixClass::Lower => "a-z",
+            PosixClass::Print => " -~",
+            PosixClass::Punct => "!-/:-@\\[-`{-~",
+            PosixClass::Space => " \\t\\n\\r\\x0B\\x0C",
+            PosixClass::Upper => "A-Z",
+            PosixClass::Xdigit => "0-9A-Fa-f",
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 enum Token {
@@ -274,7 +331,11 @@ enum Token {
     RecursivePrefix,
     RecursiveSuffix,
     RecursiveZeroOrMore,
-    Class { negated: bool, ranges: Vec<(char, char)> },
+    Class {
+        negated: bool,
+        ranges: Vec<(char, char)>,
+        posix_classes: Vec<PosixClass>,
+    },
     Alternates(Vec<Tokens>),
 }
 
@@ -723,7 +784,7 @@ impl Tokens {
                 Token::RecursiveZeroOrMore => {
                     re.push_str("(?:/|/.*/)");
                 }
-                Token::Class { negated, ref ranges } => {
+                Token::Class { negated, ref ranges, ref posix_classes } => {
                     re.push('[');
                     if negated {
                         re.push('^');
@@ -737,6 +798,12 @@ impl Tokens {
                             re.push('-');
                             re.push_str(&char_to_escaped_literal(r.1));
                         }
+                    }
+                    // Add POSIX character classes
+                    // Note: We add the character sets directly rather than using
+                    // [:class:] syntax because we want ASCII-only behavior
+                    for posix_class in posix_classes {
+                        re.push_str(posix_class.to_char_set());
                     }
                     re.push(']');
                 }
@@ -981,6 +1048,7 @@ impl<'a> Parser<'a> {
             }
         }
         let mut ranges = vec![];
+        let mut posix_classes = vec![];
         let negated = match self.chars.peek() {
             Some(&'!') | Some(&'^') => {
                 let bump = self.bump();
@@ -1021,9 +1089,34 @@ impl<'a> Parser<'a> {
                         let r = ranges.last_mut().unwrap();
                         add_to_last_range(&self.glob, r, '-')?;
                         in_range = false;
-                    } else {
-                        assert!(!ranges.is_empty());
+                    } else if !ranges.is_empty() {
+                        // Start a range from the last character
                         in_range = true;
+                    } else {
+                        // No ranges yet (e.g., [[:digit:]-]), treat dash as literal
+                        ranges.push(('-', '-'));
+                    }
+                }
+                '[' if !in_range && self.peek() == Some(':') => {
+                    // Attempt to parse POSIX class
+                    match self.parse_posix_class()? {
+                        Some(posix_class) => {
+                            posix_classes.push(posix_class);
+                            in_range = false;
+                        }
+                        None => {
+                            // Not a valid POSIX class, treat '[' as literal
+                            if in_range {
+                                add_to_last_range(
+                                    &self.glob,
+                                    ranges.last_mut().unwrap(),
+                                    '[',
+                                )?;
+                            } else {
+                                ranges.push(('[', '['));
+                            }
+                            in_range = false;
+                        }
                     }
                 }
                 c => {
@@ -1048,7 +1141,89 @@ impl<'a> Parser<'a> {
             // it as a literal.
             ranges.push(('-', '-'));
         }
-        self.push_token(Token::Class { negated, ranges })
+        self.push_token(Token::Class { negated, ranges, posix_classes })
+    }
+
+    /// Attempt to parse a POSIX character class like [:space:] or [:digit:].
+    ///
+    /// This should be called when we've just seen '[' and peeked ':'.
+    /// If successful, returns Some(PosixClass) and advances the parser past ':]'.
+    /// If this is not a valid POSIX class (e.g., [:invalid:] or [:space),
+    /// returns None and resets the parser state.
+    fn parse_posix_class(&mut self) -> Result<Option<PosixClass>, Error> {
+        // Save state for potential rollback
+        let saved_chars = self.chars.clone();
+        let saved_prev = self.prev;
+        let saved_cur = self.cur;
+
+        // We should be looking at '[', and next char should be ':'
+        assert_eq!(self.cur, Some('['));
+
+        // Consume the ':'
+        if self.bump() != Some(':') {
+            // This shouldn't happen given our peek check, but be defensive
+            self.chars = saved_chars;
+            self.prev = saved_prev;
+            self.cur = saved_cur;
+            return Ok(None);
+        }
+
+        // Collect characters until we see ':' or ']' or end
+        let mut class_name = String::new();
+        loop {
+            match self.bump() {
+                Some(':') => {
+                    // Check if next char is ']'
+                    if self.peek() == Some(']') {
+                        self.bump(); // Consume the ']'
+
+                        // Try to parse the class name
+                        if let Some(posix_class) =
+                            PosixClass::from_name(&class_name)
+                        {
+                            return Ok(Some(posix_class));
+                        } else {
+                            // Invalid POSIX class name, rollback
+                            self.chars = saved_chars;
+                            self.prev = saved_prev;
+                            self.cur = saved_cur;
+                            return Ok(None);
+                        }
+                    } else {
+                        // ':' not followed by ']', keep collecting
+                        class_name.push(':');
+                    }
+                }
+                Some(']') | None => {
+                    // Hit end of class or pattern without proper ':]' terminator
+                    // This is not a valid POSIX class, rollback
+                    self.chars = saved_chars;
+                    self.prev = saved_prev;
+                    self.cur = saved_cur;
+                    return Ok(None);
+                }
+                Some(c) if c.is_ascii_lowercase() => {
+                    // Valid POSIX class names are lowercase letters
+                    class_name.push(c);
+
+                    // Sanity check: class names are short (max 7 chars: "xdigit")
+                    if class_name.len() > 10 {
+                        // Too long, not a valid POSIX class
+                        self.chars = saved_chars;
+                        self.prev = saved_prev;
+                        self.cur = saved_cur;
+                        return Ok(None);
+                    }
+                }
+                Some(_) => {
+                    // Invalid character in POSIX class name
+                    self.chars = saved_chars;
+                    self.prev = saved_prev;
+                    self.cur = saved_cur;
+                    return Ok(None);
+                }
+            }
+        }
     }
 
     fn bump(&mut self) -> Option<char> {
@@ -1207,19 +1382,42 @@ mod tests {
     }
 
     fn class(s: char, e: char) -> Token {
-        Class { negated: false, ranges: vec![(s, e)] }
+        Class { negated: false, ranges: vec![(s, e)], posix_classes: vec![] }
     }
 
     fn classn(s: char, e: char) -> Token {
-        Class { negated: true, ranges: vec![(s, e)] }
+        Class { negated: true, ranges: vec![(s, e)], posix_classes: vec![] }
     }
 
     fn rclass(ranges: &[(char, char)]) -> Token {
-        Class { negated: false, ranges: ranges.to_vec() }
+        Class {
+            negated: false,
+            ranges: ranges.to_vec(),
+            posix_classes: vec![],
+        }
     }
 
     fn rclassn(ranges: &[(char, char)]) -> Token {
-        Class { negated: true, ranges: ranges.to_vec() }
+        Class { negated: true, ranges: ranges.to_vec(), posix_classes: vec![] }
+    }
+
+    fn pclass(class: super::PosixClass) -> Token {
+        Class { negated: false, ranges: vec![], posix_classes: vec![class] }
+    }
+
+    fn pclassn(class: super::PosixClass) -> Token {
+        Class { negated: true, ranges: vec![], posix_classes: vec![class] }
+    }
+
+    fn mixed_class(
+        ranges: &[(char, char)],
+        classes: &[super::PosixClass],
+    ) -> Token {
+        Class {
+            negated: false,
+            ranges: ranges.to_vec(),
+            posix_classes: classes.to_vec(),
+        }
     }
 
     syntax!(literal1, "a", vec![Literal('a')]);
@@ -1267,6 +1465,123 @@ mod tests {
     syntax!(cls19, "[!a-z0-9]", vec![rclassn(&[('a', 'z'), ('0', '9')])]);
     syntax!(cls20, "[^a]", vec![classn('a', 'a')]);
     syntax!(cls21, "[^a-z]", vec![classn('a', 'z')]);
+
+    // POSIX character class tests
+    syntax!(posix_cls1, "[[:space:]]", vec![pclass(super::PosixClass::Space)]);
+    syntax!(posix_cls2, "[[:digit:]]", vec![pclass(super::PosixClass::Digit)]);
+    syntax!(posix_cls3, "[[:alpha:]]", vec![pclass(super::PosixClass::Alpha)]);
+    syntax!(posix_cls4, "[[:alnum:]]", vec![pclass(super::PosixClass::Alnum)]);
+    syntax!(posix_cls5, "[[:lower:]]", vec![pclass(super::PosixClass::Lower)]);
+    syntax!(posix_cls6, "[[:upper:]]", vec![pclass(super::PosixClass::Upper)]);
+    syntax!(
+        posix_cls7,
+        "[[:xdigit:]]",
+        vec![pclass(super::PosixClass::Xdigit)]
+    );
+    syntax!(posix_cls8, "[[:blank:]]", vec![pclass(super::PosixClass::Blank)]);
+    syntax!(posix_cls9, "[[:cntrl:]]", vec![pclass(super::PosixClass::Cntrl)]);
+    syntax!(
+        posix_cls10,
+        "[[:graph:]]",
+        vec![pclass(super::PosixClass::Graph)]
+    );
+    syntax!(
+        posix_cls11,
+        "[[:print:]]",
+        vec![pclass(super::PosixClass::Print)]
+    );
+    syntax!(
+        posix_cls12,
+        "[[:punct:]]",
+        vec![pclass(super::PosixClass::Punct)]
+    );
+
+    // Negated POSIX classes
+    syntax!(
+        posix_cls13,
+        "[^[:space:]]",
+        vec![pclassn(super::PosixClass::Space)]
+    );
+    syntax!(
+        posix_cls14,
+        "[![:digit:]]",
+        vec![pclassn(super::PosixClass::Digit)]
+    );
+
+    // Mixed POSIX classes and ranges
+    syntax!(
+        posix_cls15,
+        "[a[:digit:]z]",
+        vec![mixed_class(
+            &[('a', 'a'), ('z', 'z')],
+            &[super::PosixClass::Digit]
+        )]
+    );
+    syntax!(
+        posix_cls16,
+        "[[:digit:]a-f]",
+        vec![mixed_class(&[('a', 'f')], &[super::PosixClass::Digit])]
+    );
+    syntax!(
+        posix_cls17,
+        "[0-9[:space:]]",
+        vec![mixed_class(&[('0', '9')], &[super::PosixClass::Space])]
+    );
+
+    // Invalid POSIX class names should be treated as literals
+    syntax!(
+        posix_cls18,
+        "[[:invalid:]]",
+        vec![
+            rclass(&[
+                ('[', '['),
+                (':', ':'),
+                ('i', 'i'),
+                ('n', 'n'),
+                ('v', 'v'),
+                ('a', 'a'),
+                ('l', 'l'),
+                ('i', 'i'),
+                ('d', 'd'),
+                (':', ':')
+            ]),
+            Literal(']')
+        ]
+    );
+
+    // Edge case: Multiple POSIX classes in one bracket expression
+    syntax!(
+        posix_edge1,
+        "[[:space:][:digit:]]",
+        vec![mixed_class(
+            &[],
+            &[super::PosixClass::Space, super::PosixClass::Digit]
+        )]
+    );
+
+    // Edge case: POSIX class at different positions
+    syntax!(
+        posix_edge2,
+        "[a[:digit:]]",
+        vec![mixed_class(&[('a', 'a')], &[super::PosixClass::Digit])]
+    );
+    syntax!(
+        posix_edge3,
+        "[[:digit:]z]",
+        vec![mixed_class(&[('z', 'z')], &[super::PosixClass::Digit])]
+    );
+
+    // Edge case: Dash with POSIX class
+    syntax!(
+        posix_edge4,
+        "[-[:digit:]]",
+        vec![mixed_class(&[('-', '-')], &[super::PosixClass::Digit])]
+    );
+    syntax!(
+        posix_edge5,
+        "[[:digit:]-]",
+        vec![mixed_class(&[('-', '-')], &[super::PosixClass::Digit])]
+    );
 
     syntaxerr!(err_unclosed1, "[", ErrorKind::UnclosedClass);
     syntaxerr!(err_unclosed2, "[]", ErrorKind::UnclosedClass);
@@ -1348,6 +1663,17 @@ mod tests {
     );
 
     toregex!(re_empty, "", "^$");
+
+    // POSIX character class regex conversion tests
+    toregex!(posix_re1, "[[:space:]]", r"^[ \t\n\r\x0B\x0C]$");
+    toregex!(posix_re2, "[[:digit:]]", r"^[0-9]$");
+    toregex!(posix_re3, "[[:alpha:]]", r"^[A-Za-z]$");
+    toregex!(posix_re4, "[[:alnum:]]", r"^[0-9A-Za-z]$");
+    toregex!(posix_re5, "[[:xdigit:]]", r"^[0-9A-Fa-f]$");
+    toregex!(posix_re6, "[^[:space:]]", r"^[^ \t\n\r\x0B\x0C]$");
+    toregex!(posix_re7, "[![:digit:]]", r"^[^0-9]$");
+    toregex!(posix_re8, "[a[:digit:]z]", r"^[az0-9]$");
+    toregex!(posix_re9, "[[:digit:]a-f]", r"^[a-f0-9]$");
 
     toregex!(re_casei, "a", "(?i)^a$", &CASEI);
 
@@ -1562,6 +1888,60 @@ mod tests {
     );
     nmatches!(matchrec33, ".*/**", ".abc");
     nmatches!(matchrec34, "foo/**", "foo");
+
+    // POSIX character class matching tests
+    matches!(posix_match1, "[[:space:]]", " ");
+    matches!(posix_match2, "[[:space:]]", "\t");
+    matches!(posix_match3, "[[:space:]]", "\n");
+    matches!(posix_match4, "[[:digit:]]", "0");
+    matches!(posix_match5, "[[:digit:]]", "9");
+    matches!(posix_match6, "[[:alpha:]]", "a");
+    matches!(posix_match7, "[[:alpha:]]", "Z");
+    matches!(posix_match8, "[[:lower:]]", "a");
+    matches!(posix_match9, "[[:upper:]]", "Z");
+    matches!(posix_match10, "[[:xdigit:]]", "a");
+    matches!(posix_match11, "[[:xdigit:]]", "F");
+
+    // POSIX classes in filenames
+    matches!(posix_match12, "foo[[:space:]]bar.txt", "foo bar.txt");
+    matches!(posix_match13, "foo[[:space:]]bar.txt", "foo\tbar.txt");
+    matches!(posix_match14, "test[[:digit:]].txt", "test0.txt");
+    matches!(posix_match15, "test[[:digit:]].txt", "test9.txt");
+
+    // Negated POSIX classes
+    matches!(posix_match16, "[^[:space:]]", "a");
+    matches!(posix_match17, "[^[:digit:]]", "x");
+    matches!(posix_match18, "[![:space:]]", "a");
+
+    // Mixed ranges and POSIX classes
+    matches!(posix_match19, "[[:digit:]a-f]", "5");
+    matches!(posix_match20, "[[:digit:]a-f]", "c");
+    matches!(posix_match21, "[0-9[:space:]]", "5");
+    matches!(posix_match22, "[0-9[:space:]]", " ");
+
+    // Negative POSIX tests
+    nmatches!(posix_nomatch1, "[[:space:]]", "a");
+    nmatches!(posix_nomatch2, "[[:digit:]]", "a");
+    nmatches!(posix_nomatch3, "[[:alpha:]]", "0");
+    nmatches!(posix_nomatch4, "[[:lower:]]", "Z");
+    nmatches!(posix_nomatch5, "[[:upper:]]", "a");
+    nmatches!(posix_nomatch6, "[^[:space:]]", " ");
+    nmatches!(posix_nomatch7, "[^[:digit:]]", "5");
+    nmatches!(posix_nomatch8, "foo[[:space:]]bar.txt", "foobar.txt");
+    nmatches!(posix_nomatch9, "foo[[:space:]]bar.txt", "foo  bar.txt");
+
+    // Edge case matching tests
+    matches!(posix_edge_match1, "[[:space:][:digit:]]", " ");
+    matches!(posix_edge_match2, "[[:space:][:digit:]]", "5");
+    nmatches!(posix_edge_match3, "[[:space:][:digit:]]", "a");
+    matches!(posix_edge_match4, "[a[:digit:]]", "a");
+    matches!(posix_edge_match5, "[a[:digit:]]", "5");
+    matches!(posix_edge_match6, "[[:digit:]z]", "0");
+    matches!(posix_edge_match7, "[[:digit:]z]", "z");
+    matches!(posix_edge_match8, "[-[:digit:]]", "-");
+    matches!(posix_edge_match9, "[-[:digit:]]", "3");
+    matches!(posix_edge_match10, "[[:digit:]-]", "8");
+    matches!(posix_edge_match11, "[[:digit:]-]", "-");
 
     macro_rules! extract {
         ($which:ident, $name:ident, $pat:expr, $expect:expr) => {
