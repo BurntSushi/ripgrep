@@ -328,6 +328,7 @@ _rg() {
     $no"--no-invert-match[do not invert matching]"
     '(-M --max-columns)'{-M+,--max-columns=}'[specify max length of lines to print]:number of bytes'
     '(-m --max-count)'{-m+,--max-count=}'[specify max number of matches per file]:number of matches'
+    '--max-bytes=[limit how many bytes are searched per file]:number of bytes'
     '--max-filesize=[specify size above which files should be ignored]:file size (bytes)'
     "--no-config[don't load configuration files]"
     '(-0 --null)'{-0,--null}'[print NUL byte after file names]'
