@@ -549,7 +549,7 @@ impl HiArgs {
         builder
             .color_specs(self.colors.clone())
             .hyperlink(self.hyperlink_config.clone())
-            .separator(self.path_separator.clone())
+            .separator(self.path_separator)
             .terminator(self.path_terminator.unwrap_or(b'\n'));
         builder
     }
@@ -620,7 +620,7 @@ impl HiArgs {
             .max_columns(self.max_columns)
             .only_matching(self.only_matching)
             .path(self.with_filename)
-            .path_terminator(self.path_terminator.clone())
+            .path_terminator(self.path_terminator)
             .per_match_one_line(true)
             .per_match(self.vimgrep)
             .replacement(self.replace.clone().map(|r| r.into()))
@@ -631,7 +631,7 @@ impl HiArgs {
             .separator_field_match(
                 self.field_match_separator.clone().into_bytes(),
             )
-            .separator_path(self.path_separator.clone())
+            .separator_path(self.path_separator)
             .stats(self.stats.is_some())
             .trim_ascii(self.trim);
         // When doing multi-threaded searching, the buffer writer is
@@ -658,9 +658,9 @@ impl HiArgs {
             .hyperlink(self.hyperlink_config.clone())
             .kind(kind)
             .path(self.with_filename)
-            .path_terminator(self.path_terminator.clone())
+            .path_terminator(self.path_terminator)
             .separator_field(b":".to_vec())
-            .separator_path(self.path_separator.clone())
+            .separator_path(self.path_separator)
             .stats(self.stats.is_some())
             .build(wtr)
     }
