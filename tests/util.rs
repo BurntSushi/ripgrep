@@ -45,7 +45,10 @@ pub fn sort_lines(lines: &str) -> String {
 /// Returns true if and only if the given program can be successfully executed
 /// with a `--help` flag.
 pub fn cmd_exists(program: &str) -> bool {
-    Command::new(program).arg("--help").output().is_ok()
+    match Command::new(program).arg("--help").output() {
+        Ok(output) => output.status.success(),
+        Err(_) => false,
+    }
 }
 
 /// Dir represents a directory in which tests should be run.
