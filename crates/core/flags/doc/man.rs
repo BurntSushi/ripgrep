@@ -44,6 +44,7 @@ pub(crate) fn generate() -> String {
 
 /// Writes `roff` formatted documentation for `flag` to `out`.
 fn generate_flag(flag: &'static dyn Flag, out: &mut String) {
+    writeln!(out, ".TP 12");
     if let Some(byte) = flag.name_short() {
         let name = char::from(byte);
         write!(out, r"\fB\-{name}\fP");
