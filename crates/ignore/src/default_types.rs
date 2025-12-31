@@ -153,7 +153,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
         "OFL-*[0-9]*",
     ]),
     (&["lilypond"], &["*.ly", "*.ily"]),
-    (&["lisp"], &["*.el", "*.jl", "*.lisp", "*.lsp", "*.sc", "*.scm"]),
+    (&["lisp"], &["*.asd", "*.lisp", "*.lsp"]),
     (&["llvm"], &["*.ll"]),
     (&["lock"], &["*.lock", "package-lock.json"]),
     (&["log"], &["*.log"]),
@@ -242,6 +242,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["sass"], &["*.sass", "*.scss"]),
     (&["scala"], &["*.scala", "*.sbt"]),
     (&["scdoc"], &["*.scd", "*.scdoc"]),
+    (&["scheme"], &["*.sc", "*.sch", "*.sld", "*.sls", "*.sps", "*.scm"]),
     (&["seed7"], &["*.sd7", "*.s7i"]),
     (&["sh"], &[
         // Portable/misc. init files
