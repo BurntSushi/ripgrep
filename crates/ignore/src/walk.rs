@@ -545,8 +545,18 @@ impl WalkBuilder {
     /// is better to call `add` on this builder than to create multiple
     /// `Walk` values.
     pub fn new<P: AsRef<Path>>(path: P) -> WalkBuilder {
+        let mut builder = WalkBuilder::empty();
+        builder.add(path);
+        builder
+    }
+
+    /// Create an empty builder to which paths can be added.
+    ///
+    /// Note that if you call `build` on this instance before calling `add`
+    /// on it, it will return exactly zero items during iteration.
+    pub fn empty() -> WalkBuilder {
         WalkBuilder {
-            paths: vec![path.as_ref().to_path_buf()],
+            paths: vec![],
             ig_builder: IgnoreBuilder::new(),
             max_depth: None,
             min_depth: None,
@@ -559,6 +569,21 @@ impl WalkBuilder {
             filter: None,
             global_gitignores_relative_to: OnceLock::new(),
         }
+    }
+
+    /// Create a new builder for a recursive directory iterator from the
+    /// set of paths.
+    ///
+    /// Note that if the iterator is empty, this is the same as
+    /// `WalkBuilder::empty`.
+    pub fn from_iter<P: AsRef<Path>>(
+        paths: impl IntoIterator<Item = P>,
+    ) -> WalkBuilder {
+        let mut builder = WalkBuilder::empty();
+        for path in paths.into_iter() {
+            builder.add(path);
+        }
+        builder
     }
 
     /// Build a new `Walk` iterator.
@@ -2489,6 +2514,50 @@ mod tests {
             &WalkBuilder::new(td.path())
                 .filter_entry(|entry| entry.file_name() != OsStr::new("a")),
             &["x", "x/y", "x/y/foo"],
+        );
+    }
+
+    #[test]
+    fn empty() {
+        let td = tmpdir();
+        assert_paths(td.path(), &WalkBuilder::empty(), &[]);
+
+        let empty_paths: Vec<&OsStr> = Vec::new();
+        assert_paths(td.path(), &WalkBuilder::from_iter(empty_paths), &[]);
+    }
+
+    #[test]
+    fn from_iter() {
+        let td = tmpdir();
+        mkdirp(td.path().join("a/b/c"));
+        mkdirp(td.path().join("d/e/f"));
+        mkdirp(td.path().join("x/y"));
+        wfile(td.path().join("a/b/foo"), "");
+        wfile(td.path().join("d/e/f/foo"), "");
+        wfile(td.path().join("x/y/foo"), "");
+
+        let paths = vec![
+            td.path().join("a"),
+            td.path().join("d"),
+            td.path().join("x"),
+        ];
+
+        assert_paths(
+            td.path(),
+            &WalkBuilder::from_iter(paths),
+            &[
+                "x",
+                "x/y",
+                "x/y/foo",
+                "d",
+                "d/e",
+                "d/e/f",
+                "d/e/f/foo",
+                "a",
+                "a/b",
+                "a/b/foo",
+                "a/b/c",
+            ],
         );
     }
 }
