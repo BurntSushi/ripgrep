@@ -577,10 +577,10 @@ impl WalkBuilder {
     /// Note that if the iterator is empty, this is the same as
     /// `WalkBuilder::empty`.
     pub fn from_iter<P: AsRef<Path>>(
-        paths: impl Iterator<Item = P>,
+        paths: impl IntoIterator<Item = P>,
     ) -> WalkBuilder {
         let mut builder = WalkBuilder::empty();
-        for path in paths {
+        for path in paths.into_iter() {
             builder.add(path);
         }
         builder
@@ -2523,11 +2523,7 @@ mod tests {
         assert_paths(td.path(), &WalkBuilder::empty(), &[]);
 
         let empty_paths: Vec<&OsStr> = Vec::new();
-        assert_paths(
-            td.path(),
-            &WalkBuilder::from_iter(empty_paths.into_iter()),
-            &[],
-        );
+        assert_paths(td.path(), &WalkBuilder::from_iter(empty_paths), &[]);
     }
 
     #[test]
@@ -2548,7 +2544,7 @@ mod tests {
 
         assert_paths(
             td.path(),
-            &WalkBuilder::from_iter(paths.into_iter()),
+            &WalkBuilder::from_iter(paths),
             &[
                 "x",
                 "x/y",
