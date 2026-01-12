@@ -466,7 +466,7 @@ fn dir_list<P: AsRef<Path>>(dir: P) -> Vec<String> {
 /// executable. Or so one thinks. But it seems to always be set to `qemu-user`
 /// and I cannot find `qemu-user` anywhere in the Docker image. Awesome.
 ///
-/// Thers is `/linux-runner` which seems to work sometimes? But not always.
+/// There is `/linux-runner` which seems to work sometimes? But not always.
 ///
 /// Instead, it looks like we have to use `qemu-aarch64` in the `aarch64`
 /// case. Perfect, so just get the current target architecture and append it

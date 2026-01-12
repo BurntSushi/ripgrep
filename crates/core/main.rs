@@ -427,7 +427,7 @@ fn eprint_nothing_searched() {
 /// The `started` time should be the time at which ripgrep started working.
 ///
 /// If an error occurs while writing, then writing stops and the error is
-/// returned. Note that callers should probably ignore this errror, since
+/// returned. Note that callers should probably ignore this error, since
 /// whether stats fail to print or not generally shouldn't cause ripgrep to
 /// enter into an "error" state. And usually the only way for this to fail is
 /// if writing to stdout itself fails.

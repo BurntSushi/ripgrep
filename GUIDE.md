@@ -818,7 +818,7 @@ $ rg 'The Commentz-Walter algorithm' 1995-watson.txt
 10062:in input string S , we obtain the Boyer-Moore algorithm. The Commentz-Walter algorithm
 17218:The Commentz-Walter algorithm (and its variants) displayed more interesting behaviour,
 17249:Aho-Corasick algorithms are used extensively. The Commentz-Walter algorithms are used
-17297: The Commentz-Walter algorithms (CW). In all versions of the CW algorithms, a common program skeleton is used with di erent shift functions. The CW algorithms are
+17297: The Commentz-Walter algorithms (CW). In all versions of the CW algorithms, a common program skeleton is used with different shift functions. The CW algorithms are
 ```
 
 But having to explicitly convert every file can be a pain, especially when you
@@ -846,7 +846,7 @@ $ rg --pre ./preprocess 'The Commentz-Walter algorithm' 1995-watson.pdf
 10062:in input string S , we obtain the Boyer-Moore algorithm. The Commentz-Walter algorithm
 17218:The Commentz-Walter algorithm (and its variants) displayed more interesting behaviour,
 17249:Aho-Corasick algorithms are used extensively. The Commentz-Walter algorithms are used
-17297: The Commentz-Walter algorithms (CW). In all versions of the CW algorithms, a common program skeleton is used with di erent shift functions. The CW algorithms are
+17297: The Commentz-Walter algorithms (CW). In all versions of the CW algorithms, a common program skeleton is used with different shift functions. The CW algorithms are
 ```
 
 Note that `preprocess` must be resolvable to a command that ripgrep can read.

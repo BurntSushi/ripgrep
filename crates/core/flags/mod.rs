@@ -50,7 +50,7 @@ mod parse;
 /// A trait that encapsulates the definition of an optional flag for ripgrep.
 ///
 /// This trait is meant to be used via dynamic dispatch. Namely, the `defs`
-/// module provides a single global slice of `&dyn Flag` values correspondings
+/// module provides a single global slice of `&dyn Flag` values corresponding
 /// to all of the flags in ripgrep.
 ///
 /// ripgrep's required positional arguments are handled by the parser and by
@@ -67,7 +67,7 @@ mod parse;
 /// by a single implementation of this trait.
 ///
 /// ripgrep only supports flags that are switches or flags that accept a single
-/// value. Flags that accept multiple values are an unsupported abberation.
+/// value. Flags that accept multiple values are an unsupported aberration.
 trait Flag: Debug + Send + Sync + UnwindSafe + RefUnwindSafe + 'static {
     /// Returns true if this flag is a switch. When a flag is a switch, the
     /// CLI parser will not look for a value after the flag is seen.
@@ -77,7 +77,7 @@ trait Flag: Debug + Send + Sync + UnwindSafe + RefUnwindSafe + 'static {
     /// which signifies that the flag has no short name.
     ///
     /// The byte returned must be an ASCII codepoint that is a `.` or is
-    /// alpha-numeric.
+    /// alphanumeric.
     fn name_short(&self) -> Option<u8> {
         None
     }
@@ -85,7 +85,7 @@ trait Flag: Debug + Send + Sync + UnwindSafe + RefUnwindSafe + 'static {
     /// Returns the long name of this flag. All flags must have a "long" name.
     ///
     /// The long name must be at least 2 bytes, and all of its bytes must be
-    /// ASCII codepoints that are either `-` or alpha-numeric.
+    /// ASCII codepoints that are either `-` or alphanumeric.
     fn name_long(&self) -> &'static str;
 
     /// Returns a list of aliases for this flag.
@@ -253,7 +253,7 @@ enum CompletionType {
 /// two forms: a switch (on or off) or an arbitrary value.
 ///
 /// Note that the CLI doesn't directly support negated switches. For example,
-/// you can'd do anything like `-n=false` or any of that nonsense. Instead,
+/// you can't do anything like `-n=false` or any of that nonsense. Instead,
 /// the CLI parser knows about which flag names are negations and which aren't
 /// (courtesy of the `Flag` trait). If a flag given is known as a negation,
 /// then a `FlagValue::Switch(false)` value is passed into `Flag::update`.
