@@ -380,10 +380,10 @@ impl GlobSet {
         self.matches_all_candidate(&Candidate::new(path.as_ref()))
     }
 
-    /// Returns ture if all globs in this set match the path given.
+    /// Returns true if all globs in this set match the path given.
     ///
     /// This takes a Candidate as input, which can be used to amortize the cost
-    /// of peparing a path for matching.
+    /// of preparing a path for matching.
     ///
     /// This will return true if the set of globs is empty, as in that case all
     /// `0` of the globs will match.

@@ -237,7 +237,7 @@ impl Config {
 
 /// An error that can occur when building a searcher.
 ///
-/// This error occurs when a non-sensical configuration is present when trying
+/// This error occurs when a nonsensical configuration is present when trying
 /// to construct a `Searcher` from a `SearcherBuilder`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
@@ -450,7 +450,7 @@ impl SearcherBuilder {
     ///
     /// If a heap limit is set to `0`, then no heap space is used. If there are
     /// no alternative strategies available for searching without heap space
-    /// (e.g., memory maps are disabled), then the searcher wil return an error
+    /// (e.g., memory maps are disabled), then the searcher will return an error
     /// immediately.
     ///
     /// By default, no limit is set.
@@ -695,7 +695,7 @@ impl Searcher {
         // which isn't possible when searching an arbitrary std::io::Read.
         if self.multi_line_with_matcher(&matcher) {
             log::trace!(
-                "{:?}: reading entire file on to heap for mulitline",
+                "{:?}: reading entire file on to heap for multiline",
                 path
             );
             self.fill_multi_line_buffer_from_file::<S>(file)?;
