@@ -255,9 +255,10 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Install Fuzzer
-        run: cargo install cargo-fuzz
-        working-directory: fuzz
+      - name: Install cargo-fuzz
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz
 
       - name: Verify fuzz targets build
         run: cargo check
