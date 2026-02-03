@@ -47,6 +47,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["cml"], &["*.cml"]),
     (&["coffeescript"], &["*.coffee"]),
     (&["config"], &["*.cfg", "*.conf", "*.config", "*.ini"]),
+    (&["container"], &["*Containerfile*", "*Dockerfile*"]),
     (&["coq"], &["*.v"]),
     (&["cpp"], &[
         "*.[ChH]", "*.cc", "*.[ch]pp", "*.[ch]xx", "*.hh",  "*.inl",
