@@ -90,17 +90,17 @@ impl LiteralSequence {
 
 fn extract_literal_seq_components(hir: &Hir) -> Vec<LiteralComponent> {
     match hir.kind() {
+        HirKind::Capture(cap) => extract_literal_seq_components(&cap.sub),
+        HirKind::Look(_) => vec![],
         HirKind::Empty => vec![],
         HirKind::Literal(hir::Literal(bytes)) => {
             bytes.iter().copied().map(LiteralComponent::Char).collect()
         }
-        HirKind::Class(_) => vec![LiteralComponent::Break],
-        HirKind::Look(_) => vec![],
-        HirKind::Capture(cap) => extract_literal_seq_components(&cap.sub),
         HirKind::Concat(sub_hirs) => {
             sub_hirs.iter().flat_map(extract_literal_seq_components).collect()
         }
         HirKind::Alternation(_) => vec![LiteralComponent::Break],
+        HirKind::Class(_) => vec![LiteralComponent::Break],
         HirKind::Repetition(rep) => {
             let mut result = if rep.min == 0 {
                 vec![]
@@ -114,7 +114,7 @@ fn extract_literal_seq_components(hir: &Hir) -> Vec<LiteralComponent> {
             // non-deterministic λ-transitions that follow: one going to the state that consumes
             // one more `rep.sub` expression, and one going to the state that *skips* the
             // `rep.min+1`-th repetition. Just like for other non-deterministic transitions, we
-            // need to add a `LiteralComponent::BREAK` in the sequence.
+            // need to add a `LiteralComponent::Break` in the sequence.
             //
             // If we don't do this, then expressions like "ab*c" would have the required literals
             // ["ac"], which is incorrect. The correct literals in this case are: ["a", "c"].
