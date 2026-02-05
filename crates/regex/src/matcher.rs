@@ -393,10 +393,10 @@ pub struct RegexMatcher {
     /// than `regex`. Typically, this is a single literal or an alternation
     /// of literals.
     fast_line_regex: Option<Regex>,
-    /// Literal sequence extracted from the regex pattern using bridge-based
-    /// extraction. These literals must appear in order within the haystack
-    /// for a match to be possible. This allows for fast rejection of lines
-    /// where literals appear in the wrong order or don't appear at all.
+    /// Literal sequence extracted from the HIR. These literals must appear in
+    /// order within the haystack for a match to be possible. This allows for
+    /// fast rejection of lines where literals don't appear in the correct
+    /// order.
     literal_seq: Option<LiteralSequence>,
     /// A set of bytes that will never appear in a match.
     non_matching_bytes: ByteSet,
