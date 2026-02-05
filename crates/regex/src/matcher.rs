@@ -9,7 +9,10 @@ use {
     },
 };
 
-use crate::{config::Config, error::Error, literal::InnerLiterals};
+use crate::{
+    bridge_literals::LiteralSequence, config::Config, error::Error,
+    literal::InnerLiterals,
+};
 
 /// A builder for constructing a `Matcher` using regular expressions.
 ///
@@ -77,11 +80,26 @@ impl RegexMatcherBuilder {
         // simple, but the idea applies.)
         let fast_line_regex = InnerLiterals::new(&chir, &regex).one_regex()?;
 
+        // Extract ordered literals for fast pre-filtering.
+        // This is only useful when we have a line terminator set, similar to
+        // the fast_line_regex optimization.
+        let literal_seq = if chir.config().line_terminator.is_some() {
+            LiteralSequence::new(chir.hir())
+        } else {
+            None
+        };
+
         // We override the line terminator in case the configured HIR doesn't
         // support it.
         let mut config = self.config.clone();
         config.line_terminator = chir.line_terminator();
-        Ok(RegexMatcher { config, regex, fast_line_regex, non_matching_bytes })
+        Ok(RegexMatcher {
+            config,
+            regex,
+            fast_line_regex,
+            literal_seq,
+            non_matching_bytes,
+        })
     }
 
     /// Build a new matcher from a plain alternation of literals.
@@ -375,6 +393,11 @@ pub struct RegexMatcher {
     /// than `regex`. Typically, this is a single literal or an alternation
     /// of literals.
     fast_line_regex: Option<Regex>,
+    /// Literal sequence extracted from the regex pattern using bridge-based
+    /// extraction. These literals must appear in order within the haystack
+    /// for a match to be possible. This allows for fast rejection of lines
+    /// where literals appear in the wrong order or don't appear at all.
+    literal_seq: Option<LiteralSequence>,
     /// A set of bytes that will never appear in a match.
     non_matching_bytes: ByteSet,
 }
@@ -492,6 +515,13 @@ impl Matcher for RegexMatcher {
         &self,
         haystack: &[u8],
     ) -> Result<Option<LineMatchKind>, NoError> {
+        if let Some(literal_seq) = &self.literal_seq {
+            return match literal_seq.exists_in(haystack) {
+                Some(offset) => Ok(Some(LineMatchKind::Candidate(offset))),
+                None => Ok(None),
+            };
+        }
+
         Ok(match self.fast_line_regex {
             Some(ref regex) => {
                 let input = Input::new(haystack);

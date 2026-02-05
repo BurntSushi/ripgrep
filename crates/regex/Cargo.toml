@@ -17,5 +17,6 @@ edition = "2024"
 bstr = "1.6.2"
 grep-matcher = { version = "0.1.8", path = "../matcher" }
 log = "0.4.20"
+memchr = "2.7.6"
 regex-automata = { version = "0.4.0" }
 regex-syntax = "0.8.0"
