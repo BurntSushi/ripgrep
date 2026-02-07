@@ -1,4 +1,5 @@
 use {
+    bstr::ByteSlice,
     grep_matcher::{
         ByteSet, Captures, LineMatchKind, LineTerminator, Match, Matcher,
         NoError,
@@ -513,25 +514,48 @@ impl Matcher for RegexMatcher {
     #[inline]
     fn find_candidate_line(
         &self,
-        haystack: &[u8],
+        mut haystack: &[u8],
     ) -> Result<Option<LineMatchKind>, NoError> {
+        let mut haystack_offset = 0;
         if let Some(literal_seq) = &self.literal_seq {
-            return match literal_seq.exists_in(haystack) {
-                Some(offset) => Ok(Some(LineMatchKind::Candidate(offset))),
-                None => Ok(None),
+            match literal_seq.exists_in(haystack) {
+                // All literals appear in the required order.
+                // Because the other literal-extraction approaches are likely to have more literals
+                // (since they don't care about their order or their property of being individually
+                // necessary for matches), we resume searching with those approaches from the line
+                // which contains the last required literal in the `LiteralSequence`.
+                // This is an attempt to get the best of both worlds: search for the required
+                // literals that have a known order in an *order-aware* manner, and then search for
+                // the other literals which don't have a known order and are not individually
+                // necessary in an *order-unaware* manner.
+                Some(offset) => {
+                    let line_start = haystack[..offset]
+                        .rfind_byte(
+                            self.config.line_terminator.unwrap().as_byte(),
+                        )
+                        .map_or(0, |i| i + 1);
+
+                    haystack = &haystack[line_start..];
+                    haystack_offset = line_start;
+                }
+                // Not all necessary literals appear in the required order, so this haystack
+                // contains no matches.
+                None => {
+                    return Ok(None);
+                }
             };
         }
 
         Ok(match self.fast_line_regex {
             Some(ref regex) => {
                 let input = Input::new(haystack);
-                regex
-                    .search_half(&input)
-                    .map(|hm| LineMatchKind::Candidate(hm.offset()))
+                regex.search_half(&input).map(|hm| {
+                    LineMatchKind::Candidate(haystack_offset + hm.offset())
+                })
             }
-            None => {
-                self.shortest_match(haystack)?.map(LineMatchKind::Confirmed)
-            }
+            None => self.shortest_match(haystack)?.map(|offset| {
+                LineMatchKind::Confirmed(haystack_offset + offset)
+            }),
         })
     }
 }
