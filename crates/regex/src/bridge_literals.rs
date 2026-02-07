@@ -92,7 +92,7 @@ impl LiteralSequence {
     /// Heuristic for whether using the literal sequence will provide performance improvements, or
     /// at least not significantly reduce the performance.
     fn is_useful(self: &LiteralSequence) -> bool {
-        self.seq.len() >= 2 && self.min_required_len >= 8
+        !self.seq.is_empty()
     }
 }
 
