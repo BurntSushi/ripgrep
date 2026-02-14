@@ -337,7 +337,7 @@ impl Matcher for RegexMatcher {
     }
 
     fn capture_index(&self, name: &str) -> Option<usize> {
-        self.names.get(name).map(|i| *i)
+        self.names.get(name).copied()
     }
 
     fn try_find_iter<F, E>(
