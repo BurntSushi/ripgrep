@@ -7,6 +7,11 @@ Bug fixes:
 * [BUG #3212](https://github.com/BurntSushi/ripgrep/pull/3212):
   Don't check for the existence of `.jj` when `--no-ignore` is used.
 
+Feature enhancements:
+
+* [FEATURE #3255](https://github.com/BurntSushi/ripgrep/pull/3255):
+  Add hyperlink alias for Zed.
+
 
 15.1.0
 ======
