@@ -182,6 +182,8 @@ pub struct Config {
     stop_on_nonmatch: bool,
     /// The maximum number of matches this searcher should emit.
     max_matches: Option<u64>,
+    /// The maximum number of bytes that should be read from any source.
+    head_bytes: Option<u64>,
 }
 
 impl Default for Config {
@@ -201,6 +203,7 @@ impl Default for Config {
             bom_sniffing: true,
             stop_on_nonmatch: false,
             max_matches: None,
+            head_bytes: None,
         }
     }
 }
@@ -584,6 +587,18 @@ impl SearcherBuilder {
         self.config.max_matches = limit;
         self
     }
+
+    /// Set the maximum number of bytes to examine from any haystack.
+    ///
+    /// When `None`, no explicit limit is applied. When set, searches will only
+    /// consider up to this number of bytes from each input source.
+    pub fn head_bytes(
+        &mut self,
+        head_bytes: Option<u64>,
+    ) -> &mut SearcherBuilder {
+        self.config.head_bytes = head_bytes;
+        self
+    }
 }
 
 /// A searcher executes searches over a haystack and writes results to a caller
@@ -687,8 +702,21 @@ impl Searcher {
         S: Sink,
     {
         if let Some(mmap) = self.config.mmap.open(file, path) {
+            let slice = if let Some(head) = self.config.head_bytes {
+                let head_limit = usize::try_from(head).unwrap_or(usize::MAX);
+                let max = cmp::min(head_limit, mmap.len());
+                log::trace!(
+                    "{:?}: only analyzing the first {} bytes (maximum: {})",
+                    path,
+                    max,
+                    head,
+                );
+                &mmap[..max]
+            } else {
+                &mmap
+            };
             log::trace!("{:?}: searching via memory map", path);
-            return self.search_slice(matcher, &mmap, write_to);
+            return self.search_slice(matcher, slice, write_to);
         }
         // Fast path for multi-line searches of files when memory maps are not
         // enabled. This pre-allocates a buffer roughly the size of the file,
@@ -738,9 +766,16 @@ impl Searcher {
         self.check_config(&matcher).map_err(S::Error::error_config)?;
 
         let mut decode_buffer = self.decode_buffer.borrow_mut();
+        let head_limit = self.config.head_bytes.unwrap_or(u64::MAX);
+        if head_limit != u64::MAX {
+            log::trace!(
+                "generic reader: only analyzing the first {} bytes",
+                head_limit
+            );
+        }
         let decoder = self
             .decode_builder
-            .build_with_buffer(read_from, &mut *decode_buffer)
+            .build_with_buffer(read_from.take(head_limit), &mut *decode_buffer)
             .map_err(S::Error::error_io)?;
 
         if self.multi_line_with_matcher(&matcher) {
@@ -944,9 +979,16 @@ impl Searcher {
         assert!(self.config.multi_line);
 
         let mut decode_buffer = self.decode_buffer.borrow_mut();
+        let head_limit = self.config.head_bytes.unwrap_or(u64::MAX);
+        if head_limit != u64::MAX {
+            log::trace!(
+                "multiline reader: only analyzing the first {} bytes",
+                head_limit
+            );
+        }
         let mut read_from = self
             .decode_builder
-            .build_with_buffer(file, &mut *decode_buffer)
+            .build_with_buffer(file.take(head_limit), &mut *decode_buffer)
             .map_err(S::Error::error_io)?;
 
         // If we don't have a heap limit, then we can defer to std's
@@ -959,8 +1001,14 @@ impl Searcher {
         if self.config.heap_limit.is_none() {
             let mut buf = self.multi_line_buffer.borrow_mut();
             buf.clear();
-            let cap =
-                file.metadata().map(|m| m.len() as usize + 1).unwrap_or(0);
+            let file_len = file.metadata().map(|m| m.len()).unwrap_or(0);
+            let capped_len = if head_limit == u64::MAX {
+                file_len
+            } else {
+                std::cmp::min(file_len, head_limit)
+            };
+            let cap = usize::try_from(capped_len.saturating_add(1))
+                .unwrap_or(usize::MAX);
             buf.reserve(cap);
             read_from.read_to_end(&mut *buf).map_err(S::Error::error_io)?;
             return Ok(());
