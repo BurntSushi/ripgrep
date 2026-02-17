@@ -568,19 +568,67 @@ impl GitignoreBuilder {
 ///
 /// Note that the file path returned may not exist.
 pub fn gitconfig_excludes_path() -> Option<PathBuf> {
-    // git supports $HOME/.gitconfig and $XDG_CONFIG_HOME/git/config. Notably,
-    // both can be active at the same time, where $HOME/.gitconfig takes
-    // precedent. So if $HOME/.gitconfig defines a `core.excludesFile`, then
-    // we're done.
-    match gitconfig_home_contents().and_then(|x| parse_excludes_file(&x)) {
-        Some(path) => return Some(path),
-        None => {}
+    // When GIT_CONFIG_GLOBAL is set, it replaces both $HOME/.gitconfig and
+    // $XDG_CONFIG_HOME/git/config (per git 2.32+). Otherwise, git supports
+    // both simultaneously, where $HOME/.gitconfig takes precedent.
+    if std::env::var_os("GIT_CONFIG_GLOBAL")
+        .as_deref()
+        .is_some_and(|v| !v.is_empty())
+    {
+        if let Some(path) = gitconfig_global_env_contents()
+            .and_then(|x| parse_excludes_file(&x))
+        {
+            return Some(path);
+        }
+    } else {
+        if let Some(path) =
+            gitconfig_home_contents().and_then(|x| parse_excludes_file(&x))
+        {
+            return Some(path);
+        }
+        if let Some(path) =
+            gitconfig_xdg_contents().and_then(|x| parse_excludes_file(&x))
+        {
+            return Some(path);
+        }
     }
-    match gitconfig_xdg_contents().and_then(|x| parse_excludes_file(&x)) {
-        Some(path) => return Some(path),
-        None => {}
+    // System-level config has the lowest priority for core.excludesFile.
+    // GIT_CONFIG_SYSTEM overrides the default /etc/gitconfig path.
+    if let Some(path) =
+        gitconfig_system_contents().and_then(|x| parse_excludes_file(&x))
+    {
+        return Some(path);
     }
     excludes_file_default()
+}
+
+/// Returns the file contents of git's global config file from the path
+/// specified by the `GIT_CONFIG_GLOBAL` environment variable.
+fn gitconfig_global_env_contents() -> Option<Vec<u8>> {
+    let path = std::env::var_os("GIT_CONFIG_GLOBAL").and_then(|x| {
+        if x.is_empty() { None } else { Some(PathBuf::from(x)) }
+    });
+    let mut file = match path.and_then(|p| File::open(p).ok()) {
+        None => return None,
+        Some(file) => BufReader::new(file),
+    };
+    let mut contents = vec![];
+    file.read_to_end(&mut contents).ok().map(|_| contents)
+}
+
+/// Returns the file contents of git's system-level config file.
+///
+/// Checks `GIT_CONFIG_SYSTEM` first, then falls back to `/etc/gitconfig`.
+fn gitconfig_system_contents() -> Option<Vec<u8>> {
+    let path = std::env::var_os("GIT_CONFIG_SYSTEM")
+        .and_then(|x| if x.is_empty() { None } else { Some(PathBuf::from(x)) })
+        .or_else(|| Some(PathBuf::from("/etc/gitconfig")));
+    let mut file = match path.and_then(|p| File::open(p).ok()) {
+        None => return None,
+        Some(file) => BufReader::new(file),
+    };
+    let mut contents = vec![];
+    file.read_to_end(&mut contents).ok().map(|_| contents)
 }
 
 /// Returns the file contents of git's global config file, if one exists, in
