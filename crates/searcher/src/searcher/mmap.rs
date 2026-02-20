@@ -70,16 +70,30 @@ impl MmapChoice {
         if !self.is_enabled() {
             return None;
         }
-        if cfg!(target_os = "macos") {
-            // I guess memory maps on macOS aren't great. Should re-evaluate.
-            return None;
-        }
         // SAFETY: This is acceptable because the only way `MmapChoiceImpl` can
         // be `Auto` is if the caller invoked the `auto` constructor, which
         // is itself not safe. Thus, this is a propagation of the caller's
         // assertion that using memory maps is safe.
         match unsafe { Mmap::map(file) } {
-            Ok(mmap) => Some(mmap),
+            Ok(mmap) => {
+                // Hint to the kernel that we'll read sequentially. This is
+                // particularly important on macOS where mmap was historically
+                // ~2x slower than regular reads without this hint.
+                // See: https://github.com/BurntSushi/ripgrep/issues/36
+                #[cfg(unix)]
+                if let Err(err) = mmap.advise(memmap::Advice::Sequential) {
+                    if let Some(path) = path {
+                        log::debug!(
+                            "{}: madvise failed: {}",
+                            path.display(),
+                            err
+                        );
+                    } else {
+                        log::debug!("madvise failed: {}", err);
+                    }
+                }
+                Some(mmap)
+            }
             Err(err) => {
                 if let Some(path) = path {
                     log::debug!(
