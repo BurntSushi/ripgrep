@@ -10,7 +10,7 @@ get_comp_args() {
     # our function may rely on, but we'll trust that we've got it mostly right
     setopt local_options unset
 
-    # Our completion function recognises a special variable which tells it to
+    # Our completion function recognizes a special variable which tells it to
     # dump the _arguments specs and then just return. But do this in a sub-shell
     # anyway to avoid any weirdness
     ( _RG_COMPLETE_LIST_ARGS=1 source $1 )

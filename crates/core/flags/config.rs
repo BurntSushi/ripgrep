@@ -55,7 +55,7 @@ pub fn args() -> Vec<OsString> {
 /// Parse a single ripgrep rc file from the given path.
 ///
 /// On success, this returns a set of shell arguments, in order, that should
-/// be pre-pended to the arguments given to ripgrep at the command line.
+/// be prepended to the arguments given to ripgrep at the command line.
 ///
 /// If the file could not be read, then an error is returned. If there was
 /// a problem parsing one or more lines in the file, then errors are returned
@@ -76,7 +76,7 @@ fn parse<P: AsRef<Path>>(
 /// own buffer internally.
 ///
 /// On success, this returns a set of shell arguments, in order, that should
-/// be pre-pended to the arguments given to ripgrep at the command line.
+/// be prepended to the arguments given to ripgrep at the command line.
 ///
 /// If the reader could not be read, then an error is returned. If there was a
 /// problem parsing one or more lines, then errors are returned for each line
