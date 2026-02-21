@@ -155,6 +155,9 @@ impl<W: WriteColor> PathPrinter<W> {
         } else {
             let status = self.start_hyperlink(&ppath)?;
             self.wtr.set_color(self.config.colors.path())?;
+            if self.config.colors.path_blink() && self.wtr.supports_color() {
+                self.wtr.write_all(b"\x1b[5m")?;
+            }
             self.wtr.write_all(ppath.as_bytes())?;
             self.wtr.reset()?;
             self.interpolator.finish(status, &mut self.wtr)?;
