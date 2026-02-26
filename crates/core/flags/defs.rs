@@ -7535,8 +7535,12 @@ impl Flag for WordRegexp {
     fn doc_long(&self) -> &'static str {
         r"
 When enabled, ripgrep will only show matches surrounded by word boundaries.
-This is equivalent to surrounding every pattern with \fB\\b{start-half}\fP
-and \fB\\b{end-half}\fP.
+This is equivalent to surrounding every pattern with \fB\\b{start-half}\fP and
+\fB\\b{end-half}\fP. These are a custom syntax from ripgrep's default regex
+engine that, unlike \fB\\b\fP, doesn't require matching a word character on one
+side. That is, \fB\\b{start-half}\fP corresponds to matching \fB\\W|\\A\fP on
+the left and \fB\\b{end-half}\fP corresponds to matching \fB\\W|\\z\fP on the
+right.
 .sp
 This overrides the \flag{line-regexp} flag.
 "

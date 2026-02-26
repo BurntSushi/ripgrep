@@ -1004,7 +1004,11 @@ used options that will likely impact how you use ripgrep on a regular basis.
    as a literal string.
 * `-w/--word-regexp`: Require that all matches of the pattern be surrounded
   by word boundaries. That is, given `pattern`, the `--word-regexp` flag will
-  cause ripgrep to behave as if `pattern` were actually `\b(?:pattern)\b`.
+  cause ripgrep to behave as if `pattern` were actually
+  `\b{start-half}(?:pattern)\b{end-half}`.
+  (Unlike `\b`, these half-boundaries don't require a word character on one
+  side. For example, `rg -w -e -2` will match `-2` in `(-2)` but `rg '\b-2\b'`
+  will not.)
 * `-c/--count`: Report a count of total matched lines.
 * `--files`: Print the files that ripgrep *would* search, but don't actually
   search them.
