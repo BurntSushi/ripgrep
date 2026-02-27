@@ -1,0 +1,25 @@
+[package]
+name = "fuzz"
+version = "0.0.1"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+globset = { path = "../crates/globset", features = ["arbitrary"] }
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "fuzz_glob"
+path = "fuzz_targets/fuzz_glob.rs"
+test = false
+doc = false

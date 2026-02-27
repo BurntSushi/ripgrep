@@ -1,0 +1,457 @@
+benchmark,warmup_iter,iter,name,command,duration,lines,env
+linux_alternates,1,3,rg (ignore),rg -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.30042552947998047,68,
+linux_alternates,1,3,rg (ignore),rg -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.3699159622192383,68,
+linux_alternates,1,3,rg (ignore),rg -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.2950403690338135,68,
+linux_alternates,1,3,ag (ignore),ag -s ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,1.7572166919708252,68,
+linux_alternates,1,3,ag (ignore),ag -s ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,1.7568728923797607,68,
+linux_alternates,1,3,ag (ignore),ag -s ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,1.7468714714050293,68,
+linux_alternates,1,3,git grep (ignore),git grep -E -I -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.5062770843505859,68,LC_ALL=C
+linux_alternates,1,3,git grep (ignore),git grep -E -I -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.49932026863098145,68,LC_ALL=C
+linux_alternates,1,3,git grep (ignore),git grep -E -I -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.5008277893066406,68,LC_ALL=C
+linux_alternates,1,3,rg (whitelist),rg --no-ignore -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.19775605201721191,68,
+linux_alternates,1,3,rg (whitelist),rg --no-ignore -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.19699668884277344,68,
+linux_alternates,1,3,rg (whitelist),rg --no-ignore -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.19636178016662598,68,
+linux_alternates,1,3,ucg (whitelist),ucg --nosmart-case ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.21344256401062012,68,
+linux_alternates,1,3,ucg (whitelist),ucg --nosmart-case ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.21743154525756836,68,
+linux_alternates,1,3,ucg (whitelist),ucg --nosmart-case ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.22065043449401855,68,
+linux_alternates_casei,1,3,rg (ignore),rg -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.31632304191589355,160,
+linux_alternates_casei,1,3,rg (ignore),rg -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.3168807029724121,160,
+linux_alternates_casei,1,3,rg (ignore),rg -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.4834277629852295,160,
+linux_alternates_casei,1,3,ag (ignore),ag -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,1.9558978080749512,160,
+linux_alternates_casei,1,3,ag (ignore),ag -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,1.9736671447753906,160,
+linux_alternates_casei,1,3,ag (ignore),ag -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,1.9648356437683105,160,
+linux_alternates_casei,1,3,git grep (ignore),git grep -E -I -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,2.0229439735412598,160,LC_ALL=C
+linux_alternates_casei,1,3,git grep (ignore),git grep -E -I -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,2.0214922428131104,160,LC_ALL=C
+linux_alternates_casei,1,3,git grep (ignore),git grep -E -I -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,2.022616147994995,160,LC_ALL=C
+linux_alternates_casei,1,3,rg (whitelist),rg --no-ignore -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.22146987915039062,160,
+linux_alternates_casei,1,3,rg (whitelist),rg --no-ignore -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.22275280952453613,160,
+linux_alternates_casei,1,3,rg (whitelist),rg --no-ignore -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.22226715087890625,160,
+linux_alternates_casei,1,3,ucg (whitelist),ucg -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.5290391445159912,160,
+linux_alternates_casei,1,3,ucg (whitelist),ucg -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.5196049213409424,160,
+linux_alternates_casei,1,3,ucg (whitelist),ucg -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.5219125747680664,160,
+linux_literal,1,3,rg (ignore),rg -n PM_RESUME,0.2871882915496826,16,
+linux_literal,1,3,rg (ignore),rg -n PM_RESUME,0.38920140266418457,16,
+linux_literal,1,3,rg (ignore),rg -n PM_RESUME,0.3668382167816162,16,
+linux_literal,1,3,rg (ignore) (mmap),rg -n --mmap PM_RESUME,1.6073203086853027,16,
+linux_literal,1,3,rg (ignore) (mmap),rg -n --mmap PM_RESUME,1.6012177467346191,16,
+linux_literal,1,3,rg (ignore) (mmap),rg -n --mmap PM_RESUME,1.5818352699279785,16,
+linux_literal,1,3,ag (ignore) (mmap),ag -s PM_RESUME,1.592775583267212,16,
+linux_literal,1,3,ag (ignore) (mmap),ag -s PM_RESUME,1.5901448726654053,16,
+linux_literal,1,3,ag (ignore) (mmap),ag -s PM_RESUME,1.586061716079712,16,
+linux_literal,1,3,pt (ignore),pt PM_RESUME,0.45094990730285645,16,
+linux_literal,1,3,pt (ignore),pt PM_RESUME,0.47065186500549316,16,
+linux_literal,1,3,pt (ignore),pt PM_RESUME,0.4422800540924072,16,
+linux_literal,1,3,sift (ignore),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n --git PM_RESUME,0.6293809413909912,16,
+linux_literal,1,3,sift (ignore),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n --git PM_RESUME,0.6314799785614014,16,
+linux_literal,1,3,sift (ignore),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n --git PM_RESUME,0.6289358139038086,16,
+linux_literal,1,3,git grep (ignore),git grep -I -n PM_RESUME,0.347550630569458,16,LC_ALL=C
+linux_literal,1,3,git grep (ignore),git grep -I -n PM_RESUME,0.345928430557251,16,LC_ALL=C
+linux_literal,1,3,git grep (ignore),git grep -I -n PM_RESUME,0.33939385414123535,16,LC_ALL=C
+linux_literal,1,3,rg (whitelist),rg -n --no-ignore -tall PM_RESUME,0.20830345153808594,16,
+linux_literal,1,3,rg (whitelist),rg -n --no-ignore -tall PM_RESUME,0.34220385551452637,16,
+linux_literal,1,3,rg (whitelist),rg -n --no-ignore -tall PM_RESUME,0.2077772617340088,16,
+linux_literal,1,3,ucg (whitelist),ucg --nosmart-case PM_RESUME,0.21996808052062988,16,
+linux_literal,1,3,ucg (whitelist),ucg --nosmart-case PM_RESUME,0.22822093963623047,16,
+linux_literal,1,3,ucg (whitelist),ucg --nosmart-case PM_RESUME,0.21923017501831055,16,
+linux_literal_casei,1,3,rg (ignore),rg -n -i PM_RESUME,0.2988588809967041,370,
+linux_literal_casei,1,3,rg (ignore),rg -n -i PM_RESUME,0.5339267253875732,370,
+linux_literal_casei,1,3,rg (ignore),rg -n -i PM_RESUME,0.43750762939453125,370,
+linux_literal_casei,1,3,rg (ignore) (mmap),rg -n -i --mmap PM_RESUME,1.603757381439209,370,
+linux_literal_casei,1,3,rg (ignore) (mmap),rg -n -i --mmap PM_RESUME,1.618077278137207,370,
+linux_literal_casei,1,3,rg (ignore) (mmap),rg -n -i --mmap PM_RESUME,1.6234121322631836,370,
+linux_literal_casei,1,3,ag (ignore) (mmap),ag -i PM_RESUME,1.621368646621704,370,
+linux_literal_casei,1,3,ag (ignore) (mmap),ag -i PM_RESUME,1.5698626041412354,370,
+linux_literal_casei,1,3,ag (ignore) (mmap),ag -i PM_RESUME,1.6105949878692627,370,
+linux_literal_casei,1,3,sift (ignore),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n -i --git PM_RESUME,0.8005843162536621,370,
+linux_literal_casei,1,3,sift (ignore),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n -i --git PM_RESUME,0.8044955730438232,370,
+linux_literal_casei,1,3,sift (ignore),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n -i --git PM_RESUME,0.806922197341919,370,
+linux_literal_casei,1,3,git grep (ignore),git grep -I -n -i PM_RESUME,0.34161829948425293,370,LC_ALL=C
+linux_literal_casei,1,3,git grep (ignore),git grep -I -n -i PM_RESUME,0.3455958366394043,370,LC_ALL=C
+linux_literal_casei,1,3,git grep (ignore),git grep -I -n -i PM_RESUME,0.3493361473083496,370,LC_ALL=C
+linux_literal_casei,1,3,rg (whitelist),rg -n -i --no-ignore -tall PM_RESUME,0.2149522304534912,370,
+linux_literal_casei,1,3,rg (whitelist),rg -n -i --no-ignore -tall PM_RESUME,0.21602368354797363,370,
+linux_literal_casei,1,3,rg (whitelist),rg -n -i --no-ignore -tall PM_RESUME,0.27021098136901855,370,
+linux_literal_casei,1,3,ucg (whitelist),ucg -i PM_RESUME,0.22747421264648438,370,
+linux_literal_casei,1,3,ucg (whitelist),ucg -i PM_RESUME,0.22050881385803223,370,
+linux_literal_casei,1,3,ucg (whitelist),ucg -i PM_RESUME,0.21217584609985352,370,
+linux_literal_default,1,3,rg,rg PM_RESUME,0.27482175827026367,16,
+linux_literal_default,1,3,rg,rg PM_RESUME,0.2796294689178467,16,
+linux_literal_default,1,3,rg,rg PM_RESUME,0.27638936042785645,16,
+linux_literal_default,1,3,ag,ag PM_RESUME,1.598384141921997,16,
+linux_literal_default,1,3,ag,ag PM_RESUME,1.5849597454071045,16,
+linux_literal_default,1,3,ag,ag PM_RESUME,1.6000149250030518,16,
+linux_literal_default,1,3,ucg,ucg PM_RESUME,0.2263963222503662,16,
+linux_literal_default,1,3,ucg,ucg PM_RESUME,0.21367835998535156,16,
+linux_literal_default,1,3,ucg,ucg PM_RESUME,0.21764111518859863,16,
+linux_literal_default,1,3,pt,pt PM_RESUME,0.42263340950012207,16,
+linux_literal_default,1,3,pt,pt PM_RESUME,0.467041015625,16,
+linux_literal_default,1,3,pt,pt PM_RESUME,0.42820048332214355,16,
+linux_literal_default,1,3,sift,sift PM_RESUME,0.33421826362609863,16,
+linux_literal_default,1,3,sift,sift PM_RESUME,0.35932135581970215,16,
+linux_literal_default,1,3,sift,sift PM_RESUME,0.3372631072998047,16,
+linux_literal_default,1,3,git grep,git grep PM_RESUME,0.348984956741333,16,LC_ALL=en_US.UTF-8
+linux_literal_default,1,3,git grep,git grep PM_RESUME,0.34420299530029297,16,LC_ALL=en_US.UTF-8
+linux_literal_default,1,3,git grep,git grep PM_RESUME,0.33880615234375,16,LC_ALL=en_US.UTF-8
+linux_no_literal,1,3,rg (ignore),rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.5833027362823486,490,
+linux_no_literal,1,3,rg (ignore),rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.5783836841583252,490,
+linux_no_literal,1,3,rg (ignore),rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.5806806087493896,490,
+linux_no_literal,1,3,rg (ignore) (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.4163496494293213,490,
+linux_no_literal,1,3,rg (ignore) (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.4040029048919678,490,
+linux_no_literal,1,3,rg (ignore) (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.40265560150146484,490,
+linux_no_literal,1,3,ag (ignore) (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},2.3176910877227783,766,
+linux_no_literal,1,3,ag (ignore) (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},2.3504347801208496,766,
+linux_no_literal,1,3,ag (ignore) (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},2.317542552947998,766,
+linux_no_literal,1,3,sift (ignore) (ASCII),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},25.821982383728027,491,
+linux_no_literal,1,3,sift (ignore) (ASCII),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},25.82067561149597,491,
+linux_no_literal,1,3,sift (ignore) (ASCII),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},25.626302242279053,491,
+linux_no_literal,1,3,git grep (ignore),git grep -E -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},26.349210023880005,490,LC_ALL=en_US.UTF-8
+linux_no_literal,1,3,git grep (ignore),git grep -E -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},26.34226369857788,490,LC_ALL=en_US.UTF-8
+linux_no_literal,1,3,git grep (ignore),git grep -E -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},26.340656995773315,490,LC_ALL=en_US.UTF-8
+linux_no_literal,1,3,git grep (ignore) (ASCII),git grep -E -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},4.14680290222168,490,LC_ALL=C
+linux_no_literal,1,3,git grep (ignore) (ASCII),git grep -E -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},4.153340578079224,490,LC_ALL=C
+linux_no_literal,1,3,git grep (ignore) (ASCII),git grep -E -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},4.154819011688232,490,LC_ALL=C
+linux_no_literal,1,3,rg (whitelist),rg -n --no-ignore -tall \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.49768829345703125,419,
+linux_no_literal,1,3,rg (whitelist),rg -n --no-ignore -tall \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.5121400356292725,419,
+linux_no_literal,1,3,rg (whitelist),rg -n --no-ignore -tall \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.49718427658081055,419,
+linux_no_literal,1,3,rg (whitelist) (ASCII),rg -n --no-ignore -tall (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.38550543785095215,419,
+linux_no_literal,1,3,rg (whitelist) (ASCII),rg -n --no-ignore -tall (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.32651591300964355,419,
+linux_no_literal,1,3,rg (whitelist) (ASCII),rg -n --no-ignore -tall (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.3246915340423584,419,
+linux_no_literal,1,3,ucg (whitelist) (ASCII),ucg --nosmart-case \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},1.128183126449585,416,
+linux_no_literal,1,3,ucg (whitelist) (ASCII),ucg --nosmart-case \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},1.1255216598510742,416,
+linux_no_literal,1,3,ucg (whitelist) (ASCII),ucg --nosmart-case \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},1.1268525123596191,416,
+linux_re_literal_suffix,1,3,rg (ignore),rg -n [A-Z]+_RESUME,0.36306214332580566,1652,
+linux_re_literal_suffix,1,3,rg (ignore),rg -n [A-Z]+_RESUME,0.45077037811279297,1652,
+linux_re_literal_suffix,1,3,rg (ignore),rg -n [A-Z]+_RESUME,0.3804624080657959,1652,
+linux_re_literal_suffix,1,3,ag (ignore),ag -s [A-Z]+_RESUME,1.8995850086212158,1652,
+linux_re_literal_suffix,1,3,ag (ignore),ag -s [A-Z]+_RESUME,1.8897662162780762,1652,
+linux_re_literal_suffix,1,3,ag (ignore),ag -s [A-Z]+_RESUME,1.878380537033081,1652,
+linux_re_literal_suffix,1,3,sift (ignore),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n --git [A-Z]+_RESUME,10.48949646949768,1652,
+linux_re_literal_suffix,1,3,sift (ignore),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n --git [A-Z]+_RESUME,10.289165735244751,1652,
+linux_re_literal_suffix,1,3,sift (ignore),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n --git [A-Z]+_RESUME,10.000468254089355,1652,
+linux_re_literal_suffix,1,3,git grep (ignore),git grep -E -I -n [A-Z]+_RESUME,1.1080453395843506,1652,LC_ALL=C
+linux_re_literal_suffix,1,3,git grep (ignore),git grep -E -I -n [A-Z]+_RESUME,1.10821533203125,1652,LC_ALL=C
+linux_re_literal_suffix,1,3,git grep (ignore),git grep -E -I -n [A-Z]+_RESUME,1.105595588684082,1652,LC_ALL=C
+linux_re_literal_suffix,1,3,rg (whitelist),rg -n --no-ignore -tall [A-Z]+_RESUME,0.2073357105255127,1630,
+linux_re_literal_suffix,1,3,rg (whitelist),rg -n --no-ignore -tall [A-Z]+_RESUME,0.20552492141723633,1630,
+linux_re_literal_suffix,1,3,rg (whitelist),rg -n --no-ignore -tall [A-Z]+_RESUME,0.2061319351196289,1630,
+linux_re_literal_suffix,1,3,ucg (whitelist),ucg --nosmart-case [A-Z]+_RESUME,0.3013310432434082,1630,
+linux_re_literal_suffix,1,3,ucg (whitelist),ucg --nosmart-case [A-Z]+_RESUME,0.3005218505859375,1630,
+linux_re_literal_suffix,1,3,ucg (whitelist),ucg --nosmart-case [A-Z]+_RESUME,0.29984378814697266,1630,
+linux_unicode_greek,1,3,rg,rg -n \p{Greek},0.4162716865539551,23,
+linux_unicode_greek,1,3,rg,rg -n \p{Greek},0.47885966300964355,23,
+linux_unicode_greek,1,3,rg,rg -n \p{Greek},0.5135962963104248,23,
+linux_unicode_greek,1,3,sift,sift --binary-skip --exclude-files .* --exclude-files *.pdf -n --git \p{Greek},7.570494651794434,23,
+linux_unicode_greek,1,3,sift,sift --binary-skip --exclude-files .* --exclude-files *.pdf -n --git \p{Greek},7.790151596069336,23,
+linux_unicode_greek,1,3,sift,sift --binary-skip --exclude-files .* --exclude-files *.pdf -n --git \p{Greek},7.783358812332153,23,
+linux_unicode_greek_casei,1,3,rg,rg -n -i \p{Greek},0.4370443820953369,103,
+linux_unicode_greek_casei,1,3,rg,rg -n -i \p{Greek},0.40680766105651855,103,
+linux_unicode_greek_casei,1,3,rg,rg -n -i \p{Greek},0.4011569023132324,103,
+linux_unicode_greek_casei,1,3,sift,sift --binary-skip --exclude-files .* --exclude-files *.pdf -n -i --git \p{Greek},0.002422809600830078,,
+linux_unicode_greek_casei,1,3,sift,sift --binary-skip --exclude-files .* --exclude-files *.pdf -n -i --git \p{Greek},0.002414226531982422,,
+linux_unicode_greek_casei,1,3,sift,sift --binary-skip --exclude-files .* --exclude-files *.pdf -n -i --git \p{Greek},0.002293109893798828,,
+linux_unicode_word,1,3,rg (ignore),rg -n \wAh,0.44771265983581543,186,
+linux_unicode_word,1,3,rg (ignore),rg -n \wAh,0.3006107807159424,186,
+linux_unicode_word,1,3,rg (ignore),rg -n \wAh,0.3026111125946045,186,
+linux_unicode_word,1,3,rg (ignore) (ASCII),rg -n (?-u)\wAh,0.43827080726623535,174,
+linux_unicode_word,1,3,rg (ignore) (ASCII),rg -n (?-u)\wAh,0.2931697368621826,174,
+linux_unicode_word,1,3,rg (ignore) (ASCII),rg -n (?-u)\wAh,0.33072638511657715,174,
+linux_unicode_word,1,3,ag (ignore) (ASCII),ag -s \wAh,1.7645132541656494,174,
+linux_unicode_word,1,3,ag (ignore) (ASCII),ag -s \wAh,1.7730333805084229,174,
+linux_unicode_word,1,3,ag (ignore) (ASCII),ag -s \wAh,1.773383378982544,174,
+linux_unicode_word,1,3,sift (ignore) (ASCII),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n \wAh,10.872124671936035,174,
+linux_unicode_word,1,3,sift (ignore) (ASCII),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n \wAh,11.147738456726074,174,
+linux_unicode_word,1,3,sift (ignore) (ASCII),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n \wAh,11.029243469238281,174,
+linux_unicode_word,1,3,git grep (ignore),git grep -E -I -n \wAh,13.047154664993286,186,LC_ALL=en_US.UTF-8
+linux_unicode_word,1,3,git grep (ignore),git grep -E -I -n \wAh,13.025037288665771,186,LC_ALL=en_US.UTF-8
+linux_unicode_word,1,3,git grep (ignore),git grep -E -I -n \wAh,13.081012487411499,186,LC_ALL=en_US.UTF-8
+linux_unicode_word,1,3,git grep (ignore) (ASCII),git grep -E -I -n \wAh,2.98722767829895,174,LC_ALL=C
+linux_unicode_word,1,3,git grep (ignore) (ASCII),git grep -E -I -n \wAh,2.987990379333496,174,LC_ALL=C
+linux_unicode_word,1,3,git grep (ignore) (ASCII),git grep -E -I -n \wAh,2.988698959350586,174,LC_ALL=C
+linux_unicode_word,1,3,rg (whitelist),rg -n --no-ignore -tall \wAh,0.21961355209350586,180,
+linux_unicode_word,1,3,rg (whitelist),rg -n --no-ignore -tall \wAh,0.2884254455566406,180,
+linux_unicode_word,1,3,rg (whitelist),rg -n --no-ignore -tall \wAh,0.21905040740966797,180,
+linux_unicode_word,1,3,rg (whitelist) (ASCII),rg -n --no-ignore -tall (?-u)\wAh,0.23966765403747559,168,
+linux_unicode_word,1,3,rg (whitelist) (ASCII),rg -n --no-ignore -tall (?-u)\wAh,0.21801042556762695,168,
+linux_unicode_word,1,3,rg (whitelist) (ASCII),rg -n --no-ignore -tall (?-u)\wAh,0.21909880638122559,168,
+linux_unicode_word,1,3,ucg (ASCII),ucg --nosmart-case \wAh,0.2259504795074463,168,
+linux_unicode_word,1,3,ucg (ASCII),ucg --nosmart-case \wAh,0.22269177436828613,168,
+linux_unicode_word,1,3,ucg (ASCII),ucg --nosmart-case \wAh,0.2259974479675293,168,
+linux_word,1,3,rg (ignore),rg -n -w PM_RESUME,0.34968090057373047,6,
+linux_word,1,3,rg (ignore),rg -n -w PM_RESUME,0.28850769996643066,6,
+linux_word,1,3,rg (ignore),rg -n -w PM_RESUME,0.34809160232543945,6,
+linux_word,1,3,ag (ignore),ag -s -w PM_RESUME,1.6134660243988037,6,
+linux_word,1,3,ag (ignore),ag -s -w PM_RESUME,1.59847092628479,6,
+linux_word,1,3,ag (ignore),ag -s -w PM_RESUME,1.581369161605835,6,
+linux_word,1,3,sift (ignore),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n -w --git PM_RESUME,7.644887208938599,6,
+linux_word,1,3,sift (ignore),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n -w --git PM_RESUME,7.8782219886779785,6,
+linux_word,1,3,sift (ignore),sift --binary-skip --exclude-files .* --exclude-files *.pdf -n -w --git PM_RESUME,7.754150152206421,6,
+linux_word,1,3,git grep (ignore),git grep -E -I -n -w PM_RESUME,0.34302353858947754,6,LC_ALL=C
+linux_word,1,3,git grep (ignore),git grep -E -I -n -w PM_RESUME,0.33672142028808594,6,LC_ALL=C
+linux_word,1,3,git grep (ignore),git grep -E -I -n -w PM_RESUME,0.35193610191345215,6,LC_ALL=C
+linux_word,1,3,rg (whitelist),rg -n -w --no-ignore -tall PM_RESUME,0.33329272270202637,6,
+linux_word,1,3,rg (whitelist),rg -n -w --no-ignore -tall PM_RESUME,0.25751829147338867,6,
+linux_word,1,3,rg (whitelist),rg -n -w --no-ignore -tall PM_RESUME,0.21761608123779297,6,
+linux_word,1,3,ucg (whitelist),ucg --nosmart-case -w PM_RESUME,0.22014284133911133,6,
+linux_word,1,3,ucg (whitelist),ucg --nosmart-case -w PM_RESUME,0.22314929962158203,6,
+linux_word,1,3,ucg (whitelist),ucg --nosmart-case -w PM_RESUME,0.2202434539794922,6,
+subtitles_en_alternate,1,3,rg (lines),rg -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.622809886932373,848,
+subtitles_en_alternate,1,3,rg (lines),rg -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.6181182861328125,848,
+subtitles_en_alternate,1,3,rg (lines),rg -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.6205663681030273,848,
+subtitles_en_alternate,1,3,ag (lines),ag -s Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.7565691471099854,848,
+subtitles_en_alternate,1,3,ag (lines),ag -s Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.7561769485473633,848,
+subtitles_en_alternate,1,3,ag (lines),ag -s Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.7559969425201416,848,
+subtitles_en_alternate,1,3,ucg (lines),ucg --nosmart-case Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,1.4493463039398193,848,
+subtitles_en_alternate,1,3,ucg (lines),ucg --nosmart-case Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,1.44877028465271,848,
+subtitles_en_alternate,1,3,ucg (lines),ucg --nosmart-case Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,1.4433801174163818,848,
+subtitles_en_alternate,1,3,grep (lines),grep -E -an Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4114174842834473,848,LC_ALL=C
+subtitles_en_alternate,1,3,grep (lines),grep -E -an Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.411625862121582,848,LC_ALL=C
+subtitles_en_alternate,1,3,grep (lines),grep -E -an Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.408623456954956,848,LC_ALL=C
+subtitles_en_alternate,1,3,rg,rg Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2900726795196533,848,
+subtitles_en_alternate,1,3,rg,rg Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2905848026275635,848,
+subtitles_en_alternate,1,3,rg,rg Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2903940677642822,848,
+subtitles_en_alternate,1,3,grep,grep -E -a Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.9546515941619873,848,LC_ALL=C
+subtitles_en_alternate,1,3,grep,grep -E -a Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.955279588699341,848,LC_ALL=C
+subtitles_en_alternate,1,3,grep,grep -E -a Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.954089403152466,848,LC_ALL=C
+subtitles_en_alternate_casei,1,3,ag (ASCII),ag -s -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,5.169135332107544,862,
+subtitles_en_alternate_casei,1,3,ag (ASCII),ag -s -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,5.174601078033447,862,
+subtitles_en_alternate_casei,1,3,ag (ASCII),ag -s -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,5.1684675216674805,862,
+subtitles_en_alternate_casei,1,3,ucg (ASCII),ucg -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4171736240386963,862,
+subtitles_en_alternate_casei,1,3,ucg (ASCII),ucg -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4158167839050293,862,
+subtitles_en_alternate_casei,1,3,ucg (ASCII),ucg -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4186513423919678,862,
+subtitles_en_alternate_casei,1,3,grep (ASCII),grep -E -ani Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,4.531639575958252,862,LC_ALL=C
+subtitles_en_alternate_casei,1,3,grep (ASCII),grep -E -ani Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,4.526550054550171,862,LC_ALL=C
+subtitles_en_alternate_casei,1,3,grep (ASCII),grep -E -ani Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,4.528509140014648,862,LC_ALL=C
+subtitles_en_alternate_casei,1,3,rg,rg -n -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.722398281097412,862,
+subtitles_en_alternate_casei,1,3,rg,rg -n -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7225935459136963,862,
+subtitles_en_alternate_casei,1,3,rg,rg -n -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7222185134887695,862,
+subtitles_en_alternate_casei,1,3,grep,grep -E -ani Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,5.12151837348938,862,LC_ALL=en_US.UTF-8
+subtitles_en_alternate_casei,1,3,grep,grep -E -ani Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,5.119963884353638,862,LC_ALL=en_US.UTF-8
+subtitles_en_alternate_casei,1,3,grep,grep -E -ani Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,5.121079683303833,862,LC_ALL=en_US.UTF-8
+subtitles_en_literal,1,3,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2684764862060547,629,
+subtitles_en_literal,1,3,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.26811957359313965,629,
+subtitles_en_literal,1,3,rg,rg Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.2684173583984375,629,
+subtitles_en_literal,1,3,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.435128688812256,629,
+subtitles_en_literal,1,3,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4362881183624268,629,
+subtitles_en_literal,1,3,pt,pt -N Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4399220943450928,629,
+subtitles_en_literal,1,3,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.32662391662597656,629,
+subtitles_en_literal,1,3,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3277275562286377,629,
+subtitles_en_literal,1,3,sift,sift Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.32798290252685547,629,
+subtitles_en_literal,1,3,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.520500659942627,629,LC_ALL=C
+subtitles_en_literal,1,3,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5191032886505127,629,LC_ALL=C
+subtitles_en_literal,1,3,grep,grep -a Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5171597003936768,629,LC_ALL=C
+subtitles_en_literal,1,3,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.595801830291748,629,
+subtitles_en_literal,1,3,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5954360961914062,629,
+subtitles_en_literal,1,3,rg (lines),rg -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5945618152618408,629,
+subtitles_en_literal,1,3,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7291676998138428,629,
+subtitles_en_literal,1,3,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.730966329574585,629,
+subtitles_en_literal,1,3,ag (lines),ag -s Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.728854179382324,629,
+subtitles_en_literal,1,3,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.775996208190918,629,
+subtitles_en_literal,1,3,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7760195732116699,629,
+subtitles_en_literal,1,3,ucg (lines),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7763564586639404,629,
+subtitles_en_literal,1,3,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.433366060256958,629,
+subtitles_en_literal,1,3,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.4338581562042236,629,
+subtitles_en_literal,1,3,pt (lines),pt Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,3.435924768447876,629,
+subtitles_en_literal,1,3,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7586827278137207,629,
+subtitles_en_literal,1,3,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7590317726135254,629,
+subtitles_en_literal,1,3,sift (lines),sift -n Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.754432201385498,629,
+subtitles_en_literal,1,3,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9726488590240479,629,LC_ALL=C
+subtitles_en_literal,1,3,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9699857234954834,629,LC_ALL=C
+subtitles_en_literal,1,3,grep (lines),grep -an Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9714112281799316,629,LC_ALL=C
+subtitles_en_literal_casei,1,3,rg,rg -i Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.36658453941345215,642,
+subtitles_en_literal_casei,1,3,rg,rg -i Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.3654778003692627,642,
+subtitles_en_literal_casei,1,3,rg,rg -i Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.36565113067626953,642,
+subtitles_en_literal_casei,1,3,grep,grep -ai Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,4.0890116691589355,642,LC_ALL=en_US.UTF-8
+subtitles_en_literal_casei,1,3,grep,grep -ai Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,4.08124852180481,642,LC_ALL=en_US.UTF-8
+subtitles_en_literal_casei,1,3,grep,grep -ai Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,4.0796849727630615,642,LC_ALL=en_US.UTF-8
+subtitles_en_literal_casei,1,3,grep (ASCII),grep -E -ai Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.6151647567749023,642,LC_ALL=C
+subtitles_en_literal_casei,1,3,grep (ASCII),grep -E -ai Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.6141552925109863,642,LC_ALL=C
+subtitles_en_literal_casei,1,3,grep (ASCII),grep -E -ai Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.6132988929748535,642,LC_ALL=C
+subtitles_en_literal_casei,1,3,rg (lines),rg -n -i Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.6962459087371826,642,
+subtitles_en_literal_casei,1,3,rg (lines),rg -n -i Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.6945579051971436,642,
+subtitles_en_literal_casei,1,3,rg (lines),rg -n -i Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.693866491317749,642,
+subtitles_en_literal_casei,1,3,ag (lines) (ASCII),ag -i Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.771639823913574,642,
+subtitles_en_literal_casei,1,3,ag (lines) (ASCII),ag -i Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.772296190261841,642,
+subtitles_en_literal_casei,1,3,ag (lines) (ASCII),ag -i Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7712018489837646,642,
+subtitles_en_literal_casei,1,3,ucg (lines) (ASCII),ucg -i Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.8068230152130127,642,
+subtitles_en_literal_casei,1,3,ucg (lines) (ASCII),ucg -i Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.80411696434021,642,
+subtitles_en_literal_casei,1,3,ucg (lines) (ASCII),ucg -i Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.8038516044616699,642,
+subtitles_en_literal_word,1,3,rg (ASCII),rg -n (?-u:\b)Sherlock Holmes(?-u:\b) /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5951778888702393,629,
+subtitles_en_literal_word,1,3,rg (ASCII),rg -n (?-u:\b)Sherlock Holmes(?-u:\b) /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5971941947937012,629,
+subtitles_en_literal_word,1,3,rg (ASCII),rg -n (?-u:\b)Sherlock Holmes(?-u:\b) /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5952184200286865,629,
+subtitles_en_literal_word,1,3,ag (ASCII),ag -sw Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7292284965515137,629,
+subtitles_en_literal_word,1,3,ag (ASCII),ag -sw Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.728681802749634,629,
+subtitles_en_literal_word,1,3,ag (ASCII),ag -sw Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7315311431884766,629,
+subtitles_en_literal_word,1,3,ucg (ASCII),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.784024715423584,629,
+subtitles_en_literal_word,1,3,ucg (ASCII),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.780540943145752,629,
+subtitles_en_literal_word,1,3,ucg (ASCII),ucg --nosmart-case Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.7772648334503174,629,
+subtitles_en_literal_word,1,3,grep (ASCII),grep -anw Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9744353294372559,629,LC_ALL=C
+subtitles_en_literal_word,1,3,grep (ASCII),grep -anw Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9781327247619629,629,LC_ALL=C
+subtitles_en_literal_word,1,3,grep (ASCII),grep -anw Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9798097610473633,629,LC_ALL=C
+subtitles_en_literal_word,1,3,rg,rg -nw Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5965189933776855,629,
+subtitles_en_literal_word,1,3,rg,rg -nw Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5960156917572021,629,
+subtitles_en_literal_word,1,3,rg,rg -nw Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.5975723266601562,629,
+subtitles_en_literal_word,1,3,grep,grep -anw Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9818971157073975,629,LC_ALL=en_US.UTF-8
+subtitles_en_literal_word,1,3,grep,grep -anw Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.9785251617431641,629,LC_ALL=en_US.UTF-8
+subtitles_en_literal_word,1,3,grep,grep -anw Sherlock Holmes /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.977081298828125,629,LC_ALL=en_US.UTF-8
+subtitles_en_no_literal,1,3,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.7750890254974365,13,
+subtitles_en_no_literal,1,3,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.774017333984375,13,
+subtitles_en_no_literal,1,3,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.783200740814209,13,
+subtitles_en_no_literal,1,3,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.5396409034729004,13,
+subtitles_en_no_literal,1,3,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.5404820442199707,13,
+subtitles_en_no_literal,1,3,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,2.5400590896606445,13,
+subtitles_en_no_literal,1,3,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,10.072888612747192,48,
+subtitles_en_no_literal,1,3,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,10.075153350830078,48,
+subtitles_en_no_literal,1,3,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,10.0713791847229,48,
+subtitles_en_no_literal,1,3,ucg (ASCII),ucg --nosmart-case \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,7.734791278839111,13,
+subtitles_en_no_literal,1,3,ucg (ASCII),ucg --nosmart-case \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,7.7345263957977295,13,
+subtitles_en_no_literal,1,3,ucg (ASCII),ucg --nosmart-case \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,7.73199462890625,13,
+subtitles_en_no_literal,1,3,grep (ASCII),grep -E -an \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,4.411367416381836,13,LC_ALL=C
+subtitles_en_no_literal,1,3,grep (ASCII),grep -E -an \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,4.41072940826416,13,LC_ALL=C
+subtitles_en_no_literal,1,3,grep (ASCII),grep -E -an \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,4.414730072021484,13,LC_ALL=C
+subtitles_en_surrounding_words,1,3,rg,rg -n \w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.6052529811859131,317,
+subtitles_en_surrounding_words,1,3,rg,rg -n \w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.6049232482910156,317,
+subtitles_en_surrounding_words,1,3,rg,rg -n \w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.6045565605163574,317,
+subtitles_en_surrounding_words,1,3,grep,grep -E -an \w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,1.2849924564361572,317,LC_ALL=en_US.UTF-8
+subtitles_en_surrounding_words,1,3,grep,grep -E -an \w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,1.2837722301483154,317,LC_ALL=en_US.UTF-8
+subtitles_en_surrounding_words,1,3,grep,grep -E -an \w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,1.2847650051116943,317,LC_ALL=en_US.UTF-8
+subtitles_en_surrounding_words,1,3,rg (ASCII),rg -n (?-u)\w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.6005992889404297,317,
+subtitles_en_surrounding_words,1,3,rg (ASCII),rg -n (?-u)\w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.600543737411499,317,
+subtitles_en_surrounding_words,1,3,rg (ASCII),rg -n (?-u)\w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,0.6009273529052734,317,
+subtitles_en_surrounding_words,1,3,ag (ASCII),ag -s \w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,11.664374113082886,323,
+subtitles_en_surrounding_words,1,3,ag (ASCII),ag -s \w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,11.674306869506836,323,
+subtitles_en_surrounding_words,1,3,ag (ASCII),ag -s \w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,11.657484769821167,323,
+subtitles_en_surrounding_words,1,3,ucg (ASCII),ucg --nosmart-case \w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,4.650290012359619,317,
+subtitles_en_surrounding_words,1,3,ucg (ASCII),ucg --nosmart-case \w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,4.651855707168579,317,
+subtitles_en_surrounding_words,1,3,ucg (ASCII),ucg --nosmart-case \w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,4.649921417236328,317,
+subtitles_en_surrounding_words,1,3,grep (ASCII),grep -E -an \w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,1.2745037078857422,317,LC_ALL=C
+subtitles_en_surrounding_words,1,3,grep (ASCII),grep -E -an \w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,1.275665521621704,317,LC_ALL=C
+subtitles_en_surrounding_words,1,3,grep (ASCII),grep -E -an \w+\s+Holmes\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.sample.en,1.273988962173462,317,LC_ALL=C
+subtitles_ru_alternate,1,3,rg (lines),rg -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.9031155109405518,691,
+subtitles_ru_alternate,1,3,rg (lines),rg -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.9021081924438477,691,
+subtitles_ru_alternate,1,3,rg (lines),rg -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.9028818607330322,691,
+subtitles_ru_alternate,1,3,ag (lines),ag -s Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,5.8895978927612305,691,
+subtitles_ru_alternate,1,3,ag (lines),ag -s Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,5.891357660293579,691,
+subtitles_ru_alternate,1,3,ag (lines),ag -s Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,5.892467975616455,691,
+subtitles_ru_alternate,1,3,ucg (lines),ucg --nosmart-case Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.7517757415771484,691,
+subtitles_ru_alternate,1,3,ucg (lines),ucg --nosmart-case Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.7550888061523438,691,
+subtitles_ru_alternate,1,3,ucg (lines),ucg --nosmart-case Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.7555651664733887,691,
+subtitles_ru_alternate,1,3,grep (lines),grep -E -an Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,8.51417875289917,691,LC_ALL=C
+subtitles_ru_alternate,1,3,grep (lines),grep -E -an Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,8.512972116470337,691,LC_ALL=C
+subtitles_ru_alternate,1,3,grep (lines),grep -E -an Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,8.507266521453857,691,LC_ALL=C
+subtitles_ru_alternate,1,3,rg,rg Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.300950288772583,691,
+subtitles_ru_alternate,1,3,rg,rg Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.2987852096557617,691,
+subtitles_ru_alternate,1,3,rg,rg Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.3024635314941406,691,
+subtitles_ru_alternate,1,3,grep,grep -E -a Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,7.983739137649536,691,LC_ALL=C
+subtitles_ru_alternate,1,3,grep,grep -E -a Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,7.988446950912476,691,LC_ALL=C
+subtitles_ru_alternate,1,3,grep,grep -E -a Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,7.979671478271484,691,LC_ALL=C
+subtitles_ru_alternate_casei,1,3,ag (ASCII),ag -s -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,5.889382362365723,691,
+subtitles_ru_alternate_casei,1,3,ag (ASCII),ag -s -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,5.902577877044678,691,
+subtitles_ru_alternate_casei,1,3,ag (ASCII),ag -s -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,5.890571355819702,691,
+subtitles_ru_alternate_casei,1,3,ucg (ASCII),ucg -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.7548162937164307,691,
+subtitles_ru_alternate_casei,1,3,ucg (ASCII),ucg -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.747791051864624,691,
+subtitles_ru_alternate_casei,1,3,ucg (ASCII),ucg -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.7396674156188965,691,
+subtitles_ru_alternate_casei,1,3,grep (ASCII),grep -E -ani Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,8.58053183555603,691,LC_ALL=C
+subtitles_ru_alternate_casei,1,3,grep (ASCII),grep -E -ani Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,8.594751596450806,691,LC_ALL=C
+subtitles_ru_alternate_casei,1,3,grep (ASCII),grep -E -ani Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,8.561670541763306,691,LC_ALL=C
+subtitles_ru_alternate_casei,1,3,rg,rg -n -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.833597183227539,735,
+subtitles_ru_alternate_casei,1,3,rg,rg -n -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.831137180328369,735,
+subtitles_ru_alternate_casei,1,3,rg,rg -n -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.830361843109131,735,
+subtitles_ru_alternate_casei,1,3,grep,grep -E -ani Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,8.723876953125,735,LC_ALL=en_US.UTF-8
+subtitles_ru_alternate_casei,1,3,grep,grep -E -ani Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,8.723239183425903,735,LC_ALL=en_US.UTF-8
+subtitles_ru_alternate_casei,1,3,grep,grep -E -ani Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,8.722000360488892,735,LC_ALL=en_US.UTF-8
+subtitles_ru_literal,1,3,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.3252851963043213,583,
+subtitles_ru_literal,1,3,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.3270294666290283,583,
+subtitles_ru_literal,1,3,rg,rg Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.32680773735046387,583,
+subtitles_ru_literal,1,3,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.932488679885864,583,
+subtitles_ru_literal,1,3,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.91330337524414,583,
+subtitles_ru_literal,1,3,pt,pt -N Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.911381006240845,583,
+subtitles_ru_literal,1,3,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.438587427139282,583,
+subtitles_ru_literal,1,3,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.412389755249023,583,
+subtitles_ru_literal,1,3,sift,sift Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,16.412444353103638,583,
+subtitles_ru_literal,1,3,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7865939140319824,583,LC_ALL=C
+subtitles_ru_literal,1,3,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7889957427978516,583,LC_ALL=C
+subtitles_ru_literal,1,3,grep,grep -a Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7923679351806641,583,LC_ALL=C
+subtitles_ru_literal,1,3,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9255633354187012,583,
+subtitles_ru_literal,1,3,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9285938739776611,583,
+subtitles_ru_literal,1,3,rg (lines),rg -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9274048805236816,583,
+subtitles_ru_literal,1,3,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.4811036586761475,583,
+subtitles_ru_literal,1,3,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.4785168170928955,583,
+subtitles_ru_literal,1,3,ag (lines),ag -s Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.484618186950684,583,
+subtitles_ru_literal,1,3,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.7743628025054932,583,
+subtitles_ru_literal,1,3,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.7731456756591797,583,
+subtitles_ru_literal,1,3,ucg (lines),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.7749128341674805,583,
+subtitles_ru_literal,1,3,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.931540250778198,583,
+subtitles_ru_literal,1,3,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.935162782669067,583,
+subtitles_ru_literal,1,3,pt (lines),pt Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,12.949711561203003,583,
+subtitles_ru_literal,1,3,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.183809995651245,583,
+subtitles_ru_literal,1,3,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.19060492515564,583,
+subtitles_ru_literal,1,3,sift (lines),sift -n Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,17.17626404762268,583,
+subtitles_ru_literal,1,3,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.3023960590362549,583,LC_ALL=C
+subtitles_ru_literal,1,3,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.2992589473724365,583,LC_ALL=C
+subtitles_ru_literal,1,3,grep (lines),grep -an Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.299330711364746,583,LC_ALL=C
+subtitles_ru_literal_casei,1,3,rg,rg -i Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.1320264339447021,604,
+subtitles_ru_literal_casei,1,3,rg,rg -i Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.1323668956756592,604,
+subtitles_ru_literal_casei,1,3,rg,rg -i Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.1354515552520752,604,
+subtitles_ru_literal_casei,1,3,grep,grep -ai Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,8.194744348526001,604,LC_ALL=en_US.UTF-8
+subtitles_ru_literal_casei,1,3,grep,grep -ai Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,8.190656423568726,604,LC_ALL=en_US.UTF-8
+subtitles_ru_literal_casei,1,3,grep,grep -ai Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,8.18506383895874,604,LC_ALL=en_US.UTF-8
+subtitles_ru_literal_casei,1,3,grep (ASCII),grep -E -ai Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7826528549194336,583,LC_ALL=C
+subtitles_ru_literal_casei,1,3,grep (ASCII),grep -E -ai Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7846219539642334,583,LC_ALL=C
+subtitles_ru_literal_casei,1,3,grep (ASCII),grep -E -ai Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7846999168395996,583,LC_ALL=C
+subtitles_ru_literal_casei,1,3,rg (lines),rg -n -i Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.734788179397583,604,
+subtitles_ru_literal_casei,1,3,rg (lines),rg -n -i Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.7333040237426758,604,
+subtitles_ru_literal_casei,1,3,rg (lines),rg -n -i Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.731860637664795,604,
+subtitles_ru_literal_casei,1,3,ag (lines) (ASCII),ag -i Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7297205924987793,,
+subtitles_ru_literal_casei,1,3,ag (lines) (ASCII),ag -i Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7314808368682861,,
+subtitles_ru_literal_casei,1,3,ag (lines) (ASCII),ag -i Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7289514541625977,,
+subtitles_ru_literal_casei,1,3,ucg (lines) (ASCII),ucg -i Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.7773914337158203,583,
+subtitles_ru_literal_casei,1,3,ucg (lines) (ASCII),ucg -i Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.774536371231079,583,
+subtitles_ru_literal_casei,1,3,ucg (lines) (ASCII),ucg -i Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.7740859985351562,583,
+subtitles_ru_literal_word,1,3,rg (ASCII),rg -n (?-u:\b)Шерлок Холмс(?-u:\b) /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.3252553939819336,,
+subtitles_ru_literal_word,1,3,rg (ASCII),rg -n (?-u:\b)Шерлок Холмс(?-u:\b) /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.32543301582336426,,
+subtitles_ru_literal_word,1,3,rg (ASCII),rg -n (?-u:\b)Шерлок Холмс(?-u:\b) /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.32512736320495605,,
+subtitles_ru_literal_word,1,3,ag (ASCII),ag -sw Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7519562244415283,,
+subtitles_ru_literal_word,1,3,ag (ASCII),ag -sw Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.752692699432373,,
+subtitles_ru_literal_word,1,3,ag (ASCII),ag -sw Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.7524521350860596,,
+subtitles_ru_literal_word,1,3,ucg (ASCII),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.7868170738220215,583,
+subtitles_ru_literal_word,1,3,ucg (ASCII),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.7786612510681152,583,
+subtitles_ru_literal_word,1,3,ucg (ASCII),ucg --nosmart-case Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.776214838027954,583,
+subtitles_ru_literal_word,1,3,grep (ASCII),grep -anw Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.303652286529541,583,LC_ALL=C
+subtitles_ru_literal_word,1,3,grep (ASCII),grep -anw Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.3012151718139648,583,LC_ALL=C
+subtitles_ru_literal_word,1,3,grep (ASCII),grep -anw Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.307457685470581,583,LC_ALL=C
+subtitles_ru_literal_word,1,3,rg,rg -nw Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9280951023101807,579,
+subtitles_ru_literal_word,1,3,rg,rg -nw Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9285900592803955,579,
+subtitles_ru_literal_word,1,3,rg,rg -nw Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9288535118103027,579,
+subtitles_ru_literal_word,1,3,grep,grep -anw Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.3026466369628906,579,LC_ALL=en_US.UTF-8
+subtitles_ru_literal_word,1,3,grep,grep -anw Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.3016819953918457,579,LC_ALL=en_US.UTF-8
+subtitles_ru_literal_word,1,3,grep,grep -anw Шерлок Холмс /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.3006587028503418,579,LC_ALL=en_US.UTF-8
+subtitles_ru_no_literal,1,3,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.895586729049683,41,
+subtitles_ru_no_literal,1,3,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.914353132247925,41,
+subtitles_ru_no_literal,1,3,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,4.902980327606201,41,
+subtitles_ru_no_literal,1,3,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,3.972637891769409,,
+subtitles_ru_no_literal,1,3,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,3.9723849296569824,,
+subtitles_ru_no_literal,1,3,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,3.9723057746887207,,
+subtitles_ru_no_literal,1,3,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.3936586380004883,,
+subtitles_ru_no_literal,1,3,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.3987748622894287,,
+subtitles_ru_no_literal,1,3,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.393911361694336,,
+subtitles_ru_no_literal,1,3,ucg (ASCII),ucg --nosmart-case \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.8932065963745117,,
+subtitles_ru_no_literal,1,3,ucg (ASCII),ucg --nosmart-case \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.8977222442626953,,
+subtitles_ru_no_literal,1,3,ucg (ASCII),ucg --nosmart-case \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.893040895462036,,
+subtitles_ru_no_literal,1,3,grep (ASCII),grep -E -an \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.4844722747802734,,LC_ALL=C
+subtitles_ru_no_literal,1,3,grep (ASCII),grep -E -an \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.485093116760254,,LC_ALL=C
+subtitles_ru_no_literal,1,3,grep (ASCII),grep -E -an \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.482459306716919,,LC_ALL=C
+subtitles_ru_surrounding_words,1,3,rg,rg -n \w+\s+Холмс\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9564735889434814,278,
+subtitles_ru_surrounding_words,1,3,rg,rg -n \w+\s+Холмс\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9561436176300049,278,
+subtitles_ru_surrounding_words,1,3,rg,rg -n \w+\s+Холмс\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,0.9558789730072021,278,
+subtitles_ru_surrounding_words,1,3,grep,grep -E -an \w+\s+Холмс\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.6620113849639893,278,LC_ALL=en_US.UTF-8
+subtitles_ru_surrounding_words,1,3,grep,grep -E -an \w+\s+Холмс\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.6624438762664795,278,LC_ALL=en_US.UTF-8
+subtitles_ru_surrounding_words,1,3,grep,grep -E -an \w+\s+Холмс\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.6610260009765625,278,LC_ALL=en_US.UTF-8
+subtitles_ru_surrounding_words,1,3,ag (ASCII),ag -s \w+\s+Холмс\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.4094629287719727,,
+subtitles_ru_surrounding_words,1,3,ag (ASCII),ag -s \w+\s+Холмс\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.409822702407837,,
+subtitles_ru_surrounding_words,1,3,ag (ASCII),ag -s \w+\s+Холмс\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.4094691276550293,,
+subtitles_ru_surrounding_words,1,3,ucg (ASCII),ucg --nosmart-case \w+\s+Холмс\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.866976261138916,,
+subtitles_ru_surrounding_words,1,3,ucg (ASCII),ucg --nosmart-case \w+\s+Холмс\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.8666067123413086,,
+subtitles_ru_surrounding_words,1,3,ucg (ASCII),ucg --nosmart-case \w+\s+Холмс\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,2.865297317504883,,
+subtitles_ru_surrounding_words,1,3,grep (ASCII),grep -E -an \w+\s+Холмс\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.602109670639038,,LC_ALL=C
+subtitles_ru_surrounding_words,1,3,grep (ASCII),grep -E -an \w+\s+Холмс\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.598329782485962,,LC_ALL=C
+subtitles_ru_surrounding_words,1,3,grep (ASCII),grep -E -an \w+\s+Холмс\s+\w+ /mnt/bench/subtitles/OpenSubtitles2016.raw.ru,1.5975282192230225,,LC_ALL=C

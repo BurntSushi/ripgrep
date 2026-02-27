@@ -1,0 +1,1313 @@
+#!/usr/bin/env python3
+
+'''
+benchsuite is a benchmark runner for comparing command line search tools.
+'''
+
+import argparse
+import csv
+import os
+import os.path as path
+from multiprocessing import cpu_count
+import re
+import shutil
+import statistics
+import subprocess
+import sys
+import time
+
+# Some constants for identifying the corpora we use to run tests.
+# We establish two very different kinds of corpora: a small number of large
+# files and a large number of small files. These are vastly different use cases
+# not only because of their performance characteristics, but also the
+# strategies used to increase the relevance of results returned.
+
+SUBTITLES_DIR = 'subtitles'
+SUBTITLES_EN_NAME = 'en.txt'
+SUBTITLES_EN_NAME_SAMPLE = 'en.sample.txt'
+SUBTITLES_EN_NAME_GZ = '%s.gz' % SUBTITLES_EN_NAME
+SUBTITLES_EN_URL = 'https://object.pouta.csc.fi/OPUS-OpenSubtitles/v2016/mono/en.txt.gz'  # noqa
+SUBTITLES_RU_NAME = 'ru.txt'
+SUBTITLES_RU_NAME_GZ = '%s.gz' % SUBTITLES_RU_NAME
+SUBTITLES_RU_URL = 'https://object.pouta.csc.fi/OPUS-OpenSubtitles/v2016/mono/ru.txt.gz'  # noqa
+
+LINUX_DIR = 'linux'
+LINUX_CLONE = 'https://github.com/BurntSushi/linux'
+
+# Grep takes locale settings from the environment. There is a *substantial*
+# performance impact for enabling Unicode, so we need to handle this explicitly
+# in our benchmarks.
+GREP_ASCII = {'LC_ALL': 'C'}
+GREP_UNICODE = {'LC_ALL': 'en_US.UTF-8'}
+
+# Sift tries really hard to search everything by default. In our code search
+# benchmarks, we don't want that.
+SIFT = [
+    'sift',
+    '--binary-skip',
+    '--exclude-files', '.*',
+    '--exclude-files', '*.pdf',
+]
+
+
+def bench_linux_literal_default(suite_dir):
+    '''
+    Benchmark the speed of a literal using *default* settings.
+
+    This is a purposefully unfair benchmark for use in performance
+    analysis, but it is pedagogically useful to demonstrate how default
+    behaviors differ. For example, ugrep and grep don't do any smart
+    filtering by default, so they will invariably search more files
+    than ripgrep, ag or git grep.
+    '''
+    require(suite_dir, 'linux')
+    cwd = path.join(suite_dir, LINUX_DIR)
+    pat = 'PM_RESUME'
+
+    def mkcmd(*args, **kwargs):
+        kwargs['cwd'] = cwd
+        return Command(*args, **kwargs)
+
+    return Benchmark(pattern=pat, commands=[
+        mkcmd('rg', ['rg', pat]),
+        mkcmd('ag', ['ag', pat]),
+        # I guess setting LC_ALL=en_US.UTF-8 probably isn't necessarily the
+        # default, but I'd guess it to be on most desktop systems.
+        mkcmd('git grep', ['git', 'grep', pat], env=GREP_UNICODE),
+        mkcmd('ugrep', ['ugrep', '-r', pat, './']),
+        mkcmd('grep', ['grep', '-r', pat, './'], env=GREP_UNICODE),
+    ])
+
+
+def bench_linux_literal(suite_dir):
+    '''
+    Benchmark the speed of a literal, attempting to be fair.
+
+    This tries to use the minimum set of options available in all tools
+    to test how fast they are. For example, it makes sure there is
+    no case insensitive matching and that line numbers are computed
+    (because some tools don't permit disabling line numbers).
+    '''
+    require(suite_dir, 'linux')
+    cwd = path.join(suite_dir, LINUX_DIR)
+    pat = 'PM_RESUME'
+
+    def mkcmd(*args, **kwargs):
+        kwargs['cwd'] = cwd
+        return Command(*args, **kwargs)
+
+    return Benchmark(pattern=pat, commands=[
+        mkcmd('rg', ['rg', '-n', pat]),
+        mkcmd('rg (mmap)', ['rg', '-n', '--mmap', pat]),
+        mkcmd('ag (mmap)', ['ag', '-s', pat]),
+        mkcmd('git grep', [
+            'git', 'grep', '-I', '-n', pat,
+        ], env={'LC_ALL': 'C'}),
+        mkcmd('ugrep', [
+            'ugrep', '-r', '--ignore-files', '--no-hidden', '-I',
+            '-n', pat, './',
+        ])
+    ])
+
+
+def bench_linux_literal_casei(suite_dir):
+    '''
+    Benchmark the speed of a case insensitive literal search.
+
+    This is like the linux_literal benchmark, except we ask the
+    search tools to do case insensitive search.
+    '''
+    require(suite_dir, 'linux')
+    cwd = path.join(suite_dir, LINUX_DIR)
+    pat = 'PM_RESUME'
+
+    def mkcmd(*args, **kwargs):
+        kwargs['cwd'] = cwd
+        return Command(*args, **kwargs)
+
+    return Benchmark(pattern=pat, commands=[
+        mkcmd('rg', ['rg', '-n', '-i', pat]),
+        mkcmd('rg (mmap)', ['rg', '-n', '-i', '--mmap', pat]),
+        mkcmd('ag (mmap)', ['ag', '-i', pat]),
+        # It'd technically be more appropriate to set LC_ALL=en_US.UTF-8 here,
+        # since that is certainly what ripgrep is doing, but this is for an
+        # ASCII literal, so we should give `git grep` all the opportunity to
+        # do its best.
+        mkcmd('git grep', [
+            'git', 'grep', '-I', '-n', '-i', pat,
+        ], env={'LC_ALL': 'C'}),
+        mkcmd('ugrep', [
+            'ugrep', '-r', '--ignore-files', '--no-hidden', '-I',
+            '-n', '-i', pat, './',
+        ])
+    ])
+
+
+def bench_linux_re_literal_suffix(suite_dir):
+    '''
+    Benchmark the speed of a literal inside a regex.
+    '''
+    require(suite_dir, 'linux')
+    cwd = path.join(suite_dir, LINUX_DIR)
+    pat = '[A-Z]+_RESUME'
+
+    def mkcmd(*args, **kwargs):
+        kwargs['cwd'] = cwd
+        return Command(*args, **kwargs)
+
+    return Benchmark(pattern=pat, commands=[
+        mkcmd('rg', ['rg', '-n', pat]),
+        mkcmd('ag', ['ag', '-s', pat]),
+        mkcmd(
+            'git grep',
+            ['git', 'grep', '-E', '-I', '-n', pat],
+            env={'LC_ALL': 'C'},
+        ),
+        mkcmd('ugrep', [
+            'ugrep', '-r', '--ignore-files', '--no-hidden', '-I',
+            '-n', pat, './',
+        ])
+    ])
+
+
+def bench_linux_word(suite_dir):
+    '''
+    Benchmark use of the -w ("match word") flag in each tool.
+    '''
+    require(suite_dir, 'linux')
+    cwd = path.join(suite_dir, LINUX_DIR)
+    pat = 'PM_RESUME'
+
+    def mkcmd(*args, **kwargs):
+        kwargs['cwd'] = cwd
+        return Command(*args, **kwargs)
+
+    return Benchmark(pattern=pat, commands=[
+        mkcmd('rg', ['rg', '-n', '-w', pat]),
+        mkcmd('ag', ['ag', '-s', '-w', pat]),
+        mkcmd(
+            'git grep',
+            ['git', 'grep', '-E', '-I', '-n', '-w', pat],
+            env={'LC_ALL': 'C'},
+        ),
+        mkcmd('ugrep', [
+            'ugrep', '-r', '--ignore-files', '--no-hidden', '-I',
+            '-n', '-w', pat, './',
+        ])
+    ])
+
+
+def bench_linux_unicode_greek(suite_dir):
+    '''
+    Benchmark matching of a Unicode category.
+    '''
+    require(suite_dir, 'linux')
+    cwd = path.join(suite_dir, LINUX_DIR)
+    pat = r'\p{Greek}'
+
+    def mkcmd(*args, **kwargs):
+        kwargs['cwd'] = cwd
+        return Command(*args, **kwargs)
+
+    return Benchmark(pattern=pat, commands=[
+        mkcmd('rg', ['rg', '-n', pat]),
+        mkcmd('ugrep', [
+            'ugrep', '-r', '--ignore-files', '--no-hidden', '-I',
+            '-n', pat, './',
+        ])
+    ])
+
+
+def bench_linux_unicode_greek_casei(suite_dir):
+    '''
+    Benchmark matching of a Unicode category, case insensitively.
+
+    Only ripgrep gets this right (and it's still fast).
+    '''
+    require(suite_dir, 'linux')
+    cwd = path.join(suite_dir, LINUX_DIR)
+    pat = r'\p{Greek}'
+
+    def mkcmd(*args, **kwargs):
+        kwargs['cwd'] = cwd
+        return Command(*args, **kwargs)
+
+    return Benchmark(pattern=pat, commands=[
+        mkcmd('rg', ['rg', '-n', '-i', pat]),
+        mkcmd('ugrep', [
+            'ugrep', '-r', '--ignore-files', '--no-hidden', '-I',
+            '-n', '-i', pat, './',
+        ])
+    ])
+
+
+def bench_linux_unicode_word(suite_dir):
+    '''
+    Benchmark Unicode aware \\w character class.
+
+    Only ripgrep and git-grep (with LC_ALL=en_US.UTF-8) actually get
+    this right. Everything else uses the standard ASCII interpretation
+    of \\w.
+    '''
+    require(suite_dir, 'linux')
+    cwd = path.join(suite_dir, LINUX_DIR)
+    pat = r'\wAh'
+
+    def mkcmd(*args, **kwargs):
+        kwargs['cwd'] = cwd
+        return Command(*args, **kwargs)
+
+    return Benchmark(pattern=pat, commands=[
+        mkcmd('rg', ['rg', '-n', pat]),
+        mkcmd('rg (ASCII)', ['rg', '-n', '(?-u)' + pat]),
+        mkcmd('ag (ASCII)', ['ag', '-s', pat]),
+        mkcmd(
+            'git grep',
+            ['git', 'grep', '-E', '-I', '-n', pat],
+            env={'LC_ALL': 'en_US.UTF-8'},
+        ),
+        mkcmd(
+            'git grep (ASCII)',
+            ['git', 'grep', '-E', '-I', '-n', pat],
+            env={'LC_ALL': 'C'},
+        ),
+        mkcmd('ugrep', [
+            'ugrep', '-r', '--ignore-files', '--no-hidden', '-I',
+            '-n', pat, './',
+        ]),
+        mkcmd('ugrep (ASCII)', [
+            'ugrep', '-r', '--ignore-files', '--no-hidden', '-I',
+            '-n', '-U', pat, './',
+        ]),
+    ])
+
+
+def bench_linux_no_literal(suite_dir):
+    '''
+    Benchmark a regex that defeats all literal optimizations.
+
+    Most search patterns have some kind of literal in them, which
+    typically permits searches to take some shortcuts. Therefore, the
+    applicability of this benchmark is somewhat suspicious, but the
+    suite wouldn't feel complete without it.
+    '''
+    require(suite_dir, 'linux')
+    cwd = path.join(suite_dir, LINUX_DIR)
+    pat = r'\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}'
+
+    def mkcmd(*args, **kwargs):
+        kwargs['cwd'] = cwd
+        return Command(*args, **kwargs)
+
+    return Benchmark(pattern=pat, commands=[
+        mkcmd('rg', ['rg', '-n', pat]),
+        mkcmd('rg (ASCII)', ['rg', '-n', '(?-u)' + pat]),
+        mkcmd('ag (ASCII)', ['ag', '-s', pat]),
+        mkcmd(
+            'git grep',
+            ['git', 'grep', '-E', '-I', '-n', pat],
+            env={'LC_ALL': 'en_US.UTF-8'},
+        ),
+        mkcmd(
+            'git grep (ASCII)',
+            ['git', 'grep', '-E', '-I', '-n', pat],
+            env={'LC_ALL': 'C'},
+        ),
+        mkcmd('ugrep', [
+            'ugrep', '-r', '--ignore-files', '--no-hidden', '-I',
+            '-n', pat, './',
+        ]),
+        mkcmd('ugrep (ASCII)', [
+            'ugrep', '-r', '--ignore-files', '--no-hidden', '-I',
+            '-n', '-U', pat, './',
+        ]),
+    ])
+
+
+def bench_linux_alternates(suite_dir):
+    '''
+    Benchmark a small alternation of literals.
+
+    sift doesn't make the cut. It's more than 10x slower than the next
+    fastest result. The slowdown is likely because the Go regexp engine
+    doesn't do any literal optimizations for this case (there is no
+    common leading byte).
+    '''
+    require(suite_dir, 'linux')
+    cwd = path.join(suite_dir, LINUX_DIR)
+    pat = 'ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT'
+
+    def mkcmd(*args, **kwargs):
+        kwargs['cwd'] = cwd
+        return Command(*args, **kwargs)
+
+    return Benchmark(pattern=pat, commands=[
+        mkcmd('rg', ['rg', '-n', pat]),
+        mkcmd('ag', ['ag', '-s', pat]),
+        mkcmd(
+            'git grep',
+            ['git', 'grep', '-E', '-I', '-n', pat],
+            env={'LC_ALL': 'C'},
+        ),
+        mkcmd('ugrep', [
+            'ugrep', '-r', '--ignore-files', '--no-hidden', '-I',
+            '-n', pat, './',
+        ])
+    ])
+
+
+def bench_linux_alternates_casei(suite_dir):
+    'Benchmark a small alternation of literals case insensitively.'
+    require(suite_dir, 'linux')
+    cwd = path.join(suite_dir, LINUX_DIR)
+    pat = 'ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT'
+
+    def mkcmd(*args, **kwargs):
+        kwargs['cwd'] = cwd
+        return Command(*args, **kwargs)
+
+    return Benchmark(pattern=pat, commands=[
+        mkcmd('rg', ['rg', '-n', '-i', pat]),
+        mkcmd('ag', ['ag', '-i', pat]),
+        mkcmd(
+            'git grep',
+            ['git', 'grep', '-E', '-I', '-n', '-i', pat],
+            env={'LC_ALL': 'C'},
+        ),
+        mkcmd('ugrep', [
+            'ugrep', '-r', '--ignore-files', '--no-hidden', '-I',
+            '-n', '-i', pat, './',
+        ])
+    ])
+
+
+def bench_subtitles_en_literal(suite_dir):
+    '''
+    Benchmark the speed of an ASCII string literal.
+    '''
+    require(suite_dir, 'subtitles-en')
+    en = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME_SAMPLE)
+    pat = 'Sherlock Holmes'
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', pat, en]),
+        Command('rg (no mmap)', ['rg', '--no-mmap', pat, en]),
+        Command('grep', ['grep', pat, en], env=GREP_ASCII),
+        Command('rg (lines)', ['rg', '-n', pat, en]),
+        Command('ag (lines)', ['ag', '-s', pat, en]),
+        Command('grep (lines)', ['grep', '-n', pat, en], env=GREP_ASCII),
+        Command('ugrep (lines)', ['ugrep', '-n', pat, en])
+    ])
+
+
+def bench_subtitles_en_literal_casei(suite_dir):
+    '''
+    Benchmark the speed of a Unicode-y string case insensitively.
+    '''
+    require(suite_dir, 'subtitles-en')
+    en = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME_SAMPLE)
+    pat = 'Sherlock Holmes'
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', '-i', pat, en]),
+        Command('grep', ['grep', '-i', pat, en], env=GREP_UNICODE),
+        Command('grep (ASCII)', ['grep', '-E', '-i', pat, en], env=GREP_ASCII),
+        Command('rg (lines)', ['rg', '-n', '-i', pat, en]),
+        Command('ag (lines) (ASCII)', ['ag', '-i', pat, en]),
+        Command('ugrep (lines)', ['ugrep', '-n', '-i', pat, en])
+    ])
+
+
+def bench_subtitles_en_literal_word(suite_dir):
+    '''
+    Benchmark the speed of finding a literal inside word boundaries.
+    '''
+    require(suite_dir, 'subtitles-en')
+    en = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME_SAMPLE)
+    pat = 'Sherlock Holmes'
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg (ASCII)', [
+            'rg', '-n', r'(?-u:\b)' + pat + r'(?-u:\b)', en,
+        ]),
+        Command('ag (ASCII)', ['ag', '-sw', pat, en]),
+        Command('grep (ASCII)', ['grep', '-nw', pat, en], env=GREP_ASCII),
+        Command('ugrep (ASCII)', ['ugrep', '-nw', pat, en]),
+        Command('rg', ['rg', '-nw', pat, en]),
+        Command('grep', ['grep', '-nw', pat, en], env=GREP_UNICODE),
+    ])
+
+
+def bench_subtitles_en_alternate(suite_dir):
+    '''
+    Benchmark the speed of a set of alternate literals.
+    '''
+    require(suite_dir, 'subtitles-en')
+    en = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME_SAMPLE)
+    pat = '|'.join([
+        'Sherlock Holmes',
+        'John Watson',
+        'Irene Adler',
+        'Inspector Lestrade',
+        'Professor Moriarty',
+    ])
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg (lines)', ['rg', '-n', pat, en]),
+        Command('ag (lines)', ['ag', '-s', pat, en]),
+        Command('grep (lines)', ['grep', '-E', '-n', pat, en], env=GREP_ASCII),
+        Command('ugrep (lines)', ['ugrep', '-n', pat, en]),
+        Command('rg', ['rg', pat, en]),
+        Command('grep', ['grep', '-E', pat, en], env=GREP_ASCII),
+    ])
+
+
+def bench_subtitles_en_alternate_casei(suite_dir):
+    '''
+    Benchmark the speed of a set of alternate literals.
+    '''
+    require(suite_dir, 'subtitles-en')
+    en = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME_SAMPLE)
+    pat = '|'.join([
+        'Sherlock Holmes',
+        'John Watson',
+        'Irene Adler',
+        'Inspector Lestrade',
+        'Professor Moriarty',
+    ])
+
+    return Benchmark(pattern=pat, commands=[
+        Command('ag (ASCII)', ['ag', '-s', '-i', pat, en]),
+        Command('grep (ASCII)', [
+            'grep', '-E', '-ni', pat, en,
+        ], env=GREP_ASCII),
+        Command('ugrep (ASCII)', ['ugrep', '-n', '-i', pat, en]),
+        Command('rg', ['rg', '-n', '-i', pat, en]),
+        Command('grep', ['grep', '-E', '-ni', pat, en], env=GREP_UNICODE),
+    ])
+
+
+def bench_subtitles_en_surrounding_words(suite_dir):
+    '''
+    Benchmark a more complex regex with an inner literal.
+    '''
+    require(suite_dir, 'subtitles-en')
+    en = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME_SAMPLE)
+    pat = r'\w+\s+Holmes\s+\w+'
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', '-n', pat, en]),
+        Command('grep', ['grep', '-E', '-n', pat, en], env=GREP_UNICODE),
+        Command('ugrep', ['ugrep', '-n', pat, en]),
+        Command('rg (ASCII)', ['rg', '-n', '(?-u)' + pat, en]),
+        Command('ag (ASCII)', ['ag', '-s', pat, en]),
+        Command('grep (ASCII)', ['grep', '-E', '-n', pat, en], env=GREP_ASCII),
+        Command('ugrep (ASCII)', ['ugrep', '-n', '-U', pat, en])
+    ])
+
+
+def bench_subtitles_en_no_literal(suite_dir):
+    '''
+    Benchmark the speed of a regex with no literals.
+
+    Note that we don't even try to run grep with Unicode support
+    on this one. While it should eventually get the right answer,
+    I killed it after it had already been running for two minutes
+    and showed no signs of finishing soon.
+    '''
+    require(suite_dir, 'subtitles-en')
+    en = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_EN_NAME_SAMPLE)
+    pat = r'\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}'
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', '-n', pat, en]),
+        Command('ugrep', ['ugrep', '-n', pat, en]),
+        Command('rg (ASCII)', ['rg', '-n', '(?-u)' + pat, en]),
+        Command('ag (ASCII)', ['ag', '-s', pat, en]),
+        Command('grep (ASCII)', ['grep', '-E', '-n', pat, en], env=GREP_ASCII),
+        Command('ugrep (ASCII)', ['ugrep', '-n', '-U', pat, en])
+    ])
+
+
+def bench_subtitles_ru_literal(suite_dir):
+    '''
+    Benchmark the speed of a Unicode-y string literal.
+    '''
+    require(suite_dir, 'subtitles-ru')
+    ru = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_RU_NAME)
+    pat = 'Шерлок Холмс'  # Sherlock Holmes
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', pat, ru]),
+        Command('rg (no mmap)', ['rg', '--no-mmap', pat, ru]),
+        Command('grep', ['grep', pat, ru], env=GREP_ASCII),
+        Command('rg (lines)', ['rg', '-n', pat, ru]),
+        Command('ag (lines)', ['ag', '-s', pat, ru]),
+        Command('grep (lines)', ['grep', '-n', pat, ru], env=GREP_ASCII),
+        # ugrep incorrectly identifies this corpus as binary, but it is
+        # entirely valid UTF-8. So we tell ugrep to always treat the corpus
+        # as text even though this technically gives it an edge over other
+        # tools. (It no longer needs to check for binary data.)
+        Command('ugrep (lines)', ['ugrep', '-a', '-n', pat, ru])
+    ])
+
+
+def bench_subtitles_ru_literal_casei(suite_dir):
+    '''
+    Benchmark the speed of a Unicode-y string case insensitively.
+    '''
+    require(suite_dir, 'subtitles-ru')
+    ru = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_RU_NAME)
+    pat = 'Шерлок Холмс'  # Sherlock Holmes
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', '-i', pat, ru]),
+        Command('grep', ['grep', '-i', pat, ru], env=GREP_UNICODE),
+        Command('grep (ASCII)', ['grep', '-E', '-i', pat, ru], env=GREP_ASCII),
+        Command('rg (lines)', ['rg', '-n', '-i', pat, ru]),
+        Command('ag (lines) (ASCII)', ['ag', '-i', pat, ru]),
+        # See bench_subtitles_ru_literal for why we use '-a' here.
+        Command('ugrep (lines) (ASCII)', ['ugrep', '-a', '-n', '-i', pat, ru])
+    ])
+
+
+def bench_subtitles_ru_literal_word(suite_dir):
+    '''
+    Benchmark the speed of finding a literal inside word boundaries.
+    '''
+    require(suite_dir, 'subtitles-ru')
+    ru = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_RU_NAME)
+    pat = 'Шерлок Холмс'  # Sherlock Holmes
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg (ASCII)', [
+            # You might think we'd use \b here for word boundaries, but both
+            # GNU grep and ripgrep implement -w with the formulation below.
+            # Since we can't use Unicode in a pattern and disable Unicode word
+            # boundaries, we just hand-jam this ourselves.
+            'rg', '-n', r'(?-u:^|\W)' + pat + r'(?-u:$|\W)', ru,
+        ]),
+        Command('ag (ASCII)', ['ag', '-sw', pat, ru]),
+        Command('grep (ASCII)', [
+            'grep', '-nw', pat, ru,
+        ], env=GREP_ASCII),
+        # See bench_subtitles_ru_literal for why we use '-a' here.
+        Command('ugrep (ASCII)', ['ugrep', '-anw', pat, ru]),
+        Command('rg', ['rg', '-nw', pat, ru]),
+        Command('grep', ['grep', '-nw', pat, ru], env=GREP_UNICODE),
+    ])
+
+
+def bench_subtitles_ru_alternate(suite_dir):
+    '''
+    Benchmark the speed of a set of alternate literals.
+    '''
+    require(suite_dir, 'subtitles-ru')
+    ru = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_RU_NAME)
+    pat = '|'.join([
+        'Шерлок Холмс',  # Sherlock Holmes
+        'Джон Уотсон',  # John Watson
+        'Ирен Адлер',  # Irene Adler
+        'инспектор Лестрейд',  # Inspector Lestrade
+        'профессор Мориарти',  # Professor Moriarty
+    ])
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg (lines)', ['rg', '-n', pat, ru]),
+        Command('ag (lines)', ['ag', '-s', pat, ru]),
+        Command('grep (lines)', ['grep', '-E', '-n', pat, ru], env=GREP_ASCII),
+        # See bench_subtitles_ru_literal for why we use '-a' here.
+        Command('ugrep (lines)', ['ugrep', '-an', pat, ru]),
+        Command('rg', ['rg', pat, ru]),
+        Command('grep', ['grep', '-E', pat, ru], env=GREP_ASCII),
+    ])
+
+
+def bench_subtitles_ru_alternate_casei(suite_dir):
+    '''
+    Benchmark the speed of a set of alternate literals.
+    '''
+    require(suite_dir, 'subtitles-ru')
+    ru = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_RU_NAME)
+    pat = '|'.join([
+        'Шерлок Холмс',  # Sherlock Holmes
+        'Джон Уотсон',  # John Watson
+        'Ирен Адлер',  # Irene Adler
+        'инспектор Лестрейд',  # Inspector Lestrade
+        'профессор Мориарти',  # Professor Moriarty
+    ])
+
+    return Benchmark(pattern=pat, commands=[
+        Command('ag (ASCII)', ['ag', '-s', '-i', pat, ru]),
+        Command('grep (ASCII)', [
+            'grep', '-E', '-ni', pat, ru,
+        ], env=GREP_ASCII),
+        # See bench_subtitles_ru_literal for why we use '-a' here.
+        Command('ugrep (ASCII)', ['ugrep', '-ani', pat, ru]),
+        Command('rg', ['rg', '-n', '-i', pat, ru]),
+        Command('grep', ['grep', '-E', '-ni', pat, ru], env=GREP_UNICODE),
+    ])
+
+
+def bench_subtitles_ru_surrounding_words(suite_dir):
+    '''
+    Benchmark a more complex regex with an inner literal.
+    '''
+    require(suite_dir, 'subtitles-en')
+    ru = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_RU_NAME)
+    pat = r'\w+\s+Холмс\s+\w+'
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', '-n', pat, ru]),
+        Command('grep', ['grep', '-E', '-n', pat, ru], env=GREP_UNICODE),
+        Command('ugrep', ['ugrep', '-an', pat, ru]),
+        Command('ag (ASCII)', ['ag', '-s', pat, ru]),
+        Command('grep (ASCII)', ['grep', '-E', '-n', pat, ru], env=GREP_ASCII),
+        # See bench_subtitles_ru_literal for why we use '-a' here.
+        Command('ugrep (ASCII)', ['ugrep', '-a', '-n', '-U', pat, ru]),
+    ])
+
+
+def bench_subtitles_ru_no_literal(suite_dir):
+    '''
+    Benchmark the speed of a regex with no literals.
+
+    Note that we don't even try to run grep with Unicode support
+    on this one. While it should eventually get the right answer,
+    I killed it after it had already been running for two minutes
+    and showed no signs of finishing soon.
+    '''
+    require(suite_dir, 'subtitles-ru')
+    ru = path.join(suite_dir, SUBTITLES_DIR, SUBTITLES_RU_NAME)
+    pat = r'\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}'
+
+    return Benchmark(pattern=pat, commands=[
+        Command('rg', ['rg', '-n', pat, ru]),
+        # See bench_subtitles_ru_literal for why we use '-a' here.
+        Command('ugrep', ['ugrep', '-an', pat, ru]),
+        Command('rg (ASCII)', ['rg', '-n', '(?-u)' + pat, ru]),
+        Command('ag (ASCII)', ['ag', '-s', pat, ru]),
+        Command('grep (ASCII)', ['grep', '-E', '-n', pat, ru], env=GREP_ASCII),
+        # See bench_subtitles_ru_literal for why we use '-a' here.
+        Command('ugrep (ASCII)', ['ugrep', '-anU', pat, ru])
+    ])
+
+
+class MissingDependencies(Exception):
+    '''
+    A missing dependency exception.
+
+    This exception occurs when running a benchmark that requires a
+    particular corpus that isn't available.
+
+    :ivar list(str) missing_names:
+        A list of missing dependency names. These names correspond to
+        names that can be used with the --download flag.
+    '''
+    def __init__(self, missing_names):
+        self.missing_names = missing_names
+
+    def __str__(self):
+        return 'MissingDependency(%s)' % repr(self.missing_names)
+
+
+class MissingCommands(Exception):
+    '''
+    A missing command exception.
+
+    This exception occurs when running a command in a benchmark
+    where the command could not be found on the current system.
+
+    :ivar list(str) missing_names:
+        The names of the command binaries that could not be found.
+    '''
+    def __init__(self, missing_names):
+        self.missing_names = sorted(set(missing_names))
+
+    def __str__(self):
+        return 'MissingCommands(%s)' % repr(self.missing_names)
+
+
+class Benchmark(object):
+    '''
+    A single benchmark corresponding to a grouping of commands.
+
+    The main purpose of a benchmark is to compare the performance
+    characteristics of a group of commands.
+    '''
+
+    def __init__(self, name=None, pattern=None, commands=None,
+                 warmup_count=1, count=3, line_count=True,
+                 allow_missing_commands=False,
+                 disabled_cmds=None, order=0):
+        '''
+        Create a single benchmark.
+
+        A single benchmark is composed of a set of commands that are
+        benchmarked and compared against one another. A benchmark may
+        have multiple commands that use the same search tool (but
+        probably should have something differentiating them).
+
+        The grouping of commands is a purely human driven process.
+
+        By default, the output of every command is sent to /dev/null.
+        Other types of behavior are available via the methods defined
+        on this benchmark.
+
+        :param str name:
+            A human readable string denoting the name of this
+            benchmark.
+        :param str pattern:
+            The pattern that is used in search.
+        :param list(Command) commands:
+            A list of commands to initialize this benchmark with. More
+            commands may be added before running the benchmark.
+        :param int warmup_count:
+            The number of times to run each command before recording
+            samples.
+        :param int count:
+            The number of samples to collect from each command.
+        :param bool line_count:
+            When set, the lines of each search are counted and included
+            in the samples produced.
+        :param bool allow_missing_commands:
+            When set, if a command is missing, then the benchmark
+            will simply skip it.
+        :param list(str) disabled_cmds:
+            A list of commands to skip.
+        :param int order:
+            An integer indicating the sequence number of this benchmark.
+        '''
+        self.name = name
+        self.pattern = pattern
+        self.commands = commands or []
+        self.warmup_count = warmup_count
+        self.count = count
+        self.line_count = line_count
+        self.allow_missing_commands = allow_missing_commands
+        self.disabled_cmds = set(disabled_cmds or [])
+        self.order = order
+
+    def raise_if_missing(self):
+        '''
+        Raises a MissingCommands exception if applicable.
+
+        A MissingCommands exception is raised when the following
+        criteria are met: 1) allow_missing_commands is False, and 2) at
+        least one command in this benchmark could not be found on this
+        system.
+        '''
+        missing_commands = []
+        for c in self.commands:
+            if c.binary_name in self.disabled_cmds or c.exists():
+                continue
+            missing_commands.append(c.binary_name)
+        if not self.allow_missing_commands and len(missing_commands) > 0:
+            raise MissingCommands(missing_commands)
+
+    def run(self):
+        '''
+        Runs this benchmark and returns the results.
+
+        :rtype: Result
+        :raises:
+            MissingCommands if any command doesn't exist.
+            (Unless allow_missing_commands is enabled.)
+        '''
+        self.raise_if_missing()
+        result = Result(self)
+        for cmd in self.commands:
+            if cmd.binary_name in self.disabled_cmds:
+                continue
+            if self.allow_missing_commands and not cmd.exists():
+                # Skip this command if we're OK with it.
+                continue
+            # Do a warmup first.
+            for _ in range(self.warmup_count):
+                self.run_one(cmd)
+            for _ in range(self.count):
+                result.add(cmd, **self.run_one(cmd))
+        return result
+
+    def run_one(self, cmd):
+        '''
+        Runs the given command exactly once.
+
+        Returns an object that includes the time taken by the command.
+        If this benchmark was configured to count the number of lines
+        returned, then the line count is also returned.
+
+        :param Command cmd: The command to run.
+        :returns:
+            A dict with two fields, duration and line_count.
+            The duration is in seconds, with fractional milliseconds,
+            and is guaranteed to be available. The line_count is set
+            to None unless line counting is enabled, in which case,
+            it is the number of lines in the search output.
+        :rtype: int
+        '''
+        if not cmd.exists():
+            raise MissingCommands([cmd.cmd[0]])
+        cmd.kwargs['stderr'] = subprocess.DEVNULL
+        if self.line_count:
+            cmd.kwargs['stdout'] = subprocess.PIPE
+        else:
+            cmd.kwargs['stdout'] = subprocess.DEVNULL
+
+        start = time.time()
+        completed = cmd.run()
+        end = time.time()
+
+        line_count = None
+        if self.line_count:
+            line_count = completed.stdout.count(b'\n')
+        return {
+            'duration': end - start,
+            'line_count': line_count,
+        }
+
+
+class Result(object):
+    '''
+    The result of running a benchmark.
+
+    Benchmark results consist of a set of samples, where each sample
+    corresponds to a single run of a single command in the benchmark.
+    Various statistics can be computed from these samples such as mean
+    and standard deviation.
+    '''
+    def __init__(self, benchmark):
+        '''
+        Create a new set of results, initially empty.
+
+        :param Benchmark benchmark:
+            The benchmark that produced these results.
+        '''
+        self.benchmark = benchmark
+        self.samples = []
+
+    def add(self, cmd, duration, line_count=None):
+        '''
+        Add a new sample to this result set.
+
+        :param Command cmd:
+            The command that produced this sample.
+        :param int duration:
+            The duration, in milliseconds, that the command took to
+            run.
+        :param int line_count:
+            The number of lines in the search output. This is optional.
+        '''
+        self.samples.append({
+            'cmd': cmd,
+            'duration': duration,
+            'line_count': line_count,
+        })
+
+    def fastest_sample(self):
+        '''
+        Returns the fastest recorded sample.
+        '''
+        return min(self.samples, key=lambda s: s['duration'])
+
+    def fastest_cmd(self):
+        '''
+        Returns the fastest command according to distribution.
+        '''
+        means = []
+        for cmd in self.benchmark.commands:
+            mean, _ = self.distribution_for(cmd)
+            if mean is None:
+                continue
+            means.append((cmd, mean))
+        return min(means, key=lambda tup: tup[1])[0]
+
+    def samples_for(self, cmd):
+        'Returns an iterable of samples for cmd'
+        yield from (s for s in self.samples if s['cmd'].name == cmd.name)
+
+    def line_counts_for(self, cmd):
+        '''
+        Returns the line counts recorded for each command.
+
+        :returns:
+            A dictionary from command name to a set of line
+            counts recorded.
+        '''
+        return {s['line_count']
+                for s in self.samples_for(cmd)
+                if s['line_count'] is not None}
+
+    def distribution_for(self, cmd):
+        '''
+        Returns the distribution (mean +/- std) of the given command.
+
+        If there are no samples for this command (i.e., it was skipped),
+        then return ``(None, None)``.
+
+        :rtype: (float, float)
+        :returns:
+            A tuple containing the mean and standard deviation, in that
+            order.
+        '''
+        samples = list(s['duration'] for s in self.samples_for(cmd))
+        if len(samples) == 0:
+            return None, None
+        return statistics.mean(samples), statistics.stdev(samples)
+
+
+class Command(object):
+    def __init__(self, name, cmd, *args, **kwargs):
+        '''
+        Create a new command that is run as part of a benchmark.
+
+        *args and **kwargs are passed directly to ``subprocess.run``.
+        An exception to this is stdin/stdout/stderr. Output
+        redirection is completely controlled by the benchmark harness.
+        Trying to set them here will trigger an assert.
+
+        :param str name:
+            The human readable name of this command. This is
+            particularly useful if the same search tool is used
+            multiple times in the same benchmark with different
+            arguments.
+        :param list(str) cmd:
+            The command to run as a list of arguments (including the
+            command name itself).
+        '''
+        assert 'stdin' not in kwargs
+        assert 'stdout' not in kwargs
+        assert 'stderr' not in kwargs
+        self.name = name
+        self.cmd = cmd
+        self.args = args
+        self.kwargs = kwargs
+
+    def exists(self):
+        'Returns true if and only if this command exists.'
+        return shutil.which(self.binary_name) is not None
+
+    @property
+    def binary_name(self):
+        'Return the binary name of this command.'
+        return self.cmd[0]
+
+    def run(self):
+        '''
+        Runs this command and returns its status.
+
+        :rtype: subprocess.CompletedProcess
+        '''
+        return subprocess.run(self.cmd, *self.args, **self.kwargs)
+
+
+def eprint(*args, **kwargs):
+    'Like print, but to stderr.'
+    kwargs['file'] = sys.stderr
+    print(*args, **kwargs)
+
+
+def run_cmd(cmd, *args, **kwargs):
+    '''
+    Print the command to stderr and run it.
+
+    If the command fails, throw a traceback.
+    '''
+    eprint('# %s' % ' '.join(cmd))
+    kwargs['check'] = True
+    return subprocess.run(cmd, *args, **kwargs)
+
+
+def require(suite_dir, *names):
+    '''
+    Declare a dependency on the given names for a benchmark.
+
+    If any dependency doesn't exist, then fail with an error message.
+    '''
+    errs = []
+    for name in names:
+        fun_name = name.replace('-', '_')
+        if not globals()['has_%s' % fun_name](suite_dir):
+            errs.append(name)
+    if len(errs) > 0:
+        raise MissingDependencies(errs)
+
+
+def download_linux(suite_dir):
+    'Download and build the Linux kernel.'
+    checkout_dir = path.join(suite_dir, LINUX_DIR)
+    if not os.path.isdir(checkout_dir):
+        # Clone from my fork so that we always get the same corpus *and* still
+        # do a shallow clone. Shallow clones are much much cheaper than full
+        # clones.
+        run_cmd(['git', 'clone', '--depth', '1', LINUX_CLONE, checkout_dir])
+    # We want to build the kernel because the process of building it produces
+    # a lot of junk in the repository that a search tool probably shouldn't
+    # touch.
+    if not os.path.exists(path.join(checkout_dir, 'vmlinux')):
+        eprint('# Building Linux kernel...')
+        run_cmd(['make', 'defconfig'], cwd=checkout_dir)
+        run_cmd(['make', '-j', str(cpu_count())], cwd=checkout_dir)
+
+
+def has_linux(suite_dir):
+    'Returns true if we believe the Linux kernel is built.'
+    checkout_dir = path.join(suite_dir, LINUX_DIR)
+    return path.exists(path.join(checkout_dir, 'vmlinux'))
+
+
+def download_subtitles_en(suite_dir):
+    'Download and decompress English subtitles.'
+    subtitle_dir = path.join(suite_dir, SUBTITLES_DIR)
+    en_path_gz = path.join(subtitle_dir, SUBTITLES_EN_NAME_GZ)
+    en_path = path.join(subtitle_dir, SUBTITLES_EN_NAME)
+    en_path_sample = path.join(subtitle_dir, SUBTITLES_EN_NAME_SAMPLE)
+
+    if not os.path.isdir(subtitle_dir):
+        os.makedirs(subtitle_dir)
+    if not os.path.exists(en_path):
+        if not os.path.exists(en_path_gz):
+            run_cmd(['curl', '-LO', SUBTITLES_EN_URL], cwd=subtitle_dir)
+        run_cmd(['gunzip', en_path_gz])
+    if not os.path.exists(en_path_sample):
+        # Get a sample roughly the same size as the Russian corpus so that
+        # benchmarks finish in a reasonable time.
+        with open(path.join(subtitle_dir, en_path_sample), 'wb+') as f:
+            run_cmd(
+                ['head', '-n', '55000000', en_path],
+                cwd=subtitle_dir, stdout=f)
+
+
+def has_subtitles_en(suite_dir):
+    'Returns true if English subtitles have been downloaded.'
+    subtitle_dir = path.join(suite_dir, SUBTITLES_DIR)
+    return path.exists(path.join(subtitle_dir, SUBTITLES_EN_NAME_SAMPLE))
+
+
+def download_subtitles_ru(suite_dir):
+    'Download and decompress Russian subtitles.'
+    subtitle_dir = path.join(suite_dir, SUBTITLES_DIR)
+    ru_path_gz = path.join(subtitle_dir, SUBTITLES_RU_NAME_GZ)
+    ru_path = path.join(subtitle_dir, SUBTITLES_RU_NAME)
+
+    if not os.path.isdir(subtitle_dir):
+        os.makedirs(subtitle_dir)
+    if not os.path.exists(ru_path):
+        if not os.path.exists(ru_path_gz):
+            run_cmd(['curl', '-LO', SUBTITLES_RU_URL], cwd=subtitle_dir)
+        run_cmd(['gunzip', ru_path_gz])
+
+
+def has_subtitles_ru(suite_dir):
+    'Returns true if Russian subtitles have been downloaded.'
+    subtitle_dir = path.join(suite_dir, SUBTITLES_DIR)
+    return path.exists(path.join(subtitle_dir, SUBTITLES_RU_NAME))
+
+
+def download(suite_dir, choices):
+    '''
+    Download choices into suite_dir.
+
+    Specifically, choices specifies a list of corpora to fetch.
+
+    :param str suite_dir:
+        The directory in which to download corpora.
+    :param list(str) choices:
+        A list of corpora to download. Available choices are:
+        all, linux, subtitles-en, subtitles-ru.
+    '''
+    for choice in choices:
+        if choice == 'linux':
+            download_linux(suite_dir)
+        elif choice == 'subtitles-en':
+            download_subtitles_en(suite_dir)
+        elif choice == 'subtitles-ru':
+            download_subtitles_ru(suite_dir)
+        elif choice == 'all':
+            download_linux(suite_dir)
+            download_subtitles_en(suite_dir)
+            download_subtitles_ru(suite_dir)
+        else:
+            eprint('Unrecognized download choice: %s' % choice)
+            sys.exit(1)
+
+
+def collect_benchmarks(suite_dir, filter_pat=None,
+                       allow_missing_commands=False,
+                       disabled_cmds=None,
+                       warmup_iter=1, bench_iter=3):
+    '''
+    Return an iterable of all runnable benchmarks.
+
+    :param str suite_dir:
+        The directory containing corpora.
+    :param str filter_pat:
+        A single regular expression that is used to filter benchmarks
+        by their name. When not specified, all benchmarks are run.
+    :returns:
+        An iterable over all runnable benchmarks. If a benchmark
+        requires corpora that are missing, then a log message is
+        emitted to stderr and it is not yielded.
+    '''
+    benchmarks = []
+    for global_name in globals():
+        if not global_name.startswith('bench_'):
+            continue
+        name = re.sub('^bench_', '', global_name)
+        if filter_pat is not None and not re.search(filter_pat, name):
+            continue
+        try:
+            fun = globals()[global_name]
+            benchmark = fun(suite_dir)
+            benchmark.name = name
+            benchmark.warmup_count = warmup_iter
+            benchmark.count = bench_iter
+            benchmark.allow_missing_commands = allow_missing_commands
+            benchmark.disabled_cmds = disabled_cmds
+            benchmark.order = fun.__code__.co_firstlineno
+            benchmark.raise_if_missing()
+        except MissingDependencies as e:
+            eprint(
+                'missing: %s, skipping benchmark %s (try running with: %s)' % (
+                    ', '.join(e.missing_names),
+                    name,
+                    ' '.join(['--download %s' % n for n in e.missing_names]),
+                ))
+            continue
+        except MissingCommands as e:
+            fmt = 'missing commands: %s, skipping benchmark %s ' \
+                  '(run with --allow-missing to run incomplete benchmarks)'
+            eprint(fmt % (', '.join(e.missing_names), name))
+            continue
+        benchmarks.append(benchmark)
+    return sorted(benchmarks, key=lambda b: b.order)
+
+
+def main():
+    download_choices = ['all', 'linux', 'subtitles-en', 'subtitles-ru']
+    p = argparse.ArgumentParser('Command line search tool benchmark suite.')
+    p.add_argument(
+        '--dir', metavar='PATH', default=os.getcwd(),
+        help='The directory in which to download data and perform searches.')
+    p.add_argument(
+        '--download', metavar='CORPUS', action='append',
+        choices=download_choices,
+        help='Download and prepare corpus data, then exit without running '
+             'any benchmarks. Note that this command is intended to be '
+             'idempotent. WARNING: This downloads over a gigabyte of data, '
+             'and also includes building the Linux kernel. If "all" is used '
+             'then the total uncompressed size is around 13 GB. '
+             'Choices: %s' % ', '.join(download_choices))
+    p.add_argument(
+        '--allow-missing', action='store_true',
+        help='Permit benchmarks to run even if some commands are missing.')
+    p.add_argument(
+        '--disabled', help='A list of comma separated commands to skip.')
+    p.add_argument(
+        '-f', '--force', action='store_true',
+        help='Overwrite existing files if there is a conflict.')
+    p.add_argument(
+        '--list', action='store_true',
+        help='List available benchmarks by name.')
+    p.add_argument(
+        '--raw', metavar='PATH',
+        help='Dump raw data (all samples collected) in CSV format to the '
+             'file path provided.')
+    p.add_argument(
+        '--warmup-iter', metavar='INTEGER', type=int, default=1,
+        help='The number of iterations to run each command before '
+             'recording measurements.')
+    p.add_argument(
+        '--bench-iter', metavar='INTEGER', type=int, default=3,
+        help='The number of iterations to run each command while '
+             'recording measurements.')
+    p.add_argument(
+        'bench', metavar='PAT', nargs='?',
+        help='A regex pattern that will only run benchmarks that match.')
+    args = p.parse_args()
+
+    if args.list:
+        benchmarks = collect_benchmarks(
+            args.dir, filter_pat=args.bench,
+            allow_missing_commands=args.allow_missing,
+            disabled_cmds=(args.disabled or '').split(','),
+            warmup_iter=args.warmup_iter, bench_iter=args.bench_iter)
+        for b in benchmarks:
+            print(b.name)
+        sys.exit(0)
+    if args.download is not None and len(args.download) > 0:
+        download(args.dir, args.download)
+        sys.exit(0)
+
+    if not path.isdir(args.dir):
+        os.makedirs(args.dir)
+    if args.raw is not None and path.exists(args.raw) and not args.force:
+        eprint('File %s already exists (delete it or use --force)' % args.raw)
+        sys.exit(1)
+    raw_handle, raw_csv_wtr = None, None
+    if args.raw is not None:
+        fields = [
+            'benchmark', 'warmup_iter', 'iter',
+            'name', 'command', 'duration', 'lines', 'env',
+        ]
+        raw_handle = open(args.raw, 'w+')
+        raw_csv_wtr = csv.DictWriter(raw_handle, fields)
+        raw_csv_wtr.writerow({x: x for x in fields})
+
+    benchmarks = collect_benchmarks(
+        args.dir, filter_pat=args.bench,
+        allow_missing_commands=args.allow_missing,
+        disabled_cmds=(args.disabled or '').split(','),
+        warmup_iter=args.warmup_iter, bench_iter=args.bench_iter)
+    for i, b in enumerate(benchmarks):
+        result = b.run()
+        fastest_cmd = result.fastest_cmd()
+        fastest_sample = result.fastest_sample()
+        max_name_len = max(len(cmd.name) for cmd in b.commands)
+
+        if i > 0:
+            print()
+        header = '%s (pattern: %s)' % (b.name, b.pattern)
+        print('%s\n%s' % (header, '-' * len(header)))
+        for cmd in b.commands:
+            name = cmd.name
+            mean, stdev = result.distribution_for(cmd)
+            if mean is None:
+                # If we couldn't get a distribution for this command then
+                # it was skipped.
+                continue
+            line_counts = result.line_counts_for(cmd)
+            show_fast_cmd, show_line_counts = '', ''
+            if fastest_cmd.name == cmd.name:
+                show_fast_cmd = '*'
+            if fastest_sample['cmd'].name == cmd.name:
+                name += '*'
+            if len(line_counts) > 0:
+                counts = map(str, line_counts)
+                show_line_counts = ' (lines: %s)' % ', '.join(counts)
+            fmt = '{name:{pad}} {mean:0.3f} +/- {stdev:0.3f}{lines}{fast_cmd}'
+            print(fmt.format(
+                name=name, pad=max_name_len + 2, fast_cmd=show_fast_cmd,
+                mean=mean, stdev=stdev, lines=show_line_counts))
+        sys.stdout.flush()
+
+        if raw_csv_wtr is not None:
+            for sample in result.samples:
+                cmd, duration = sample['cmd'], sample['duration']
+                env = ' '.join(['%s=%s' % (k, v)
+                                for k, v in cmd.kwargs.get('env', {}).items()])
+                raw_csv_wtr.writerow({
+                    'benchmark': b.name,
+                    'warmup_iter': b.warmup_count,
+                    'iter': b.count,
+                    'name': sample['cmd'].name,
+                    'command': ' '.join(cmd.cmd),
+                    'duration': duration,
+                    'lines': sample['line_count'] or '',
+                    'env': env,
+                })
+            raw_handle.flush()
+
+
+if __name__ == '__main__':
+    main()

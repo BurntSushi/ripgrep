@@ -1,0 +1,59 @@
+This directory contains updated benchmarks as of 2018-01-08. They were captured
+via the benchsuite script at `benchsuite/benchsuite` from the root of this
+repository. The command that was run:
+
+    $ ./benchsuite \
+          --dir /tmp/benchsuite \
+          --raw runs/2018-01-08-archlinux-cheetah/raw.csv \
+          --warmup-iter 1 \
+          --bench-iter 5
+
+These results are most directly comparable to the
+`2016-09-22-archlinux-cheetah` run in the parent directory.
+
+The versions of each tool are as follows:
+
+    $ grep -V
+    grep (GNU grep) 3.1
+
+    $ ag -V
+    ag version 2.1.0
+    Features:
+      +jit +lzma +zlib
+
+    $ sift -V
+    sift 0.8.0 (linux/amd64)
+    built from commit 2ca94717 (which seems to be 0.9.0)
+
+    $ pt --version
+    pt version 2.1.4
+
+    $ ucg -V
+    UniversalCodeGrep 0.3.3
+    [...]
+    Build info
+
+    Repo version: 0.3.3-251-g9b5a3e3
+
+    Compiler info:
+     Name ($(CXX)): "g++ -std=gnu++1z"
+     Version string: "g++ (GCC) 7.2.1 20171224"
+
+    ISA extensions in use:
+     sse4.2: yes
+     popcnt: yes
+
+    libpcre info:
+     Not linked against libpcre.
+
+    libpcre2-8 info:
+     Version: 10.30 2017-08-14
+     JIT support built in?: yes
+     JIT target architecture: x86 64bit (little endian + unaligned)
+     Newline style: LF
+
+The version of ripgrep was compiled from source on commit 85d463c0, with the
+simd-accel and avx-accel features enabled:
+
+    $ export RUSTFLAGS="-C target-cpu=native"
+    $ cargo build --release --features 'simd-accel avx-accel'

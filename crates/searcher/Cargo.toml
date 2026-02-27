@@ -1,0 +1,32 @@
+[package]
+name = "grep-searcher"
+version = "0.1.16"  #:version
+authors = ["Andrew Gallant <jamslam@gmail.com>"]
+description = """
+Fast line oriented regex searching as a library.
+"""
+documentation = "https://docs.rs/grep-searcher"
+homepage = "https://github.com/BurntSushi/ripgrep/tree/master/crates/searcher"
+repository = "https://github.com/BurntSushi/ripgrep/tree/master/crates/searcher"
+readme = "README.md"
+keywords = ["regex", "grep", "egrep", "search", "pattern"]
+license = "Unlicense OR MIT"
+edition = "2024"
+
+[dependencies]
+bstr = { version = "1.6.2", default-features = false, features = ["std"] }
+encoding_rs = "0.8.33"
+encoding_rs_io = "0.1.7"
+grep-matcher = { version = "0.1.8", path = "../matcher" }
+log = "0.4.20"
+memchr = "2.6.3"
+memmap = { package = "memmap2", version = "0.9.0" }
+
+[dev-dependencies]
+grep-regex = { version = "0.1.14", path = "../regex" }
+regex = "1.9.5"
+
+[features]
+# These features are DEPRECATED. Runtime dispatch is used for SIMD now.
+simd-accel = []
+avx-accel = []

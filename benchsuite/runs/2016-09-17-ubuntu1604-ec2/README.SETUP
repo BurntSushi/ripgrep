@@ -1,0 +1,93 @@
+Ubuntu 16.04 HVM AMI
+c3.2xlarge, Xeon E5-2680, 2.8 GHz, 8 CPUs, 16 GB memory, 80 GB SSD
+
+# Generic system setup
+
+mkfs.ext4 /dev/xvdb
+sudo mount /dev/xvdb /mnt
+sudo chown ubuntu /mnt
+sudo apt-get update
+sudo apt-get install \  # for building Linux kernel
+  make gcc bc
+sudo apt-get install \  # for the silver searcher
+  automake pkg-config zlib1g-dev liblzma-dev libpcre3 libpcre3-dev
+sudo apt-get install \  # for Universal Code Grep
+  libtool libpcre2-8-0 libpcre2-dev
+sudo apt-get install \  # for sift and the platinum searcher
+  go
+
+# Get benchmark corpora
+
+cd /mnt
+mkdir /mnt/bench
+git clone git://github.com/BurntSushi/ripgrep
+cd ripgrep/benchsuite
+./benchsuite --dir  /mnt/bench/ --download all  # takes around 15 minutes
+
+# Install search tools
+mkdir /mnt/bin/
+
+## ripgrep
+
+cd /mnt
+mkdir ripgrep-bin
+cd ripgrep-bin
+curl -LO 'https://github.com/BurntSushi/ripgrep/releases/download/0.1.2/ripgrep-0.1.2-x86_64-unknown-linux-musl.tar.gz'
+cp ripgrep-0.1.2-x86_64-unknown-linux-musl/rg /mnt/bin/
+
+## The Silver Searcher
+
+cd /mnt
+git clone git://github.com/ggreer/the_silver_searcher
+cd the_silver_searcher
+git checkout cda635
+./build.sh
+cp ag /mnt/bin/
+
+## Universal Code Grep
+
+cd /mnt
+git clone git://github.com/gvansickle/ucg
+cd ucg
+git checkout 487bfb
+autoreconf -i
+./configure
+make
+cp ucg /mnt/bin/
+
+## The Platinum Searcher
+
+export GOPATH=/mnt/go
+go get github.com/monochromegane/the_platinum_searcher
+cd /mnt/go/src/github.com/monochromegane/the_platinum_searcher
+git checkout 509368
+go install github.com/monochromegane/the_platinum_searcher/cmd/...
+cp /mnt/go/bin/pt /mnt/bin/
+
+## Sift
+
+export GOPATH=/mnt/go
+go get github.com/svent/sift
+cd /mnt/go/src/github.com/svent/sift
+git checkout 2d175c
+go install
+cp /mnt/go/bin/sift /mnt/bin/
+
+## 'git grep' and GNU grep
+
+They are part of the standard Ubuntu install, and are pretty recent (as of
+September 2016).
+
+$ git --version
+git version 2.7.4
+$ grep --version
+grep (GNU grep) 2.25
+
+
+# Running benchmarks
+
+export PATH="/mnt/bin:$PATH"
+cd /mnt/ripgrep/benchsuite
+./benchsuite --dir /mnt/bench/ --raw /mnt/bench/raw.csv \
+  | tee /mnt/bench/summary
+# The above took around 30 minutes to run to completion.

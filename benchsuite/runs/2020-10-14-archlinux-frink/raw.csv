@@ -1,0 +1,671 @@
+benchmark,warmup_iter,iter,name,command,duration,lines,env
+linux_literal_default,1,5,rg,rg PM_RESUME,0.12675833702087402,19,
+linux_literal_default,1,5,rg,rg PM_RESUME,0.1196434497833252,19,
+linux_literal_default,1,5,rg,rg PM_RESUME,0.12096214294433594,19,
+linux_literal_default,1,5,rg,rg PM_RESUME,0.1257617473602295,19,
+linux_literal_default,1,5,rg,rg PM_RESUME,0.12903356552124023,19,
+linux_literal_default,1,5,ag,ag PM_RESUME,0.8575565814971924,19,
+linux_literal_default,1,5,ag,ag PM_RESUME,0.9113664627075195,19,
+linux_literal_default,1,5,ag,ag PM_RESUME,0.944256067276001,19,
+linux_literal_default,1,5,ag,ag PM_RESUME,0.5309450626373291,19,
+linux_literal_default,1,5,ag,ag PM_RESUME,0.6105470657348633,19,
+linux_literal_default,1,5,git grep,git grep PM_RESUME,0.49039149284362793,19,LC_ALL=en_US.UTF-8
+linux_literal_default,1,5,git grep,git grep PM_RESUME,0.48095154762268066,19,LC_ALL=en_US.UTF-8
+linux_literal_default,1,5,git grep,git grep PM_RESUME,0.48927950859069824,19,LC_ALL=en_US.UTF-8
+linux_literal_default,1,5,git grep,git grep PM_RESUME,0.47182321548461914,19,LC_ALL=en_US.UTF-8
+linux_literal_default,1,5,git grep,git grep PM_RESUME,0.46923041343688965,19,LC_ALL=en_US.UTF-8
+linux_literal_default,1,5,ugrep,ugrep -r PM_RESUME ./,0.13612771034240723,19,
+linux_literal_default,1,5,ugrep,ugrep -r PM_RESUME ./,0.13677191734313965,19,
+linux_literal_default,1,5,ugrep,ugrep -r PM_RESUME ./,0.13688087463378906,19,
+linux_literal_default,1,5,ugrep,ugrep -r PM_RESUME ./,0.13218474388122559,19,
+linux_literal_default,1,5,ugrep,ugrep -r PM_RESUME ./,0.13851046562194824,19,
+linux_literal_default,1,5,grep,grep -r PM_RESUME ./,1.1436240673065186,19,LC_ALL=en_US.UTF-8
+linux_literal_default,1,5,grep,grep -r PM_RESUME ./,1.1436970233917236,19,LC_ALL=en_US.UTF-8
+linux_literal_default,1,5,grep,grep -r PM_RESUME ./,1.1542651653289795,19,LC_ALL=en_US.UTF-8
+linux_literal_default,1,5,grep,grep -r PM_RESUME ./,1.14790940284729,19,LC_ALL=en_US.UTF-8
+linux_literal_default,1,5,grep,grep -r PM_RESUME ./,1.1441664695739746,19,LC_ALL=en_US.UTF-8
+linux_literal,1,5,rg,rg -n PM_RESUME,0.134232759475708,19,
+linux_literal,1,5,rg,rg -n PM_RESUME,0.12477993965148926,19,
+linux_literal,1,5,rg,rg -n PM_RESUME,0.11790871620178223,19,
+linux_literal,1,5,rg,rg -n PM_RESUME,0.13471150398254395,19,
+linux_literal,1,5,rg,rg -n PM_RESUME,0.13730239868164062,19,
+linux_literal,1,5,rg (mmap),rg -n --mmap PM_RESUME,1.2953157424926758,19,
+linux_literal,1,5,rg (mmap),rg -n --mmap PM_RESUME,1.3263885974884033,19,
+linux_literal,1,5,rg (mmap),rg -n --mmap PM_RESUME,1.320932388305664,19,
+linux_literal,1,5,rg (mmap),rg -n --mmap PM_RESUME,1.3446438312530518,19,
+linux_literal,1,5,rg (mmap),rg -n --mmap PM_RESUME,1.3919141292572021,19,
+linux_literal,1,5,ag (mmap),ag -s PM_RESUME,0.7901346683502197,19,
+linux_literal,1,5,ag (mmap),ag -s PM_RESUME,0.9647164344787598,19,
+linux_literal,1,5,ag (mmap),ag -s PM_RESUME,0.8800022602081299,19,
+linux_literal,1,5,ag (mmap),ag -s PM_RESUME,0.9307558536529541,19,
+linux_literal,1,5,ag (mmap),ag -s PM_RESUME,0.8346366882324219,19,
+linux_literal,1,5,git grep,git grep -I -n PM_RESUME,0.4694955348968506,19,LC_ALL=C
+linux_literal,1,5,git grep,git grep -I -n PM_RESUME,0.4620368480682373,19,LC_ALL=C
+linux_literal,1,5,git grep,git grep -I -n PM_RESUME,0.4673285484313965,19,LC_ALL=C
+linux_literal,1,5,git grep,git grep -I -n PM_RESUME,0.4570960998535156,19,LC_ALL=C
+linux_literal,1,5,git grep,git grep -I -n PM_RESUME,0.4648761749267578,19,LC_ALL=C
+linux_literal,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n PM_RESUME ./,0.3233473300933838,19,
+linux_literal,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n PM_RESUME ./,0.3199331760406494,19,
+linux_literal,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n PM_RESUME ./,0.29825615882873535,19,
+linux_literal,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n PM_RESUME ./,0.3003232479095459,19,
+linux_literal,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n PM_RESUME ./,0.30283141136169434,19,
+linux_literal_casei,1,5,rg,rg -n -i PM_RESUME,0.1349015235900879,456,
+linux_literal_casei,1,5,rg,rg -n -i PM_RESUME,0.1277780532836914,456,
+linux_literal_casei,1,5,rg,rg -n -i PM_RESUME,0.1251516342163086,456,
+linux_literal_casei,1,5,rg,rg -n -i PM_RESUME,0.12959671020507812,456,
+linux_literal_casei,1,5,rg,rg -n -i PM_RESUME,0.1374528408050537,456,
+linux_literal_casei,1,5,rg (mmap),rg -n -i --mmap PM_RESUME,1.3468265533447266,456,
+linux_literal_casei,1,5,rg (mmap),rg -n -i --mmap PM_RESUME,1.3552894592285156,456,
+linux_literal_casei,1,5,rg (mmap),rg -n -i --mmap PM_RESUME,1.3028552532196045,456,
+linux_literal_casei,1,5,rg (mmap),rg -n -i --mmap PM_RESUME,1.336735725402832,456,
+linux_literal_casei,1,5,rg (mmap),rg -n -i --mmap PM_RESUME,1.338634729385376,456,
+linux_literal_casei,1,5,ag (mmap),ag -i PM_RESUME,0.5562450885772705,456,
+linux_literal_casei,1,5,ag (mmap),ag -i PM_RESUME,0.7324790954589844,456,
+linux_literal_casei,1,5,ag (mmap),ag -i PM_RESUME,0.8382794857025146,456,
+linux_literal_casei,1,5,ag (mmap),ag -i PM_RESUME,0.5817627906799316,456,
+linux_literal_casei,1,5,ag (mmap),ag -i PM_RESUME,0.5771033763885498,456,
+linux_literal_casei,1,5,git grep,git grep -I -n -i PM_RESUME,0.48885059356689453,456,LC_ALL=C
+linux_literal_casei,1,5,git grep,git grep -I -n -i PM_RESUME,0.4838893413543701,456,LC_ALL=C
+linux_literal_casei,1,5,git grep,git grep -I -n -i PM_RESUME,0.48733997344970703,456,LC_ALL=C
+linux_literal_casei,1,5,git grep,git grep -I -n -i PM_RESUME,0.4765594005584717,456,LC_ALL=C
+linux_literal_casei,1,5,git grep,git grep -I -n -i PM_RESUME,0.47402334213256836,456,LC_ALL=C
+linux_literal_casei,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -i PM_RESUME ./,0.3075406551361084,456,
+linux_literal_casei,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -i PM_RESUME ./,0.2922379970550537,456,
+linux_literal_casei,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -i PM_RESUME ./,0.2901036739349365,456,
+linux_literal_casei,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -i PM_RESUME ./,0.2723674774169922,456,
+linux_literal_casei,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -i PM_RESUME ./,0.2762429714202881,456,
+linux_re_literal_suffix,1,5,rg,rg -n [A-Z]+_RESUME,0.12853646278381348,1944,
+linux_re_literal_suffix,1,5,rg,rg -n [A-Z]+_RESUME,0.1190040111541748,1944,
+linux_re_literal_suffix,1,5,rg,rg -n [A-Z]+_RESUME,0.14054393768310547,1944,
+linux_re_literal_suffix,1,5,rg,rg -n [A-Z]+_RESUME,0.12263894081115723,1944,
+linux_re_literal_suffix,1,5,rg,rg -n [A-Z]+_RESUME,0.12101268768310547,1944,
+linux_re_literal_suffix,1,5,ag,ag -s [A-Z]+_RESUME,0.9220716953277588,1944,
+linux_re_literal_suffix,1,5,ag,ag -s [A-Z]+_RESUME,1.009810209274292,1944,
+linux_re_literal_suffix,1,5,ag,ag -s [A-Z]+_RESUME,0.9654982089996338,1944,
+linux_re_literal_suffix,1,5,ag,ag -s [A-Z]+_RESUME,1.2758586406707764,1944,
+linux_re_literal_suffix,1,5,ag,ag -s [A-Z]+_RESUME,1.0480666160583496,1944,
+linux_re_literal_suffix,1,5,git grep,git grep -E -I -n [A-Z]+_RESUME,1.1811027526855469,1944,LC_ALL=C
+linux_re_literal_suffix,1,5,git grep,git grep -E -I -n [A-Z]+_RESUME,1.1824719905853271,1944,LC_ALL=C
+linux_re_literal_suffix,1,5,git grep,git grep -E -I -n [A-Z]+_RESUME,1.2052066326141357,1944,LC_ALL=C
+linux_re_literal_suffix,1,5,git grep,git grep -E -I -n [A-Z]+_RESUME,1.224193811416626,1944,LC_ALL=C
+linux_re_literal_suffix,1,5,git grep,git grep -E -I -n [A-Z]+_RESUME,1.2896029949188232,1944,LC_ALL=C
+linux_re_literal_suffix,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n [A-Z]+_RESUME ./,0.5580098628997803,1944,
+linux_re_literal_suffix,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n [A-Z]+_RESUME ./,0.5409820079803467,1944,
+linux_re_literal_suffix,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n [A-Z]+_RESUME ./,0.5436761379241943,1944,
+linux_re_literal_suffix,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n [A-Z]+_RESUME ./,0.5317332744598389,1944,
+linux_re_literal_suffix,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n [A-Z]+_RESUME ./,0.5662341117858887,1944,
+linux_word,1,5,rg,rg -n -w PM_RESUME,0.13112211227416992,6,
+linux_word,1,5,rg,rg -n -w PM_RESUME,0.13633346557617188,6,
+linux_word,1,5,rg,rg -n -w PM_RESUME,0.1308743953704834,6,
+linux_word,1,5,rg,rg -n -w PM_RESUME,0.13691973686218262,6,
+linux_word,1,5,rg,rg -n -w PM_RESUME,0.1369326114654541,6,
+linux_word,1,5,ag,ag -s -w PM_RESUME,0.5965347290039062,6,
+linux_word,1,5,ag,ag -s -w PM_RESUME,0.8891518115997314,6,
+linux_word,1,5,ag,ag -s -w PM_RESUME,0.5207972526550293,6,
+linux_word,1,5,ag,ag -s -w PM_RESUME,0.5551142692565918,6,
+linux_word,1,5,ag,ag -s -w PM_RESUME,0.5308854579925537,6,
+linux_word,1,5,git grep,git grep -E -I -n -w PM_RESUME,0.45984363555908203,6,LC_ALL=C
+linux_word,1,5,git grep,git grep -E -I -n -w PM_RESUME,0.47351694107055664,6,LC_ALL=C
+linux_word,1,5,git grep,git grep -E -I -n -w PM_RESUME,0.5011758804321289,6,LC_ALL=C
+linux_word,1,5,git grep,git grep -E -I -n -w PM_RESUME,0.45740509033203125,6,LC_ALL=C
+linux_word,1,5,git grep,git grep -E -I -n -w PM_RESUME,0.46122002601623535,6,LC_ALL=C
+linux_word,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -w PM_RESUME ./,0.3174629211425781,6,
+linux_word,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -w PM_RESUME ./,0.32368993759155273,6,
+linux_word,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -w PM_RESUME ./,0.3131399154663086,6,
+linux_word,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -w PM_RESUME ./,0.2834908962249756,6,
+linux_word,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -w PM_RESUME ./,0.2899782657623291,6,
+linux_unicode_greek,1,5,rg,rg -n \p{Greek},0.2624638080596924,105,
+linux_unicode_greek,1,5,rg,rg -n \p{Greek},0.26248669624328613,105,
+linux_unicode_greek,1,5,rg,rg -n \p{Greek},0.26514244079589844,105,
+linux_unicode_greek,1,5,rg,rg -n \p{Greek},0.26303768157958984,105,
+linux_unicode_greek,1,5,rg,rg -n \p{Greek},0.2612752914428711,105,
+linux_unicode_greek,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n \p{Greek} ./,0.2842683792114258,105,
+linux_unicode_greek,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n \p{Greek} ./,0.2718374729156494,105,
+linux_unicode_greek,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n \p{Greek} ./,0.26900339126586914,105,
+linux_unicode_greek,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n \p{Greek} ./,0.267728328704834,105,
+linux_unicode_greek,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n \p{Greek} ./,0.27019381523132324,105,
+linux_unicode_greek_casei,1,5,rg,rg -n -i \p{Greek},0.24460315704345703,225,
+linux_unicode_greek_casei,1,5,rg,rg -n -i \p{Greek},0.2752077579498291,225,
+linux_unicode_greek_casei,1,5,rg,rg -n -i \p{Greek},0.25118350982666016,225,
+linux_unicode_greek_casei,1,5,rg,rg -n -i \p{Greek},0.2610158920288086,225,
+linux_unicode_greek_casei,1,5,rg,rg -n -i \p{Greek},0.24675774574279785,225,
+linux_unicode_greek_casei,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -i \p{Greek} ./,0.26882410049438477,105,
+linux_unicode_greek_casei,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -i \p{Greek} ./,0.2770118713378906,105,
+linux_unicode_greek_casei,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -i \p{Greek} ./,0.2694118022918701,105,
+linux_unicode_greek_casei,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -i \p{Greek} ./,0.2690916061401367,105,
+linux_unicode_greek_casei,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -i \p{Greek} ./,0.2686276435852051,105,
+linux_unicode_word,1,5,rg,rg -n \wAh,0.13727664947509766,229,
+linux_unicode_word,1,5,rg,rg -n \wAh,0.1450798511505127,229,
+linux_unicode_word,1,5,rg,rg -n \wAh,0.13819336891174316,229,
+linux_unicode_word,1,5,rg,rg -n \wAh,0.1422877311706543,229,
+linux_unicode_word,1,5,rg,rg -n \wAh,0.13657712936401367,229,
+linux_unicode_word,1,5,rg (ASCII),rg -n (?-u)\wAh,0.1487271785736084,216,
+linux_unicode_word,1,5,rg (ASCII),rg -n (?-u)\wAh,0.1459641456604004,216,
+linux_unicode_word,1,5,rg (ASCII),rg -n (?-u)\wAh,0.13515281677246094,216,
+linux_unicode_word,1,5,rg (ASCII),rg -n (?-u)\wAh,0.12724566459655762,216,
+linux_unicode_word,1,5,rg (ASCII),rg -n (?-u)\wAh,0.13360023498535156,216,
+linux_unicode_word,1,5,ag (ASCII),ag -s \wAh,1.2160453796386719,216,
+linux_unicode_word,1,5,ag (ASCII),ag -s \wAh,1.230163335800171,216,
+linux_unicode_word,1,5,ag (ASCII),ag -s \wAh,1.2649273872375488,216,
+linux_unicode_word,1,5,ag (ASCII),ag -s \wAh,1.224984884262085,216,
+linux_unicode_word,1,5,ag (ASCII),ag -s \wAh,1.4559555053710938,216,
+linux_unicode_word,1,5,git grep,git grep -E -I -n \wAh,8.233768224716187,229,LC_ALL=en_US.UTF-8
+linux_unicode_word,1,5,git grep,git grep -E -I -n \wAh,8.191053867340088,229,LC_ALL=en_US.UTF-8
+linux_unicode_word,1,5,git grep,git grep -E -I -n \wAh,8.175920724868774,229,LC_ALL=en_US.UTF-8
+linux_unicode_word,1,5,git grep,git grep -E -I -n \wAh,8.167959451675415,229,LC_ALL=en_US.UTF-8
+linux_unicode_word,1,5,git grep,git grep -E -I -n \wAh,8.1710205078125,229,LC_ALL=en_US.UTF-8
+linux_unicode_word,1,5,git grep (ASCII),git grep -E -I -n \wAh,2.3747494220733643,216,LC_ALL=C
+linux_unicode_word,1,5,git grep (ASCII),git grep -E -I -n \wAh,2.3170926570892334,216,LC_ALL=C
+linux_unicode_word,1,5,git grep (ASCII),git grep -E -I -n \wAh,2.3430888652801514,216,LC_ALL=C
+linux_unicode_word,1,5,git grep (ASCII),git grep -E -I -n \wAh,2.3219168186187744,216,LC_ALL=C
+linux_unicode_word,1,5,git grep (ASCII),git grep -E -I -n \wAh,2.3155832290649414,216,LC_ALL=C
+linux_unicode_word,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n \wAh ./,0.2722008228302002,229,
+linux_unicode_word,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n \wAh ./,0.27547430992126465,229,
+linux_unicode_word,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n \wAh ./,0.2771613597869873,229,
+linux_unicode_word,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n \wAh ./,0.27692317962646484,229,
+linux_unicode_word,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n \wAh ./,0.27749085426330566,229,
+linux_unicode_word,1,5,ugrep (ASCII),ugrep -r --ignore-files --no-hidden -I -n -U \wAh ./,0.2744929790496826,216,
+linux_unicode_word,1,5,ugrep (ASCII),ugrep -r --ignore-files --no-hidden -I -n -U \wAh ./,0.2725999355316162,216,
+linux_unicode_word,1,5,ugrep (ASCII),ugrep -r --ignore-files --no-hidden -I -n -U \wAh ./,0.27443718910217285,216,
+linux_unicode_word,1,5,ugrep (ASCII),ugrep -r --ignore-files --no-hidden -I -n -U \wAh ./,0.2668039798736572,216,
+linux_unicode_word,1,5,ugrep (ASCII),ugrep -r --ignore-files --no-hidden -I -n -U \wAh ./,0.27918338775634766,216,
+linux_no_literal,1,5,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.38802123069763184,611,
+linux_no_literal,1,5,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.40351152420043945,611,
+linux_no_literal,1,5,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.40592288970947266,611,
+linux_no_literal,1,5,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.40622901916503906,611,
+linux_no_literal,1,5,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.40683722496032715,611,
+linux_no_literal,1,5,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.2553420066833496,610,
+linux_no_literal,1,5,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.2511327266693115,610,
+linux_no_literal,1,5,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.2530384063720703,610,
+linux_no_literal,1,5,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.2420644760131836,610,
+linux_no_literal,1,5,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.2691671848297119,610,
+linux_no_literal,1,5,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.9446702003479004,971,
+linux_no_literal,1,5,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.9380638599395752,971,
+linux_no_literal,1,5,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.9273786544799805,971,
+linux_no_literal,1,5,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.9271430969238281,971,
+linux_no_literal,1,5,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},0.9307007789611816,971,
+linux_no_literal,1,5,git grep,git grep -E -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},14.531656265258789,611,LC_ALL=en_US.UTF-8
+linux_no_literal,1,5,git grep,git grep -E -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},14.570266008377075,611,LC_ALL=en_US.UTF-8
+linux_no_literal,1,5,git grep,git grep -E -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},14.51328158378601,611,LC_ALL=en_US.UTF-8
+linux_no_literal,1,5,git grep,git grep -E -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},14.644389629364014,611,LC_ALL=en_US.UTF-8
+linux_no_literal,1,5,git grep,git grep -E -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},14.694648027420044,611,LC_ALL=en_US.UTF-8
+linux_no_literal,1,5,git grep (ASCII),git grep -E -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},3.164829730987549,610,LC_ALL=C
+linux_no_literal,1,5,git grep (ASCII),git grep -E -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},3.2377045154571533,610,LC_ALL=C
+linux_no_literal,1,5,git grep (ASCII),git grep -E -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},3.1798932552337646,610,LC_ALL=C
+linux_no_literal,1,5,git grep (ASCII),git grep -E -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},3.142343044281006,610,LC_ALL=C
+linux_no_literal,1,5,git grep (ASCII),git grep -E -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5},3.185952663421631,610,LC_ALL=C
+linux_no_literal,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} ./,6.241358041763306,973,
+linux_no_literal,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} ./,6.213250637054443,973,
+linux_no_literal,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} ./,6.242088079452515,973,
+linux_no_literal,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} ./,6.126717567443848,973,
+linux_no_literal,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} ./,6.15744948387146,973,
+linux_no_literal,1,5,ugrep (ASCII),ugrep -r --ignore-files --no-hidden -I -n -U \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} ./,0.3647449016571045,972,
+linux_no_literal,1,5,ugrep (ASCII),ugrep -r --ignore-files --no-hidden -I -n -U \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} ./,0.36277341842651367,972,
+linux_no_literal,1,5,ugrep (ASCII),ugrep -r --ignore-files --no-hidden -I -n -U \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} ./,0.3670034408569336,972,
+linux_no_literal,1,5,ugrep (ASCII),ugrep -r --ignore-files --no-hidden -I -n -U \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} ./,0.3563535213470459,972,
+linux_no_literal,1,5,ugrep (ASCII),ugrep -r --ignore-files --no-hidden -I -n -U \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} ./,0.36490702629089355,972,
+linux_alternates,1,5,rg,rg -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.14299488067626953,112,
+linux_alternates,1,5,rg,rg -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.15548348426818848,112,
+linux_alternates,1,5,rg,rg -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.14477276802062988,112,
+linux_alternates,1,5,rg,rg -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.12926578521728516,112,
+linux_alternates,1,5,rg,rg -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.13896560668945312,112,
+linux_alternates,1,5,ag,ag -s ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.9893472194671631,112,
+linux_alternates,1,5,ag,ag -s ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,1.016686201095581,112,
+linux_alternates,1,5,ag,ag -s ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.9755496978759766,112,
+linux_alternates,1,5,ag,ag -s ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.9718713760375977,112,
+linux_alternates,1,5,ag,ag -s ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,1.0030465126037598,112,
+linux_alternates,1,5,git grep,git grep -E -I -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.5737886428833008,112,LC_ALL=C
+linux_alternates,1,5,git grep,git grep -E -I -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.562185525894165,112,LC_ALL=C
+linux_alternates,1,5,git grep,git grep -E -I -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.5762710571289062,112,LC_ALL=C
+linux_alternates,1,5,git grep,git grep -E -I -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.5561251640319824,112,LC_ALL=C
+linux_alternates,1,5,git grep,git grep -E -I -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.5849525928497314,112,LC_ALL=C
+linux_alternates,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT ./,0.3186032772064209,112,
+linux_alternates,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT ./,0.2896738052368164,112,
+linux_alternates,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT ./,0.28582000732421875,112,
+linux_alternates,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT ./,0.2837677001953125,112,
+linux_alternates,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT ./,0.27143406867980957,112,
+linux_alternates_casei,1,5,rg,rg -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.21955585479736328,203,
+linux_alternates_casei,1,5,rg,rg -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.22631502151489258,203,
+linux_alternates_casei,1,5,rg,rg -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.23458337783813477,203,
+linux_alternates_casei,1,5,rg,rg -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.21781086921691895,203,
+linux_alternates_casei,1,5,rg,rg -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.231217622756958,203,
+linux_alternates_casei,1,5,ag,ag -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.7170076370239258,203,
+linux_alternates_casei,1,5,ag,ag -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.7032256126403809,203,
+linux_alternates_casei,1,5,ag,ag -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.6868026256561279,203,
+linux_alternates_casei,1,5,ag,ag -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.6965539455413818,203,
+linux_alternates_casei,1,5,ag,ag -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.6966633796691895,203,
+linux_alternates_casei,1,5,git grep,git grep -E -I -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.9774580001831055,203,LC_ALL=C
+linux_alternates_casei,1,5,git grep,git grep -E -I -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.9654648303985596,203,LC_ALL=C
+linux_alternates_casei,1,5,git grep,git grep -E -I -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.967714786529541,203,LC_ALL=C
+linux_alternates_casei,1,5,git grep,git grep -E -I -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.9789888858795166,203,LC_ALL=C
+linux_alternates_casei,1,5,git grep,git grep -E -I -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT,0.9938976764678955,203,LC_ALL=C
+linux_alternates_casei,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT ./,0.2825000286102295,203,
+linux_alternates_casei,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT ./,0.27024054527282715,203,
+linux_alternates_casei,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT ./,0.27353668212890625,203,
+linux_alternates_casei,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT ./,0.27333736419677734,203,
+linux_alternates_casei,1,5,ugrep,ugrep -r --ignore-files --no-hidden -I -n -i ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT ./,0.2730555534362793,203,
+subtitles_en_literal,1,5,rg,rg Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.2259538173675537,830,
+subtitles_en_literal,1,5,rg,rg Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.22034168243408203,830,
+subtitles_en_literal,1,5,rg,rg Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.22986674308776855,830,
+subtitles_en_literal,1,5,rg,rg Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.22815775871276855,830,
+subtitles_en_literal,1,5,rg,rg Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.2238922119140625,830,
+subtitles_en_literal,1,5,rg (no mmap),rg --no-mmap Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.36427783966064453,830,
+subtitles_en_literal,1,5,rg (no mmap),rg --no-mmap Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.37499117851257324,830,
+subtitles_en_literal,1,5,rg (no mmap),rg --no-mmap Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.36223769187927246,830,
+subtitles_en_literal,1,5,rg (no mmap),rg --no-mmap Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.3646128177642822,830,
+subtitles_en_literal,1,5,rg (no mmap),rg --no-mmap Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.36281347274780273,830,
+subtitles_en_literal,1,5,grep,grep Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.8064453601837158,830,LC_ALL=C
+subtitles_en_literal,1,5,grep,grep Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.8001935482025146,830,LC_ALL=C
+subtitles_en_literal,1,5,grep,grep Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.8018591403961182,830,LC_ALL=C
+subtitles_en_literal,1,5,grep,grep Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.7978458404541016,830,LC_ALL=C
+subtitles_en_literal,1,5,grep,grep Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.7912843227386475,830,LC_ALL=C
+subtitles_en_literal,1,5,rg (lines),rg -n Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.31099891662597656,830,
+subtitles_en_literal,1,5,rg (lines),rg -n Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.3145768642425537,830,
+subtitles_en_literal,1,5,rg (lines),rg -n Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.30507469177246094,830,
+subtitles_en_literal,1,5,rg (lines),rg -n Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.3450126647949219,830,
+subtitles_en_literal,1,5,rg (lines),rg -n Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.31091880798339844,830,
+subtitles_en_literal,1,5,ag (lines),ag -s Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,2.5518174171447754,830,
+subtitles_en_literal,1,5,ag (lines),ag -s Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,2.551568031311035,830,
+subtitles_en_literal,1,5,ag (lines),ag -s Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,2.5306365489959717,830,
+subtitles_en_literal,1,5,ag (lines),ag -s Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,2.537529468536377,830,
+subtitles_en_literal,1,5,ag (lines),ag -s Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,2.5627124309539795,830,
+subtitles_en_literal,1,5,grep (lines),grep -n Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.2934913635253906,830,LC_ALL=C
+subtitles_en_literal,1,5,grep (lines),grep -n Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.2990975379943848,830,LC_ALL=C
+subtitles_en_literal,1,5,grep (lines),grep -n Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.2942156791687012,830,LC_ALL=C
+subtitles_en_literal,1,5,grep (lines),grep -n Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.2887969017028809,830,LC_ALL=C
+subtitles_en_literal,1,5,grep (lines),grep -n Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.2922444343566895,830,LC_ALL=C
+subtitles_en_literal,1,5,ugrep (lines),ugrep -n Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.3939177989959717,830,
+subtitles_en_literal,1,5,ugrep (lines),ugrep -n Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.3916018009185791,830,
+subtitles_en_literal,1,5,ugrep (lines),ugrep -n Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.40460968017578125,830,
+subtitles_en_literal,1,5,ugrep (lines),ugrep -n Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.41738367080688477,830,
+subtitles_en_literal,1,5,ugrep (lines),ugrep -n Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.41339826583862305,830,
+subtitles_en_literal_casei,1,5,rg,rg -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.37847900390625,871,
+subtitles_en_literal_casei,1,5,rg,rg -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.3692331314086914,871,
+subtitles_en_literal_casei,1,5,rg,rg -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.40493106842041016,871,
+subtitles_en_literal_casei,1,5,rg,rg -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.4074361324310303,871,
+subtitles_en_literal_casei,1,5,rg,rg -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.4297189712524414,871,
+subtitles_en_literal_casei,1,5,grep,grep -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,3.63842511177063,871,LC_ALL=en_US.UTF-8
+subtitles_en_literal_casei,1,5,grep,grep -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,3.6366350650787354,871,LC_ALL=en_US.UTF-8
+subtitles_en_literal_casei,1,5,grep,grep -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,3.6044440269470215,871,LC_ALL=en_US.UTF-8
+subtitles_en_literal_casei,1,5,grep,grep -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,3.6123127937316895,871,LC_ALL=en_US.UTF-8
+subtitles_en_literal_casei,1,5,grep,grep -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,3.6119742393493652,871,LC_ALL=en_US.UTF-8
+subtitles_en_literal_casei,1,5,grep (ASCII),grep -E -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.917151689529419,871,LC_ALL=C
+subtitles_en_literal_casei,1,5,grep (ASCII),grep -E -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.9379458427429199,871,LC_ALL=C
+subtitles_en_literal_casei,1,5,grep (ASCII),grep -E -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.9703550338745117,871,LC_ALL=C
+subtitles_en_literal_casei,1,5,grep (ASCII),grep -E -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.9309988021850586,871,LC_ALL=C
+subtitles_en_literal_casei,1,5,grep (ASCII),grep -E -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.9328129291534424,871,LC_ALL=C
+subtitles_en_literal_casei,1,5,rg (lines),rg -n -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.5196061134338379,871,
+subtitles_en_literal_casei,1,5,rg (lines),rg -n -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.5225450992584229,871,
+subtitles_en_literal_casei,1,5,rg (lines),rg -n -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.4856400489807129,871,
+subtitles_en_literal_casei,1,5,rg (lines),rg -n -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.5204241275787354,871,
+subtitles_en_literal_casei,1,5,rg (lines),rg -n -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.5224106311798096,871,
+subtitles_en_literal_casei,1,5,ag (lines) (ASCII),ag -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,2.5935003757476807,871,
+subtitles_en_literal_casei,1,5,ag (lines) (ASCII),ag -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,2.640918016433716,871,
+subtitles_en_literal_casei,1,5,ag (lines) (ASCII),ag -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,2.602182626724243,871,
+subtitles_en_literal_casei,1,5,ag (lines) (ASCII),ag -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,2.575654983520508,871,
+subtitles_en_literal_casei,1,5,ag (lines) (ASCII),ag -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,2.5606820583343506,871,
+subtitles_en_literal_casei,1,5,ugrep (lines),ugrep -n -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.0980546474456787,871,
+subtitles_en_literal_casei,1,5,ugrep (lines),ugrep -n -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.095038652420044,871,
+subtitles_en_literal_casei,1,5,ugrep (lines),ugrep -n -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.0974702835083008,871,
+subtitles_en_literal_casei,1,5,ugrep (lines),ugrep -n -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.113879919052124,871,
+subtitles_en_literal_casei,1,5,ugrep (lines),ugrep -n -i Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.1096961498260498,871,
+subtitles_en_literal_word,1,5,rg (ASCII),rg -n (?-u:\b)Sherlock Holmes(?-u:\b) /tmp/benchsuite/subtitles/en.sample.txt,0.3175060749053955,830,
+subtitles_en_literal_word,1,5,rg (ASCII),rg -n (?-u:\b)Sherlock Holmes(?-u:\b) /tmp/benchsuite/subtitles/en.sample.txt,0.321685791015625,830,
+subtitles_en_literal_word,1,5,rg (ASCII),rg -n (?-u:\b)Sherlock Holmes(?-u:\b) /tmp/benchsuite/subtitles/en.sample.txt,0.30799293518066406,830,
+subtitles_en_literal_word,1,5,rg (ASCII),rg -n (?-u:\b)Sherlock Holmes(?-u:\b) /tmp/benchsuite/subtitles/en.sample.txt,0.31140613555908203,830,
+subtitles_en_literal_word,1,5,rg (ASCII),rg -n (?-u:\b)Sherlock Holmes(?-u:\b) /tmp/benchsuite/subtitles/en.sample.txt,0.32439208030700684,830,
+subtitles_en_literal_word,1,5,ag (ASCII),ag -sw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,2.5530965328216553,830,
+subtitles_en_literal_word,1,5,ag (ASCII),ag -sw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,2.5833561420440674,830,
+subtitles_en_literal_word,1,5,ag (ASCII),ag -sw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,2.5765762329101562,830,
+subtitles_en_literal_word,1,5,ag (ASCII),ag -sw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,2.610975742340088,830,
+subtitles_en_literal_word,1,5,ag (ASCII),ag -sw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,2.5965471267700195,830,
+subtitles_en_literal_word,1,5,grep (ASCII),grep -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.3212966918945312,830,LC_ALL=C
+subtitles_en_literal_word,1,5,grep (ASCII),grep -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.311401128768921,830,LC_ALL=C
+subtitles_en_literal_word,1,5,grep (ASCII),grep -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.298889398574829,830,LC_ALL=C
+subtitles_en_literal_word,1,5,grep (ASCII),grep -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.316542148590088,830,LC_ALL=C
+subtitles_en_literal_word,1,5,grep (ASCII),grep -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.3483500480651855,830,LC_ALL=C
+subtitles_en_literal_word,1,5,ugrep (ASCII),ugrep -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.4127326011657715,830,
+subtitles_en_literal_word,1,5,ugrep (ASCII),ugrep -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.4138009548187256,830,
+subtitles_en_literal_word,1,5,ugrep (ASCII),ugrep -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.4203319549560547,830,
+subtitles_en_literal_word,1,5,ugrep (ASCII),ugrep -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.4127979278564453,830,
+subtitles_en_literal_word,1,5,ugrep (ASCII),ugrep -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.41126537322998047,830,
+subtitles_en_literal_word,1,5,rg,rg -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.3251321315765381,830,
+subtitles_en_literal_word,1,5,rg,rg -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.31773900985717773,830,
+subtitles_en_literal_word,1,5,rg,rg -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.32987523078918457,830,
+subtitles_en_literal_word,1,5,rg,rg -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.32228970527648926,830,
+subtitles_en_literal_word,1,5,rg,rg -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,0.3207516670227051,830,
+subtitles_en_literal_word,1,5,grep,grep -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.2946159839630127,830,LC_ALL=en_US.UTF-8
+subtitles_en_literal_word,1,5,grep,grep -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.333972454071045,830,LC_ALL=en_US.UTF-8
+subtitles_en_literal_word,1,5,grep,grep -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.3002500534057617,830,LC_ALL=en_US.UTF-8
+subtitles_en_literal_word,1,5,grep,grep -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.347550630569458,830,LC_ALL=en_US.UTF-8
+subtitles_en_literal_word,1,5,grep,grep -nw Sherlock Holmes /tmp/benchsuite/subtitles/en.sample.txt,1.306572675704956,830,LC_ALL=en_US.UTF-8
+subtitles_en_alternate,1,5,rg (lines),rg -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,0.4178187847137451,1094,
+subtitles_en_alternate,1,5,rg (lines),rg -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,0.44626832008361816,1094,
+subtitles_en_alternate,1,5,rg (lines),rg -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,0.44959425926208496,1094,
+subtitles_en_alternate,1,5,rg (lines),rg -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,0.38634324073791504,1094,
+subtitles_en_alternate,1,5,rg (lines),rg -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,0.4460463523864746,1094,
+subtitles_en_alternate,1,5,ag (lines),ag -s Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,3.6045682430267334,1094,
+subtitles_en_alternate,1,5,ag (lines),ag -s Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,3.6191344261169434,1094,
+subtitles_en_alternate,1,5,ag (lines),ag -s Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,3.579859972000122,1094,
+subtitles_en_alternate,1,5,ag (lines),ag -s Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,3.6637580394744873,1094,
+subtitles_en_alternate,1,5,ag (lines),ag -s Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,3.5728182792663574,1094,
+subtitles_en_alternate,1,5,grep (lines),grep -E -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,3.323948621749878,1094,LC_ALL=C
+subtitles_en_alternate,1,5,grep (lines),grep -E -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,3.3338429927825928,1094,LC_ALL=C
+subtitles_en_alternate,1,5,grep (lines),grep -E -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,3.34714937210083,1094,LC_ALL=C
+subtitles_en_alternate,1,5,grep (lines),grep -E -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,3.314117908477783,1094,LC_ALL=C
+subtitles_en_alternate,1,5,grep (lines),grep -E -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,3.303710699081421,1094,LC_ALL=C
+subtitles_en_alternate,1,5,ugrep (lines),ugrep -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,1.147033452987671,1094,
+subtitles_en_alternate,1,5,ugrep (lines),ugrep -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,1.2054970264434814,1094,
+subtitles_en_alternate,1,5,ugrep (lines),ugrep -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,1.0998892784118652,1094,
+subtitles_en_alternate,1,5,ugrep (lines),ugrep -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,1.101989984512329,1094,
+subtitles_en_alternate,1,5,ugrep (lines),ugrep -n Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,1.110612154006958,1094,
+subtitles_en_alternate,1,5,rg,rg Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,0.29009222984313965,1094,
+subtitles_en_alternate,1,5,rg,rg Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,0.29300451278686523,1094,
+subtitles_en_alternate,1,5,rg,rg Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,0.3199915885925293,1094,
+subtitles_en_alternate,1,5,rg,rg Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,0.3187263011932373,1094,
+subtitles_en_alternate,1,5,rg,rg Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,0.30321288108825684,1094,
+subtitles_en_alternate,1,5,grep,grep -E Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,2.813009738922119,1094,LC_ALL=C
+subtitles_en_alternate,1,5,grep,grep -E Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,2.80930757522583,1094,LC_ALL=C
+subtitles_en_alternate,1,5,grep,grep -E Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,2.814509153366089,1094,LC_ALL=C
+subtitles_en_alternate,1,5,grep,grep -E Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,2.8390560150146484,1094,LC_ALL=C
+subtitles_en_alternate,1,5,grep,grep -E Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,2.830871105194092,1094,LC_ALL=C
+subtitles_en_alternate_casei,1,5,ag (ASCII),ag -s -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,6.166510343551636,1136,
+subtitles_en_alternate_casei,1,5,ag (ASCII),ag -s -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,6.192304849624634,1136,
+subtitles_en_alternate_casei,1,5,ag (ASCII),ag -s -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,6.185140132904053,1136,
+subtitles_en_alternate_casei,1,5,ag (ASCII),ag -s -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,6.20132040977478,1136,
+subtitles_en_alternate_casei,1,5,ag (ASCII),ag -s -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,6.159040451049805,1136,
+subtitles_en_alternate_casei,1,5,grep (ASCII),grep -E -ni Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,5.523138999938965,1136,LC_ALL=C
+subtitles_en_alternate_casei,1,5,grep (ASCII),grep -E -ni Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,5.512346267700195,1136,LC_ALL=C
+subtitles_en_alternate_casei,1,5,grep (ASCII),grep -E -ni Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,5.562563896179199,1136,LC_ALL=C
+subtitles_en_alternate_casei,1,5,grep (ASCII),grep -E -ni Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,5.533160448074341,1136,LC_ALL=C
+subtitles_en_alternate_casei,1,5,grep (ASCII),grep -E -ni Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,5.504830837249756,1136,LC_ALL=C
+subtitles_en_alternate_casei,1,5,ugrep (ASCII),ugrep -n -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,1.1120033264160156,1136,
+subtitles_en_alternate_casei,1,5,ugrep (ASCII),ugrep -n -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,1.1150739192962646,1136,
+subtitles_en_alternate_casei,1,5,ugrep (ASCII),ugrep -n -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,1.1018304824829102,1136,
+subtitles_en_alternate_casei,1,5,ugrep (ASCII),ugrep -n -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,1.1106996536254883,1136,
+subtitles_en_alternate_casei,1,5,ugrep (ASCII),ugrep -n -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,1.0994808673858643,1136,
+subtitles_en_alternate_casei,1,5,rg,rg -n -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,0.8494291305541992,1136,
+subtitles_en_alternate_casei,1,5,rg,rg -n -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,0.7878148555755615,1136,
+subtitles_en_alternate_casei,1,5,rg,rg -n -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,0.8290884494781494,1136,
+subtitles_en_alternate_casei,1,5,rg,rg -n -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,0.7409803867340088,1136,
+subtitles_en_alternate_casei,1,5,rg,rg -n -i Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,0.7880558967590332,1136,
+subtitles_en_alternate_casei,1,5,grep,grep -E -ni Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,5.5523765087127686,1136,LC_ALL=en_US.UTF-8
+subtitles_en_alternate_casei,1,5,grep,grep -E -ni Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,5.527086019515991,1136,LC_ALL=en_US.UTF-8
+subtitles_en_alternate_casei,1,5,grep,grep -E -ni Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,5.740911483764648,1136,LC_ALL=en_US.UTF-8
+subtitles_en_alternate_casei,1,5,grep,grep -E -ni Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,5.520638465881348,1136,LC_ALL=en_US.UTF-8
+subtitles_en_alternate_casei,1,5,grep,grep -E -ni Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty /tmp/benchsuite/subtitles/en.sample.txt,5.52523398399353,1136,LC_ALL=en_US.UTF-8
+subtitles_en_surrounding_words,1,5,rg,rg -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,0.3353078365325928,483,
+subtitles_en_surrounding_words,1,5,rg,rg -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,0.3248591423034668,483,
+subtitles_en_surrounding_words,1,5,rg,rg -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,0.33918261528015137,483,
+subtitles_en_surrounding_words,1,5,rg,rg -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,0.33177971839904785,483,
+subtitles_en_surrounding_words,1,5,rg,rg -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,0.34472131729125977,483,
+subtitles_en_surrounding_words,1,5,grep,grep -E -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,1.7516274452209473,483,LC_ALL=en_US.UTF-8
+subtitles_en_surrounding_words,1,5,grep,grep -E -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,1.7489221096038818,483,LC_ALL=en_US.UTF-8
+subtitles_en_surrounding_words,1,5,grep,grep -E -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,1.7574889659881592,483,LC_ALL=en_US.UTF-8
+subtitles_en_surrounding_words,1,5,grep,grep -E -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,1.813244342803955,483,LC_ALL=en_US.UTF-8
+subtitles_en_surrounding_words,1,5,grep,grep -E -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,1.750051498413086,483,LC_ALL=en_US.UTF-8
+subtitles_en_surrounding_words,1,5,ugrep,ugrep -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,70.12419986724854,489,
+subtitles_en_surrounding_words,1,5,ugrep,ugrep -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,70.26925611495972,489,
+subtitles_en_surrounding_words,1,5,ugrep,ugrep -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,70.56865787506104,489,
+subtitles_en_surrounding_words,1,5,ugrep,ugrep -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,70.12933135032654,489,
+subtitles_en_surrounding_words,1,5,ugrep,ugrep -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,70.07925295829773,489,
+subtitles_en_surrounding_words,1,5,rg (ASCII),rg -n (?-u)\w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,0.3309454917907715,483,
+subtitles_en_surrounding_words,1,5,rg (ASCII),rg -n (?-u)\w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,0.33062124252319336,483,
+subtitles_en_surrounding_words,1,5,rg (ASCII),rg -n (?-u)\w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,0.3292708396911621,483,
+subtitles_en_surrounding_words,1,5,rg (ASCII),rg -n (?-u)\w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,0.3300509452819824,483,
+subtitles_en_surrounding_words,1,5,rg (ASCII),rg -n (?-u)\w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,0.3252389430999756,483,
+subtitles_en_surrounding_words,1,5,ag (ASCII),ag -s \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,7.372813701629639,489,
+subtitles_en_surrounding_words,1,5,ag (ASCII),ag -s \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,7.338848114013672,489,
+subtitles_en_surrounding_words,1,5,ag (ASCII),ag -s \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,7.739792108535767,489,
+subtitles_en_surrounding_words,1,5,ag (ASCII),ag -s \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,7.302056074142456,489,
+subtitles_en_surrounding_words,1,5,ag (ASCII),ag -s \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,7.334207057952881,489,
+subtitles_en_surrounding_words,1,5,grep (ASCII),grep -E -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,1.7617950439453125,483,LC_ALL=C
+subtitles_en_surrounding_words,1,5,grep (ASCII),grep -E -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,1.7765378952026367,483,LC_ALL=C
+subtitles_en_surrounding_words,1,5,grep (ASCII),grep -E -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,1.7456245422363281,483,LC_ALL=C
+subtitles_en_surrounding_words,1,5,grep (ASCII),grep -E -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,1.748713731765747,483,LC_ALL=C
+subtitles_en_surrounding_words,1,5,grep (ASCII),grep -E -n \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,1.7846882343292236,483,LC_ALL=C
+subtitles_en_surrounding_words,1,5,ugrep (ASCII),ugrep -n -U \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,31.14370322227478,489,
+subtitles_en_surrounding_words,1,5,ugrep (ASCII),ugrep -n -U \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,31.543628454208374,489,
+subtitles_en_surrounding_words,1,5,ugrep (ASCII),ugrep -n -U \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,31.133421182632446,489,
+subtitles_en_surrounding_words,1,5,ugrep (ASCII),ugrep -n -U \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,31.149214506149292,489,
+subtitles_en_surrounding_words,1,5,ugrep (ASCII),ugrep -n -U \w+\s+Holmes\s+\w+ /tmp/benchsuite/subtitles/en.sample.txt,31.180144548416138,489,
+subtitles_en_no_literal,1,5,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,2.9173591136932373,22,
+subtitles_en_no_literal,1,5,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,2.867539644241333,22,
+subtitles_en_no_literal,1,5,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,2.9047088623046875,22,
+subtitles_en_no_literal,1,5,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,2.9265778064727783,22,
+subtitles_en_no_literal,1,5,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,2.874317169189453,22,
+subtitles_en_no_literal,1,5,ugrep,ugrep -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,24.619744777679443,309,
+subtitles_en_no_literal,1,5,ugrep,ugrep -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,24.622087240219116,309,
+subtitles_en_no_literal,1,5,ugrep,ugrep -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,24.770710468292236,309,
+subtitles_en_no_literal,1,5,ugrep,ugrep -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,24.60181713104248,309,
+subtitles_en_no_literal,1,5,ugrep,ugrep -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,24.678969383239746,309,
+subtitles_en_no_literal,1,5,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,2.676262140274048,22,
+subtitles_en_no_literal,1,5,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,2.673837184906006,22,
+subtitles_en_no_literal,1,5,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,2.667243003845215,22,
+subtitles_en_no_literal,1,5,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,2.667970657348633,22,
+subtitles_en_no_literal,1,5,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,2.6588196754455566,22,
+subtitles_en_no_literal,1,5,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,10.786212682723999,302,
+subtitles_en_no_literal,1,5,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,10.744041204452515,302,
+subtitles_en_no_literal,1,5,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,10.74718165397644,302,
+subtitles_en_no_literal,1,5,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,10.768681287765503,302,
+subtitles_en_no_literal,1,5,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,10.772834777832031,302,
+subtitles_en_no_literal,1,5,grep (ASCII),grep -E -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,6.287469148635864,22,LC_ALL=C
+subtitles_en_no_literal,1,5,grep (ASCII),grep -E -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,6.243509769439697,22,LC_ALL=C
+subtitles_en_no_literal,1,5,grep (ASCII),grep -E -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,6.242478370666504,22,LC_ALL=C
+subtitles_en_no_literal,1,5,grep (ASCII),grep -E -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,6.2600791454315186,22,LC_ALL=C
+subtitles_en_no_literal,1,5,grep (ASCII),grep -E -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,6.2560741901397705,22,LC_ALL=C
+subtitles_en_no_literal,1,5,ugrep (ASCII),ugrep -n -U \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,4.670856237411499,302,
+subtitles_en_no_literal,1,5,ugrep (ASCII),ugrep -n -U \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,4.703561544418335,302,
+subtitles_en_no_literal,1,5,ugrep (ASCII),ugrep -n -U \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,4.675989627838135,302,
+subtitles_en_no_literal,1,5,ugrep (ASCII),ugrep -n -U \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,4.6688103675842285,302,
+subtitles_en_no_literal,1,5,ugrep (ASCII),ugrep -n -U \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/en.sample.txt,4.715432167053223,302,
+subtitles_ru_literal,1,5,rg,rg Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.20440673828125,583,
+subtitles_ru_literal,1,5,rg,rg Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.20561552047729492,583,
+subtitles_ru_literal,1,5,rg,rg Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.2381761074066162,583,
+subtitles_ru_literal,1,5,rg,rg Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.23102140426635742,583,
+subtitles_ru_literal,1,5,rg,rg Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.19649791717529297,583,
+subtitles_ru_literal,1,5,rg (no mmap),rg --no-mmap Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.3158297538757324,583,
+subtitles_ru_literal,1,5,rg (no mmap),rg --no-mmap Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.3136112689971924,583,
+subtitles_ru_literal,1,5,rg (no mmap),rg --no-mmap Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.32402992248535156,583,
+subtitles_ru_literal,1,5,rg (no mmap),rg --no-mmap Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.3248250484466553,583,
+subtitles_ru_literal,1,5,rg (no mmap),rg --no-mmap Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.3201103210449219,583,
+subtitles_ru_literal,1,5,grep,grep Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.7790360450744629,583,LC_ALL=C
+subtitles_ru_literal,1,5,grep,grep Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.7977695465087891,583,LC_ALL=C
+subtitles_ru_literal,1,5,grep,grep Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.7397308349609375,583,LC_ALL=C
+subtitles_ru_literal,1,5,grep,grep Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.7123947143554688,583,LC_ALL=C
+subtitles_ru_literal,1,5,grep,grep Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.711977481842041,583,LC_ALL=C
+subtitles_ru_literal,1,5,rg (lines),rg -n Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.27593088150024414,583,
+subtitles_ru_literal,1,5,rg (lines),rg -n Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.2842848300933838,583,
+subtitles_ru_literal,1,5,rg (lines),rg -n Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.28340864181518555,583,
+subtitles_ru_literal,1,5,rg (lines),rg -n Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.28469133377075195,583,
+subtitles_ru_literal,1,5,rg (lines),rg -n Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.27951884269714355,583,
+subtitles_ru_literal,1,5,ag (lines),ag -s Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,2.7401182651519775,583,
+subtitles_ru_literal,1,5,ag (lines),ag -s Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,2.658051013946533,583,
+subtitles_ru_literal,1,5,ag (lines),ag -s Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,2.666799306869507,583,
+subtitles_ru_literal,1,5,ag (lines),ag -s Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,2.7145025730133057,583,
+subtitles_ru_literal,1,5,ag (lines),ag -s Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,2.7412168979644775,583,
+subtitles_ru_literal,1,5,grep (lines),grep -n Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.0886235237121582,583,LC_ALL=C
+subtitles_ru_literal,1,5,grep (lines),grep -n Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.0896506309509277,583,LC_ALL=C
+subtitles_ru_literal,1,5,grep (lines),grep -n Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.1100494861602783,583,LC_ALL=C
+subtitles_ru_literal,1,5,grep (lines),grep -n Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.088308334350586,583,LC_ALL=C
+subtitles_ru_literal,1,5,grep (lines),grep -n Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.0891127586364746,583,LC_ALL=C
+subtitles_ru_literal,1,5,ugrep (lines),ugrep -n Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.8426175117492676,583,
+subtitles_ru_literal,1,5,ugrep (lines),ugrep -n Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.85064697265625,583,
+subtitles_ru_literal,1,5,ugrep (lines),ugrep -n Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.8356082439422607,583,
+subtitles_ru_literal,1,5,ugrep (lines),ugrep -n Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.8405826091766357,583,
+subtitles_ru_literal,1,5,ugrep (lines),ugrep -n Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.83730149269104,583,
+subtitles_ru_literal_casei,1,5,rg,rg -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.48739099502563477,604,
+subtitles_ru_literal_casei,1,5,rg,rg -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.4823324680328369,604,
+subtitles_ru_literal_casei,1,5,rg,rg -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.4832422733306885,604,
+subtitles_ru_literal_casei,1,5,rg,rg -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.4812777042388916,604,
+subtitles_ru_literal_casei,1,5,rg,rg -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.4854264259338379,604,
+subtitles_ru_literal_casei,1,5,grep,grep -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,6.694453477859497,604,LC_ALL=en_US.UTF-8
+subtitles_ru_literal_casei,1,5,grep,grep -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,6.759232044219971,604,LC_ALL=en_US.UTF-8
+subtitles_ru_literal_casei,1,5,grep,grep -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,6.686243534088135,604,LC_ALL=en_US.UTF-8
+subtitles_ru_literal_casei,1,5,grep,grep -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,6.7029454708099365,604,LC_ALL=en_US.UTF-8
+subtitles_ru_literal_casei,1,5,grep,grep -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,6.699738264083862,604,LC_ALL=en_US.UTF-8
+subtitles_ru_literal_casei,1,5,grep (ASCII),grep -E -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.7290260791778564,583,LC_ALL=C
+subtitles_ru_literal_casei,1,5,grep (ASCII),grep -E -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.7400493621826172,583,LC_ALL=C
+subtitles_ru_literal_casei,1,5,grep (ASCII),grep -E -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.7299001216888428,583,LC_ALL=C
+subtitles_ru_literal_casei,1,5,grep (ASCII),grep -E -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.7308380603790283,583,LC_ALL=C
+subtitles_ru_literal_casei,1,5,grep (ASCII),grep -E -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.7283904552459717,583,LC_ALL=C
+subtitles_ru_literal_casei,1,5,rg (lines),rg -n -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.5711629390716553,604,
+subtitles_ru_literal_casei,1,5,rg (lines),rg -n -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.574974536895752,604,
+subtitles_ru_literal_casei,1,5,rg (lines),rg -n -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.5820963382720947,604,
+subtitles_ru_literal_casei,1,5,rg (lines),rg -n -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.5438523292541504,604,
+subtitles_ru_literal_casei,1,5,rg (lines),rg -n -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.5054161548614502,604,
+subtitles_ru_literal_casei,1,5,ag (lines) (ASCII),ag -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.6135058403015137,,
+subtitles_ru_literal_casei,1,5,ag (lines) (ASCII),ag -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.6051545143127441,,
+subtitles_ru_literal_casei,1,5,ag (lines) (ASCII),ag -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.6032793521881104,,
+subtitles_ru_literal_casei,1,5,ag (lines) (ASCII),ag -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.6097028255462646,,
+subtitles_ru_literal_casei,1,5,ag (lines) (ASCII),ag -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.6850666999816895,,
+subtitles_ru_literal_casei,1,5,ugrep (lines) (ASCII),ugrep -n -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.833592176437378,583,
+subtitles_ru_literal_casei,1,5,ugrep (lines) (ASCII),ugrep -n -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.8357219696044922,583,
+subtitles_ru_literal_casei,1,5,ugrep (lines) (ASCII),ugrep -n -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.8394358158111572,583,
+subtitles_ru_literal_casei,1,5,ugrep (lines) (ASCII),ugrep -n -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.8334264755249023,583,
+subtitles_ru_literal_casei,1,5,ugrep (lines) (ASCII),ugrep -n -i Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.8304622173309326,583,
+subtitles_ru_literal_word,1,5,rg (ASCII),rg -n (?-u:^|\W)Шерлок Холмс(?-u:$|\W) /tmp/benchsuite/subtitles/ru.txt,0.2904787063598633,583,
+subtitles_ru_literal_word,1,5,rg (ASCII),rg -n (?-u:^|\W)Шерлок Холмс(?-u:$|\W) /tmp/benchsuite/subtitles/ru.txt,0.2831101417541504,583,
+subtitles_ru_literal_word,1,5,rg (ASCII),rg -n (?-u:^|\W)Шерлок Холмс(?-u:$|\W) /tmp/benchsuite/subtitles/ru.txt,0.2786984443664551,583,
+subtitles_ru_literal_word,1,5,rg (ASCII),rg -n (?-u:^|\W)Шерлок Холмс(?-u:$|\W) /tmp/benchsuite/subtitles/ru.txt,0.28719663619995117,583,
+subtitles_ru_literal_word,1,5,rg (ASCII),rg -n (?-u:^|\W)Шерлок Холмс(?-u:$|\W) /tmp/benchsuite/subtitles/ru.txt,0.27600622177124023,583,
+subtitles_ru_literal_word,1,5,ag (ASCII),ag -sw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.6810102462768555,,
+subtitles_ru_literal_word,1,5,ag (ASCII),ag -sw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.6855161190032959,,
+subtitles_ru_literal_word,1,5,ag (ASCII),ag -sw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.6827929019927979,,
+subtitles_ru_literal_word,1,5,ag (ASCII),ag -sw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.6587810516357422,,
+subtitles_ru_literal_word,1,5,ag (ASCII),ag -sw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.6551673412322998,,
+subtitles_ru_literal_word,1,5,grep (ASCII),grep -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.0948495864868164,583,LC_ALL=C
+subtitles_ru_literal_word,1,5,grep (ASCII),grep -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.097151756286621,583,LC_ALL=C
+subtitles_ru_literal_word,1,5,grep (ASCII),grep -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.1051688194274902,583,LC_ALL=C
+subtitles_ru_literal_word,1,5,grep (ASCII),grep -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.1151607036590576,583,LC_ALL=C
+subtitles_ru_literal_word,1,5,grep (ASCII),grep -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.1100919246673584,583,LC_ALL=C
+subtitles_ru_literal_word,1,5,ugrep (ASCII),ugrep -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.84104585647583,,
+subtitles_ru_literal_word,1,5,ugrep (ASCII),ugrep -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.9092209339141846,,
+subtitles_ru_literal_word,1,5,ugrep (ASCII),ugrep -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.836583137512207,,
+subtitles_ru_literal_word,1,5,ugrep (ASCII),ugrep -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.8941335678100586,,
+subtitles_ru_literal_word,1,5,ugrep (ASCII),ugrep -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.8811957836151123,,
+subtitles_ru_literal_word,1,5,rg,rg -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.2956504821777344,579,
+subtitles_ru_literal_word,1,5,rg,rg -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.29023194313049316,579,
+subtitles_ru_literal_word,1,5,rg,rg -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.3374972343444824,579,
+subtitles_ru_literal_word,1,5,rg,rg -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.29686713218688965,579,
+subtitles_ru_literal_word,1,5,rg,rg -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,0.29778003692626953,579,
+subtitles_ru_literal_word,1,5,grep,grep -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.1042869091033936,579,LC_ALL=en_US.UTF-8
+subtitles_ru_literal_word,1,5,grep,grep -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.1068925857543945,579,LC_ALL=en_US.UTF-8
+subtitles_ru_literal_word,1,5,grep,grep -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.0973529815673828,579,LC_ALL=en_US.UTF-8
+subtitles_ru_literal_word,1,5,grep,grep -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.0917479991912842,579,LC_ALL=en_US.UTF-8
+subtitles_ru_literal_word,1,5,grep,grep -nw Шерлок Холмс /tmp/benchsuite/subtitles/ru.txt,1.0987188816070557,579,LC_ALL=en_US.UTF-8
+subtitles_ru_alternate,1,5,rg (lines),rg -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,0.8945937156677246,691,
+subtitles_ru_alternate,1,5,rg (lines),rg -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,0.8919808864593506,691,
+subtitles_ru_alternate,1,5,rg (lines),rg -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,0.9041986465454102,691,
+subtitles_ru_alternate,1,5,rg (lines),rg -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,0.8838107585906982,691,
+subtitles_ru_alternate,1,5,rg (lines),rg -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,0.903540849685669,691,
+subtitles_ru_alternate,1,5,ag (lines),ag -s Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,3.715298652648926,691,
+subtitles_ru_alternate,1,5,ag (lines),ag -s Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,3.676830530166626,691,
+subtitles_ru_alternate,1,5,ag (lines),ag -s Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,3.721431016921997,691,
+subtitles_ru_alternate,1,5,ag (lines),ag -s Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,3.6990325450897217,691,
+subtitles_ru_alternate,1,5,ag (lines),ag -s Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,3.764216184616089,691,
+subtitles_ru_alternate,1,5,grep (lines),grep -E -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,8.519805669784546,691,LC_ALL=C
+subtitles_ru_alternate,1,5,grep (lines),grep -E -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,8.40212869644165,691,LC_ALL=C
+subtitles_ru_alternate,1,5,grep (lines),grep -E -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,8.381818294525146,691,LC_ALL=C
+subtitles_ru_alternate,1,5,grep (lines),grep -E -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,8.386401176452637,691,LC_ALL=C
+subtitles_ru_alternate,1,5,grep (lines),grep -E -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,8.425997257232666,691,LC_ALL=C
+subtitles_ru_alternate,1,5,ugrep (lines),ugrep -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,13.259684801101685,691,
+subtitles_ru_alternate,1,5,ugrep (lines),ugrep -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,13.236181735992432,691,
+subtitles_ru_alternate,1,5,ugrep (lines),ugrep -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,13.340983629226685,691,
+subtitles_ru_alternate,1,5,ugrep (lines),ugrep -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,13.21895980834961,691,
+subtitles_ru_alternate,1,5,ugrep (lines),ugrep -n Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,13.194425106048584,691,
+subtitles_ru_alternate,1,5,rg,rg Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,0.8262777328491211,691,
+subtitles_ru_alternate,1,5,rg,rg Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,0.8343832492828369,691,
+subtitles_ru_alternate,1,5,rg,rg Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,0.8675012588500977,691,
+subtitles_ru_alternate,1,5,rg,rg Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,0.8584244251251221,691,
+subtitles_ru_alternate,1,5,rg,rg Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,0.8777158260345459,691,
+subtitles_ru_alternate,1,5,grep,grep -E Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,8.25586986541748,691,LC_ALL=C
+subtitles_ru_alternate,1,5,grep,grep -E Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,8.007173538208008,691,LC_ALL=C
+subtitles_ru_alternate,1,5,grep,grep -E Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,8.068726301193237,691,LC_ALL=C
+subtitles_ru_alternate,1,5,grep,grep -E Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,8.010542631149292,691,LC_ALL=C
+subtitles_ru_alternate,1,5,grep,grep -E Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,8.021028280258179,691,LC_ALL=C
+subtitles_ru_alternate_casei,1,5,ag (ASCII),ag -s -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,3.7179486751556396,691,
+subtitles_ru_alternate_casei,1,5,ag (ASCII),ag -s -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,3.682896375656128,691,
+subtitles_ru_alternate_casei,1,5,ag (ASCII),ag -s -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,3.699859142303467,691,
+subtitles_ru_alternate_casei,1,5,ag (ASCII),ag -s -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,3.662733316421509,691,
+subtitles_ru_alternate_casei,1,5,ag (ASCII),ag -s -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,3.661060094833374,691,
+subtitles_ru_alternate_casei,1,5,grep (ASCII),grep -E -ni Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,8.434819221496582,691,LC_ALL=C
+subtitles_ru_alternate_casei,1,5,grep (ASCII),grep -E -ni Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,8.436205625534058,691,LC_ALL=C
+subtitles_ru_alternate_casei,1,5,grep (ASCII),grep -E -ni Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,8.388120412826538,691,LC_ALL=C
+subtitles_ru_alternate_casei,1,5,grep (ASCII),grep -E -ni Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,8.407799243927002,691,LC_ALL=C
+subtitles_ru_alternate_casei,1,5,grep (ASCII),grep -E -ni Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,8.44464373588562,691,LC_ALL=C
+subtitles_ru_alternate_casei,1,5,ugrep (ASCII),ugrep -n -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,13.216991662979126,691,
+subtitles_ru_alternate_casei,1,5,ugrep (ASCII),ugrep -n -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,13.470320701599121,691,
+subtitles_ru_alternate_casei,1,5,ugrep (ASCII),ugrep -n -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,13.21274471282959,691,
+subtitles_ru_alternate_casei,1,5,ugrep (ASCII),ugrep -n -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,13.38324522972107,691,
+subtitles_ru_alternate_casei,1,5,ugrep (ASCII),ugrep -n -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,13.3148832321167,691,
+subtitles_ru_alternate_casei,1,5,rg,rg -n -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,6.205031156539917,735,
+subtitles_ru_alternate_casei,1,5,rg,rg -n -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,6.1502509117126465,735,
+subtitles_ru_alternate_casei,1,5,rg,rg -n -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,6.150696516036987,735,
+subtitles_ru_alternate_casei,1,5,rg,rg -n -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,6.150148630142212,735,
+subtitles_ru_alternate_casei,1,5,rg,rg -n -i Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,6.153124809265137,735,
+subtitles_ru_alternate_casei,1,5,grep,grep -E -ni Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,7.477111339569092,735,LC_ALL=en_US.UTF-8
+subtitles_ru_alternate_casei,1,5,grep,grep -E -ni Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,7.483617782592773,735,LC_ALL=en_US.UTF-8
+subtitles_ru_alternate_casei,1,5,grep,grep -E -ni Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,7.502292156219482,735,LC_ALL=en_US.UTF-8
+subtitles_ru_alternate_casei,1,5,grep,grep -E -ni Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,7.528963327407837,735,LC_ALL=en_US.UTF-8
+subtitles_ru_alternate_casei,1,5,grep,grep -E -ni Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти /tmp/benchsuite/subtitles/ru.txt,7.482379198074341,735,LC_ALL=en_US.UTF-8
+subtitles_ru_surrounding_words,1,5,rg,rg -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,0.3461883068084717,278,
+subtitles_ru_surrounding_words,1,5,rg,rg -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,0.30211687088012695,278,
+subtitles_ru_surrounding_words,1,5,rg,rg -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,0.30521416664123535,278,
+subtitles_ru_surrounding_words,1,5,rg,rg -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,0.2969543933868408,278,
+subtitles_ru_surrounding_words,1,5,rg,rg -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,0.3003671169281006,278,
+subtitles_ru_surrounding_words,1,5,grep,grep -E -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.4209251403808594,278,LC_ALL=en_US.UTF-8
+subtitles_ru_surrounding_words,1,5,grep,grep -E -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.4190807342529297,278,LC_ALL=en_US.UTF-8
+subtitles_ru_surrounding_words,1,5,grep,grep -E -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.4178283214569092,278,LC_ALL=en_US.UTF-8
+subtitles_ru_surrounding_words,1,5,grep,grep -E -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.4173235893249512,278,LC_ALL=en_US.UTF-8
+subtitles_ru_surrounding_words,1,5,grep,grep -E -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.4221296310424805,278,LC_ALL=en_US.UTF-8
+subtitles_ru_surrounding_words,1,5,ugrep,ugrep -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,70.6701226234436,326,
+subtitles_ru_surrounding_words,1,5,ugrep,ugrep -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,71.15788650512695,326,
+subtitles_ru_surrounding_words,1,5,ugrep,ugrep -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,71.07276272773743,326,
+subtitles_ru_surrounding_words,1,5,ugrep,ugrep -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,70.5626060962677,326,
+subtitles_ru_surrounding_words,1,5,ugrep,ugrep -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,70.54449439048767,326,
+subtitles_ru_surrounding_words,1,5,ag (ASCII),ag -s \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.868441104888916,,
+subtitles_ru_surrounding_words,1,5,ag (ASCII),ag -s \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.886382818222046,,
+subtitles_ru_surrounding_words,1,5,ag (ASCII),ag -s \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.8685986995697021,,
+subtitles_ru_surrounding_words,1,5,ag (ASCII),ag -s \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.8727426528930664,,
+subtitles_ru_surrounding_words,1,5,ag (ASCII),ag -s \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.8667800426483154,,
+subtitles_ru_surrounding_words,1,5,grep (ASCII),grep -E -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.3818490505218506,,LC_ALL=C
+subtitles_ru_surrounding_words,1,5,grep (ASCII),grep -E -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.3709721565246582,,LC_ALL=C
+subtitles_ru_surrounding_words,1,5,grep (ASCII),grep -E -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.3819043636322021,,LC_ALL=C
+subtitles_ru_surrounding_words,1,5,grep (ASCII),grep -E -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.460402488708496,,LC_ALL=C
+subtitles_ru_surrounding_words,1,5,grep (ASCII),grep -E -n \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.4097135066986084,,LC_ALL=C
+subtitles_ru_surrounding_words,1,5,ugrep (ASCII),ugrep -n -U \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.286102294921875,,
+subtitles_ru_surrounding_words,1,5,ugrep (ASCII),ugrep -n -U \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.2712647914886475,,
+subtitles_ru_surrounding_words,1,5,ugrep (ASCII),ugrep -n -U \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.2950100898742676,,
+subtitles_ru_surrounding_words,1,5,ugrep (ASCII),ugrep -n -U \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.264500617980957,,
+subtitles_ru_surrounding_words,1,5,ugrep (ASCII),ugrep -n -U \w+\s+Холмс\s+\w+ /tmp/benchsuite/subtitles/ru.txt,1.2877566814422607,,
+subtitles_ru_no_literal,1,5,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,3.1152236461639404,41,
+subtitles_ru_no_literal,1,5,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,3.1311423778533936,41,
+subtitles_ru_no_literal,1,5,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,3.0800061225891113,41,
+subtitles_ru_no_literal,1,5,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,3.070636510848999,41,
+subtitles_ru_no_literal,1,5,rg,rg -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,3.0940587520599365,41,
+subtitles_ru_no_literal,1,5,ugrep,ugrep -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,50.85447072982788,86,
+subtitles_ru_no_literal,1,5,ugrep,ugrep -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,50.832582235336304,86,
+subtitles_ru_no_literal,1,5,ugrep,ugrep -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,50.8755087852478,86,
+subtitles_ru_no_literal,1,5,ugrep,ugrep -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,50.79056358337402,86,
+subtitles_ru_no_literal,1,5,ugrep,ugrep -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,50.84795618057251,86,
+subtitles_ru_no_literal,1,5,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,2.716826915740967,,
+subtitles_ru_no_literal,1,5,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,2.7381114959716797,,
+subtitles_ru_no_literal,1,5,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,2.7545180320739746,,
+subtitles_ru_no_literal,1,5,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,2.7215416431427,,
+subtitles_ru_no_literal,1,5,rg (ASCII),rg -n (?-u)\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,2.707784414291382,,
+subtitles_ru_no_literal,1,5,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,1.9250116348266602,,
+subtitles_ru_no_literal,1,5,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,1.8956947326660156,,
+subtitles_ru_no_literal,1,5,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,1.8904175758361816,,
+subtitles_ru_no_literal,1,5,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,1.8968868255615234,,
+subtitles_ru_no_literal,1,5,ag (ASCII),ag -s \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,1.900888204574585,,
+subtitles_ru_no_literal,1,5,grep (ASCII),grep -E -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,1.755054235458374,,LC_ALL=C
+subtitles_ru_no_literal,1,5,grep (ASCII),grep -E -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,1.7681376934051514,,LC_ALL=C
+subtitles_ru_no_literal,1,5,grep (ASCII),grep -E -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,1.7654614448547363,,LC_ALL=C
+subtitles_ru_no_literal,1,5,grep (ASCII),grep -E -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,1.75648832321167,,LC_ALL=C
+subtitles_ru_no_literal,1,5,grep (ASCII),grep -E -n \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,1.7456772327423096,,LC_ALL=C
+subtitles_ru_no_literal,1,5,ugrep (ASCII),ugrep -n -U \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,1.2170698642730713,,
+subtitles_ru_no_literal,1,5,ugrep (ASCII),ugrep -n -U \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,1.1907124519348145,,
+subtitles_ru_no_literal,1,5,ugrep (ASCII),ugrep -n -U \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,1.1722266674041748,,
+subtitles_ru_no_literal,1,5,ugrep (ASCII),ugrep -n -U \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,1.191617727279663,,
+subtitles_ru_no_literal,1,5,ugrep (ASCII),ugrep -n -U \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5} /tmp/benchsuite/subtitles/ru.txt,1.1909863948822021,,

@@ -1,0 +1,235 @@
+linux_alternates (pattern: ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT)
+-------------------------------------------------------------------------
+rg (ignore)         0.351 +/- 0.074 (lines: 68)
+ag (ignore)         1.747 +/- 0.005 (lines: 68)
+git grep (ignore)   0.501 +/- 0.003 (lines: 68)
+rg (whitelist)*     0.216 +/- 0.031 (lines: 68)
+ucg (whitelist)     0.214 +/- 0.008 (lines: 68)*
+
+linux_alternates_casei (pattern: ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT)
+-------------------------------------------------------------------------------
+rg (ignore)         0.391 +/- 0.078 (lines: 160)
+ag (ignore)         1.968 +/- 0.009 (lines: 160)
+git grep (ignore)   2.018 +/- 0.006 (lines: 160)
+rg (whitelist)*     0.222 +/- 0.001 (lines: 160)*
+ucg (whitelist)     0.522 +/- 0.002 (lines: 160)
+
+linux_literal (pattern: PM_RESUME)
+----------------------------------
+rg (ignore)          0.334 +/- 0.053 (lines: 16)
+rg (ignore) (mmap)   1.611 +/- 0.009 (lines: 16)
+ag (ignore) (mmap)   1.588 +/- 0.011 (lines: 16)
+pt (ignore)          0.456 +/- 0.025 (lines: 16)
+sift (ignore)        0.630 +/- 0.004 (lines: 16)
+git grep (ignore)    0.345 +/- 0.007 (lines: 16)
+rg (whitelist)*      0.228 +/- 0.042 (lines: 16)
+ucg (whitelist)      0.218 +/- 0.007 (lines: 16)*
+
+linux_literal_casei (pattern: PM_RESUME)
+----------------------------------------
+rg (ignore)          0.345 +/- 0.073 (lines: 370)
+rg (ignore) (mmap)   1.612 +/- 0.011 (lines: 370)
+ag (ignore) (mmap)   1.609 +/- 0.015 (lines: 370)
+pt (ignore)          17.204 +/- 0.126 (lines: 370)
+sift (ignore)        0.805 +/- 0.005 (lines: 370)
+git grep (ignore)    0.343 +/- 0.007 (lines: 370)
+rg (whitelist)*      0.222 +/- 0.021 (lines: 370)
+ucg (whitelist)      0.217 +/- 0.006 (lines: 370)*
+
+linux_literal_default (pattern: PM_RESUME)
+------------------------------------------
+rg         0.349 +/- 0.104 (lines: 16)
+ag         1.589 +/- 0.009 (lines: 16)
+ucg*       0.218 +/- 0.007 (lines: 16)*
+pt         0.462 +/- 0.012 (lines: 16)
+sift       0.352 +/- 0.018 (lines: 16)
+git grep   0.342 +/- 0.005 (lines: 16)
+
+linux_no_literal (pattern: \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5})
+-----------------------------------------------------------------
+rg (ignore)                 0.577 +/- 0.003 (lines: 490)
+rg (ignore) (ASCII)         0.416 +/- 0.025 (lines: 490)
+ag (ignore) (ASCII)         2.339 +/- 0.010 (lines: 766)
+pt (ignore) (ASCII)         22.066 +/- 0.057 (lines: 490)
+sift (ignore) (ASCII)       25.563 +/- 0.108 (lines: 490)
+git grep (ignore)           26.382 +/- 0.044 (lines: 490)
+git grep (ignore) (ASCII)   4.153 +/- 0.010 (lines: 490)
+rg (whitelist)              0.503 +/- 0.011 (lines: 419)
+rg (whitelist) (ASCII)*     0.343 +/- 0.038 (lines: 419)*
+ucg (whitelist) (ASCII)     1.130 +/- 0.003 (lines: 416)
+
+linux_re_literal_suffix (pattern: [A-Z]+_RESUME)
+------------------------------------------------
+rg (ignore)         0.318 +/- 0.034 (lines: 1652)
+ag (ignore)         1.899 +/- 0.008 (lines: 1652)
+pt (ignore)         13.713 +/- 0.241 (lines: 1652)
+sift (ignore)       10.172 +/- 0.186 (lines: 1652)
+git grep (ignore)   1.108 +/- 0.004 (lines: 1652)
+rg (whitelist)*     0.221 +/- 0.022 (lines: 1630)*
+ucg (whitelist)     0.301 +/- 0.001 (lines: 1630)
+
+linux_unicode_greek (pattern: \p{Greek})
+----------------------------------------
+rg*    0.414 +/- 0.021 (lines: 23)*
+pt     12.745 +/- 0.166 (lines: 23)
+sift   7.767 +/- 0.264 (lines: 23)
+
+linux_unicode_greek_casei (pattern: \p{Greek})
+----------------------------------------------
+rg     0.425 +/- 0.027 (lines: 103)
+pt     12.612 +/- 0.217 (lines: 23)
+sift*  0.002 +/- 0.000 (lines: 0)*
+
+linux_unicode_word (pattern: \wAh)
+----------------------------------
+rg (ignore)                 0.355 +/- 0.073 (lines: 186)
+rg (ignore) (ASCII)         0.329 +/- 0.060 (lines: 174)
+ag (ignore) (ASCII)         1.774 +/- 0.011 (lines: 174)
+pt (ignore) (ASCII)         14.180 +/- 0.180 (lines: 174)
+sift (ignore) (ASCII)       11.087 +/- 0.108 (lines: 174)
+git grep (ignore)           13.045 +/- 0.008 (lines: 186)
+git grep (ignore) (ASCII)   2.991 +/- 0.004 (lines: 174)
+rg (whitelist)              0.235 +/- 0.031 (lines: 180)
+rg (whitelist) (ASCII)*     0.225 +/- 0.023 (lines: 168)*
+ucg (ASCII)                 0.229 +/- 0.007 (lines: 168)
+
+linux_word (pattern: PM_RESUME)
+-------------------------------
+rg (ignore)         0.362 +/- 0.080 (lines: 6)
+ag (ignore)         1.603 +/- 0.009 (lines: 6)
+pt (ignore)         14.417 +/- 0.144 (lines: 6)
+sift (ignore)       7.840 +/- 0.123 (lines: 6)
+git grep (ignore)   0.341 +/- 0.005 (lines: 6)
+rg (whitelist)*     0.220 +/- 0.026 (lines: 6)*
+ucg (whitelist)     0.221 +/- 0.007 (lines: 6)
+
+subtitles_en_alternate (pattern: Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty)
+---------------------------------------------------------------------------------------------------------------
+rg (lines)     0.619 +/- 0.001 (lines: 848)
+ag (lines)     3.757 +/- 0.001 (lines: 848)
+ucg (lines)    1.479 +/- 0.002 (lines: 848)
+grep (lines)   3.412 +/- 0.004 (lines: 848)
+rg*            0.294 +/- 0.001 (lines: 848)*
+grep           2.955 +/- 0.003 (lines: 848)
+
+subtitles_en_alternate_casei (pattern: Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty)
+---------------------------------------------------------------------------------------------------------------------
+ag (ASCII)     5.170 +/- 0.004 (lines: 862)
+ucg (ASCII)    3.453 +/- 0.005 (lines: 862)
+grep (ASCII)   4.537 +/- 0.025 (lines: 862)
+rg*            2.724 +/- 0.002 (lines: 862)*
+grep           5.125 +/- 0.006 (lines: 862)
+
+subtitles_en_literal (pattern: Sherlock Holmes)
+-----------------------------------------------
+rg*            0.268 +/- 0.000 (lines: 629)*
+rg (no mmap)   0.336 +/- 0.001 (lines: 629)
+pt             3.433 +/- 0.002 (lines: 629)
+sift           0.326 +/- 0.002 (lines: 629)
+grep           0.516 +/- 0.001 (lines: 629)
+rg (lines)     0.595 +/- 0.001 (lines: 629)
+ag (lines)     2.730 +/- 0.003 (lines: 629)
+ucg (lines)    0.745 +/- 0.001 (lines: 629)
+pt (lines)     3.434 +/- 0.005 (lines: 629)
+sift (lines)   0.756 +/- 0.002 (lines: 629)
+grep (lines)   0.969 +/- 0.001 (lines: 629)
+
+subtitles_en_literal_casei (pattern: Sherlock Holmes)
+-----------------------------------------------------
+rg*                   0.366 +/- 0.001 (lines: 642)*
+grep                  4.084 +/- 0.005 (lines: 642)
+grep (ASCII)          0.614 +/- 0.001 (lines: 642)
+rg (lines)            0.696 +/- 0.002 (lines: 642)
+ag (lines) (ASCII)    2.775 +/- 0.004 (lines: 642)
+ucg (lines) (ASCII)   0.841 +/- 0.002 (lines: 642)
+
+subtitles_en_literal_word (pattern: Sherlock Holmes)
+----------------------------------------------------
+rg (ASCII)     0.596 +/- 0.001 (lines: 629)
+ag (ASCII)     2.729 +/- 0.001 (lines: 629)
+ucg (ASCII)    0.810 +/- 0.002 (lines: 629)
+grep (ASCII)   0.970 +/- 0.000 (lines: 629)
+rg*            0.596 +/- 0.001 (lines: 629)*
+grep           0.972 +/- 0.003 (lines: 629)
+
+subtitles_en_no_literal (pattern: \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5})
+----------------------------------------------------------------------------------------
+rg             2.777 +/- 0.003 (lines: 13)
+rg (ASCII)*    2.541 +/- 0.005 (lines: 13)*
+ag (ASCII)     10.076 +/- 0.005 (lines: 48)
+ucg (ASCII)    7.771 +/- 0.004 (lines: 13)
+grep (ASCII)   4.411 +/- 0.004 (lines: 13)
+
+subtitles_en_surrounding_words (pattern: \w+\s+Holmes\s+\w+)
+------------------------------------------------------------
+rg             0.605 +/- 0.000 (lines: 317)
+grep           1.286 +/- 0.002 (lines: 317)
+rg (ASCII)*    0.602 +/- 0.000 (lines: 317)*
+ag (ASCII)     11.663 +/- 0.008 (lines: 323)
+ucg (ASCII)    4.690 +/- 0.002 (lines: 317)
+grep (ASCII)   1.276 +/- 0.002 (lines: 317)
+
+subtitles_ru_alternate (pattern: Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти)
+-----------------------------------------------------------------------------------------------------------
+rg (lines)     1.902 +/- 0.002 (lines: 691)
+ag (lines)     5.892 +/- 0.003 (lines: 691)
+ucg (lines)    2.864 +/- 0.006 (lines: 691)
+grep (lines)   8.511 +/- 0.005 (lines: 691)
+rg*            1.300 +/- 0.002 (lines: 691)*
+grep           7.994 +/- 0.017 (lines: 691)
+
+subtitles_ru_alternate_casei (pattern: Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти)
+-----------------------------------------------------------------------------------------------------------------
+ag (ASCII)     5.891 +/- 0.001 (lines: 691)
+ucg (ASCII)*   2.868 +/- 0.005 (lines: 691)*
+grep (ASCII)   8.572 +/- 0.009 (lines: 691)
+rg             4.834 +/- 0.004 (lines: 735)
+grep           8.729 +/- 0.004 (lines: 735)
+
+subtitles_ru_literal (pattern: Шерлок Холмс)
+--------------------------------------------
+rg*            0.325 +/- 0.001 (lines: 583)*
+rg (no mmap)   0.452 +/- 0.002 (lines: 583)
+pt             12.917 +/- 0.009 (lines: 583)
+sift           16.418 +/- 0.008 (lines: 583)
+grep           0.780 +/- 0.001 (lines: 583)
+rg (lines)     0.926 +/- 0.001 (lines: 583)
+ag (lines)     4.481 +/- 0.003 (lines: 583)
+ucg (lines)    1.889 +/- 0.004 (lines: 583)
+pt (lines)     12.935 +/- 0.011 (lines: 583)
+sift (lines)   17.177 +/- 0.010 (lines: 583)
+grep (lines)   1.300 +/- 0.003 (lines: 583)
+
+subtitles_ru_literal_casei (pattern: Шерлок Холмс)
+--------------------------------------------------
+rg                    1.131 +/- 0.001 (lines: 604)
+grep                  8.187 +/- 0.006 (lines: 604)
+grep (ASCII)          0.785 +/- 0.001 (lines: 583)
+rg (lines)            1.733 +/- 0.002 (lines: 604)
+ag (lines) (ASCII)*   0.729 +/- 0.001 (lines: 0)*
+ucg (lines) (ASCII)   1.896 +/- 0.005 (lines: 583)
+
+subtitles_ru_literal_word (pattern: Шерлок Холмс)
+-------------------------------------------------
+rg (ASCII)*    0.325 +/- 0.000 (lines: 0)*
+ag (ASCII)     0.753 +/- 0.001 (lines: 0)
+ucg (ASCII)    1.891 +/- 0.004 (lines: 583)
+grep (ASCII)   1.303 +/- 0.004 (lines: 583)
+rg             0.929 +/- 0.001 (lines: 579)
+grep           1.304 +/- 0.003 (lines: 579)
+
+subtitles_ru_no_literal (pattern: \w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5})
+----------------------------------------------------------------------------------------
+rg             4.905 +/- 0.003 (lines: 41)
+rg (ASCII)     3.973 +/- 0.002 (lines: 0)
+ag (ASCII)*    2.395 +/- 0.004 (lines: 0)*
+ucg (ASCII)    3.006 +/- 0.005 (lines: 0)
+grep (ASCII)   2.483 +/- 0.005 (lines: 0)
+
+subtitles_ru_surrounding_words (pattern: \w+\s+Холмс\s+\w+)
+-----------------------------------------------------------
+rg*            0.957 +/- 0.001 (lines: 278)*
+grep           1.660 +/- 0.002 (lines: 278)
+ag (ASCII)     2.411 +/- 0.001 (lines: 0)
+ucg (ASCII)    2.980 +/- 0.002 (lines: 0)
+grep (ASCII)   1.596 +/- 0.003 (lines: 0)
