@@ -1054,9 +1054,7 @@ impl<'a> Parser<'a> {
                 // We expand these directly into char ranges at parse
                 // time so that Token::Class remains unchanged.
                 '[' if !in_range && self.peek() == Some(':') => {
-                    if let Some(class_ranges) =
-                        self.try_parse_posix_class()
-                    {
+                    if let Some(class_ranges) = self.try_parse_posix_class() {
                         ranges.extend(class_ranges);
                         in_range = false;
                     } else {
@@ -1348,33 +1346,13 @@ mod tests {
     syntax!(cls21, "[^a-z]", vec![classn('a', 'z')]);
 
     // POSIX character classes expand into ranges
-    syntax!(
-        posix1,
-        "[[:digit:]]",
-        vec![rclass(&[('0', '9')])]
-    );
-    syntax!(
-        posix2,
-        "[[:alpha:]]",
-        vec![rclass(&[('A', 'Z'), ('a', 'z')])]
-    );
-    syntax!(
-        posix3,
-        "[[:space:]]",
-        vec![rclass(&[('\t', '\r'), (' ', ' ')])]
-    );
+    syntax!(posix1, "[[:digit:]]", vec![rclass(&[('0', '9')])]);
+    syntax!(posix2, "[[:alpha:]]", vec![rclass(&[('A', 'Z'), ('a', 'z')])]);
+    syntax!(posix3, "[[:space:]]", vec![rclass(&[('\t', '\r'), (' ', ' ')])]);
     // Negated POSIX class
-    syntax!(
-        posix4,
-        "[^[:digit:]]",
-        vec![rclassn(&[('0', '9')])]
-    );
+    syntax!(posix4, "[^[:digit:]]", vec![rclassn(&[('0', '9')])]);
     // Mixed: range + POSIX class
-    syntax!(
-        posix5,
-        "[a-f[:digit:]]",
-        vec![rclass(&[('a', 'f'), ('0', '9')])]
-    );
+    syntax!(posix5, "[a-f[:digit:]]", vec![rclass(&[('a', 'f'), ('0', '9')])]);
     // Multiple POSIX classes
     syntax!(
         posix6,
@@ -1383,11 +1361,7 @@ mod tests {
     );
     // Invalid POSIX class name: consumed up to ':]', '[' pushed as
     // literal in the bracket expression, the bracket closes at next ']'.
-    syntax!(
-        posix7,
-        "[[:bogus:]]",
-        vec![rclass(&[('[', '[')])]
-    );
+    syntax!(posix7, "[[:bogus:]]", vec![rclass(&[('[', '[')])]);
 
     syntaxerr!(err_unclosed1, "[", ErrorKind::UnclosedClass);
     syntaxerr!(err_unclosed2, "[]", ErrorKind::UnclosedClass);
