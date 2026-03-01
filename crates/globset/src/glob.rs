@@ -265,6 +265,30 @@ impl std::ops::DerefMut for Tokens {
     }
 }
 
+/// Returns the ASCII char ranges for a POSIX character class name.
+/// All definitions are ASCII-only to avoid locale-dependent behavior.
+fn posix_class_ranges(name: &str) -> Option<Vec<(char, char)>> {
+    Some(match name {
+        "alnum" => vec![('0', '9'), ('A', 'Z'), ('a', 'z')],
+        "alpha" => vec![('A', 'Z'), ('a', 'z')],
+        "blank" => vec![('\t', '\t'), (' ', ' ')],
+        "cntrl" => vec![('\x00', '\x1f'), ('\x7f', '\x7f')],
+        "digit" => vec![('0', '9')],
+        "graph" => vec![('!', '~')],
+        "lower" => vec![('a', 'z')],
+        "print" => vec![(' ', '~')],
+        "punct" => {
+            vec![('!', '/'), (':', '@'), ('[', '`'), ('{', '~')]
+        }
+        "space" => {
+            vec![('\t', '\r'), (' ', ' ')]
+        }
+        "upper" => vec![('A', 'Z')],
+        "xdigit" => vec![('0', '9'), ('A', 'F'), ('a', 'f')],
+        _ => return None,
+    })
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 enum Token {
@@ -1026,6 +1050,21 @@ impl<'a> Parser<'a> {
                         in_range = true;
                     }
                 }
+                // Check for POSIX character class syntax: [[:name:]]
+                // We expand these directly into char ranges at parse
+                // time so that Token::Class remains unchanged.
+                '[' if !in_range && self.peek() == Some(':') => {
+                    if let Some(class_ranges) =
+                        self.try_parse_posix_class()
+                    {
+                        ranges.extend(class_ranges);
+                        in_range = false;
+                    } else {
+                        // Not a valid POSIX class, treat '[' as literal
+                        ranges.push(('[', '['));
+                        in_range = false;
+                    }
+                }
                 c => {
                     if in_range {
                         // invariant: in_range is only set when there is
@@ -1049,6 +1088,46 @@ impl<'a> Parser<'a> {
             ranges.push(('-', '-'));
         }
         self.push_token(Token::Class { negated, ranges })
+    }
+
+    /// Try to parse a POSIX character class like `[:space:]` inside a
+    /// bracket expression. Called when we've just consumed `[` and peeked
+    /// `:`. Returns the equivalent ASCII char ranges on success, or `None`
+    /// if this isn't a valid POSIX class (in which case the parser state
+    /// is restored).
+    fn try_parse_posix_class(&mut self) -> Option<Vec<(char, char)>> {
+        let saved_chars = self.chars.clone();
+        let saved_prev = self.prev;
+        let saved_cur = self.cur;
+
+        // Consume the ':'
+        if self.bump() != Some(':') {
+            self.chars = saved_chars;
+            self.prev = saved_prev;
+            self.cur = saved_cur;
+            return None;
+        }
+
+        // Collect the class name (only lowercase ascii)
+        let mut name = String::new();
+        loop {
+            match self.bump() {
+                Some(':') if self.peek() == Some(']') => {
+                    self.bump(); // consume ']'
+                    return posix_class_ranges(&name);
+                }
+                Some(c) if c.is_ascii_lowercase() && name.len() < 8 => {
+                    name.push(c);
+                }
+                _ => {
+                    // Not a valid POSIX class, restore state
+                    self.chars = saved_chars;
+                    self.prev = saved_prev;
+                    self.cur = saved_cur;
+                    return None;
+                }
+            }
+        }
     }
 
     fn bump(&mut self) -> Option<char> {
@@ -1267,6 +1346,48 @@ mod tests {
     syntax!(cls19, "[!a-z0-9]", vec![rclassn(&[('a', 'z'), ('0', '9')])]);
     syntax!(cls20, "[^a]", vec![classn('a', 'a')]);
     syntax!(cls21, "[^a-z]", vec![classn('a', 'z')]);
+
+    // POSIX character classes expand into ranges
+    syntax!(
+        posix1,
+        "[[:digit:]]",
+        vec![rclass(&[('0', '9')])]
+    );
+    syntax!(
+        posix2,
+        "[[:alpha:]]",
+        vec![rclass(&[('A', 'Z'), ('a', 'z')])]
+    );
+    syntax!(
+        posix3,
+        "[[:space:]]",
+        vec![rclass(&[('\t', '\r'), (' ', ' ')])]
+    );
+    // Negated POSIX class
+    syntax!(
+        posix4,
+        "[^[:digit:]]",
+        vec![rclassn(&[('0', '9')])]
+    );
+    // Mixed: range + POSIX class
+    syntax!(
+        posix5,
+        "[a-f[:digit:]]",
+        vec![rclass(&[('a', 'f'), ('0', '9')])]
+    );
+    // Multiple POSIX classes
+    syntax!(
+        posix6,
+        "[[:digit:][:alpha:]]",
+        vec![rclass(&[('0', '9'), ('A', 'Z'), ('a', 'z')])]
+    );
+    // Invalid POSIX class name: consumed up to ':]', '[' pushed as
+    // literal in the bracket expression, the bracket closes at next ']'.
+    syntax!(
+        posix7,
+        "[[:bogus:]]",
+        vec![rclass(&[('[', '[')])]
+    );
 
     syntaxerr!(err_unclosed1, "[", ErrorKind::UnclosedClass);
     syntaxerr!(err_unclosed2, "[]", ErrorKind::UnclosedClass);
@@ -1562,6 +1683,50 @@ mod tests {
     );
     nmatches!(matchrec33, ".*/**", ".abc");
     nmatches!(matchrec34, "foo/**", "foo");
+
+    // POSIX character class matching
+    matches!(posix_match1, "[[:space:]]", " ");
+    matches!(posix_match2, "[[:space:]]", "\t");
+    matches!(posix_match3, "[[:digit:]]", "5");
+    matches!(posix_match4, "[[:digit:]]", "0");
+    matches!(posix_match5, "[[:alpha:]]", "a");
+    matches!(posix_match6, "[[:alpha:]]", "Z");
+    matches!(posix_match7, "[[:lower:]]", "a");
+    matches!(posix_match8, "[[:upper:]]", "Z");
+    matches!(posix_match9, "[[:alnum:]]", "a");
+    matches!(posix_match10, "[[:alnum:]]", "3");
+    matches!(posix_match11, "[[:xdigit:]]", "f");
+    matches!(posix_match12, "[[:xdigit:]]", "A");
+    nmatches!(posix_nomatch1, "[[:space:]]", "a");
+    nmatches!(posix_nomatch2, "[[:digit:]]", "x");
+    nmatches!(posix_nomatch3, "[[:lower:]]", "Z");
+    nmatches!(posix_nomatch4, "[[:upper:]]", "a");
+    // Negated
+    matches!(posix_neg1, "[^[:digit:]]", "a");
+    nmatches!(posix_neg2, "[^[:digit:]]", "5");
+    matches!(posix_neg3, "[![:space:]]", "x");
+    nmatches!(posix_neg4, "[![:space:]]", " ");
+    // Mixed with ranges
+    matches!(posix_mix1, "[[:digit:]a-f]", "c");
+    matches!(posix_mix2, "[[:digit:]a-f]", "7");
+    nmatches!(posix_mix3, "[[:digit:]a-f]", "g");
+    matches!(posix_mix4, "[a[:space:]]", " ");
+    matches!(posix_mix5, "[a[:space:]]", "a");
+    // In filenames (the original issue's use case)
+    matches!(posix_file1, "foo[[:space:]]bar.txt", "foo bar.txt");
+    matches!(posix_file2, "foo[[:space:]]bar.txt", "foo\tbar.txt");
+    nmatches!(posix_file3, "foo[[:space:]]bar.txt", "fooXbar.txt");
+    matches!(posix_file4, "test[[:digit:]].txt", "test9.txt");
+    nmatches!(posix_file5, "test[[:digit:]].txt", "testa.txt");
+    // Multiple POSIX classes
+    matches!(posix_multi1, "[[:digit:][:alpha:]]", "a");
+    matches!(posix_multi2, "[[:digit:][:alpha:]]", "5");
+    nmatches!(posix_multi3, "[[:digit:][:alpha:]]", " ");
+    // Edge: dash with POSIX class
+    matches!(posix_dash1, "[-[:digit:]]", "-");
+    matches!(posix_dash2, "[-[:digit:]]", "3");
+    matches!(posix_dash3, "[[:digit:]-]", "8");
+    matches!(posix_dash4, "[[:digit:]-]", "-");
 
     macro_rules! extract {
         ($which:ident, $name:ident, $pat:expr, $expect:expr) => {
