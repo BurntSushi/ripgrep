@@ -2,14 +2,19 @@ TBD
 ===
 Unreleased changes. Release notes have not yet been written.
 
+Performance improvements:
+
+* [PERF #3293](https://github.com/BurntSushi/ripgrep/issues/3293):
+  Improves directory traversal time on very large corpora.
+
 Bug fixes:
 
 * [BUG #3212](https://github.com/BurntSushi/ripgrep/pull/3212):
   Don't check for the existence of `.jj` when `--no-ignore` is used.
 
 
-15.1.0
-======
+15.1.0 (2025-10-22)
+===================
 This is a small release that fixes a bug with how ripgrep handles line
 buffering. This might manifest as ripgrep printing output later than you
 expect or not working correctly with `tail -f` (even if you're using the
