@@ -16,7 +16,7 @@
 use std::{
     collections::HashMap,
     ffi::{OsStr, OsString},
-    fs::{File, FileType},
+    fs::{self, File, FileType},
     io::{self, BufRead},
     path::{Path, PathBuf},
     sync::{Arc, RwLock, Weak},
@@ -150,6 +150,14 @@ struct IgnoreInner {
     opts: IgnoreOptions,
 }
 
+struct IgnoreFilesFound {
+    has_ignore: bool,
+    has_git_ignore: bool,
+    has_git_dir: bool,
+    has_jj_dir: bool,
+    custom_ignore_files: Vec<bool>,
+}
+
 impl Ignore {
     /// Return the directory path of this matcher.
     pub(crate) fn path(&self) -> &Path {
@@ -254,34 +262,103 @@ impl Ignore {
         (Ignore(Arc::new(ig)), err)
     }
 
+    /// Like add_child, but uses successful read_dir entries to reduce
+    /// probing when discovering ignore files.
+    pub(crate) fn add_child_with_entries<P: AsRef<Path>>(
+        &self,
+        dir: P,
+        entries: &[fs::DirEntry],
+    ) -> (Ignore, Option<Error>) {
+        let files = Self::collect_ignore_files(
+            entries,
+            &self.0.custom_ignore_filenames,
+        );
+        let (ig, err) =
+            self.add_child_path_with_found_ignore_files(dir.as_ref(), Some(&files));
+        (Ignore(Arc::new(ig)), err)
+    }
+
     /// Like add_child, but takes a full path and returns an IgnoreInner.
     fn add_child_path(&self, dir: &Path) -> (IgnoreInner, Option<Error>) {
+        self.add_child_path_with_found_ignore_files(dir, None)
+    }
+
+    fn collect_ignore_files(
+        entries: &[fs::DirEntry],
+        custom_ignore_filenames: &[OsString],
+    ) -> IgnoreFilesFound {
+        let mut files = IgnoreFilesFound {
+            has_ignore: false,
+            has_git_ignore: false,
+            has_git_dir: false,
+            has_jj_dir: false,
+            custom_ignore_files: vec![false; custom_ignore_filenames.len()],
+        };
+        for entry in entries {
+            let file_name = entry.file_name();
+            if file_name == OsStr::new(".ignore") {
+                files.has_ignore = true;
+            } else if file_name == OsStr::new(".gitignore") {
+                files.has_git_ignore = true;
+            } else if file_name == OsStr::new(".git") {
+                files.has_git_dir = true;
+            } else if file_name == OsStr::new(".jj") {
+                files.has_jj_dir = true;
+            }
+            for (i, name) in custom_ignore_filenames.iter().enumerate() {
+                if file_name == name.as_os_str() {
+                    files.custom_ignore_files[i] = true;
+                }
+            }
+        }
+        files
+    }
+
+    fn add_child_path_with_found_ignore_files(
+        &self,
+        dir: &Path,
+        ignore_files_list: Option<&IgnoreFilesFound>,
+    ) -> (IgnoreInner, Option<Error>) {
         let check_vcs_dir = self.0.opts.require_git
             && (self.0.opts.git_ignore || self.0.opts.git_exclude);
-        let git_type = if check_vcs_dir {
-            dir.join(".git").metadata().ok().map(|md| md.file_type())
-        } else {
-            None
-        };
-        let has_git =
-            check_vcs_dir && (git_type.is_some() || dir.join(".jj").exists());
+        let git_type =
+            if check_vcs_dir && ignore_files_list.is_none_or(|i| i.has_git_dir) {
+                dir.join(".git").metadata().ok().map(|md| md.file_type())
+            } else {
+                None
+            };
+        let has_jj = check_vcs_dir
+            && ignore_files_list.is_none_or(|i| i.has_jj_dir)
+            && dir.join(".jj").exists();
+        let has_git = check_vcs_dir && (git_type.is_some() || has_jj);
 
         let mut errs = PartialErrorBuilder::default();
         let custom_ig_matcher = if self.0.custom_ignore_filenames.is_empty() {
             Gitignore::empty()
         } else {
-            let (m, err) = create_gitignore(
-                &dir,
-                &dir,
-                &self.0.custom_ignore_filenames,
-                self.0.opts.ignore_case_insensitive,
-            );
-            errs.maybe_push(err);
-            m
+            let custom_ignore_names: Vec<&OsString> = match ignore_files_list {
+                None => self.0.custom_ignore_filenames.iter().collect(),
+                Some(m) => self.0.custom_ignore_filenames.iter()
+                    .zip(m.custom_ignore_files.iter())
+                    .filter_map(|(name, matched)| (*matched).then_some(name))
+                    .collect(),
+            };
+            if custom_ignore_names.is_empty() {
+                Gitignore::empty()
+            } else {
+                let (m, err) = create_gitignore(
+                    &dir,
+                    &dir,
+                    &custom_ignore_names,
+                    self.0.opts.ignore_case_insensitive,
+                );
+                errs.maybe_push(err);
+                m
+            }
         };
         let ig_matcher = if !self.0.opts.ignore {
             Gitignore::empty()
-        } else {
+        } else if ignore_files_list.is_none_or(|i| i.has_ignore) {
             let (m, err) = create_gitignore(
                 &dir,
                 &dir,
@@ -290,10 +367,12 @@ impl Ignore {
             );
             errs.maybe_push(err);
             m
+        } else {
+            Gitignore::empty()
         };
         let gi_matcher = if !self.0.opts.git_ignore {
             Gitignore::empty()
-        } else {
+        } else if ignore_files_list.is_none_or(|i| i.has_git_ignore) {
             let (m, err) = create_gitignore(
                 &dir,
                 &dir,
@@ -302,11 +381,13 @@ impl Ignore {
             );
             errs.maybe_push(err);
             m
+        } else {
+            Gitignore::empty()
         };
 
         let gi_exclude_matcher = if !self.0.opts.git_exclude {
             Gitignore::empty()
-        } else {
+        } else if ignore_files_list.is_none_or(|i| i.has_git_dir) {
             match resolve_git_commondir(dir, git_type) {
                 Ok(git_dir) => {
                     let (m, err) = create_gitignore(
@@ -323,6 +404,8 @@ impl Ignore {
                     Gitignore::empty()
                 }
             }
+        } else {
+            Gitignore::empty()
         };
         let ig = IgnoreInner {
             compiled: self.0.compiled.clone(),

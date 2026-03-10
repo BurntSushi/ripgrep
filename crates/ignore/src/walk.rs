@@ -1463,6 +1463,12 @@ struct Work {
     root_device: Option<u64>,
 }
 
+#[derive(Default)]
+struct ReadDirResult {
+    entries: Vec<fs::DirEntry>,
+    errors: Vec<Error>,
+}
+
 impl Work {
     /// Returns true if and only if this work item is a directory.
     fn is_dir(&self) -> bool {
@@ -1489,6 +1495,13 @@ impl Work {
         err
     }
 
+    /// Adds ignore rules for this directory without reading its contents.
+    fn add_ignore(&mut self) {
+        let (ig, err) = self.ignore.add_child(self.dent.path());
+        self.ignore = ig;
+        self.dent.err = err;
+    }
+
     /// Reads the directory contents of this work item and adds ignore
     /// rules for this directory.
     ///
@@ -1496,7 +1509,7 @@ impl Work {
     /// an error is returned. If there was a problem reading the ignore
     /// rules for this directory, then the error is attached to this
     /// work item's directory entry.
-    fn read_dir(&mut self) -> Result<fs::ReadDir, Error> {
+    fn read_dir(&mut self) -> Result<ReadDirResult, Error> {
         let readdir = match fs::read_dir(self.dent.path()) {
             Ok(readdir) => readdir,
             Err(err) => {
@@ -1506,10 +1519,22 @@ impl Work {
                 return Err(err);
             }
         };
-        let (ig, err) = self.ignore.add_child(self.dent.path());
+        // Actually descend into the directory and read its contents
+        let mut result = ReadDirResult::default();
+        for entry in readdir {
+            match entry {
+                Ok(entry) => result.entries.push(entry),
+                Err(err) => result.errors.push(
+                    Error::from(err)
+                        .with_path(self.dent.path())
+                        .with_depth(self.dent.depth() + 1),
+                ),
+            }
+        }
+        let (ig, err) = self.ignore.add_child_with_entries(self.dent.path(), &result.entries);
         self.ignore = ig;
         self.dent.err = err;
-        Ok(readdir)
+        Ok(result)
     }
 }
 
@@ -1679,8 +1704,14 @@ impl<'s> Worker<'s> {
         // have sufficient read permissions to list the directory.
         // In that case we still want to provide the closure with a valid
         // entry before passing the error value.
-        let readdir = work.read_dir();
         let depth = work.dent.depth();
+        let readdir = if descend
+            && self.max_depth.is_none_or(|m| work.dent.depth() < m) {
+            Some(work.read_dir())
+        } else {
+            work.add_ignore();
+            None
+        };
         if should_visit {
             let state = self.visitor.visit(Ok(work.dent));
             if !state.is_continue() {
@@ -1692,22 +1723,29 @@ impl<'s> Worker<'s> {
         }
 
         let readdir = match readdir {
+            Some(readdir) => readdir,
+            None => return WalkState::Skip,
+        };
+        let readdir = match readdir {
             Ok(readdir) => readdir,
             Err(err) => {
                 return self.visitor.visit(Err(err));
             }
         };
 
-        if self.max_depth.map_or(false, |max| depth >= max) {
-            return WalkState::Skip;
-        }
-        for result in readdir {
+        for result in readdir.entries {
             let state = self.generate_work(
                 &work.ignore,
                 depth + 1,
                 work.root_device,
                 result,
             );
+            if state.is_quit() {
+                return state;
+            }
+        }
+        for err in readdir.errors {
+            let state = self.visitor.visit(Err(err));
             if state.is_quit() {
                 return state;
             }
@@ -1733,16 +1771,8 @@ impl<'s> Worker<'s> {
         ig: &Ignore,
         depth: usize,
         root_device: Option<u64>,
-        result: Result<fs::DirEntry, io::Error>,
+        fs_dent: fs::DirEntry,
     ) -> WalkState {
-        let fs_dent = match result {
-            Ok(fs_dent) => fs_dent,
-            Err(err) => {
-                return self
-                    .visitor
-                    .visit(Err(Error::from(err).with_depth(depth)));
-            }
-        };
         let mut dent = match DirEntryRaw::from_entry(depth, &fs_dent) {
             Ok(dent) => DirEntry::new_raw(dent, None),
             Err(err) => {
