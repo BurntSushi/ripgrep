@@ -207,6 +207,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
         "*.php", "*.php3", "*.php4", "*.php5", "*.php7", "*.php8",
         "*.pht", "*.phtml"
     ]),
+    (&["pkgbuild"], &["PKGBUILD"]),
     (&["po"], &["*.po"]),
     (&["pod"], &["*.pod"]),
     (&["postscript"], &["*.eps", "*.ps"]),
