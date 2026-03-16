@@ -383,17 +383,14 @@ impl GlobSet {
     /// Returns ture if all globs in this set match the path given.
     ///
     /// This takes a Candidate as input, which can be used to amortize the cost
-    /// of peparing a path for matching.
+    /// of preparing a path for matching.
     ///
     /// This will return true if the set of globs is empty, as in that case all
     /// `0` of the globs will match.
     pub fn matches_all_candidate(&self, path: &Candidate<'_>) -> bool {
-        for strat in &self.strats {
-            if !strat.is_match(path) {
-                return false;
-            }
-        }
-        true
+        let mut matches = vec![];
+        self.matches_candidate_into(path, &mut matches);
+        matches.len() == self.len
     }
 
     /// Returns the sequence number of every glob pattern that matches the
@@ -1091,6 +1088,28 @@ mod tests {
         let set: GlobSet = Default::default();
         assert!(!set.is_match(""));
         assert!(!set.is_match("a"));
+    }
+
+    #[test]
+    fn matches_all_same_strategy() {
+        // Two globs that fall into the same strategy bucket (extension)
+        // should not both be reported as matching when only one does.
+        let mut builder = GlobSetBuilder::new();
+        builder.add(Glob::new("*.rs").unwrap());
+        builder.add(Glob::new("*.c").unwrap());
+        let set = builder.build().unwrap();
+
+        assert!(!set.matches_all("foo.rs"));
+        assert!(!set.matches_all("foo.c"));
+
+        // Two literals in the same bucket.
+        let mut builder = GlobSetBuilder::new();
+        builder.add(Glob::new("foo").unwrap());
+        builder.add(Glob::new("bar").unwrap());
+        let set = builder.build().unwrap();
+
+        assert!(!set.matches_all("foo"));
+        assert!(!set.matches_all("bar"));
     }
 
     #[test]
