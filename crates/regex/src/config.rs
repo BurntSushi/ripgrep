@@ -181,11 +181,18 @@ impl ConfiguredHIR {
         } else {
             let mut alts = vec![];
             for p in patterns.iter() {
-                alts.push(if config.fixed_strings {
-                    format!("(?:{})", regex_syntax::escape(p.as_ref()))
+                let pat = p.as_ref();
+                let wrapped = if config.fixed_strings {
+                    format!("(?:{})", regex_syntax::escape(pat))
+                } else if pat.contains("(?x") {
+                    // In (?x) mode, # starts a comment to EOL. Adding newline
+                    // before the closing ) prevents the comment from consuming it.
+                    format!("(?:{}
+)", pat)
                 } else {
-                    format!("(?:{})", p.as_ref())
-                });
+                    format!("(?:{})", pat)
+                };
+                alts.push(wrapped);
             }
             let pattern = alts.join("|");
             let ast = ast::parse::ParserBuilder::new()

@@ -1457,6 +1457,21 @@ rgtest!(r2480, |dir: Dir, mut cmd: TestCommand| {
     cmd.assert_err();
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/2677
+rgtest!(r2677, |dir: Dir, _cmd: TestCommand| {
+    dir.create("file", "fig a#b 123\n");
+
+    // (?x) with # comment: wrapping in (?:...) must not let comment consume )
+    let mut cmd = dir.command();
+    cmd.args(&["--only-matching", r"(?x)\d+ #extract digits", "file"]);
+    eqnice!("123\n", cmd.stdout());
+
+    // multi-pattern with (?x) and comment
+    let mut cmd = dir.command();
+    cmd.args(&["--only-matching", "-e", r"(?x)\d+ #extract digits", "-e", "fig", "file"]);
+    eqnice!("fig\n123\n", cmd.stdout());
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/2574
 rgtest!(r2574, |dir: Dir, mut cmd: TestCommand| {
     dir.create("haystack", "some.domain.com\nsome.domain.com/x\n");

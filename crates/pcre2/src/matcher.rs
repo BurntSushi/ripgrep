@@ -49,11 +49,18 @@ impl RegexMatcherBuilder {
         let mut builder = self.builder.clone();
         let mut pats = Vec::with_capacity(patterns.len());
         for p in patterns.iter() {
-            pats.push(if self.fixed_strings {
-                format!("(?:{})", pcre2::escape(p.as_ref()))
+            let pat = p.as_ref();
+            let wrapped = if self.fixed_strings {
+                format!("(?:{})", pcre2::escape(pat))
+            } else if pat.contains("(?x") {
+                // In (?x) mode, # starts a comment to EOL. Adding newline
+                // before the closing ) prevents the comment from consuming it.
+                format!("(?:{}
+)", pat)
             } else {
-                format!("(?:{})", p.as_ref())
-            });
+                format!("(?:{})", pat)
+            };
+            pats.push(wrapped);
         }
         let mut singlepat = if patterns.is_empty() {
             // A way to spell a pattern that can never match anything.
