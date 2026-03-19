@@ -35,6 +35,11 @@ Please see the [CHANGELOG](CHANGELOG.md) for a release history.
 
 [![A screenshot of a sample search with ripgrep](https://burntsushi.net/stuff/ripgrep1.png)](https://burntsushi.net/stuff/ripgrep1.png)
 
+### Demo
+
+<p align="center">
+  <img src="media/demo.gif" alt="ripgrep demo" width="800">
+</p>
 
 ### Quick examples comparing tools
 
