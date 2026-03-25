@@ -1432,6 +1432,10 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
 
     fn write_spec(&self, spec: &ColorSpec, buf: &[u8]) -> io::Result<()> {
         let mut wtr = self.wtr().borrow_mut();
+        if spec.is_none() {
+            wtr.write_all(buf)?;
+            return Ok(());
+        }
         wtr.set_color(spec)?;
         wtr.write_all(buf)?;
         wtr.reset()?;
@@ -1440,7 +1444,12 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
 
     fn write_path(&self, path: &PrinterPath) -> io::Result<()> {
         let mut wtr = self.wtr().borrow_mut();
-        wtr.set_color(self.config().colors.path())?;
+        let spec = self.config().colors.path();
+        if spec.is_none() {
+            wtr.write_all(path.as_bytes())?;
+            return Ok(());
+        }
+        wtr.set_color(spec)?;
         wtr.write_all(path.as_bytes())?;
         wtr.reset()
     }

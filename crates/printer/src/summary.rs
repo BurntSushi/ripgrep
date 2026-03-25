@@ -615,6 +615,10 @@ impl<'p, 's, M: Matcher, W: WriteColor> SummarySink<'p, 's, M, W> {
 
     /// Write the given bytes using the give style.
     fn write_spec(&self, spec: &ColorSpec, buf: &[u8]) -> io::Result<()> {
+        if spec.is_none() {
+            self.write(buf)?;
+            return Ok(());
+        }
         self.summary.wtr.borrow_mut().set_color(spec)?;
         self.write(buf)?;
         self.summary.wtr.borrow_mut().reset()?;

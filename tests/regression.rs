@@ -518,11 +518,13 @@ rgtest!(r568_leading_hyphen_option_args, |dir: Dir, mut cmd: TestCommand| {
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/599
+// See: https://github.com/BurntSushi/ripgrep/issues/3289
 //
 // This test used to check that we emitted color escape sequences even for
 // empty matches, but with the addition of the JSON output format, clients no
 // longer need to rely on escape sequences to parse matches. Therefore, we no
-// longer emit useless escape sequences.
+// longer emit useless escape sequences. In particular, when colors are set to
+// 'none', we suppress reset sequences entirely.
 rgtest!(r599, |dir: Dir, mut cmd: TestCommand| {
     dir.create("input.txt", "\n\ntest\n");
     cmd.args(&[
@@ -542,8 +544,8 @@ rgtest!(r599, |dir: Dir, mut cmd: TestCommand| {
     ]);
 
     let expected = "\
-[0m1[0m:
-[0m2[0m:
+1:
+2:
 ";
     eqnice_repr!(expected, cmd.stdout());
 });

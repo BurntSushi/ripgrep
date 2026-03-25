@@ -154,9 +154,14 @@ impl<W: WriteColor> PathPrinter<W> {
             self.wtr.write_all(ppath.as_bytes())?;
         } else {
             let status = self.start_hyperlink(&ppath)?;
-            self.wtr.set_color(self.config.colors.path())?;
-            self.wtr.write_all(ppath.as_bytes())?;
-            self.wtr.reset()?;
+            let spec = self.config.colors.path();
+            if spec.is_none() {
+                self.wtr.write_all(ppath.as_bytes())?;
+            } else {
+                self.wtr.set_color(spec)?;
+                self.wtr.write_all(ppath.as_bytes())?;
+                self.wtr.reset()?;
+            }
             self.interpolator.finish(status, &mut self.wtr)?;
         }
         self.wtr.write_all(&[self.config.terminator])
