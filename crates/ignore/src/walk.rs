@@ -1126,7 +1126,9 @@ impl Iterator for Walk {
                     return Some(Err(Error::from_walkdir(err)));
                 }
                 Ok(WalkEvent::Exit) => {
-                    self.ig = self.ig.parent().unwrap();
+                    if let Some(parent) = self.ig.parent() {
+                        self.ig = parent;
+                    }
                 }
                 Ok(WalkEvent::Dir(ent)) => {
                     let mut ent = DirEntry::new_walkdir(ent, None);
@@ -2330,6 +2332,20 @@ mod tests {
             td.path(),
             builder.min_depth(Some(2)).max_depth(Some(1)),
             &["a/b", "a/foo"],
+        );
+    }
+
+    // Regression test for: https://github.com/BurntSushi/ripgrep/issues/3286
+    #[test]
+    fn min_depth_max_depth_no_panic() {
+        let td = tmpdir();
+        mkdirp(td.path().join("a"));
+        wfile(td.path().join("foo"), "");
+
+        assert_paths(
+            td.path(),
+            WalkBuilder::new(td.path()).min_depth(Some(1)).max_depth(Some(1)),
+            &["a", "foo"],
         );
     }
 
