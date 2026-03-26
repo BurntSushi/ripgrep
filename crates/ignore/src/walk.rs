@@ -2265,6 +2265,36 @@ mod tests {
     }
 
     #[test]
+    fn custom_ignore_parent_multiple_explicit_roots() {
+        let td = tmpdir();
+        mkdirp(td.path().join("src"));
+        mkdirp(td.path().join("tests"));
+        wfile(td.path().join(".rgignore"), "src/foo");
+        wfile(td.path().join("src/foo"), "");
+        wfile(td.path().join("src/bar"), "");
+        wfile(td.path().join("tests/foo"), "");
+        wfile(td.path().join("tests/bar"), "");
+
+        let expected = ["src", "src/bar", "tests", "tests/bar", "tests/foo"];
+        for (first, second) in [("src", "tests"), ("tests", "src")] {
+            let mut builder = WalkBuilder::new(td.path().join(first));
+            builder
+                .add(td.path().join(second))
+                .add_custom_ignore_filename(".rgignore")
+                .threads(1);
+
+            let got = walk_collect(td.path(), &builder);
+            assert_eq!(
+                got,
+                mkpaths(&expected),
+                "single threaded {first} {second}"
+            );
+            let got = walk_collect_parallel(td.path(), &builder);
+            assert_eq!(got, mkpaths(&expected), "parallel {first} {second}");
+        }
+    }
+
+    #[test]
     fn max_depth() {
         let td = tmpdir();
         mkdirp(td.path().join("a/b/c"));

@@ -100,7 +100,9 @@ struct IgnoreInner {
     ///
     /// Note that this is never used during matching, only when adding new
     /// parent directory matchers. This avoids needing to rebuild glob sets for
-    /// parent directories if many paths are being searched.
+    /// parent directories if many paths are being searched. When reusing a
+    /// cached matcher for a different explicit root, the traversal specific
+    /// state is rebound to the new parent chain.
     compiled: Arc<RwLock<HashMap<OsString, Weak<IgnoreInner>>>>,
     /// The path to the directory that this matcher was built from.
     dir: PathBuf,
@@ -214,7 +216,15 @@ impl Ignore {
             let mut compiled = self.0.compiled.write().unwrap();
             if let Some(weak) = compiled.get(parent.as_os_str()) {
                 if let Some(prebuilt) = weak.upgrade() {
-                    ig = Ignore(prebuilt);
+                    let rebound = ig.add_child_path_from_prebuilt(
+                        &prebuilt,
+                        absolute_base.clone(),
+                    );
+                    compiled.insert(
+                        parent.as_os_str().to_os_string(),
+                        Arc::downgrade(&rebound.0),
+                    );
+                    ig = rebound;
                     continue;
                 }
             }
@@ -252,6 +262,36 @@ impl Ignore {
     ) -> (Ignore, Option<Error>) {
         let (ig, err) = self.add_child_path(dir.as_ref());
         (Ignore(Arc::new(ig)), err)
+    }
+
+    /// Reuses a cached absolute parent matcher for the current chain.
+    fn add_child_path_from_prebuilt(
+        &self,
+        prebuilt: &IgnoreInner,
+        absolute_base: Arc<PathBuf>,
+    ) -> Ignore {
+        debug_assert!(prebuilt.is_absolute_parent);
+        Ignore(Arc::new(IgnoreInner {
+            compiled: prebuilt.compiled.clone(),
+            dir: prebuilt.dir.clone(),
+            overrides: prebuilt.overrides.clone(),
+            types: prebuilt.types.clone(),
+            parent: Some(self.clone()),
+            is_absolute_parent: true,
+            absolute_base: Some(absolute_base),
+            global_gitignores_relative_to: prebuilt
+                .global_gitignores_relative_to
+                .clone(),
+            explicit_ignores: prebuilt.explicit_ignores.clone(),
+            custom_ignore_filenames: prebuilt.custom_ignore_filenames.clone(),
+            custom_ignore_matcher: prebuilt.custom_ignore_matcher.clone(),
+            ignore_matcher: prebuilt.ignore_matcher.clone(),
+            git_global_matcher: prebuilt.git_global_matcher.clone(),
+            git_ignore_matcher: prebuilt.git_ignore_matcher.clone(),
+            git_exclude_matcher: prebuilt.git_exclude_matcher.clone(),
+            has_git: prebuilt.has_git,
+            opts: prebuilt.opts,
+        }))
     }
 
     /// Like add_child, but takes a full path and returns an IgnoreInner.
@@ -1256,6 +1296,44 @@ mod tests {
         assert!(ig2.matched("src/llvm", true).is_none());
         assert!(ig2.matched("foo", false).is_ignore());
         assert!(ig2.matched("src/foo", false).is_ignore());
+    }
+
+    #[test]
+    fn absolute_parent_custom_ignore_not_reused_across_roots() {
+        let td = tmpdir();
+        mkdirp(td.path().join("src"));
+        mkdirp(td.path().join("tests"));
+        wfile(td.path().join(".rgignore"), "src/foo");
+
+        for (first, second) in [("src", "tests"), ("tests", "src")] {
+            let mut builder = IgnoreBuilder::new();
+            builder.add_custom_ignore_filename(".rgignore");
+            let ig0 = builder.build();
+
+            let (first_ig, err) = ig0.add_parents(td.path().join(first));
+            assert!(err.is_none());
+            let (first_ig, err) = first_ig.add_child(first);
+            assert!(err.is_none());
+
+            let (second_ig, err) = ig0.add_parents(td.path().join(second));
+            assert!(err.is_none());
+            let (second_ig, err) = second_ig.add_child(second);
+            assert!(err.is_none());
+
+            let first_match = first_ig.matched("foo", false);
+            if first == "src" {
+                assert!(first_match.is_ignore());
+            } else {
+                assert!(first_match.is_none());
+            }
+
+            let second_match = second_ig.matched("foo", false);
+            if second == "src" {
+                assert!(second_match.is_ignore());
+            } else {
+                assert!(second_match.is_none());
+            }
+        }
     }
 
     #[test]
