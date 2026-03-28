@@ -1480,6 +1480,7 @@ rgtest!(r2658_null_data_line_regexp, |dir: Dir, mut cmd: TestCommand| {
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/2677
+#[cfg(not(feature = "pcre2"))]
 rgtest!(r2677_inline_x_comment, |dir: Dir, mut cmd: TestCommand| {
     dir.create("file", "fig a#b 123\n");
     cmd.args(&["-o", "-e", r"(?x)\d+ #extract digits", "file"]);
