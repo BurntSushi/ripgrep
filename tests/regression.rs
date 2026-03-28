@@ -1479,6 +1479,13 @@ rgtest!(r2658_null_data_line_regexp, |dir: Dir, mut cmd: TestCommand| {
     eqnice!("haystack:bar\0", got);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/2677
+rgtest!(r2677_inline_x_comment, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("file", "fig a#b 123\n");
+    cmd.args(&["-o", "-e", r"(?x)\d+ #extract digits", "file"]);
+    eqnice!("123\n", cmd.stdout());
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/2770
 rgtest!(r2770_gitignore_error, |dir: Dir, _cmd: TestCommand| {
     dir.create(".git", "");

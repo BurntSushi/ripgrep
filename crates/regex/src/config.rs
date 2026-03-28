@@ -182,19 +182,51 @@ impl ConfiguredHIR {
             let mut alts = vec![];
             for p in patterns.iter() {
                 alts.push(if config.fixed_strings {
-                    regex_syntax::escape(p.as_ref())
+                    format!("(?:{})", regex_syntax::escape(p.as_ref()))
                 } else {
-                    p.as_ref().to_string()
+                    format!("(?:{})", p.as_ref())
                 });
             }
-            let pattern = alts.join("|");
-            let ast = ast::parse::ParserBuilder::new()
-                .nest_limit(config.nest_limit)
-                .octal(config.octal)
-                .ignore_whitespace(config.ignore_whitespace)
-                .build()
-                .parse(&pattern)
-                .map_err(Error::generic)?;
+            let parse = |pattern: &str| {
+                ast::parse::ParserBuilder::new()
+                    .nest_limit(config.nest_limit)
+                    .octal(config.octal)
+                    .ignore_whitespace(config.ignore_whitespace)
+                    .build()
+                    .parse(pattern)
+            };
+
+            let mut pattern = alts.join("|");
+            let ast = match parse(&pattern) {
+                Ok(ast) => ast,
+                Err(err) if !config.fixed_strings => {
+                    // Slow-path rescue for patterns where wrapping in a
+                    // non-capturing group interacts with an inline `(?x)` mode
+                    // comment that reaches end-of-pattern.
+                    let mut rescued_alts = vec![];
+                    let mut used_rescue = false;
+                    for p in patterns.iter() {
+                        let wrapped = format!("(?:{})", p.as_ref());
+                        if parse(&wrapped).is_ok() {
+                            rescued_alts.push(wrapped);
+                            continue;
+                        }
+                        let wrapped_newline = format!("(?:{}\n)", p.as_ref());
+                        if parse(&wrapped_newline).is_ok() {
+                            rescued_alts.push(wrapped_newline);
+                            used_rescue = true;
+                            continue;
+                        }
+                        return Err(Error::generic(err));
+                    }
+                    if !used_rescue {
+                        return Err(Error::generic(err));
+                    }
+                    pattern = rescued_alts.join("|");
+                    parse(&pattern).map_err(Error::generic)?
+                }
+                Err(err) => return Err(Error::generic(err)),
+            };
             let analysis = AstAnalysis::from_ast(&ast);
             let mut hir = hir::translate::TranslatorBuilder::new()
                 .utf8(false)
