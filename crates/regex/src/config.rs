@@ -182,9 +182,9 @@ impl ConfiguredHIR {
             let mut alts = vec![];
             for p in patterns.iter() {
                 alts.push(if config.fixed_strings {
-                    format!("(?:{})", regex_syntax::escape(p.as_ref()))
+                    regex_syntax::escape(p.as_ref())
                 } else {
-                    format!("(?:{})", p.as_ref())
+                    p.as_ref().to_string()
                 });
             }
             let pattern = alts.join("|");
