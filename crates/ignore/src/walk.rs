@@ -1842,11 +1842,10 @@ impl<'s> Worker<'s> {
                             break;
                         }
                         // Our stack isn't blocking. Instead of burning the
-                        // CPU waiting, we let the thread sleep for a bit. In
-                        // general, this tends to only occur once the search is
-                        // approaching termination.
-                        let dur = std::time::Duration::from_millis(1);
-                        std::thread::sleep(dur);
+                        // CPU waiting, yield the scheduler so that blocked
+                        // workers can make progress without spinning in a
+                        // nanosleep loop.
+                        std::thread::yield_now();
                     }
                 }
             }
