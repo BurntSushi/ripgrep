@@ -74,6 +74,10 @@ pub use crate::{
 
 #[cfg(feature = "serde")]
 pub use crate::json::{JSON, JSONBuilder, JSONSink};
+#[cfg(feature = "serde")]
+pub use crate::json_captures::{
+    JSONCaptures, JSONCapturesBuilder, JSONCapturesSink,
+};
 
 // The maximum number of bytes to execute a search to account for look-ahead.
 //
@@ -94,6 +98,8 @@ mod counter;
 mod hyperlink;
 #[cfg(feature = "serde")]
 mod json;
+#[cfg(feature = "serde")]
+mod json_captures;
 #[cfg(feature = "serde")]
 mod jsont;
 mod path;

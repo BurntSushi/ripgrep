@@ -141,6 +141,11 @@ generally speaking):
   syntax is provided via the `--engine (default|pcre2|auto)` option.
 * ripgrep has [rudimentary support for replacements](GUIDE.md#replacements),
   which permit rewriting output based on what was matched.
+* ripgrep can report explicit regex capture groups in both human-readable and
+  machine-readable forms. Use `--capture-highlight` to color capture groups
+  inside standard output, `--capture-list` to print one record per capture with
+  offsets, and `--json-captures` for structured output keyed by occurrences and
+  groups.
 * ripgrep supports [searching files in text encodings](GUIDE.md#file-encoding)
   other than UTF-8, such as UTF-16, latin-1, GBK, EUC-JP, Shift_JIS and more.
   (Some support for automatically detecting UTF-16 is provided. Other text

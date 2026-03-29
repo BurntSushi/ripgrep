@@ -42,6 +42,8 @@ pub(crate) struct LowArgs {
     pub(crate) buffer: BufferMode,
     pub(crate) byte_offset: bool,
     pub(crate) case: CaseMode,
+    pub(crate) capture_highlight: bool,
+    pub(crate) capture_list: bool,
     pub(crate) color: ColorChoice,
     pub(crate) colors: Vec<UserColorSpec>,
     pub(crate) column: Option<bool>,
@@ -66,6 +68,7 @@ pub(crate) struct LowArgs {
     pub(crate) ignore_file_case_insensitive: bool,
     pub(crate) include_zero: bool,
     pub(crate) invert_match: bool,
+    pub(crate) json_captures_lines: JSONCapturesLines,
     pub(crate) line_number: Option<bool>,
     pub(crate) logging: Option<LoggingMode>,
     pub(crate) max_columns: Option<u64>,
@@ -211,6 +214,18 @@ pub(crate) enum SearchMode {
     CountMatches,
     /// Print matches in a JSON lines format.
     JSON,
+    /// Print matches and capture groups in a JSON lines format.
+    JSONCaptures,
+}
+
+/// Controls whether `--json-captures` includes the parent `lines` payload.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub(crate) enum JSONCapturesLines {
+    /// Omit `lines` from capture JSON output.
+    #[default]
+    Never,
+    /// Always include `lines` in capture JSON output.
+    Always,
 }
 
 /// The thing to generate via the --generate flag.

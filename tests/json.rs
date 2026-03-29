@@ -17,6 +17,17 @@ enum Message {
     Summary(Summary),
 }
 
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(tag = "type", content = "data")]
+#[serde(rename_all = "snake_case")]
+enum CaptureMessage {
+    Begin(Begin),
+    End(End),
+    Match(CaptureMatch),
+    Context(CaptureContext),
+    Summary(Summary),
+}
+
 impl Message {
     fn unwrap_begin(&self) -> Begin {
         match *self {
@@ -50,6 +61,15 @@ impl Message {
         match *self {
             Message::Summary(ref x) => x.clone(),
             ref x => panic!("expected Message::Summary but got {x:?}"),
+        }
+    }
+}
+
+impl CaptureMessage {
+    fn unwrap_match(&self) -> CaptureMatch {
+        match *self {
+            CaptureMessage::Match(ref x) => x.clone(),
+            ref x => panic!("expected CaptureMessage::Match but got {x:?}"),
         }
     }
 }
@@ -106,6 +126,51 @@ struct SubMatch {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct CaptureMatch {
+    path: Option<Data>,
+    lines: Option<Data>,
+    line_number: Option<u64>,
+    absolute_offset: u64,
+    occurrences: Vec<CaptureOccurrence>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct CaptureContext {
+    path: Option<Data>,
+    lines: Option<Data>,
+    line_number: Option<u64>,
+    absolute_offset: u64,
+    occurrences: Vec<CaptureOccurrence>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct CaptureOccurrence {
+    #[serde(rename = "match")]
+    m: Data,
+    start: usize,
+    end: usize,
+    absolute_start: u64,
+    absolute_end: u64,
+    captures: Vec<CaptureGroup>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct CaptureGroup {
+    index: usize,
+    name: Option<String>,
+    #[serde(rename = "match")]
+    m: Option<Data>,
+    start: Option<usize>,
+    end: Option<usize>,
+    absolute_start: Option<u64>,
+    absolute_end: Option<u64>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 enum Data {
     Text { text: String },
@@ -149,6 +214,13 @@ fn json_decode(jsonlines: &str) -> Vec<Message> {
     json::Deserializer::from_str(jsonlines)
         .into_iter()
         .collect::<Result<Vec<Message>, _>>()
+        .unwrap()
+}
+
+fn json_captures_decode(jsonlines: &str) -> Vec<CaptureMessage> {
+    json::Deserializer::from_str(jsonlines)
+        .into_iter()
+        .collect::<Result<Vec<CaptureMessage>, _>>()
         .unwrap()
 }
 
@@ -438,4 +510,62 @@ rgtest!(r1412_look_behind_match_missing, |dir: Dir, mut cmd: TestCommand| {
     let m = msgs[1].unwrap_match();
     assert_eq!(m.lines, Data::text("bar\n"));
     assert_eq!(m.submatches.len(), 1);
+});
+
+rgtest!(json_captures_basic, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("test", "aa fairplay bb\n");
+    cmd.arg("--json-captures").arg(r"(aa )?(fairplay)( bb)?").arg("test");
+
+    let msgs = json_captures_decode(&cmd.stdout());
+    assert_eq!(msgs.len(), 4);
+
+    let m = msgs[1].unwrap_match();
+    assert_eq!(m.lines, None);
+    assert_eq!(m.occurrences.len(), 1);
+    assert_eq!(m.occurrences[0].m, Data::text("aa fairplay bb"));
+    assert_eq!(m.occurrences[0].captures.len(), 4);
+    assert_eq!(
+        m.occurrences[0].captures[0].m,
+        Some(Data::text("aa fairplay bb"))
+    );
+    assert_eq!(m.occurrences[0].captures[1].m, Some(Data::text("aa ")));
+    assert_eq!(m.occurrences[0].captures[2].m, Some(Data::text("fairplay")));
+    assert_eq!(m.occurrences[0].captures[3].m, Some(Data::text(" bb")));
+});
+
+rgtest!(
+    json_captures_missing_optional_group,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create("test", "fairplay\n");
+        cmd.arg("--json-captures").arg(r"(fairplay)( foo)?").arg("test");
+
+        let msgs = json_captures_decode(&cmd.stdout());
+        assert_eq!(msgs.len(), 4);
+
+        let m = msgs[1].unwrap_match();
+        assert_eq!(m.occurrences.len(), 1);
+        assert_eq!(m.occurrences[0].captures.len(), 3);
+        assert_eq!(
+            m.occurrences[0].captures[1].m,
+            Some(Data::text("fairplay"))
+        );
+        assert_eq!(m.occurrences[0].captures[2].m, None);
+        assert_eq!(m.occurrences[0].captures[2].start, None);
+        assert_eq!(m.occurrences[0].captures[2].absolute_start, None);
+    }
+);
+
+rgtest!(json_captures_lines_always, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("test", "aa fairplay bb\n");
+    cmd.arg("--json-captures")
+        .arg("--json-captures-lines=always")
+        .arg(r"(aa )?(fairplay)( bb)?")
+        .arg("test");
+
+    let msgs = json_captures_decode(&cmd.stdout());
+    assert_eq!(msgs.len(), 4);
+
+    let m = msgs[1].unwrap_match();
+    assert_eq!(m.lines, Some(Data::text("aa fairplay bb\n")));
+    assert_eq!(m.occurrences.len(), 1);
 });

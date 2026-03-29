@@ -523,6 +523,49 @@ at index 0, but the `0`th capturing group always corresponds to the entire
 match. The capturing group at index `1` always corresponds to the first
 explicit capturing group found in the regex pattern.)
 
+### Capture-aware output
+
+ripgrep can also surface capture groups directly in its output instead of
+treating the whole regex match as one undifferentiated span.
+
+If you want to keep the usual grep-like output shape, but visually distinguish
+capture groups inside a larger match, use `--capture-highlight`. This is most
+useful with `--only-matching`:
+
+```bash
+$ rg '.{0,20}(fast).{0,20}' -o --capture-highlight README.md
+```
+
+That prints the full outer match, but colors the explicit capture groups
+separately from the surrounding bytes.
+
+If you want one record per explicit capture group, use `--capture-list`:
+
+```bash
+$ rg '(fast)\\s+(\\w+)' --capture-list README.md
+```
+
+Each record includes the capture start location, absolute byte offset and the
+capture bytes themselves.
+
+If you want machine-readable capture output, use `--json-captures`:
+
+```bash
+$ rg '(fast)\\s+(\\w+)' --json-captures README.md
+```
+
+By default, `--json-captures` omits the parent `lines` payload from `match`
+and `context` messages. This keeps the JSON smaller, especially when searching
+binary or otherwise large records. If you need the full parent record bytes,
+enable them explicitly:
+
+```bash
+$ rg '(fast)\\s+(\\w+)' --json-captures --json-captures-lines=always README.md
+```
+
+When `lines` is present, occurrence and capture offsets are still relative to
+that parent payload, just like the existing `--json` format.
+
 Capturing groups can also be named, which is sometimes more convenient than
 using the indices. For example, the following command is equivalent to the
 above command:

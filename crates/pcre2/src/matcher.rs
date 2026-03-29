@@ -80,7 +80,9 @@ impl RegexMatcherBuilder {
                     names.insert(name.to_string(), i);
                 }
             }
-            RegexMatcher { regex, names }
+            let names_by_index =
+                regex.capture_names().iter().cloned().collect();
+            RegexMatcher { regex, names, names_by_index }
         })
     }
 
@@ -302,6 +304,7 @@ impl RegexMatcherBuilder {
 pub struct RegexMatcher {
     regex: Regex,
     names: HashMap<String, usize>,
+    names_by_index: Vec<Option<String>>,
 }
 
 impl RegexMatcher {
@@ -338,6 +341,10 @@ impl Matcher for RegexMatcher {
 
     fn capture_index(&self, name: &str) -> Option<usize> {
         self.names.get(name).map(|i| *i)
+    }
+
+    fn capture_name(&self, index: usize) -> Option<&str> {
+        self.names_by_index.get(index).and_then(|name| name.as_deref())
     }
 
     fn try_find_iter<F, E>(

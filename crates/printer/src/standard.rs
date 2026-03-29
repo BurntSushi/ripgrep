@@ -13,7 +13,7 @@ use {
     grep_searcher::{
         LineStep, Searcher, Sink, SinkContext, SinkFinish, SinkMatch,
     },
-    termcolor::{ColorSpec, NoColor, WriteColor},
+    termcolor::{Color, ColorSpec, NoColor, WriteColor},
 };
 
 use crate::{
@@ -22,8 +22,9 @@ use crate::{
     hyperlink::{self, HyperlinkConfig},
     stats::Stats,
     util::{
-        DecimalFormatter, PrinterPath, Replacer, Sunk,
-        find_iter_at_in_context, trim_ascii_prefix, trim_line_terminator,
+        CaptureMatch, DecimalFormatter, PrinterPath, Replacer, Sunk,
+        capture_matches_in_context, find_iter_at_in_context,
+        trim_ascii_prefix, trim_line_terminator,
     },
 };
 
@@ -39,6 +40,8 @@ struct Config {
     stats: bool,
     heading: bool,
     path: bool,
+    capture_highlight: bool,
+    capture_list: bool,
     only_matching: bool,
     per_match: bool,
     per_match_one_line: bool,
@@ -64,6 +67,8 @@ impl Default for Config {
             stats: false,
             heading: false,
             path: true,
+            capture_highlight: false,
+            capture_list: false,
             only_matching: false,
             per_match: false,
             per_match_one_line: false,
@@ -129,6 +134,7 @@ impl StandardBuilder {
             config: self.config.clone(),
             wtr: RefCell::new(CounterWriter::new(wtr)),
             matches: vec![],
+            occurrences: vec![],
         }
     }
 
@@ -228,6 +234,30 @@ impl StandardBuilder {
     /// This is enabled by default.
     pub fn path(&mut self, yes: bool) -> &mut StandardBuilder {
         self.config.path = yes;
+        self
+    }
+
+    /// Highlight explicit capture groups within each reported match.
+    ///
+    /// This keeps the standard printer's existing line-oriented layout, but
+    /// colors explicit capture groups distinctly from the surrounding bytes of
+    /// the overall match.
+    ///
+    /// This is disabled by default.
+    pub fn capture_highlight(&mut self, yes: bool) -> &mut StandardBuilder {
+        self.config.capture_highlight = yes;
+        self
+    }
+
+    /// Print one record for each explicit capture group that participated in
+    /// a match.
+    ///
+    /// Each record includes the capture group's start location, absolute byte
+    /// offset and group metadata before printing the capture bytes.
+    ///
+    /// This is disabled by default.
+    pub fn capture_list(&mut self, yes: bool) -> &mut StandardBuilder {
+        self.config.capture_list = yes;
         self
     }
 
@@ -481,6 +511,7 @@ pub struct Standard<W> {
     config: Config,
     wtr: RefCell<CounterWriter<W>>,
     matches: Vec<Match>,
+    occurrences: Vec<CaptureMatch>,
 }
 
 impl<W: WriteColor> Standard<W> {
@@ -578,9 +609,13 @@ impl<W: WriteColor> Standard<W> {
     fn needs_match_granularity(&self) -> bool {
         let supports_color = self.wtr.borrow().supports_color();
         let match_colored = !self.config.colors.matched().is_none();
+        let capture_highlight =
+            self.config.capture_highlight && supports_color;
 
         // Coloring requires identifying each individual match.
         (supports_color && match_colored)
+        // Capture highlighting requires finding each explicit capture group.
+        || capture_highlight
         // The column feature requires finding the position of the first match.
         || self.config.column
         // Requires finding each match for performing replacement.
@@ -589,8 +624,20 @@ impl<W: WriteColor> Standard<W> {
         || self.config.per_match
         // Emitting only the match requires finding each match.
         || self.config.only_matching
+        // Emitting one row per capture requires capture-aware matching.
+        || self.config.capture_list
         // Computing certain statistics requires finding each match.
         || self.config.stats
+    }
+
+    fn needs_capture_granularity(&self) -> bool {
+        self.config.capture_highlight || self.config.capture_list
+    }
+
+    /// Returns true if and only if this printer is configured to require
+    /// explicit capture groups.
+    pub fn requires_explicit_captures(&self) -> bool {
+        self.config.capture_highlight || self.config.capture_list
     }
 }
 
@@ -702,7 +749,30 @@ impl<'p, 's, M: Matcher, W: WriteColor> StandardSink<'p, 's, M, W> {
         range: std::ops::Range<usize>,
     ) -> io::Result<()> {
         self.standard.matches.clear();
+        self.standard.occurrences.clear();
         if !self.needs_match_granularity {
+            return Ok(());
+        }
+        if self.standard.needs_capture_granularity() {
+            let caps = self.replacer.captures(&self.matcher)?;
+            capture_matches_in_context(
+                searcher,
+                &self.matcher,
+                bytes,
+                range.clone(),
+                caps,
+                &mut self.standard.occurrences,
+            )?;
+            for occurrence in self.standard.occurrences.iter() {
+                self.standard.matches.push(occurrence.overall());
+            }
+            if !self.standard.matches.is_empty()
+                && self.standard.matches.last().unwrap().is_empty()
+                && self.standard.matches.last().unwrap().start() >= range.end
+            {
+                self.standard.matches.pop().unwrap();
+                self.standard.occurrences.pop().unwrap();
+            }
             return Ok(());
         }
         // If printing requires knowing the location of each individual match,
@@ -927,6 +997,9 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
 
     fn sink(&self) -> io::Result<()> {
         self.write_search_prelude()?;
+        if self.config().capture_list && !self.is_context() {
+            return self.sink_capture_list();
+        }
         if self.sunk.matches().is_empty() {
             if self.multi_line() && !self.is_context() {
                 self.sink_fast_multi_line()
@@ -940,6 +1013,223 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                 self.sink_slow()
             }
         }
+    }
+
+    fn occurrences(&self) -> &'a [CaptureMatch] {
+        &self.sink.standard.occurrences
+    }
+
+    fn capture_highlight_on(&self) -> bool {
+        self.config().capture_highlight && self.wtr().borrow().supports_color()
+    }
+
+    fn capture_color_spec(&self, group_index: usize) -> ColorSpec {
+        const PALETTE: [Color; 6] = [
+            Color::Red,
+            Color::Cyan,
+            Color::Green,
+            Color::Magenta,
+            Color::Yellow,
+            Color::Blue,
+        ];
+
+        let mut spec = self.config().colors.matched().clone();
+        let color = PALETTE[(group_index.saturating_sub(1)) % PALETTE.len()];
+        spec.set_fg(Some(color));
+        spec
+    }
+
+    fn write_capture_spec(
+        &self,
+        group_index: usize,
+        buf: &[u8],
+    ) -> io::Result<()> {
+        let spec = self.capture_color_spec(group_index);
+        let mut wtr = self.wtr().borrow_mut();
+        wtr.set_color(&spec)?;
+        wtr.write_all(buf)?;
+        if self.highlight_on() {
+            wtr.set_color(self.config().colors.highlight())?;
+        } else {
+            wtr.reset()?;
+        }
+        Ok(())
+    }
+
+    fn capture_spans_for_range(
+        &self,
+        output_range: Match,
+        rebase_start: usize,
+    ) -> Vec<(Match, usize)> {
+        let mut spans = vec![];
+        for occurrence in self.occurrences() {
+            for (group_index, capture) in
+                occurrence.captures().iter().enumerate().skip(1)
+            {
+                let Some(capture) = *capture else { continue };
+                let start = cmp::max(capture.start(), output_range.start());
+                let end = cmp::min(capture.end(), output_range.end());
+                if start >= end {
+                    continue;
+                }
+                spans.push((
+                    Match::new(start - rebase_start, end - rebase_start),
+                    group_index,
+                ));
+            }
+        }
+        spans.sort_by_key(|(span, group_index)| {
+            (span.start(), span.end() - span.start(), *group_index)
+        });
+        spans
+    }
+
+    fn capture_owner(
+        &self,
+        spans: &[(Match, usize)],
+        offset: usize,
+    ) -> Option<usize> {
+        spans.iter().fold(None, |best, (span, group_index)| {
+            if span.start() <= offset && offset < span.end() {
+                match best {
+                    None => Some(*group_index),
+                    Some(prev_group) => {
+                        let prev = spans
+                            .iter()
+                            .find(|(candidate, idx)| {
+                                *idx == prev_group
+                                    && candidate.start() <= offset
+                                    && offset < candidate.end()
+                            })
+                            .map(|(candidate, _)| *candidate)
+                            .unwrap();
+                        let prev_len = prev.end() - prev.start();
+                        let next_len = span.end() - span.start();
+                        if next_len < prev_len
+                            || (next_len == prev_len
+                                && *group_index < prev_group)
+                        {
+                            Some(*group_index)
+                        } else {
+                            Some(prev_group)
+                        }
+                    }
+                }
+            } else {
+                best
+            }
+        })
+    }
+
+    fn write_capture_highlighted_line(
+        &self,
+        bytes: &[u8],
+        mut range: Match,
+        rebase_start: usize,
+    ) -> io::Result<()> {
+        self.trim_line_terminator(bytes, &mut range);
+        self.trim_ascii_prefix(bytes, &mut range);
+        let slice = &bytes[range];
+        if slice.is_empty() {
+            self.write_line_term()?;
+            return Ok(());
+        }
+        if !self.capture_highlight_on() {
+            self.write_line(slice)?;
+            return Ok(());
+        }
+        let spans = self.capture_spans_for_range(range, rebase_start);
+        if spans.is_empty() {
+            self.write_line(slice)?;
+            return Ok(());
+        }
+        let mut boundaries = vec![0, slice.len()];
+        for (span, _) in spans.iter() {
+            boundaries.push(span.start());
+            boundaries.push(span.end());
+        }
+        boundaries.sort_unstable();
+        boundaries.dedup();
+
+        self.start_line_highlight()?;
+        for window in boundaries.windows(2) {
+            let start = window[0];
+            let end = window[1];
+            if start == end {
+                continue;
+            }
+            let segment = &slice[start..end];
+            if let Some(group_index) = self.capture_owner(&spans, start) {
+                self.write_capture_spec(group_index, segment)?;
+            } else {
+                self.write(segment)?;
+            }
+        }
+        self.end_line_highlight()?;
+        self.write_line_term()
+    }
+
+    fn capture_location(&self, span: Match) -> (Option<u64>, u64) {
+        let mut count = 0u64;
+        let mut line_start = 0usize;
+        let line_term = self.searcher.line_terminator().as_byte();
+        let mut stepper = LineStep::new(line_term, 0, self.sunk.bytes().len());
+        while let Some((start, end)) = stepper.next(self.sunk.bytes()) {
+            if span.start() < end {
+                line_start = start;
+                break;
+            }
+            count += 1;
+        }
+        (
+            self.sunk.line_number().map(|line| line + count),
+            (span.start() - line_start) as u64 + 1,
+        )
+    }
+
+    fn write_capture_record(
+        &self,
+        group_index: usize,
+        span: Match,
+    ) -> io::Result<()> {
+        let (line_number, column) = self.capture_location(span);
+        let absolute_offset =
+            self.sunk.absolute_byte_offset() + span.start() as u64;
+
+        let mut prelude = PreludeWriter::new(self);
+        prelude.start(line_number, Some(column))?;
+        prelude.write_path_force()?;
+        prelude.write_line_number(line_number)?;
+        prelude.write_column_number_force(column)?;
+        prelude.write_byte_offset_force(absolute_offset)?;
+        prelude.end()?;
+
+        self.write(b"group=")?;
+        let group = DecimalFormatter::new(group_index as u64);
+        self.write(group.as_bytes())?;
+        self.write(self.separator_field())?;
+        if let Some(name) = self.sink.matcher.capture_name(group_index) {
+            self.write(b"name=")?;
+            self.write(name.as_bytes())?;
+            self.write(self.separator_field())?;
+        }
+        self.write(&self.sunk.bytes()[span])?;
+        if !self.has_line_terminator(&self.sunk.bytes()[span]) {
+            self.write_line_term()?;
+        }
+        Ok(())
+    }
+
+    fn sink_capture_list(&self) -> io::Result<()> {
+        for occurrence in self.occurrences() {
+            for (group_index, capture) in
+                occurrence.captures().iter().enumerate().skip(1)
+            {
+                let Some(span) = *capture else { continue };
+                self.write_capture_record(group_index, span)?;
+            }
+        }
+        Ok(())
     }
 
     /// Print matches (limited to one line) quickly by avoiding the detection
@@ -996,15 +1286,23 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         debug_assert!(!self.multi_line() || self.is_context());
 
         if self.config().only_matching {
-            for &m in self.sunk.matches() {
+            let occurrences = self.occurrences();
+            for (i, &m) in self.sunk.matches().iter().enumerate() {
                 self.write_prelude(
                     self.sunk.absolute_byte_offset() + m.start() as u64,
                     self.sunk.line_number(),
                     Some(m.start() as u64 + 1),
                 )?;
-
-                let buf = &self.sunk.bytes()[m];
-                self.write_colored_line(&[Match::new(0, buf.len())], buf)?;
+                if self.capture_highlight_on() && i < occurrences.len() {
+                    self.write_capture_highlighted_line(
+                        self.sunk.bytes(),
+                        m,
+                        m.start(),
+                    )?;
+                } else {
+                    let buf = &self.sunk.bytes()[m];
+                    self.write_colored_line(&[Match::new(0, buf.len())], buf)?;
+                }
             }
         } else if self.config().per_match {
             for &m in self.sunk.matches() {
@@ -1013,7 +1311,15 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                     self.sunk.line_number(),
                     Some(m.start() as u64 + 1),
                 )?;
-                self.write_colored_line(&[m], self.sunk.bytes())?;
+                if self.capture_highlight_on() {
+                    self.write_capture_highlighted_line(
+                        self.sunk.bytes(),
+                        m,
+                        0,
+                    )?;
+                } else {
+                    self.write_colored_line(&[m], self.sunk.bytes())?;
+                }
             }
         } else {
             self.write_prelude(
@@ -1021,7 +1327,18 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                 self.sunk.line_number(),
                 Some(self.sunk.matches()[0].start() as u64 + 1),
             )?;
-            self.write_colored_line(self.sunk.matches(), self.sunk.bytes())?;
+            if self.capture_highlight_on() {
+                self.write_capture_highlighted_line(
+                    self.sunk.bytes(),
+                    Match::new(0, self.sunk.bytes().len()),
+                    0,
+                )?;
+            } else {
+                self.write_colored_line(
+                    self.sunk.matches(),
+                    self.sunk.bytes(),
+                )?;
+            }
         }
         Ok(())
     }
@@ -1053,6 +1370,8 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
             self.trim_ascii_prefix(bytes, &mut line);
             if self.exceeds_max_columns(&bytes[line]) {
                 self.write_exceeded_line(bytes, line, matches, &mut midx)?;
+            } else if self.capture_highlight_on() {
+                self.write_capture_highlighted_line(bytes, line, 0)?;
             } else {
                 self.write_colored_matches(bytes, line, matches, &mut midx)?;
                 self.write_line_term()?;
@@ -1062,6 +1381,54 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     }
 
     fn sink_slow_multi_line_only_matching(&self) -> io::Result<()> {
+        if self.capture_highlight_on() {
+            let line_term = self.searcher.line_terminator().as_byte();
+            let bytes = self.sunk.bytes();
+            for occurrence in self.occurrences() {
+                let m = occurrence.overall();
+                let mut count = 0;
+                let mut stepper = LineStep::new(line_term, 0, bytes.len());
+                while let Some((start, end)) = stepper.next(bytes) {
+                    let line = Match::new(start, end);
+                    if line.start() >= m.end() {
+                        break;
+                    } else if line.end() <= m.start() {
+                        count += 1;
+                        continue;
+                    }
+                    let this_line = Match::new(
+                        cmp::max(line.start(), m.start()),
+                        cmp::min(line.end(), m.end()),
+                    );
+                    self.write_prelude(
+                        self.sunk.absolute_byte_offset()
+                            + this_line.start() as u64,
+                        self.sunk.line_number().map(|n| n + count),
+                        Some(
+                            this_line.start().saturating_sub(line.start())
+                                as u64
+                                + 1,
+                        ),
+                    )?;
+                    if self.exceeds_max_columns(&bytes[this_line]) {
+                        self.write_exceeded_line(
+                            bytes,
+                            this_line,
+                            &[m],
+                            &mut 0,
+                        )?;
+                    } else {
+                        self.write_capture_highlighted_line(
+                            bytes,
+                            this_line,
+                            this_line.start(),
+                        )?;
+                    }
+                    count += 1;
+                }
+            }
+            return Ok(());
+        }
         let line_term = self.searcher.line_terminator().as_byte();
         let spec = self.config().colors.matched();
         let bytes = self.sunk.bytes();
@@ -1113,6 +1480,41 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     }
 
     fn sink_slow_multi_per_match(&self) -> io::Result<()> {
+        if self.capture_highlight_on() {
+            let line_term = self.searcher.line_terminator().as_byte();
+            let bytes = self.sunk.bytes();
+            for occurrence in self.occurrences() {
+                let m = occurrence.overall();
+                let mut count = 0;
+                let mut stepper = LineStep::new(line_term, 0, bytes.len());
+                while let Some((start, end)) = stepper.next(bytes) {
+                    let line = Match::new(start, end);
+                    if line.start() >= m.end() {
+                        break;
+                    } else if line.end() <= m.start() {
+                        count += 1;
+                        continue;
+                    }
+                    self.write_prelude(
+                        self.sunk.absolute_byte_offset() + line.start() as u64,
+                        self.sunk.line_number().map(|n| n + count),
+                        Some(
+                            m.start().saturating_sub(line.start()) as u64 + 1,
+                        ),
+                    )?;
+                    count += 1;
+                    if self.exceeds_max_columns(&bytes[line]) {
+                        self.write_exceeded_line(bytes, line, &[m], &mut 0)?;
+                    } else {
+                        self.write_capture_highlighted_line(bytes, line, 0)?;
+                    }
+                    if self.config().per_match_one_line {
+                        break;
+                    }
+                }
+            }
+            return Ok(());
+        }
         let line_term = self.searcher.line_terminator().as_byte();
         let spec = self.config().colors.matched();
         let bytes = self.sunk.bytes();
@@ -1676,6 +2078,20 @@ impl<'a, M: Matcher, W: WriteColor> PreludeWriter<'a, M, W> {
         Ok(())
     }
 
+    #[inline(always)]
+    fn write_path_force(&mut self) -> io::Result<()> {
+        let Some(path) = self.std.path() else { return Ok(()) };
+        self.write_separator()?;
+        self.std.write_path(path)?;
+
+        self.next_separator = if self.config().path_terminator.is_some() {
+            PreludeSeparator::PathTerminator
+        } else {
+            PreludeSeparator::FieldSeparator
+        };
+        Ok(())
+    }
+
     /// Writes the line number field if present.
     #[inline(always)]
     fn write_line_number(&mut self, line: Option<u64>) -> io::Result<()> {
@@ -1701,12 +2117,30 @@ impl<'a, M: Matcher, W: WriteColor> PreludeWriter<'a, M, W> {
         Ok(())
     }
 
+    #[inline(always)]
+    fn write_column_number_force(&mut self, column: u64) -> io::Result<()> {
+        self.write_separator()?;
+        let n = DecimalFormatter::new(column);
+        self.std.write_spec(self.config().colors.column(), n.as_bytes())?;
+        self.next_separator = PreludeSeparator::FieldSeparator;
+        Ok(())
+    }
+
     /// Writes the byte offset field if configured to do so.
     #[inline(always)]
     fn write_byte_offset(&mut self, offset: u64) -> io::Result<()> {
         if !self.config().byte_offset {
             return Ok(());
         }
+        self.write_separator()?;
+        let n = DecimalFormatter::new(offset);
+        self.std.write_spec(self.config().colors.column(), n.as_bytes())?;
+        self.next_separator = PreludeSeparator::FieldSeparator;
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn write_byte_offset_force(&mut self, offset: u64) -> io::Result<()> {
         self.write_separator()?;
         let n = DecimalFormatter::new(offset);
         self.std.write_spec(self.config().colors.column(), n.as_bytes())?;
@@ -3077,6 +3511,48 @@ line 3 x
 2:16:Holmeses
 5:12:Watson has to have it taken out for him and dusted,
 6:12:and exhibited clearly
+";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn capture_highlight_only_matching_ansi() {
+        let matcher = RegexMatcher::new(r"(foo)(1)(bar)").unwrap();
+        let mut printer = StandardBuilder::new()
+            .capture_highlight(true)
+            .only_matching(true)
+            .build(Ansi::new(vec![]));
+        SearcherBuilder::new()
+            .build()
+            .search_reader(&matcher, b"x foo1bar y\n", printer.sink(&matcher))
+            .unwrap();
+
+        let got = printer_contents_ansi(&mut printer);
+        let expected = "\x1b[0m\x1b[1m\x1b[31mfoo\x1b[0m\x1b[0m\x1b[1m\x1b[36m1\x1b[0m\x1b[0m\x1b[1m\x1b[32mbar\x1b[0m\n";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn capture_list() {
+        let matcher = RegexMatcher::new(r"(aa )?(fairplay)( bb)?").unwrap();
+        let mut printer = StandardBuilder::new()
+            .capture_list(true)
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(true)
+            .build()
+            .search_reader(
+                &matcher,
+                b"aa fairplay bb\n",
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "\
+1:1:0:group=1:aa 
+1:4:3:group=2:fairplay
+1:12:11:group=3: bb
 ";
         assert_eq_printed!(expected, got);
     }

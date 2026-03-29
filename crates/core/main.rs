@@ -438,7 +438,7 @@ fn print_stats<W: Write>(
     mut wtr: W,
 ) -> std::io::Result<()> {
     let elapsed = std::time::Instant::now().duration_since(started);
-    if matches!(mode, SearchMode::JSON) {
+    if matches!(mode, SearchMode::JSON | SearchMode::JSONCaptures) {
         // We specifically match the format laid out by the JSON printer in
         // the grep-printer crate. We simply "extend" it with the 'summary'
         // message type.

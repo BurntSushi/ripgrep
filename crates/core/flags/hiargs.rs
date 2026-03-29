@@ -16,8 +16,9 @@ use crate::{
     flags::lowargs::{
         BinaryMode, BoundaryMode, BufferMode, CaseMode, ColorChoice,
         ContextMode, ContextSeparator, EncodingMode, EngineChoice,
-        FieldContextSeparator, FieldMatchSeparator, LowArgs, MmapMode, Mode,
-        PatternSource, SearchMode, SortMode, SortModeKind, TypeChange,
+        FieldContextSeparator, FieldMatchSeparator, JSONCapturesLines,
+        LowArgs, MmapMode, Mode, PatternSource, SearchMode, SortMode,
+        SortModeKind, TypeChange,
     },
     haystack::{Haystack, HaystackBuilder},
     search::{PatternMatcher, Printer, SearchWorker, SearchWorkerBuilder},
@@ -39,6 +40,8 @@ pub(crate) struct HiArgs {
     buffer: BufferMode,
     byte_offset: bool,
     case: CaseMode,
+    capture_highlight: bool,
+    capture_list: bool,
     color: ColorChoice,
     colors: grep::printer::ColorSpecs,
     column: bool,
@@ -62,6 +65,7 @@ pub(crate) struct HiArgs {
     ignore_file: Vec<PathBuf>,
     include_zero: bool,
     invert_match: bool,
+    json_captures_lines: JSONCapturesLines,
     is_terminal_stdout: bool,
     line_number: bool,
     max_columns: Option<u64>,
@@ -138,6 +142,37 @@ impl HiArgs {
             },
             _ => {}
         }
+        if low.capture_highlight && low.capture_list {
+            anyhow::bail!(
+                "--capture-highlight and --capture-list cannot be used together"
+            );
+        }
+        if (low.capture_highlight || low.capture_list)
+            && !matches!(low.mode, Mode::Search(SearchMode::Standard))
+        {
+            anyhow::bail!(
+                "capture-aware standard output requires ripgrep's standard search mode"
+            );
+        }
+        if (low.capture_highlight || low.capture_list) && low.vimgrep {
+            anyhow::bail!(
+                "capture-aware standard output cannot be used with --vimgrep"
+            );
+        }
+        if (low.capture_highlight
+            || low.capture_list
+            || matches!(low.mode, Mode::Search(SearchMode::JSONCaptures)))
+            && low.replace.is_some()
+        {
+            anyhow::bail!(
+                "capture-aware output cannot be used with --replace"
+            );
+        }
+        if !matches!(low.mode, Mode::Search(SearchMode::JSONCaptures))
+            && !matches!(low.json_captures_lines, JSONCapturesLines::Never)
+        {
+            anyhow::bail!("--json-captures-lines requires --json-captures");
+        }
 
         let mut state = State::new()?;
         let patterns = Patterns::from_low_args(&mut state, &mut low)?;
@@ -205,7 +240,7 @@ impl HiArgs {
                 | SearchMode::FilesWithoutMatch
                 | SearchMode::Count
                 | SearchMode::CountMatches => return false,
-                SearchMode::JSON => return true,
+                SearchMode::JSON | SearchMode::JSONCaptures => return true,
                 SearchMode::Standard => {
                     // A few things can imply counting line numbers. In
                     // particular, we generally want to show line numbers by
@@ -279,6 +314,7 @@ impl HiArgs {
             ignore_file_case_insensitive: low.ignore_file_case_insensitive,
             include_zero: low.include_zero,
             invert_match: low.invert_match,
+            json_captures_lines: low.json_captures_lines,
             is_terminal_stdout: state.is_terminal_stdout,
             line_number,
             max_columns: low.max_columns,
@@ -300,6 +336,8 @@ impl HiArgs {
             null_data: low.null_data,
             one_file_system: low.one_file_system,
             only_matching: low.only_matching,
+            capture_highlight: low.capture_highlight,
+            capture_list: low.capture_list,
             globs,
             path_separator: low.path_separator,
             path_terminator,
@@ -569,6 +607,7 @@ impl HiArgs {
                 | SearchMode::Count
                 | SearchMode::CountMatches
                 | SearchMode::JSON
+                | SearchMode::JSONCaptures
                 | SearchMode::Standard => SummaryKind::QuietWithMatch,
                 SearchMode::FilesWithoutMatch => {
                     SummaryKind::QuietWithoutMatch
@@ -582,6 +621,11 @@ impl HiArgs {
                 SearchMode::CountMatches => SummaryKind::CountMatches,
                 SearchMode::JSON => {
                     return Printer::JSON(self.printer_json(wtr));
+                }
+                SearchMode::JSONCaptures => {
+                    return Printer::JSONCaptures(
+                        self.printer_json_captures(wtr),
+                    );
                 }
                 SearchMode::Standard => {
                     return Printer::Standard(self.printer_standard(wtr));
@@ -603,6 +647,19 @@ impl HiArgs {
             .build(wtr)
     }
 
+    /// Builds a JSON capture printer.
+    fn printer_json_captures<W: std::io::Write>(
+        &self,
+        wtr: W,
+    ) -> grep::printer::JSONCaptures<W> {
+        grep::printer::JSONCapturesBuilder::new()
+            .lines(matches!(
+                self.json_captures_lines,
+                JSONCapturesLines::Always
+            ))
+            .build(wtr)
+    }
+
     /// Builds a "standard" grep printer where matches are printed as plain
     /// text lines.
     fn printer_standard<W: termcolor::WriteColor>(
@@ -614,6 +671,8 @@ impl HiArgs {
             .byte_offset(self.byte_offset)
             .color_specs(self.colors.clone())
             .column(self.column)
+            .capture_highlight(self.capture_highlight)
+            .capture_list(self.capture_list)
             .heading(self.heading)
             .hyperlink(self.hyperlink_config.clone())
             .max_columns_preview(self.max_columns_preview)
@@ -1251,7 +1310,12 @@ fn stats(low: &LowArgs) -> Option<grep::printer::Stats> {
     if !matches!(low.mode, Mode::Search(_)) {
         return None;
     }
-    if low.stats || matches!(low.mode, Mode::Search(SearchMode::JSON)) {
+    if low.stats
+        || matches!(
+            low.mode,
+            Mode::Search(SearchMode::JSON | SearchMode::JSONCaptures)
+        )
+    {
         return Some(grep::printer::Stats::new());
     }
     None

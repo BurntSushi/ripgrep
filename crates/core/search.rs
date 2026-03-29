@@ -208,6 +208,8 @@ pub(crate) enum Printer<W> {
     Summary(grep::printer::Summary<W>),
     /// A JSON printer, which emits results in the JSON Lines format.
     JSON(grep::printer::JSON<W>),
+    /// A JSON printer that emits occurrences and capture groups.
+    JSONCaptures(grep::printer::JSONCaptures<W>),
 }
 
 impl<W: WriteColor> Printer<W> {
@@ -217,6 +219,7 @@ impl<W: WriteColor> Printer<W> {
             Printer::Standard(ref mut p) => p.get_mut(),
             Printer::Summary(ref mut p) => p.get_mut(),
             Printer::JSON(ref mut p) => p.get_mut(),
+            Printer::JSONCaptures(ref mut p) => p.get_mut(),
         }
     }
 }
@@ -385,6 +388,12 @@ fn search_path<M: Matcher, W: WriteColor>(
 ) -> io::Result<SearchResult> {
     match *printer {
         Printer::Standard(ref mut p) => {
+            if p.requires_explicit_captures() && matcher.capture_count() <= 1 {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "capture-aware output requires at least one explicit capture group",
+                ));
+            }
             let mut sink = p.sink_with_path(&matcher, path);
             searcher.search_path(&matcher, path, &mut sink)?;
             Ok(SearchResult {
@@ -408,6 +417,20 @@ fn search_path<M: Matcher, W: WriteColor>(
                 stats: Some(sink.stats().clone()),
             })
         }
+        Printer::JSONCaptures(ref mut p) => {
+            if p.requires_explicit_captures() && matcher.capture_count() <= 1 {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "capture-aware output requires at least one explicit capture group",
+                ));
+            }
+            let mut sink = p.sink_with_path(&matcher, path);
+            searcher.search_path(&matcher, path, &mut sink)?;
+            Ok(SearchResult {
+                has_match: sink.has_match(),
+                stats: Some(sink.stats().clone()),
+            })
+        }
     }
 }
 
@@ -422,6 +445,12 @@ fn search_reader<M: Matcher, R: io::Read, W: WriteColor>(
 ) -> io::Result<SearchResult> {
     match *printer {
         Printer::Standard(ref mut p) => {
+            if p.requires_explicit_captures() && matcher.capture_count() <= 1 {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "capture-aware output requires at least one explicit capture group",
+                ));
+            }
             let mut sink = p.sink_with_path(&matcher, path);
             searcher.search_reader(&matcher, &mut rdr, &mut sink)?;
             Ok(SearchResult {
@@ -438,6 +467,20 @@ fn search_reader<M: Matcher, R: io::Read, W: WriteColor>(
             })
         }
         Printer::JSON(ref mut p) => {
+            let mut sink = p.sink_with_path(&matcher, path);
+            searcher.search_reader(&matcher, &mut rdr, &mut sink)?;
+            Ok(SearchResult {
+                has_match: sink.has_match(),
+                stats: Some(sink.stats().clone()),
+            })
+        }
+        Printer::JSONCaptures(ref mut p) => {
+            if p.requires_explicit_captures() && matcher.capture_count() <= 1 {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "capture-aware output requires at least one explicit capture group",
+                ));
+            }
             let mut sink = p.sink_with_path(&matcher, path);
             searcher.search_reader(&matcher, &mut rdr, &mut sink)?;
             Ok(SearchResult {

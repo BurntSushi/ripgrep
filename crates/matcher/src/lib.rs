@@ -612,6 +612,19 @@ pub trait Matcher {
         None
     }
 
+    /// Maps the given capture group index to its corresponding capture group
+    /// name, if one exists.
+    ///
+    /// Group names are not guaranteed to exist for every index. In
+    /// particular, group `0` is the overall match and is always unnamed.
+    ///
+    /// By default, capturing groups are not supported, so this always returns
+    /// `None`.
+    #[inline]
+    fn capture_name(&self, _index: usize) -> Option<&str> {
+        None
+    }
+
     /// Returns the start and end byte range of the first match in `haystack`.
     /// If no match exists, then `None` is returned.
     ///

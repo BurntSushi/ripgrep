@@ -1172,3 +1172,45 @@ rgtest!(stop_on_nonmatch, |dir: Dir, mut cmd: TestCommand| {
     cmd.args(&["--stop-on-nonmatch", "[235]"]);
     eqnice!("test:line2\ntest:line3\n", cmd.stdout());
 });
+
+rgtest!(capture_highlight_requires_group, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("test", "fairplay\n");
+    cmd.args(&["--capture-highlight", "fairplay", "test"]);
+    cmd.assert_err();
+});
+
+rgtest!(capture_list_requires_group, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("test", "fairplay\n");
+    cmd.args(&["--capture-list", "fairplay", "test"]);
+    cmd.assert_err();
+});
+
+rgtest!(json_captures_requires_group, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("test", "fairplay\n");
+    cmd.args(&["--json-captures", "fairplay", "test"]);
+    cmd.assert_err();
+});
+
+rgtest!(
+    json_captures_lines_requires_json_captures,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create("test", "fairplay\n");
+        cmd.args(&["--json-captures-lines=always", "(fairplay)", "test"]);
+        cmd.assert_err();
+    }
+);
+
+rgtest!(
+    capture_highlight_conflicts_vimgrep,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create("test", "fairplay\n");
+        cmd.args(&["--capture-highlight", "--vimgrep", "(fairplay)", "test"]);
+        cmd.assert_err();
+    }
+);
+
+rgtest!(capture_list_conflicts_replace, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("test", "fairplay\n");
+    cmd.args(&["--capture-list", "--replace", "x", "(fairplay)", "test"]);
+    cmd.assert_err();
+});

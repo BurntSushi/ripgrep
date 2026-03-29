@@ -25,9 +25,10 @@ use crate::flags::{
     Category, Flag, FlagValue,
     lowargs::{
         BinaryMode, BoundaryMode, BufferMode, CaseMode, ColorChoice,
-        ContextMode, EncodingMode, EngineChoice, GenerateMode, LoggingMode,
-        LowArgs, MmapMode, Mode, PatternSource, SearchMode, SortMode,
-        SortModeKind, SpecialMode, TypeChange,
+        ContextMode, EncodingMode, EngineChoice, GenerateMode,
+        JSONCapturesLines as JSONCapturesLinesMode, LoggingMode, LowArgs,
+        MmapMode, Mode, PatternSource, SearchMode, SortMode, SortModeKind,
+        SpecialMode, TypeChange,
     },
 };
 
@@ -52,6 +53,8 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &BlockBuffered,
     &ByteOffset,
     &CaseSensitive,
+    &CaptureHighlight,
+    &CaptureList,
     &Color,
     &Colors,
     &Column,
@@ -86,6 +89,8 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &IncludeZero,
     &InvertMatch,
     &JSON,
+    &JSONCaptures,
+    &JSONCapturesLines,
     &LineBuffered,
     &LineNumber,
     &LineNumberNo,
@@ -684,6 +689,99 @@ fn test_case_sensitive() {
 
     let args = parse_low_raw(["-s"]).unwrap();
     assert_eq!(CaseMode::Sensitive, args.case);
+}
+
+/// --capture-highlight
+#[derive(Debug)]
+struct CaptureHighlight;
+
+impl Flag for CaptureHighlight {
+    fn is_switch(&self) -> bool {
+        true
+    }
+    fn name_long(&self) -> &'static str {
+        "capture-highlight"
+    }
+    fn doc_category(&self) -> Category {
+        Category::Output
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Highlight explicit capture groups in standard output."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Highlight explicit capture groups in ripgrep's standard output.
+.sp
+This keeps ripgrep's existing text output shape, but colors explicit capture
+groups distinctly from the surrounding bytes of the overall match.
+.sp
+This flag requires at least one explicit capture group in the compiled regex.
+It is most useful with \flag{only-matching}, but also works with normal
+line-oriented output.
+"
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        assert!(v.unwrap_switch(), "--capture-highlight has no negation");
+        args.capture_highlight = true;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_capture_highlight() {
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(false, args.capture_highlight);
+
+    let args = parse_low_raw(["--capture-highlight"]).unwrap();
+    assert_eq!(true, args.capture_highlight);
+}
+
+/// --capture-list
+#[derive(Debug)]
+struct CaptureList;
+
+impl Flag for CaptureList {
+    fn is_switch(&self) -> bool {
+        true
+    }
+    fn name_long(&self) -> &'static str {
+        "capture-list"
+    }
+    fn doc_category(&self) -> Category {
+        Category::Output
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Print one record for each explicit capture group."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Print one output record for each explicit capture group that participated in a
+match.
+.sp
+Each record includes the capture group's location information together with the
+capture bytes themselves.
+.sp
+This flag requires at least one explicit capture group in the compiled regex.
+"
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        assert!(v.unwrap_switch(), "--capture-list has no negation");
+        args.capture_list = true;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_capture_list() {
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(false, args.capture_list);
+
+    let args = parse_low_raw(["--capture-list"]).unwrap();
+    assert_eq!(true, args.capture_list);
 }
 
 /// --color
@@ -3530,6 +3628,125 @@ fn test_json() {
 
     let args = parse_low_raw(["--json", "-l", "--no-json"]).unwrap();
     assert_eq!(Mode::Search(SearchMode::FilesWithMatches), args.mode);
+}
+
+/// --json-captures
+#[derive(Debug)]
+struct JSONCaptures;
+
+impl Flag for JSONCaptures {
+    fn is_switch(&self) -> bool {
+        true
+    }
+    fn name_long(&self) -> &'static str {
+        "json-captures"
+    }
+    fn name_negated(&self) -> Option<&'static str> {
+        Some("no-json-captures")
+    }
+    fn doc_category(&self) -> Category {
+        Category::OutputModes
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Show matches and capture groups in JSON Lines."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Enable printing results in a capture-aware JSON Lines format.
+.sp
+This mode emits the same lifecycle messages as \flag{json}, but each match
+message contains the overall regex occurrences together with all capture groups
+for each occurrence.
+.sp
+This flag requires at least one explicit capture group in the compiled regex.
+.sp
+By default, this mode omits the parent \fBlines\fP payload from match and
+context messages. Use \flag{json-captures-lines} with \fBalways\fP to include it.
+.sp
+Like \flag{json}, this output mode always implies \flag{stats}.
+"
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        if v.unwrap_switch() {
+            args.mode.update(Mode::Search(SearchMode::JSONCaptures));
+        } else if matches!(args.mode, Mode::Search(SearchMode::JSONCaptures)) {
+            args.mode.update(Mode::Search(SearchMode::Standard));
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_json_captures() {
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(Mode::Search(SearchMode::Standard), args.mode);
+
+    let args = parse_low_raw(["--json-captures"]).unwrap();
+    assert_eq!(Mode::Search(SearchMode::JSONCaptures), args.mode);
+
+    let args =
+        parse_low_raw(["--json-captures", "--no-json-captures"]).unwrap();
+    assert_eq!(Mode::Search(SearchMode::Standard), args.mode);
+}
+
+/// --json-captures-lines
+#[derive(Debug)]
+struct JSONCapturesLines;
+
+impl Flag for JSONCapturesLines {
+    fn is_switch(&self) -> bool {
+        false
+    }
+    fn name_long(&self) -> &'static str {
+        "json-captures-lines"
+    }
+    fn doc_variable(&self) -> Option<&'static str> {
+        Some("WHEN")
+    }
+    fn doc_choices(&self) -> &'static [&'static str] {
+        &["never", "always"]
+    }
+    fn doc_category(&self) -> Category {
+        Category::OutputModes
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Control whether `lines` is emitted in `--json-captures`."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Control whether \fBlines\fP is emitted in capture-aware JSON output.
+.sp
+The default is \fBnever\fP, which omits the parent record payload from each
+match and context message. Use \fBalways\fP to include the full parent record
+payload.
+"
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        let value = v.unwrap_value();
+        let string = convert::str(&value)?;
+        args.json_captures_lines = match string {
+            "never" => JSONCapturesLinesMode::Never,
+            "always" => JSONCapturesLinesMode::Always,
+            unk => anyhow::bail!("choice '{unk}' is unrecognized"),
+        };
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_json_captures_lines() {
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(JSONCapturesLinesMode::Never, args.json_captures_lines);
+
+    let args = parse_low_raw(["--json-captures-lines", "never"]).unwrap();
+    assert_eq!(JSONCapturesLinesMode::Never, args.json_captures_lines);
+
+    let args = parse_low_raw(["--json-captures-lines", "always"]).unwrap();
+    assert_eq!(JSONCapturesLinesMode::Always, args.json_captures_lines);
 }
 
 /// --line-buffered

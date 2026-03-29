@@ -10,6 +10,34 @@ use {
 
 use crate::{MAX_LOOK_AHEAD, hyperlink::HyperlinkPath};
 
+/// A complete regex occurrence, including the overall match and every capture
+/// group span that participated in it.
+#[derive(Clone, Debug)]
+pub(crate) struct CaptureMatch {
+    overall: Match,
+    captures: Vec<Option<Match>>,
+}
+
+impl CaptureMatch {
+    #[inline]
+    pub(crate) fn new(
+        overall: Match,
+        captures: Vec<Option<Match>>,
+    ) -> CaptureMatch {
+        CaptureMatch { overall, captures }
+    }
+
+    #[inline]
+    pub(crate) fn overall(&self) -> Match {
+        self.overall
+    }
+
+    #[inline]
+    pub(crate) fn captures(&self) -> &[Option<Match>] {
+        &self.captures
+    }
+}
+
 /// A type for handling replacements while amortizing allocation.
 pub(crate) struct Replacer<M: Matcher> {
     space: Option<Space<M>>,
@@ -136,6 +164,15 @@ impl<M: Matcher> Replacer<M> {
             space.dst.clear();
             space.matches.clear();
         }
+    }
+
+    /// Return reusable space for extracting captures without performing a
+    /// replacement.
+    pub(crate) fn captures<'a>(
+        &'a mut self,
+        matcher: &M,
+    ) -> io::Result<&'a mut M::Captures> {
+        Ok(&mut self.allocate(matcher)?.caps)
     }
 
     /// Allocate space for replacements when used with the given matcher and
@@ -525,6 +562,57 @@ where
                 return false;
             }
             matched(m)
+        })
+        .map_err(io::Error::error_message)
+}
+
+/// Like `Matcher::captures_iter_at`, but accepts an end bound by discarding
+/// matches that start beyond the given range.
+pub(crate) fn capture_matches_in_context<M>(
+    searcher: &Searcher,
+    matcher: M,
+    mut bytes: &[u8],
+    range: std::ops::Range<usize>,
+    caps: &mut M::Captures,
+    matches: &mut Vec<CaptureMatch>,
+) -> io::Result<()>
+where
+    M: Matcher,
+{
+    let is_multi_line = searcher.multi_line_with_matcher(&matcher);
+    if is_multi_line {
+        if bytes[range.end..].len() >= MAX_LOOK_AHEAD {
+            bytes = &bytes[..range.end + MAX_LOOK_AHEAD];
+        }
+    } else {
+        let mut m = Match::new(0, range.end);
+        trim_line_terminator(searcher, bytes, &mut m);
+        bytes = &bytes[..m.end()];
+    }
+    matcher
+        .captures_iter_at(bytes, range.start, caps, |caps| {
+            let overall = caps.get(0).unwrap();
+            if overall.start() >= range.end {
+                return false;
+            }
+            let captures = (0..caps.len())
+                .map(|i| {
+                    caps.get(i).map(|m| {
+                        Match::new(
+                            m.start() - range.start,
+                            m.end() - range.start,
+                        )
+                    })
+                })
+                .collect();
+            matches.push(CaptureMatch::new(
+                Match::new(
+                    overall.start() - range.start,
+                    overall.end() - range.start,
+                ),
+                captures,
+            ));
+            true
         })
         .map_err(io::Error::error_message)
 }

@@ -133,6 +133,159 @@ impl<'a> serde::Serialize for Context<'a> {
     }
 }
 
+pub(crate) enum CaptureMessage<'a> {
+    Begin(Begin<'a>),
+    End(End<'a>),
+    Match(CaptureMatch<'a>),
+    Context(CaptureContext<'a>),
+}
+
+impl<'a> serde::Serialize for CaptureMessage<'a> {
+    fn serialize<S: serde::Serializer>(
+        &self,
+        s: S,
+    ) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+
+        let mut state = s.serialize_struct("CaptureMessage", 2)?;
+        match *self {
+            CaptureMessage::Begin(ref msg) => {
+                state.serialize_field("type", &"begin")?;
+                state.serialize_field("data", msg)?;
+            }
+            CaptureMessage::End(ref msg) => {
+                state.serialize_field("type", &"end")?;
+                state.serialize_field("data", msg)?;
+            }
+            CaptureMessage::Match(ref msg) => {
+                state.serialize_field("type", &"match")?;
+                state.serialize_field("data", msg)?;
+            }
+            CaptureMessage::Context(ref msg) => {
+                state.serialize_field("type", &"context")?;
+                state.serialize_field("data", msg)?;
+            }
+        }
+        state.end()
+    }
+}
+
+pub(crate) struct CaptureMatch<'a> {
+    pub(crate) path: Option<&'a Path>,
+    pub(crate) lines: Option<&'a [u8]>,
+    pub(crate) line_number: Option<u64>,
+    pub(crate) absolute_offset: u64,
+    pub(crate) occurrences: Vec<CaptureOccurrence<'a>>,
+}
+
+impl<'a> serde::Serialize for CaptureMatch<'a> {
+    fn serialize<S: serde::Serializer>(
+        &self,
+        s: S,
+    ) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+
+        let mut state = s.serialize_struct(
+            "CaptureMatch",
+            4 + usize::from(self.lines.is_some()),
+        )?;
+        state.serialize_field("path", &self.path.map(Data::from_path))?;
+        if let Some(lines) = self.lines {
+            state.serialize_field("lines", &Data::from_bytes(lines))?;
+        }
+        state.serialize_field("line_number", &self.line_number)?;
+        state.serialize_field("absolute_offset", &self.absolute_offset)?;
+        state.serialize_field("occurrences", &self.occurrences)?;
+        state.end()
+    }
+}
+
+pub(crate) struct CaptureContext<'a> {
+    pub(crate) path: Option<&'a Path>,
+    pub(crate) lines: Option<&'a [u8]>,
+    pub(crate) line_number: Option<u64>,
+    pub(crate) absolute_offset: u64,
+    pub(crate) occurrences: Vec<CaptureOccurrence<'a>>,
+}
+
+impl<'a> serde::Serialize for CaptureContext<'a> {
+    fn serialize<S: serde::Serializer>(
+        &self,
+        s: S,
+    ) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+
+        let mut state = s.serialize_struct(
+            "CaptureContext",
+            4 + usize::from(self.lines.is_some()),
+        )?;
+        state.serialize_field("path", &self.path.map(Data::from_path))?;
+        if let Some(lines) = self.lines {
+            state.serialize_field("lines", &Data::from_bytes(lines))?;
+        }
+        state.serialize_field("line_number", &self.line_number)?;
+        state.serialize_field("absolute_offset", &self.absolute_offset)?;
+        state.serialize_field("occurrences", &self.occurrences)?;
+        state.end()
+    }
+}
+
+pub(crate) struct CaptureOccurrence<'a> {
+    pub(crate) m: &'a [u8],
+    pub(crate) start: usize,
+    pub(crate) end: usize,
+    pub(crate) absolute_start: u64,
+    pub(crate) absolute_end: u64,
+    pub(crate) captures: Vec<CaptureGroup<'a>>,
+}
+
+impl<'a> serde::Serialize for CaptureOccurrence<'a> {
+    fn serialize<S: serde::Serializer>(
+        &self,
+        s: S,
+    ) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+
+        let mut state = s.serialize_struct("CaptureOccurrence", 6)?;
+        state.serialize_field("match", &Data::from_bytes(self.m))?;
+        state.serialize_field("start", &self.start)?;
+        state.serialize_field("end", &self.end)?;
+        state.serialize_field("absolute_start", &self.absolute_start)?;
+        state.serialize_field("absolute_end", &self.absolute_end)?;
+        state.serialize_field("captures", &self.captures)?;
+        state.end()
+    }
+}
+
+pub(crate) struct CaptureGroup<'a> {
+    pub(crate) index: usize,
+    pub(crate) name: Option<String>,
+    pub(crate) m: Option<&'a [u8]>,
+    pub(crate) start: Option<usize>,
+    pub(crate) end: Option<usize>,
+    pub(crate) absolute_start: Option<u64>,
+    pub(crate) absolute_end: Option<u64>,
+}
+
+impl<'a> serde::Serialize for CaptureGroup<'a> {
+    fn serialize<S: serde::Serializer>(
+        &self,
+        s: S,
+    ) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+
+        let mut state = s.serialize_struct("CaptureGroup", 7)?;
+        state.serialize_field("index", &self.index)?;
+        state.serialize_field("name", &self.name)?;
+        state.serialize_field("match", &self.m.map(Data::from_bytes))?;
+        state.serialize_field("start", &self.start)?;
+        state.serialize_field("end", &self.end)?;
+        state.serialize_field("absolute_start", &self.absolute_start)?;
+        state.serialize_field("absolute_end", &self.absolute_end)?;
+        state.end()
+    }
+}
+
 pub(crate) struct SubMatch<'a> {
     pub(crate) m: &'a [u8],
     pub(crate) replacement: Option<&'a [u8]>,
@@ -166,7 +319,7 @@ impl<'a> serde::Serialize for SubMatch<'a> {
 /// it is natively supported by JSON. When invalid UTF-8 is found, then it is
 /// represented as arbitrary bytes and base64 encoded.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-enum Data<'a> {
+pub(crate) enum Data<'a> {
     Text { text: Cow<'a, str> },
     Bytes { bytes: &'a [u8] },
 }

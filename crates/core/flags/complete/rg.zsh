@@ -176,7 +176,10 @@ _rg() {
 
     + '(json)' # JSON options
     '--json[output results in JSON Lines format]'
+    '--json-captures[output matches and capture groups in JSON Lines format]'
+    '--json-captures-lines=[control whether lines are emitted in --json-captures]:when:(never always)'
     $no"--no-json[don't output results in JSON Lines format]"
+    $no"--no-json-captures[don't output matches and capture groups in JSON Lines format]"
 
     + '(line-number)' # Line-number options
     {-n,--line-number}'[show line numbers for matches]'
@@ -218,6 +221,8 @@ _rg() {
 
     + '(only)' # Only-match options
     {-o,--only-matching}'[show only matching part of each line]'
+    '--capture-highlight[highlight explicit capture groups in standard output]'
+    '--capture-list[show one record per explicit capture group]'
 
     + '(passthru)' # Pass-through options
     '(--vimgrep)--passthru[show both matching and non-matching lines]'

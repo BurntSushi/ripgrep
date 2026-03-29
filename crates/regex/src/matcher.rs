@@ -436,6 +436,11 @@ impl Matcher for RegexMatcher {
     }
 
     #[inline]
+    fn capture_name(&self, index: usize) -> Option<&str> {
+        self.regex.group_info().to_name(PatternID::ZERO, index)
+    }
+
+    #[inline]
     fn try_find_iter<F, E>(
         &self,
         haystack: &[u8],

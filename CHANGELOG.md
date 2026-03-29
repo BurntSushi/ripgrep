@@ -7,6 +7,26 @@ Bug fixes:
 * [BUG #3212](https://github.com/BurntSushi/ripgrep/pull/3212):
   Don't check for the existence of `.jj` when `--no-ignore` is used.
 
+Feature enhancements:
+
+* Add `--capture-highlight` to color explicit capture groups within standard
+  output, `--capture-list` to print one record per explicit capture group and
+  `--json-captures` for structured capture-aware JSON output.
+* Add `--json-captures-lines=never|always`. The default is `never`, which keeps
+  capture-aware JSON compact by omitting the parent `lines` payload unless it
+  is explicitly requested.
+
+Feature enhancements:
+
+* Add `--capture-highlight` for coloring explicit capture groups inside
+  standard output.
+* Add `--capture-list` for emitting one record per explicit capture group with
+  offsets.
+* Add `--json-captures` for occurrence- and capture-aware JSON output.
+* Add `--json-captures-lines=never|always`, with `never` as the default, so
+  capture-aware JSON can stay compact unless the parent `lines` payload is
+  explicitly requested.
+
 
 15.1.0
 ======
