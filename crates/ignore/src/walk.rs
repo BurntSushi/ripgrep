@@ -1629,8 +1629,17 @@ impl<'s> Worker<'s> {
     /// skipped by the ignore matcher.
     fn run(mut self) {
         while let Some(work) = self.get_work() {
-            if let WalkState::Quit = self.run_one(work) {
-                self.quit_now();
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                self.run_one(work)
+            }));
+            match result {
+                Ok(WalkState::Continue) => {}
+                Ok(WalkState::Quit) => self.quit_now(),
+                Ok(WalkState::Skip) => {}
+                Err(payload) => {
+                    self.quit_now();
+                    std::panic::resume_unwind(payload);
+                }
             }
         }
     }
