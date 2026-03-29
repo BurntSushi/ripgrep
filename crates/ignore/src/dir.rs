@@ -657,8 +657,12 @@ impl IgnoreBuilder {
             cwd.or_else(|| self.global_gitignores_relative_to.clone());
         let git_global_matcher = if !self.opts.git_global {
             Gitignore::empty()
-        } else if let Some(ref cwd) = global_gitignores_relative_to {
-            let mut builder = GitignoreBuilder::new(cwd);
+        } else if global_gitignores_relative_to.is_some() {
+            // Global-style globs (including -g/--glob and --ignore-file)
+            // should be resolved relative to the search root, not the process
+            // cwd. Use the configured search cwd only as a fallback for the
+            // legacy global ignore file lookup.
+            let mut builder = GitignoreBuilder::new(Path::new("."));
             builder
                 .case_insensitive(self.opts.ignore_case_insensitive)
                 .unwrap();
