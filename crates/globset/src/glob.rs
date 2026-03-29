@@ -13,7 +13,7 @@ use crate::{Candidate, Error, ErrorKind, new_regex};
 /// possible to test whether any of those patterns matches by looking up a
 /// file path's extension in a hash table.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) enum MatchStrategy {
+pub enum MatchStrategy {
     /// A pattern matches if and only if the entire file path matches this
     /// literal string.
     Literal(String),
@@ -48,7 +48,7 @@ pub(crate) enum MatchStrategy {
 
 impl MatchStrategy {
     /// Returns a matching strategy for the given pattern.
-    pub(crate) fn new(pat: &Glob) -> MatchStrategy {
+    pub fn new(pat: &Glob) -> MatchStrategy {
         if let Some(lit) = pat.basename_literal() {
             MatchStrategy::BasenameLiteral(lit)
         } else if let Some(lit) = pat.literal() {
