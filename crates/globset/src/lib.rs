@@ -129,7 +129,6 @@ use {
 };
 
 use crate::{
-    glob::MatchStrategy,
     pathutil::{file_name, file_name_ext, normalize_path},
 };
 
