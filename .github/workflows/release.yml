@@ -108,7 +108,7 @@ jobs:
           os: ubuntu-latest
           rust: stable
           target: loongarch64-unknown-linux-gnu
-          strip: loongarch64-linux-gnu-strip
+          strip: loongarch64-unknown-linux-gnu-strip
           qemu: qemu-loongarch64
         - build: macos
           os: macos-latest
