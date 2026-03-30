@@ -517,6 +517,7 @@ impl GitignoreBuilder {
             .case_insensitive(self.case_insensitive)
             .backslash_escape(true)
             .allow_unclosed_class(self.allow_unclosed_class)
+            .literal_braces(true)
             .build()
             .map_err(|err| Error::Glob {
                 glob: Some(glob.original.clone()),
@@ -751,6 +752,8 @@ mod tests {
     ignored!(ig42, ROOT, "s*.rs", "sfoo.rs");
     ignored!(ig43, ROOT, "**", "foo.rs");
     ignored!(ig44, ROOT, "**/**/*", "a/foo.rs");
+    ignored!(ig45, ROOT, "*.txt{}", "foo.txt{}");
+    ignored!(ig46, ROOT, "{{a}}", "{{a}}");
 
     not_ignored!(ignot1, ROOT, "amonths", "months");
     not_ignored!(ignot2, ROOT, "monthsa", "months");
@@ -776,6 +779,8 @@ mod tests {
     not_ignored!(ignot17, ROOT, "src/*.rs", "src/grep/src/main.rs");
     not_ignored!(ignot18, ROOT, "path1/*", "path2/path1/foo");
     not_ignored!(ignot19, ROOT, "s*.rs", "src/foo.rs");
+    not_ignored!(ignot20, ROOT, "*.txt{}", "foo.txt");
+    not_ignored!(ignot21, ROOT, "{{a}}", "a");
 
     fn bytes(s: &str) -> Vec<u8> {
         s.to_string().into_bytes()

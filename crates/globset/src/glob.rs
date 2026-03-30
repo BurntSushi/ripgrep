@@ -234,6 +234,9 @@ struct GlobOptions {
     /// When this isn't enabled, an opening `[` without a corresponding `]` is
     /// treated as an error.
     allow_unclosed_class: bool,
+    /// Whether or not braces are always treated literally and never as
+    /// alternation groups.
+    literal_braces: bool,
 }
 
 impl GlobOptions {
@@ -244,6 +247,7 @@ impl GlobOptions {
             backslash_escape: !is_separator('\\'),
             empty_alternates: false,
             allow_unclosed_class: false,
+            literal_braces: false,
         }
     }
 }
@@ -664,6 +668,16 @@ impl<'a> GlobBuilder<'a> {
         self.opts.allow_unclosed_class = yes;
         self
     }
+
+    /// Toggle whether braces (`{` and `}`) are always treated literally.
+    ///
+    /// When enabled, braces no longer start or end alternation groups.
+    ///
+    /// This is disabled by default.
+    pub fn literal_braces(&mut self, yes: bool) -> &mut GlobBuilder<'a> {
+        self.opts.literal_braces = yes;
+        self
+    }
 }
 
 impl Tokens {
@@ -826,8 +840,8 @@ impl<'a> Parser<'a> {
                 '?' => self.push_token(Token::Any)?,
                 '*' => self.parse_star()?,
                 '[' if !self.found_unclosed_class => self.parse_class()?,
-                '{' => self.push_alternate()?,
-                '}' => self.pop_alternate()?,
+                '{' if !self.opts.literal_braces => self.push_alternate()?,
+                '}' if !self.opts.literal_braces => self.pop_alternate()?,
                 ',' => self.parse_comma()?,
                 '\\' => self.parse_backslash()?,
                 c => self.push_token(Token::Literal(c))?,
@@ -1088,6 +1102,7 @@ mod tests {
         bsesc: Option<bool>,
         ealtre: Option<bool>,
         unccls: Option<bool>,
+        litbrace: Option<bool>,
     }
 
     macro_rules! syntax {
@@ -1133,6 +1148,9 @@ mod tests {
                 if let Some(unccls) = $options.unccls {
                     builder.allow_unclosed_class(unccls);
                 }
+                if let Some(litbrace) = $options.litbrace {
+                    builder.literal_braces(litbrace);
+                }
 
                 let pat = builder.build().unwrap();
                 assert_eq!(format!("(?-u){}", $re), pat.regex());
@@ -1159,6 +1177,9 @@ mod tests {
                 }
                 if let Some(ealtre) = $options.ealtre {
                     builder.empty_alternates(ealtre);
+                }
+                if let Some(litbrace) = $options.litbrace {
+                    builder.literal_braces(litbrace);
                 }
                 let pat = builder.build().unwrap();
                 let matcher = pat.compile_matcher();
@@ -1190,6 +1211,9 @@ mod tests {
                 }
                 if let Some(ealtre) = $options.ealtre {
                     builder.empty_alternates(ealtre);
+                }
+                if let Some(litbrace) = $options.litbrace {
+                    builder.literal_braces(litbrace);
                 }
                 let pat = builder.build().unwrap();
                 let matcher = pat.compile_matcher();
@@ -1285,6 +1309,7 @@ mod tests {
         bsesc: None,
         ealtre: None,
         unccls: None,
+        litbrace: None,
     };
     const SLASHLIT: Options = Options {
         casei: None,
@@ -1292,6 +1317,7 @@ mod tests {
         bsesc: None,
         ealtre: None,
         unccls: None,
+        litbrace: None,
     };
     const NOBSESC: Options = Options {
         casei: None,
@@ -1299,6 +1325,7 @@ mod tests {
         bsesc: Some(false),
         ealtre: None,
         unccls: None,
+        litbrace: None,
     };
     const BSESC: Options = Options {
         casei: None,
@@ -1306,6 +1333,7 @@ mod tests {
         bsesc: Some(true),
         ealtre: None,
         unccls: None,
+        litbrace: None,
     };
     const EALTRE: Options = Options {
         casei: None,
@@ -1313,6 +1341,7 @@ mod tests {
         bsesc: Some(true),
         ealtre: Some(true),
         unccls: None,
+        litbrace: None,
     };
     const UNCCLS: Options = Options {
         casei: None,
@@ -1320,6 +1349,15 @@ mod tests {
         bsesc: None,
         ealtre: None,
         unccls: Some(true),
+        litbrace: None,
+    };
+    const LITBRACE: Options = Options {
+        casei: None,
+        litsep: None,
+        bsesc: None,
+        ealtre: None,
+        unccls: None,
+        litbrace: Some(true),
     };
 
     toregex!(allow_unclosed_class_single, r"[", r"^\[$", &UNCCLS);
@@ -1365,6 +1403,8 @@ mod tests {
     toregex!(re9, "[+]", r"^[\+]$");
     toregex!(re10, "+", r"^\+$");
     toregex!(re11, "☃", r"^\xe2\x98\x83$");
+    toregex!(re11a, "{a,b}", r"^\{a,b\}$", &LITBRACE);
+    toregex!(re11b, "{{a}}", r"^\{\{a\}\}$", &LITBRACE);
     toregex!(re12, "**", r"^.*$");
     toregex!(re13, "**/", r"^.*$");
     toregex!(re14, "**/*", r"^(?:/?|.*/).*$");
@@ -1481,6 +1521,8 @@ mod tests {
     matches!(matchalt17, "{a,b{c,d}}", "bc");
     matches!(matchalt18, "{a,b{c,d}}", "bd");
     matches!(matchalt19, "{a,b{c,d}}", "a");
+    matches!(matchalt20, "{a,b}", "{a,b}", LITBRACE);
+    matches!(matchalt21, "{{a}}", "{{a}}", LITBRACE);
 
     matches!(matchslash1, "abc/def", "abc/def", SLASHLIT);
     #[cfg(unix)]
@@ -1513,6 +1555,7 @@ mod tests {
     nmatches!(matchnot6, "/**/test", "/one/notthis");
     nmatches!(matchnot7, "/**/test", "/notthis");
     nmatches!(matchnot8, "**/.*", "ab.c");
+    nmatches!(matchnot8a, "{{a}}", "a", LITBRACE);
     nmatches!(matchnot9, "**/.*", "abc/ab.c");
     nmatches!(matchnot10, ".*/**", "a.bc");
     nmatches!(matchnot11, ".*/**", "abc/a.bc");

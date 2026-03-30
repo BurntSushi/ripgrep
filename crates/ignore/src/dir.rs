@@ -1146,7 +1146,7 @@ mod tests {
     #[test]
     fn errored() {
         let td = tmpdir();
-        wfile(td.path().join(".gitignore"), "{foo");
+        wfile(td.path().join(".gitignore"), "[z-a]");
 
         let (_, err) = IgnoreBuilder::new().build().add_child(td.path());
         assert!(err.is_some());
@@ -1155,8 +1155,8 @@ mod tests {
     #[test]
     fn errored_both() {
         let td = tmpdir();
-        wfile(td.path().join(".gitignore"), "{foo");
-        wfile(td.path().join(".ignore"), "{bar");
+        wfile(td.path().join(".gitignore"), "[z-a]");
+        wfile(td.path().join(".ignore"), "[z-a]");
 
         let (_, err) = IgnoreBuilder::new().build().add_child(td.path());
         assert_eq!(2, partial(err.expect("an error")).len());
@@ -1166,7 +1166,7 @@ mod tests {
     fn errored_partial() {
         let td = tmpdir();
         mkdirp(td.path().join(".git"));
-        wfile(td.path().join(".gitignore"), "{foo\nbar");
+        wfile(td.path().join(".gitignore"), "[z-a]\nbar");
 
         let (ig, err) = IgnoreBuilder::new().build().add_child(td.path());
         assert!(err.is_some());
@@ -1176,7 +1176,7 @@ mod tests {
     #[test]
     fn errored_partial_and_ignore() {
         let td = tmpdir();
-        wfile(td.path().join(".gitignore"), "{foo\nbar");
+        wfile(td.path().join(".gitignore"), "[z-a]\nbar");
         wfile(td.path().join(".ignore"), "!bar");
 
         let (ig, err) = IgnoreBuilder::new().build().add_child(td.path());
