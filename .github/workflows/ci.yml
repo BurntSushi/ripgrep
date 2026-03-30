@@ -99,6 +99,12 @@ jobs:
           os: ubuntu-latest
           rust: stable
           target: riscv64gc-unknown-linux-gnu
+        - build: stable-loongarch64
+          os: ubuntu-latest
+          rust: stable
+          target: loongarch64-unknown-linux-gnu
+          strip: loongarch64-linux-gnu-strip
+          qemu: qemu-loongarch64
         - build: macos
           os: macos-latest
           rust: nightly
@@ -131,12 +137,16 @@ jobs:
         # In the past, new releases of 'cross' have broken CI. So for now, we
         # pin it. We also use their pre-compiled binary releases because cross
         # has over 100 dependencies and takes a bit to compile.
-        dir="$RUNNER_TEMP/cross-download"
-        mkdir "$dir"
-        echo "$dir" >> $GITHUB_PATH
-        cd "$dir"
-        curl -LO "https://github.com/cross-rs/cross/releases/download/$CROSS_VERSION/cross-x86_64-unknown-linux-musl.tar.gz"
-        tar xf cross-x86_64-unknown-linux-musl.tar.gz
+        if [[ "${{ matrix.target }}" == loongarch64* ]]; then
+          cargo install --git https://github.com/cross-rs/cross --rev 4090beca3cfffa44371a5bba524de3a578aa46c3 cross
+        else
+          dir="$RUNNER_TEMP/cross-download"
+          mkdir "$dir"
+          echo "$dir" >> $GITHUB_PATH
+          cd "$dir"
+          curl -LO "https://github.com/cross-rs/cross/releases/download/$CROSS_VERSION/cross-x86_64-unknown-linux-musl.tar.gz"
+          tar xf cross-x86_64-unknown-linux-musl.tar.gz
+        fi
         echo "CARGO=cross" >> $GITHUB_ENV
         echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
         echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
