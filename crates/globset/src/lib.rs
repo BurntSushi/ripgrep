@@ -133,7 +133,7 @@ use crate::{
     pathutil::{file_name, file_name_ext, normalize_path},
 };
 
-pub use crate::glob::{Glob, GlobBuilder, GlobMatcher};
+pub use crate::glob::{Glob, GlobBuilder, GlobMatcher, MatchStrategy};
 
 mod fnv;
 mod glob;

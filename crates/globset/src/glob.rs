@@ -12,8 +12,12 @@ use crate::{Candidate, Error, ErrorKind, new_regex};
 /// patterns. For example, if many patterns are of the form `*.ext`, then it's
 /// possible to test whether any of those patterns matches by looking up a
 /// file path's extension in a hash table.
+///
+/// This is useful for users who want to inspect or categorize patterns
+/// based on their matching strategy, or for building custom optimizations
+/// based on the detected strategy.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) enum MatchStrategy {
+pub enum MatchStrategy {
     /// A pattern matches if and only if the entire file path matches this
     /// literal string.
     Literal(String),
@@ -48,7 +52,16 @@ pub(crate) enum MatchStrategy {
 
 impl MatchStrategy {
     /// Returns a matching strategy for the given pattern.
-    pub(crate) fn new(pat: &Glob) -> MatchStrategy {
+    ///
+    /// This analyzes the glob pattern and determines the optimal matching
+    /// strategy that can be used. For example, a pattern like `*.rs` will
+    /// return `MatchStrategy::Extension(".rs")`, while a pattern like
+    /// `foo/bar` will return `MatchStrategy::Literal("foo/bar")`.
+    ///
+    /// Note that case-insensitive patterns will generally result in a
+    /// `MatchStrategy::Regex` strategy, since literal optimizations are
+    /// only possible when case sensitivity is enabled.
+    pub fn new(pat: &Glob) -> MatchStrategy {
         if let Some(lit) = pat.basename_literal() {
             MatchStrategy::BasenameLiteral(lit)
         } else if let Some(lit) = pat.literal() {
