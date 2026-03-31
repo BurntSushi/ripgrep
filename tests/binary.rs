@@ -57,6 +57,31 @@ rgtest!(mmap_match_explicit, |dir: Dir, mut cmd: TestCommand| {
     eqnice!(expected, cmd.stdout());
 });
 
+// On macOS, mmap is selected by default for small explicit file searches.
+// These tests pin the default path's binary-file behavior without requiring
+// --mmap explicitly.
+#[cfg(target_os = "macos")]
+rgtest!(auto_mmap_match_explicit_before_nul, |dir: Dir, mut cmd: TestCommand| {
+    dir.create_bytes("hay", HAY);
+    cmd.args(&["-n", "Project Gutenberg EBook", "hay"]);
+
+    let expected = "\
+1:The Project Gutenberg EBook of A Study In Scarlet, by Arthur Conan Doyle
+";
+    eqnice!(expected, cmd.stdout());
+});
+
+#[cfg(target_os = "macos")]
+rgtest!(auto_mmap_match_explicit_after_nul, |dir: Dir, mut cmd: TestCommand| {
+    dir.create_bytes("hay", HAY);
+    cmd.args(&["-n", "Heaven", "hay"]);
+
+    let expected = "\
+1871:\"No. Heaven knows what the objects of his studies are. But here we
+";
+    eqnice!(expected, cmd.stdout());
+});
+
 // Test specifically with a pattern that matches near the NUL byte which should
 // trigger binary detection with memory maps.
 #[cfg(not(target_os = "macos"))]
