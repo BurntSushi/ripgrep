@@ -119,6 +119,16 @@ pub(crate) fn without_terminator(
     bytes: &[u8],
     line_term: LineTerminator,
 ) -> &[u8] {
+    // Fast path for the common single-byte line terminator case.
+    // Avoids constructing a slice from as_bytes() and the bounds-checked
+    // comparison via get().
+    if !line_term.is_crlf() {
+        let term = line_term.as_byte();
+        if bytes.last() == Some(&term) {
+            return &bytes[..bytes.len() - 1];
+        }
+        return bytes;
+    }
     let line_term = line_term.as_bytes();
     let start = bytes.len().saturating_sub(line_term.len());
     if bytes.get(start..) == Some(line_term) {
