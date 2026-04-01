@@ -1424,8 +1424,18 @@ impl WalkParallel {
                 })
                 .map(|worker| s.spawn(|| worker.run()))
                 .collect();
+            let mut panic_payload = None;
             for handle in handles {
-                handle.join().unwrap();
+                if let Err(payload) = handle.join() {
+                    // Capture the first panic but keep joining the rest,
+                    // so all threads get a chance to clean up.
+                    if panic_payload.is_none() {
+                        panic_payload = Some(payload);
+                    }
+                }
+            }
+            if let Some(payload) = panic_payload {
+                std::panic::resume_unwind(payload);
             }
         });
     }
@@ -1622,17 +1632,52 @@ struct Worker<'s> {
     filter: Option<Filter>,
 }
 
+/// A guard that ensures the parallel walker terminates cleanly even if a
+/// worker thread panics. Without this, a panic in a visitor callback would
+/// unwind past `Worker::run` without signaling other threads to stop,
+/// causing them to spin indefinitely in their work-stealing loop.
+///
+/// This fixes two known issues:
+/// - Workers hanging when a visitor panics (gh-3009)
+/// - Workers spinning in nanosleep when a sibling is stuck (gh-2761)
+struct WorkerPanicGuard {
+    quit_now: Arc<AtomicBool>,
+    /// Set to `true` before normal return from `Worker::run()`.
+    /// When `false` at drop time, we know we're unwinding from a panic.
+    defused: bool,
+}
+
+impl Drop for WorkerPanicGuard {
+    fn drop(&mut self) {
+        if !self.defused {
+            // Signal all workers to quit. We intentionally do NOT touch
+            // active_workers here: the termination protocol in get_work()
+            // handles its own accounting, and the quit_now flag takes
+            // priority over the active worker count (see the check at the
+            // top of the get_work loop). Setting quit_now is sufficient to
+            // break all workers out of both their work loop and their sleep
+            // loop.
+            self.quit_now.store(true, AtomicOrdering::SeqCst);
+        }
+    }
+}
+
 impl<'s> Worker<'s> {
     /// Runs this worker until there is no more work left to do.
     ///
     /// The worker will call the caller's callback for all entries that aren't
     /// skipped by the ignore matcher.
     fn run(mut self) {
+        let mut guard = WorkerPanicGuard {
+            quit_now: self.quit_now.clone(),
+            defused: false,
+        };
         while let Some(work) = self.get_work() {
             if let WalkState::Quit = self.run_one(work) {
                 self.quit_now();
             }
         }
+        guard.defused = true;
     }
 
     fn run_one(&mut self, mut work: Work) -> WalkState {
@@ -1836,6 +1881,12 @@ impl<'s> Worker<'s> {
                     }
                     // Wait for next `Work` or `Quit` message.
                     loop {
+                        if self.is_quit_now() {
+                            // A sibling worker has signaled termination
+                            // (possibly via panic). Break out immediately.
+                            self.send_quit();
+                            return None;
+                        }
                         if let Some(v) = self.recv() {
                             self.activate_worker();
                             value = Some(v);
@@ -2490,5 +2541,43 @@ mod tests {
                 .filter_entry(|entry| entry.file_name() != OsStr::new("a")),
             &["x", "x/y", "x/y/foo"],
         );
+    }
+
+    /// Test that the parallel walker terminates cleanly when a visitor
+    /// panics, instead of hanging indefinitely. This is a regression test
+    /// for <https://github.com/BurntSushi/ripgrep/issues/3009>.
+    #[test]
+    fn parallel_visitor_panic_does_not_hang() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        let td = tmpdir();
+        // Create enough entries to ensure multiple workers get work.
+        for i in 0..100 {
+            wfile(td.path().join(format!("file{i}")), "");
+        }
+
+        let visited = Arc::new(AtomicUsize::new(0));
+        let result = std::panic::catch_unwind(|| {
+            let visited = visited.clone();
+            let mut builder = WalkBuilder::new(td.path());
+            builder.threads(4);
+            builder.build_parallel().run(|| {
+                let visited = visited.clone();
+                Box::new(move |_| {
+                    let n = visited.fetch_add(1, Ordering::SeqCst);
+                    if n == 5 {
+                        panic!("intentional panic in visitor");
+                    }
+                    WalkState::Continue
+                })
+            });
+        });
+
+        // The walker should have terminated (not hung), and the panic
+        // should have propagated.
+        assert!(result.is_err(), "expected panic to propagate");
+        // We should have visited at least a few entries before the panic
+        // killed everything.
+        assert!(visited.load(Ordering::SeqCst) >= 5);
     }
 }
