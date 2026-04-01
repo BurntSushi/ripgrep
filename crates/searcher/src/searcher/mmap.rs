@@ -1,6 +1,8 @@
 use std::{fs::File, path::Path};
 
-use memmap::{Advice, Mmap};
+#[cfg(unix)]
+use memmap::Advice;
+use memmap::Mmap;
 
 /// Controls the strategy used for determining when to use memory maps.
 ///
@@ -82,6 +84,7 @@ impl MmapChoice {
                 // Hint to the OS that we'll read this sequentially.
                 // This encourages aggressive prefetching of pages ahead
                 // of our current position.
+                #[cfg(unix)]
                 let _ = mmap.advise(Advice::Sequential);
                 Some(mmap)
             }

@@ -700,6 +700,7 @@ impl Searcher {
                 // searches. We skip this when a match limit is set
                 // because the search may stop early.
                 if self.config.max_matches.is_none() {
+                    #[cfg(unix)]
                     let _ = mmap.advise(memmap::Advice::WillNeed);
                 }
                 log::trace!("{:?}: searching via memory map", path);
