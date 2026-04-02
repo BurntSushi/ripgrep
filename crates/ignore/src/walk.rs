@@ -1082,12 +1082,14 @@ impl Walk {
                 &ent.metadata().ok(),
             ));
         }
-        if let Some(Filter(filter)) = &self.filter {
-            if !filter(ent) {
-                return Ok(true);
-            }
-        }
         Ok(false)
+    }
+
+    fn skip_entry_filtered(&self, ent: &DirEntry) -> bool {
+        if let Some(Filter(filter)) = &self.filter {
+            return !filter(ent);
+        }
+        false
     }
 }
 
@@ -1134,17 +1136,19 @@ impl Iterator for Walk {
                         Err(err) => return Some(Err(err)),
                         Ok(should_skip) => should_skip,
                     };
-                    if should_skip {
-                        self.it.as_mut().unwrap().it.skip_current_dir();
-                        // Still need to push this on the stack because
-                        // we'll get a WalkEvent::Exit event for this dir.
-                        // We don't care if it errors though.
-                        let (igtmp, _) = self.ig.add_child(ent.path());
-                        self.ig = igtmp;
-                        continue;
-                    }
                     let (igtmp, err) = self.ig.add_child(ent.path());
                     self.ig = igtmp;
+                    if should_skip {
+                        self.it.as_mut().unwrap().it.skip_current_dir();
+                        continue;
+                    }
+                    // Advance the ignore stack before running the user-supplied
+                    // filter so a caught panic still leaves the subsequent
+                    // WalkEvent::Exit balanced.
+                    if self.skip_entry_filtered(&ent) {
+                        self.it.as_mut().unwrap().it.skip_current_dir();
+                        continue;
+                    }
                     ent.err = err;
                     return Some(Ok(ent));
                 }
@@ -1154,7 +1158,7 @@ impl Iterator for Walk {
                         Err(err) => return Some(Err(err)),
                         Ok(should_skip) => should_skip,
                     };
-                    if should_skip {
+                    if should_skip || self.skip_entry_filtered(&ent) {
                         continue;
                     }
                     return Some(Ok(ent));
