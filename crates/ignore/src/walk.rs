@@ -1750,6 +1750,11 @@ impl<'s> Worker<'s> {
             }
         };
         let is_symlink = dent.file_type().map_or(false, |ft| ft.is_symlink());
+        // N.B. See analogous call in the single-threaded implementation about
+        // why it's important for this to come before the checks below.
+        if should_skip_entry(ig, &dent) {
+            return WalkState::Continue;
+        }
         if self.follow_links && is_symlink {
             let path = dent.path().to_path_buf();
             dent = match DirEntryRaw::from_path(depth, path, true) {
@@ -1763,11 +1768,6 @@ impl<'s> Worker<'s> {
                     return self.visitor.visit(Err(err));
                 }
             }
-        }
-        // N.B. See analogous call in the single-threaded implementation about
-        // why it's important for this to come before the checks below.
-        if should_skip_entry(ig, &dent) {
-            return WalkState::Continue;
         }
         if let Some(ref stdout) = self.skip {
             let is_stdout = match path_equals(&dent, stdout) {
@@ -2382,6 +2382,18 @@ mod tests {
             &builder.follow_links(true),
             &["a", "a/b", "a/b/foo", "z", "z/foo"],
         );
+    }
+
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn ignored_broken_symlink_follow_parallel() {
+        let td = tmpdir();
+        wfile(td.path().join(".gitignore"), "broken_symlink\n");
+        symlink("does-not-exist", td.path().join("broken_symlink"));
+
+        let mut builder = WalkBuilder::new(td.path());
+        builder.follow_links(true);
+        assert_paths(td.path(), &builder, &[]);
     }
 
     #[cfg(unix)] // because symlinks on windows are weird
