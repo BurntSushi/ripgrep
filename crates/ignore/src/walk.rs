@@ -1673,16 +1673,16 @@ impl<'s> Worker<'s> {
             true
         };
 
-        // Try to read the directory first before we transfer ownership
-        // to the provided closure. Do not unwrap it immediately, though,
-        // as we may receive an `Err` value e.g. in the case when we do not
-        // have sufficient read permissions to list the directory.
-        // In that case we still want to provide the closure with a valid
-        // entry before passing the error value.
-        let readdir = work.read_dir();
         let depth = work.dent.depth();
+        if self.max_depth.map_or(false, |max| depth >= max) {
+            return if should_visit {
+                self.visitor.visit(Ok(work.dent.clone()))
+            } else {
+                WalkState::Skip
+            };
+        }
         if should_visit {
-            let state = self.visitor.visit(Ok(work.dent));
+            let state = self.visitor.visit(Ok(work.dent.clone()));
             if !state.is_continue() {
                 return state;
             }
@@ -1691,6 +1691,14 @@ impl<'s> Worker<'s> {
             return WalkState::Skip;
         }
 
+        // Try to read the directory first before we transfer ownership
+        // to the provided closure. Do not unwrap it immediately, though,
+        // as we may receive an `Err` value e.g. in the case when we do not
+        // have sufficient read permissions to list the directory.
+        // In that case we still want to provide the closure with a valid
+        // entry before passing the error value.
+        let readdir = work.read_dir();
+
         let readdir = match readdir {
             Ok(readdir) => readdir,
             Err(err) => {
@@ -1698,9 +1706,6 @@ impl<'s> Worker<'s> {
             }
         };
 
-        if self.max_depth.map_or(false, |max| depth >= max) {
-            return WalkState::Skip;
-        }
         for result in readdir {
             let state = self.generate_work(
                 &work.ignore,
