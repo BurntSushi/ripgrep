@@ -1008,6 +1008,21 @@ rgtest!(compressed_failing_gzip, |dir: Dir, mut cmd: TestCommand| {
     cmd.assert_non_empty_stderr();
 });
 
+rgtest!(compressed_gzip_without_extension, |dir: Dir, mut cmd: TestCommand| {
+    if !cmd_exists("gzip") {
+        return;
+    }
+
+    dir.create_bytes("sherlock", include_bytes!("./data/sherlock.gz"));
+    cmd.arg("-z").arg("Sherlock").arg("sherlock");
+
+    let expected = "\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+be, to a very large extent, the result of luck. Sherlock Holmes
+";
+    eqnice!(expected, cmd.stdout());
+});
+
 rgtest!(binary_convert, |dir: Dir, mut cmd: TestCommand| {
     dir.create("file", "foo\x00bar\nfoo\x00baz\n");
     cmd.arg("--no-mmap").arg("foo").arg("file");

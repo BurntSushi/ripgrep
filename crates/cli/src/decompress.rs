@@ -1,7 +1,7 @@
 use std::{
     ffi::{OsStr, OsString},
     fs::File,
-    io,
+    io::{self, Read},
     path::{Path, PathBuf},
     process::Command,
 };
@@ -25,6 +25,9 @@ pub struct DecompressionMatcherBuilder {
 struct DecompressionCommand {
     /// The glob that matches this command.
     glob: String,
+    /// An optional magic header that can be used to detect compressed files
+    /// independent of their file path.
+    magic: Option<&'static [u8]>,
     /// The command or binary name.
     bin: PathBuf,
     /// The arguments to invoke with the command.
@@ -137,7 +140,12 @@ impl DecompressionMatcherBuilder {
         let bin = try_resolve_binary(Path::new(program.as_ref()))?;
         let args =
             args.into_iter().map(|a| a.as_ref().to_os_string()).collect();
-        self.commands.push(DecompressionCommand { glob, bin, args });
+        self.commands.push(DecompressionCommand {
+            glob,
+            magic: None,
+            bin,
+            args,
+        });
         Ok(self)
     }
 }
@@ -177,19 +185,36 @@ impl DecompressionMatcher {
     /// If there are multiple possible commands matching the given path, then
     /// the command added last takes precedence.
     pub fn command<P: AsRef<Path>>(&self, path: P) -> Option<Command> {
-        if let Some(i) = self.globs.matches(path).into_iter().next_back() {
-            let decomp_cmd = &self.commands[i];
-            let mut cmd = Command::new(&decomp_cmd.bin);
-            cmd.args(&decomp_cmd.args);
-            return Some(cmd);
-        }
-        None
+        let path = path.as_ref();
+        let i = self
+            .globs
+            .matches(path)
+            .into_iter()
+            .next_back()
+            .or_else(|| self.command_index_by_magic(path))?;
+        let decomp_cmd = &self.commands[i];
+        let mut cmd = Command::new(&decomp_cmd.bin);
+        cmd.args(&decomp_cmd.args);
+        Some(cmd)
     }
 
     /// Returns true if and only if the given file path has at least one
     /// matching command to perform decompression on.
     pub fn has_command<P: AsRef<Path>>(&self, path: P) -> bool {
-        self.globs.is_match(path)
+        let path = path.as_ref();
+        self.globs.is_match(path) || self.command_index_by_magic(path).is_some()
+    }
+
+    fn command_index_by_magic(&self, path: &Path) -> Option<usize> {
+        let mut file = File::open(path).ok()?;
+        let mut buf = [0; 16];
+        let len = file.read(&mut buf).ok()?;
+        self.commands.iter().enumerate().find_map(|(i, cmd)| {
+            let magic = cmd.magic?;
+            buf.get(..len)
+                .filter(|bytes| bytes.starts_with(magic))
+                .map(|_| i)
+        })
     }
 }
 
@@ -497,7 +522,12 @@ fn default_decompression_commands() -> Vec<DecompressionCommand> {
     const ARGS_ZSTD: &[&str] = &["zstd", "-q", "-d", "-c"];
     const ARGS_UNCOMPRESS: &[&str] = &["uncompress", "-c"];
 
-    fn add(glob: &str, args: &[&str], cmds: &mut Vec<DecompressionCommand>) {
+    fn add(
+        glob: &str,
+        magic: Option<&'static [u8]>,
+        args: &[&str],
+        cmds: &mut Vec<DecompressionCommand>,
+    ) {
         let bin = match resolve_binary(Path::new(args[0])) {
             Ok(bin) => bin,
             Err(err) => {
@@ -507,6 +537,7 @@ fn default_decompression_commands() -> Vec<DecompressionCommand> {
         };
         cmds.push(DecompressionCommand {
             glob: glob.to_string(),
+            magic,
             bin,
             args: args
                 .iter()
@@ -516,17 +547,17 @@ fn default_decompression_commands() -> Vec<DecompressionCommand> {
         });
     }
     let mut cmds = vec![];
-    add("*.gz", ARGS_GZIP, &mut cmds);
-    add("*.tgz", ARGS_GZIP, &mut cmds);
-    add("*.bz2", ARGS_BZIP, &mut cmds);
-    add("*.tbz2", ARGS_BZIP, &mut cmds);
-    add("*.xz", ARGS_XZ, &mut cmds);
-    add("*.txz", ARGS_XZ, &mut cmds);
-    add("*.lz4", ARGS_LZ4, &mut cmds);
-    add("*.lzma", ARGS_LZMA, &mut cmds);
-    add("*.br", ARGS_BROTLI, &mut cmds);
-    add("*.zst", ARGS_ZSTD, &mut cmds);
-    add("*.zstd", ARGS_ZSTD, &mut cmds);
-    add("*.Z", ARGS_UNCOMPRESS, &mut cmds);
+    add("*.gz", Some(b"\x1F\x8B"), ARGS_GZIP, &mut cmds);
+    add("*.tgz", Some(b"\x1F\x8B"), ARGS_GZIP, &mut cmds);
+    add("*.bz2", Some(b"BZh"), ARGS_BZIP, &mut cmds);
+    add("*.tbz2", Some(b"BZh"), ARGS_BZIP, &mut cmds);
+    add("*.xz", Some(b"\xFD7zXZ\x00"), ARGS_XZ, &mut cmds);
+    add("*.txz", Some(b"\xFD7zXZ\x00"), ARGS_XZ, &mut cmds);
+    add("*.lz4", Some(b"\x04\x22\x4D\x18"), ARGS_LZ4, &mut cmds);
+    add("*.lzma", None, ARGS_LZMA, &mut cmds);
+    add("*.br", None, ARGS_BROTLI, &mut cmds);
+    add("*.zst", Some(b"\x28\xB5\x2F\xFD"), ARGS_ZSTD, &mut cmds);
+    add("*.zstd", Some(b"\x28\xB5\x2F\xFD"), ARGS_ZSTD, &mut cmds);
+    add("*.Z", Some(b"\x1F\x9D"), ARGS_UNCOMPRESS, &mut cmds);
     cmds
 }
