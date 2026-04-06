@@ -202,7 +202,8 @@ impl DecompressionMatcher {
     /// matching command to perform decompression on.
     pub fn has_command<P: AsRef<Path>>(&self, path: P) -> bool {
         let path = path.as_ref();
-        self.globs.is_match(path) || self.command_index_by_magic(path).is_some()
+        self.globs.is_match(path)
+            || self.command_index_by_magic(path).is_some()
     }
 
     fn command_index_by_magic(&self, path: &Path) -> Option<usize> {
@@ -211,9 +212,7 @@ impl DecompressionMatcher {
         let len = file.read(&mut buf).ok()?;
         self.commands.iter().enumerate().find_map(|(i, cmd)| {
             let magic = cmd.magic?;
-            buf.get(..len)
-                .filter(|bytes| bytes.starts_with(magic))
-                .map(|_| i)
+            buf.get(..len).filter(|bytes| bytes.starts_with(magic)).map(|_| i)
         })
     }
 }
