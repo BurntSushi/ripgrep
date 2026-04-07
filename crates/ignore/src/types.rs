@@ -87,7 +87,7 @@ assert!(matcher.matched("y.cpp", false).is_whitelist());
 use std::{collections::HashMap, path::Path, sync::Arc};
 
 use {
-    globset::{GlobBuilder, GlobSet, GlobSetBuilder},
+    globset::{GlobBuilder, GlobMatcher, GlobSet, GlobSetBuilder},
     regex_automata::util::pool::Pool,
 };
 
@@ -176,6 +176,8 @@ pub struct Types {
     glob_to_selection: Vec<(usize, usize)>,
     /// The set of all glob selections, used for actual matching.
     set: GlobSet,
+    /// All compiled glob matchers corresponding to the globs in `set`.
+    matchers: Vec<GlobMatcher>,
     /// Temporary storage for globs that match.
     matches: Arc<Pool<Vec<usize>>>,
 }
@@ -231,6 +233,7 @@ impl Types {
             has_selected: false,
             glob_to_selection: vec![],
             set: GlobSetBuilder::new().build().unwrap(),
+            matchers: vec![],
             matches: Arc::new(Pool::new(|| vec![])),
         }
     }
@@ -263,28 +266,27 @@ impl Types {
         path: P,
         is_dir: bool,
     ) -> Match<Glob<'a>> {
-        // File types don't apply to directories, and we can't do anything
-        // if our glob set is empty.
-        if is_dir || self.set.is_empty() {
+        if self.set.is_empty() {
             return Match::None;
         }
-        // We only want to match against the file name, so extract it.
-        // If one doesn't exist, then we can't match it.
-        let name = match file_name(path.as_ref()) {
-            Some(name) => name,
-            None if self.has_selected => {
-                return Match::Ignore(Glob::unmatched());
-            }
-            None => {
-                return Match::None;
-            }
-        };
+        let path = path.as_ref();
+        let name = file_name(path);
         let mut matches = self.matches.get();
-        self.set.matches_into(name, &mut *matches);
-        // The highest precedent match is the last one.
-        if let Some(&i) = matches.last() {
-            let (isel, _) = self.glob_to_selection[i];
+        self.set.matches_into(path, &mut *matches);
+        for &i in matches.iter().rev() {
+            let (isel, iglob) = self.glob_to_selection[i];
             let sel = &self.selections[isel];
+            let glob = &sel.inner().globs[iglob];
+            let has_separator = glob.chars().any(std::path::is_separator);
+            if is_dir && !has_separator {
+                continue;
+            }
+            if !has_separator {
+                let Some(name) = name else { continue };
+                if !self.matchers[i].is_match(name) {
+                    continue;
+                }
+            }
             let glob = Glob(GlobInner::Matched { def: sel.inner() });
             return if sel.is_negated() {
                 Match::Ignore(glob)
@@ -292,7 +294,7 @@ impl Types {
                 Match::Whitelist(glob)
             };
         }
-        if self.has_selected {
+        if self.has_selected && !is_dir {
             Match::Ignore(Glob::unmatched())
         } else {
             Match::None
@@ -326,6 +328,7 @@ impl TypesBuilder {
         let mut selections = vec![];
         let mut glob_to_selection = vec![];
         let mut build_set = GlobSetBuilder::new();
+        let mut matchers = vec![];
         for (isel, selection) in self.selections.iter().enumerate() {
             let def = match self.types.get(selection.name()) {
                 Some(def) => def.clone(),
@@ -335,15 +338,15 @@ impl TypesBuilder {
                 }
             };
             for (iglob, glob) in def.globs.iter().enumerate() {
-                build_set.add(
-                    GlobBuilder::new(glob)
-                        .literal_separator(true)
-                        .build()
-                        .map_err(|err| Error::Glob {
-                            glob: Some(glob.to_string()),
-                            err: err.kind().to_string(),
-                        })?,
-                );
+                let parsed = GlobBuilder::new(glob)
+                    .literal_separator(true)
+                    .build()
+                    .map_err(|err| Error::Glob {
+                        glob: Some(glob.to_string()),
+                        err: err.kind().to_string(),
+                    })?;
+                matchers.push(parsed.compile_matcher());
+                build_set.add(parsed);
                 glob_to_selection.push((isel, iglob));
             }
             selections.push(selection.clone().map(move |_| def));
@@ -357,6 +360,7 @@ impl TypesBuilder {
             has_selected,
             glob_to_selection,
             set,
+            matchers,
             matches: Arc::new(Pool::new(|| vec![])),
         })
     }
@@ -559,6 +563,52 @@ mod tests {
     matched!(not, matchnot6, types(), vec!["combo"], vec![], "leftpad.js");
     matched!(not, matchnot7, types(), vec!["py"], vec![], "index.html");
     matched!(not, matchnot8, types(), vec!["python"], vec![], "doc.md");
+
+    #[test]
+    fn match_path_glob_against_file_path() {
+        let mut btypes = TypesBuilder::new();
+        btypes.add_def("test:tests/**").unwrap();
+        btypes.select("test");
+        let types = btypes.build().unwrap();
+
+        assert!(types.matched("tests/data/input.txt", false).is_whitelist());
+        assert!(types.matched("src/tests/data/input.txt", false).is_ignore());
+    }
+
+    #[test]
+    fn match_path_glob_against_directory_entries() {
+        let mut btypes = TypesBuilder::new();
+        btypes.add_def("test:tests/**").unwrap();
+        btypes.select("test");
+        let types = btypes.build().unwrap();
+
+        assert!(types.matched("tests/data", true).is_whitelist());
+        assert!(types.matched("src", true).is_none());
+    }
+
+    #[test]
+    fn basename_globs_still_only_apply_to_files() {
+        let mut btypes = TypesBuilder::new();
+        btypes.add_def("rust:*.rs").unwrap();
+        btypes.select("rust");
+        let types = btypes.build().unwrap();
+
+        assert!(types.matched("lib.rs", false).is_whitelist());
+        assert!(types.matched("src/lib.rs", false).is_ignore());
+        assert!(types.matched("src", true).is_none());
+    }
+
+    #[test]
+    fn path_globs_can_match_directories_while_basename_globs_match_files() {
+        let mut btypes = TypesBuilder::new();
+        btypes.add_def("test:*.rs").unwrap();
+        btypes.add_def("test:tests/**").unwrap();
+        btypes.select("test");
+        let types = btypes.build().unwrap();
+
+        assert!(types.matched("tests/data", true).is_whitelist());
+        assert!(types.matched("main.rs", false).is_whitelist());
+    }
 
     #[test]
     fn test_invalid_defs() {
