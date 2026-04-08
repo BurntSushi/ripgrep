@@ -267,6 +267,37 @@ mod tests {
     }
 
     #[test]
+    fn absolute_glob_matches_same_absolute_path_regardless_of_root() {
+        let path = "/tmp/rg/two.txt";
+
+        let from_fs_root = OverrideBuilder::new("/")
+            .add("!/tmp/rg/two.txt")
+            .unwrap()
+            .build()
+            .unwrap();
+        assert!(from_fs_root.matched(path, false).is_ignore());
+
+        let from_subdir = OverrideBuilder::new("/tmp/rg")
+            .add("!/tmp/rg/two.txt")
+            .unwrap()
+            .build()
+            .unwrap();
+        assert!(from_subdir.matched(path, false).is_ignore());
+    }
+
+    #[test]
+    fn absolute_glob_matches_issue_example_path_from_search_dir_root() {
+        let ov = OverrideBuilder::new("/tmp/rg")
+            .add("!/tmp/rg/two.txt")
+            .unwrap()
+            .build()
+            .unwrap();
+
+        assert!(ov.matched("/tmp/rg/one.txt", false).is_none());
+        assert!(ov.matched("/tmp/rg/two.txt", false).is_ignore());
+    }
+
+    #[test]
     fn case_insensitive() {
         let ov = OverrideBuilder::new(ROOT)
             .case_insensitive(true)
