@@ -497,14 +497,37 @@ impl GitignoreBuilder {
             }
         }
         glob.actual = line.to_string();
+        // If this glob came from a specific gitignore file beneath our root,
+        // then prefix it with that directory so that matching remains relative
+        // to the gitignore's location, even when this matcher is used on paths
+        // outside that subtree.
+        let mut relative_to = None;
+        if let Some(ref from) = glob.from {
+            if let Some(parent) = from.parent() {
+                if let Some(prefix) = strip_prefix(&self.root, parent) {
+                    let prefix = strip_prefix("/", prefix).unwrap_or(prefix);
+                    if !prefix.as_os_str().is_empty() {
+                        relative_to = Some(prefix.to_path_buf());
+                    }
+                }
+            }
+        }
         // If there is a literal slash, then this is a glob that must match the
-        // entire path name. Otherwise, we should let it match anywhere, so use
-        // a **/ prefix.
+        // entire path name. Otherwise, we should let it match anywhere below the
+        // directory containing the gitignore file, so use a **/ prefix within
+        // that directory.
         if !is_absolute && !line.chars().any(|c| c == '/') {
             // ... but only if we don't already have a **/ prefix.
             if !glob.has_doublestar_prefix() {
                 glob.actual = format!("**/{}", glob.actual);
             }
+        }
+        if let Some(prefix) = relative_to {
+            glob.actual = if glob.actual.is_empty() {
+                prefix.to_string_lossy().into_owned()
+            } else {
+                format!("{}/{}", prefix.to_string_lossy(), glob.actual)
+            };
         }
         // If the glob ends with `/**`, then we should only match everything
         // inside a directory, but not the directory itself. Standard globs
@@ -840,6 +863,21 @@ mod tests {
         assert!(gi.matched("foo.HTML", false).is_ignore());
         assert!(!gi.matched("foo.htm", false).is_ignore());
         assert!(!gi.matched("foo.HTM", false).is_ignore());
+    }
+
+    #[test]
+    fn matches_are_relative_to_gitignore_file() {
+        use std::path::PathBuf;
+
+        let mut builder = GitignoreBuilder::new("/root");
+        builder
+            .add_line(Some(PathBuf::from("/root/scratch/.gitignore")), "!foo.html")
+            .unwrap();
+        let gi = builder.build().unwrap();
+
+        assert!(gi.matched("/root/scratch/foo.html", false).is_whitelist());
+        assert!(gi.matched("/root/scratch/a/foo.html", false).is_whitelist());
+        assert!(gi.matched("/root/unknown/foo.html", false).is_none());
     }
 
     ignored!(cs1, ROOT, "*.html", "foo.html");
