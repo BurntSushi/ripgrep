@@ -1,0 +1,35 @@
+---
+description: Governance rules for ripgrep — quality gates, security, conventions
+globs:
+  - "**/*.rs"
+alwaysApply: true
+---
+
+# Governance — ripgrep
+
+> Generated from governance.md by crag. Regenerate: `crag compile --target cursor`
+
+**Stack:** rust
+
+## Quality Gates
+
+Run these checks in order before committing:
+### Lint
+- `cargo clippy -- -D warnings`
+- `cargo fmt --check`
+
+### Test
+- `cargo test`
+
+### Ci (inferred from workflow)
+- `cargo build --verbose`
+- `cargo fmt --all --check`
+- `cargo check`
+## Security
+
+- No hardcoded secrets — grep for sk_live, AKIA, password= before commit
+
+## Conventions
+
+- Follow project commit conventions
+- Runtimes: rust
