@@ -515,7 +515,6 @@ fn disambiguate_leading_dash(path: &Path) -> OsString {
     path.as_os_str().to_os_string()
 }
 
-
 fn default_decompression_commands() -> Vec<DecompressionCommand> {
     const ARGS_GZIP: &[&str] = &["gzip", "-d", "-c"];
     const ARGS_BZIP: &[&str] = &["bzip2", "-d", "-c"];
