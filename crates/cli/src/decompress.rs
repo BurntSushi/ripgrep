@@ -574,7 +574,10 @@ mod tests {
     #[test]
     fn disambiguate_leaves_normal_nested_paths_unchanged() {
         let p = PathBuf::from("dir/-10.gz");
-        assert_eq!(disambiguate_leading_dash(&p), OsString::from("dir/-10.gz"));
+        assert_eq!(
+            disambiguate_leading_dash(&p),
+            OsString::from("dir/-10.gz")
+        );
     }
 
     #[test]
@@ -589,12 +592,18 @@ mod tests {
         #[cfg(unix)]
         {
             let p = PathBuf::from("/tmp/-10.gz");
-            assert_eq!(disambiguate_leading_dash(&p), OsString::from("/tmp/-10.gz"));
+            assert_eq!(
+                disambiguate_leading_dash(&p),
+                OsString::from("/tmp/-10.gz")
+            );
         }
         #[cfg(windows)]
         {
             let p = PathBuf::from(r"C:\tmp\-10.gz");
-            assert_eq!(disambiguate_leading_dash(&p), OsString::from(r"C:\tmp\-10.gz"));
+            assert_eq!(
+                disambiguate_leading_dash(&p),
+                OsString::from(r"C:\tmp\-10.gz")
+            );
         }
     }
 }
