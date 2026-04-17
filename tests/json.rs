@@ -439,3 +439,80 @@ rgtest!(r1412_look_behind_match_missing, |dir: Dir, mut cmd: TestCommand| {
     assert_eq!(m.lines, Data::text("bar\n"));
     assert_eq!(m.submatches.len(), 1);
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3364
+rgtest!(
+    r3364_pcre2_adjacent_matches_split_per_line,
+    |dir: Dir, mut cmd: TestCommand| {
+        if !dir.is_pcre2() {
+            return;
+        }
+
+        dir.create("test", "test test foobar test\ntest foobar test test\n");
+        cmd.arg("--multiline")
+            .arg("--pcre2")
+            .arg("--json")
+            .arg("foobar")
+            .arg("test");
+
+        let msgs = json_decode(&cmd.stdout());
+        assert_eq!(msgs.len(), 5);
+
+        assert_eq!(
+            msgs[1].unwrap_match(),
+            Match {
+                path: Some(Data::text("test")),
+                lines: Data::text("test test foobar test\n"),
+                line_number: Some(1),
+                absolute_offset: 0,
+                submatches: vec![SubMatch {
+                    m: Data::text("foobar"),
+                    replacement: None,
+                    start: 10,
+                    end: 16,
+                }],
+            }
+        );
+        assert_eq!(
+            msgs[2].unwrap_match(),
+            Match {
+                path: Some(Data::text("test")),
+                lines: Data::text("test foobar test test\n"),
+                line_number: Some(2),
+                absolute_offset: 22,
+                submatches: vec![SubMatch {
+                    m: Data::text("foobar"),
+                    replacement: None,
+                    start: 5,
+                    end: 11,
+                }],
+            }
+        );
+    }
+);
+
+rgtest!(
+    json_multiline_match_stays_grouped,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create("test", "foo\nbar\n");
+        cmd.arg("--multiline").arg("--json").arg(r"foo\nbar").arg("test");
+
+        let msgs = json_decode(&cmd.stdout());
+        assert_eq!(msgs.len(), 4);
+        assert_eq!(
+            msgs[1].unwrap_match(),
+            Match {
+                path: Some(Data::text("test")),
+                lines: Data::text("foo\nbar\n"),
+                line_number: Some(1),
+                absolute_offset: 0,
+                submatches: vec![SubMatch {
+                    m: Data::text("foo\nbar"),
+                    replacement: None,
+                    start: 0,
+                    end: 7,
+                }],
+            }
+        );
+    }
+);

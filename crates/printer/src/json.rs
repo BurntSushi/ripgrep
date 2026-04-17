@@ -7,7 +7,9 @@ use std::{
 
 use {
     grep_matcher::{Match, Matcher},
-    grep_searcher::{Searcher, Sink, SinkContext, SinkFinish, SinkMatch},
+    grep_searcher::{
+        LineStep, Searcher, Sink, SinkContext, SinkFinish, SinkMatch,
+    },
     serde_json as json,
 };
 
@@ -714,6 +716,145 @@ impl<'p, 's, M: Matcher, W: io::Write> JSONSink<'p, 's, M, W> {
         self.begin_printed = true;
         Ok(())
     }
+
+    /// Write one or more match messages for the given sink match.
+    ///
+    /// When multiline search is enabled, the searcher may report multiple
+    /// single-line matches in one sink event. The default regex engine emits
+    /// one JSON match message per line in this case, so preserve that behavior
+    /// for PCRE2 as long as every match is fully contained within a single
+    /// line. If any match spans a line boundary, we keep the original
+    /// multi-line JSON message intact.
+    fn write_match_messages(
+        &mut self,
+        searcher: &Searcher,
+        mat: &SinkMatch<'_>,
+    ) -> io::Result<()> {
+        let matches = self.json.matches.clone();
+        let replacement = self
+            .replacer
+            .replacement()
+            .map(|(bytes, matches)| (bytes.to_vec(), matches.to_vec()));
+        let replacement = replacement
+            .as_ref()
+            .map(|(bytes, matches)| (bytes.as_slice(), matches.as_slice()));
+
+        if !searcher.multi_line_with_matcher(&self.matcher)
+            || mat.lines().count() <= 1
+        {
+            return self.write_match_message_for_matches(
+                mat.bytes(),
+                mat.line_number(),
+                mat.absolute_byte_offset(),
+                &matches,
+                replacement,
+            );
+        }
+
+        let bytes = mat.bytes();
+
+        let mut line_ranges = vec![];
+        let mut stepper = LineStep::new(
+            searcher.line_terminator().as_byte(),
+            0,
+            bytes.len(),
+        );
+        let mut midx = 0;
+        let mut line_index = 0usize;
+        while let Some((start, end)) = stepper.next(bytes) {
+            let match_start = midx;
+            while midx < matches.len() && matches[midx].start() < end {
+                if matches[midx].end() > end
+                    || (matches[midx].end() > 0
+                        && bytes[matches[midx].end() - 1]
+                            == searcher.line_terminator().as_byte())
+                {
+                    return self.write_match_message_for_matches(
+                        mat.bytes(),
+                        mat.line_number(),
+                        mat.absolute_byte_offset(),
+                        &matches,
+                        replacement,
+                    );
+                }
+                midx += 1;
+            }
+            if match_start < midx {
+                line_ranges.push((line_index, start, end, match_start, midx));
+            }
+            line_index += 1;
+        }
+        if line_ranges.len() <= 1 {
+            return self.write_match_message_for_matches(
+                mat.bytes(),
+                mat.line_number(),
+                mat.absolute_byte_offset(),
+                &matches,
+                replacement,
+            );
+        }
+
+        for (line_index, start, end, match_start, match_end) in line_ranges {
+            let line = &bytes[start..end];
+            let mut submatches = vec![];
+            for (offset, mat) in
+                matches[match_start..match_end].iter().enumerate()
+            {
+                let submatch_start = mat.start() - start;
+                let submatch_end = mat.end() - start;
+                submatches.push(jsont::SubMatch {
+                    m: &line[submatch_start..submatch_end],
+                    replacement: replacement.map(|(bytes, matches)| {
+                        let replacement = matches[match_start + offset];
+                        &bytes[replacement.start()..replacement.end()]
+                    }),
+                    start: submatch_start,
+                    end: submatch_end,
+                });
+            }
+            self.write_match_message(
+                line,
+                mat.line_number().map(|n| n + line_index as u64),
+                mat.absolute_byte_offset() + start as u64,
+                &submatches,
+            )?;
+        }
+        Ok(())
+    }
+
+    fn write_match_message<'a>(
+        &mut self,
+        lines: &'a [u8],
+        line_number: Option<u64>,
+        absolute_offset: u64,
+        submatches: &[jsont::SubMatch<'a>],
+    ) -> io::Result<()> {
+        let msg = jsont::Message::Match(jsont::Match {
+            path: self.path,
+            lines,
+            line_number,
+            absolute_offset,
+            submatches,
+        });
+        self.json.write_message(&msg)
+    }
+
+    fn write_match_message_for_matches<'a>(
+        &mut self,
+        lines: &'a [u8],
+        line_number: Option<u64>,
+        absolute_offset: u64,
+        matches: &[Match],
+        replacement: Option<(&'a [u8], &'a [Match])>,
+    ) -> io::Result<()> {
+        let submatches = SubMatches::new(lines, matches, replacement);
+        self.write_match_message(
+            lines,
+            line_number,
+            absolute_offset,
+            submatches.as_slice(),
+        )
+    }
 }
 
 impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
@@ -735,20 +876,7 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
         self.replace(searcher, mat.buffer(), mat.bytes_range_in_buffer())?;
         self.stats.add_matches(self.json.matches.len() as u64);
         self.stats.add_matched_lines(mat.lines().count() as u64);
-
-        let submatches = SubMatches::new(
-            mat.bytes(),
-            &self.json.matches,
-            self.replacer.replacement(),
-        );
-        let msg = jsont::Message::Match(jsont::Match {
-            path: self.path,
-            lines: mat.bytes(),
-            line_number: mat.line_number(),
-            absolute_offset: mat.absolute_byte_offset(),
-            submatches: submatches.as_slice(),
-        });
-        self.json.write_message(&msg)?;
+        self.write_match_messages(searcher, mat)?;
         Ok(true)
     }
 
