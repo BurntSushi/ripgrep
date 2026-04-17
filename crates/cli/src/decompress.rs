@@ -226,7 +226,11 @@ impl DecompressionReaderBuilder {
         let Some(mut cmd) = self.matcher.command(path) else {
             return DecompressionReader::new_passthru(path);
         };
-        cmd.arg(path);
+        // If the path starts with `-`, decompression tools like gzip/bzip2
+        // will misinterpret it as an options bundle ("gzip: invalid option").
+        // Prepend `./` for relative paths so the path is unambiguously a
+        // filename. See https://github.com/BurntSushi/ripgrep/issues/3222.
+        cmd.arg(disambiguate_leading_dash(path));
 
         match self.command_builder.build(&mut cmd) {
             Ok(cmd_reader) => Ok(DecompressionReader { rdr: Ok(cmd_reader) }),
@@ -487,6 +491,31 @@ fn try_resolve_binary<P: AsRef<Path>>(
     return Err(CommandError::io(io::Error::new(io::ErrorKind::Other, msg)));
 }
 
+/// Ensures a path doesn't begin with a `-`, which would be mistaken for an
+/// options argument by most command-line decompression tools (gzip, bzip2,
+/// xz, etc.) and produce an "invalid option" error.
+///
+/// For relative paths that start with `-`, returns a new `OsString` with
+/// `./` prepended. For paths that don't start with `-`, or absolute paths,
+/// returns the original path unchanged.
+fn disambiguate_leading_dash(path: &Path) -> OsString {
+    // Absolute paths can never be misinterpreted as options.
+    if path.is_absolute() {
+        return path.as_os_str().to_os_string();
+    }
+    // On Unix, `-` in the first byte is the only ambiguity. On Windows,
+    // options are usually introduced with `/` but some tools also accept
+    // `-`-prefixed options, so we apply the fix uniformly.
+    let bytes = path.as_os_str().as_encoded_bytes();
+    if bytes.first() == Some(&b'-') {
+        let mut out = OsString::from("./");
+        out.push(path);
+        return out;
+    }
+    path.as_os_str().to_os_string()
+}
+
+
 fn default_decompression_commands() -> Vec<DecompressionCommand> {
     const ARGS_GZIP: &[&str] = &["gzip", "-d", "-c"];
     const ARGS_BZIP: &[&str] = &["bzip2", "-d", "-c"];
@@ -529,4 +558,43 @@ fn default_decompression_commands() -> Vec<DecompressionCommand> {
     add("*.zstd", ARGS_ZSTD, &mut cmds);
     add("*.Z", ARGS_UNCOMPRESS, &mut cmds);
     cmds
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn disambiguate_leaves_normal_relative_paths_unchanged() {
+        let p = PathBuf::from("foo.gz");
+        assert_eq!(disambiguate_leading_dash(&p), OsString::from("foo.gz"));
+    }
+
+    #[test]
+    fn disambiguate_leaves_normal_nested_paths_unchanged() {
+        let p = PathBuf::from("dir/-10.gz");
+        assert_eq!(disambiguate_leading_dash(&p), OsString::from("dir/-10.gz"));
+    }
+
+    #[test]
+    fn disambiguate_prepends_dot_slash_for_leading_dash() {
+        let p = PathBuf::from("-10.gz");
+        assert_eq!(disambiguate_leading_dash(&p), OsString::from("./-10.gz"));
+    }
+
+    #[test]
+    fn disambiguate_leaves_absolute_paths_unchanged() {
+        // Absolute paths can never be mistaken for options.
+        #[cfg(unix)]
+        {
+            let p = PathBuf::from("/tmp/-10.gz");
+            assert_eq!(disambiguate_leading_dash(&p), OsString::from("/tmp/-10.gz"));
+        }
+        #[cfg(windows)]
+        {
+            let p = PathBuf::from(r"C:\tmp\-10.gz");
+            assert_eq!(disambiguate_leading_dash(&p), OsString::from(r"C:\tmp\-10.gz"));
+        }
+    }
 }
