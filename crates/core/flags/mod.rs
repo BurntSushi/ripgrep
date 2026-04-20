@@ -67,7 +67,7 @@ mod parse;
 /// by a single implementation of this trait.
 ///
 /// ripgrep only supports flags that are switches or flags that accept a single
-/// value. Flags that accept multiple values are an unsupported abberation.
+/// value. Flags that accept multiple values are an unsupported aberration.
 trait Flag: Debug + Send + Sync + UnwindSafe + RefUnwindSafe + 'static {
     /// Returns true if this flag is a switch. When a flag is a switch, the
     /// CLI parser will not look for a value after the flag is seen.
