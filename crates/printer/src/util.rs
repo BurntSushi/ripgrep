@@ -483,7 +483,7 @@ where
 {
     // This strange dance is to account for the possibility of look-ahead in
     // the regex. The problem here is that mat.bytes() doesn't include the
-    // lines beyond the match boundaries in mulit-line mode, which means that
+    // lines beyond the match boundaries in multi-line mode, which means that
     // when we try to rediscover the full set of matches here, the regex may no
     // longer match if it required some look-ahead beyond the matching lines.
     //
