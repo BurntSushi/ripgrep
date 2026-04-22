@@ -109,7 +109,7 @@ pub(crate) struct LowArgs {
     pub(crate) with_filename: Option<bool>,
 }
 
-/// A "special" mode that supercedes everything else.
+/// A "special" mode that supersedes everything else.
 ///
 /// When one of these modes is present, it overrides everything else and causes
 /// ripgrep to short-circuit. In particular, we avoid converting low-level
