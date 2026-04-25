@@ -102,7 +102,7 @@ struct IgnoreInner {
     /// parent directory matchers. This avoids needing to rebuild glob sets for
     /// parent directories if many paths are being searched.
     ///
-    /// The key is a Vec<OsString> = [parent_path, absolute_base_path]
+    /// The key is a Vec\<OsString\> = [parent_path, absolute_base_path]
     /// to ensure different root paths get distinct cache entries.
     compiled: Arc<RwLock<HashMap<Vec<OsString>, Weak<IgnoreInner>>>>,
     /// The path to the directory that this matcher was built from.
