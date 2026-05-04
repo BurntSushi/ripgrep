@@ -567,11 +567,27 @@ impl GitignoreBuilder {
 /// Return the file path of the current environment's global gitignore file.
 ///
 /// Note that the file path returned may not exist.
+///
+/// This respects the following environment variables in order:
+/// - `GIT_CONFIG_GLOBAL`: Path to the global git config (Git 2.32+)
+/// - `GIT_CONFIG_SYSTEM`: Path to the system git config (Git 2.32+)
+/// - `$HOME/.gitconfig`: Fallback global config
+/// - `$XDG_CONFIG_HOME/git/config`: XDG-style global config
 pub fn gitconfig_excludes_path() -> Option<PathBuf> {
-    // git supports $HOME/.gitconfig and $XDG_CONFIG_HOME/git/config. Notably,
-    // both can be active at the same time, where $HOME/.gitconfig takes
-    // precedent. So if $HOME/.gitconfig defines a `core.excludesFile`, then
-    // we're done.
+    if let Some(path) = git_config_global_path() {
+        if let Some(contents) = read_gitconfig(&path) {
+            if let Some(path) = parse_excludes_file(&contents) {
+                return Some(path);
+            }
+        }
+    }
+    if let Some(path) = git_config_system_path() {
+        if let Some(contents) = read_gitconfig(&path) {
+            if let Some(path) = parse_excludes_file(&contents) {
+                return Some(path);
+            }
+        }
+    }
     match gitconfig_home_contents().and_then(|x| parse_excludes_file(&x)) {
         Some(path) => return Some(path),
         None => {}
@@ -581,6 +597,30 @@ pub fn gitconfig_excludes_path() -> Option<PathBuf> {
         None => {}
     }
     excludes_file_default()
+}
+
+/// Returns the path specified by the GIT_CONFIG_GLOBAL environment variable,
+/// if set and non-empty.
+fn git_config_global_path() -> Option<PathBuf> {
+    std::env::var_os("GIT_CONFIG_GLOBAL")
+        .and_then(|x| if x.is_empty() { None } else { Some(PathBuf::from(x)) })
+}
+
+/// Returns the path specified by the GIT_CONFIG_SYSTEM environment variable,
+/// if set and non-empty.
+fn git_config_system_path() -> Option<PathBuf> {
+    std::env::var_os("GIT_CONFIG_SYSTEM")
+        .and_then(|x| if x.is_empty() { None } else { Some(PathBuf::from(x)) })
+}
+
+/// Reads and returns the contents of the git config file at the given path.
+fn read_gitconfig(path: &Path) -> Option<Vec<u8>> {
+    let mut file = match File::open(path) {
+        Err(_) => return None,
+        Ok(file) => BufReader::new(file),
+    };
+    let mut contents = vec![];
+    file.read_to_end(&mut contents).ok().map(|_| contents)
 }
 
 /// Returns the file contents of git's global config file, if one exists, in
