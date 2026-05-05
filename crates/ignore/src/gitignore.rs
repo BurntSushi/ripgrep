@@ -572,6 +572,17 @@ pub fn gitconfig_excludes_path() -> Option<PathBuf> {
     // both can be active at the same time, where $HOME/.gitconfig takes
     // precedent. So if $HOME/.gitconfig defines a `core.excludesFile`, then
     // we're done.
+    if let Some(path) = std::env::var_os("GIT_CONFIG_GLOBAL") {
+        if !path.is_empty() {
+            if let Some(excludes) = File::open(&path).ok().and_then(|f| {
+                let mut contents = vec![];
+                BufReader::new(f).read_to_end(&mut contents).ok()?;
+                parse_excludes_file(&contents)
+            }) {
+                return Some(excludes);
+            }
+        }
+    }
     match gitconfig_home_contents().and_then(|x| parse_excludes_file(&x)) {
         Some(path) => return Some(path),
         None => {}
