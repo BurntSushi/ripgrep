@@ -4024,7 +4024,11 @@ e
             .search_reader(&matcher, &payload[..], &mut printer.sink(&matcher))
             .unwrap();
         let got = printer.get_mut().get_ref().to_owned();
-        assert!(!got.contains(&0x1b), "ESC should not pass to a tty: {:?}", got);
+        assert!(
+            !got.contains(&0x1b),
+            "ESC should not pass to a tty: {:?}",
+            got
+        );
         assert!(!got.contains(&0x07), "BEL should not pass to a tty");
     }
 

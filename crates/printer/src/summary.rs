@@ -592,7 +592,10 @@ impl<'p, 's, M: Matcher, W: WriteColor> SummarySink<'p, 's, M, W> {
             let path_bytes = self.path.as_ref().unwrap().as_bytes();
             let spec = self.summary.config.colors.path();
             if self.summary.config.is_terminal {
-                self.write_spec(spec, &crate::util::sanitize_control(path_bytes))?;
+                self.write_spec(
+                    spec,
+                    &crate::util::sanitize_control(path_bytes),
+                )?;
             } else {
                 self.write_spec(spec, path_bytes)?;
             }

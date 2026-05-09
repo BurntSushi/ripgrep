@@ -614,9 +614,7 @@ const SANITIZE_TABLE: [u8; 256] = {
 // Rewrite C0 (except HT/LF/CR), DEL, and C1 (raw and UTF-8) to \xNN.
 // Returns Cow::Borrowed and skips allocation when the input is clean.
 #[allow(missing_docs)]
-pub fn sanitize_control<'b>(
-    bytes: &'b [u8],
-) -> std::borrow::Cow<'b, [u8]> {
+pub fn sanitize_control<'b>(bytes: &'b [u8]) -> std::borrow::Cow<'b, [u8]> {
     let mut i = 0;
     let mut need = false;
     while i < bytes.len() {
