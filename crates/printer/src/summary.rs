@@ -36,6 +36,8 @@ struct Config {
     separator_field: Arc<Vec<u8>>,
     separator_path: Option<u8>,
     path_terminator: Option<u8>,
+    /// True if output is going to an interactive terminal.
+    is_terminal: bool,
 }
 
 impl Default for Config {
@@ -50,6 +52,7 @@ impl Default for Config {
             separator_field: Arc::new(b":".to_vec()),
             separator_path: None,
             path_terminator: None,
+            is_terminal: false,
         }
     }
 }
@@ -238,6 +241,13 @@ impl SummaryBuilder {
         config: HyperlinkConfig,
     ) -> &mut SummaryBuilder {
         self.config.hyperlink = config;
+        self
+    }
+
+    /// Configure for output to an interactive terminal. When `true`,
+    /// printed paths are escaped to defang terminal control sequences.
+    pub fn is_terminal(&mut self, yes: bool) -> &mut SummaryBuilder {
+        self.config.is_terminal = yes;
         self
     }
 
@@ -581,7 +591,7 @@ impl<'p, 's, M: Matcher, W: WriteColor> SummarySink<'p, 's, M, W> {
             let status = self.start_hyperlink()?;
             let path_bytes = self.path.as_ref().unwrap().as_bytes();
             let spec = self.summary.config.colors.path();
-            if self.summary.wtr.borrow().supports_color() {
+            if self.summary.config.is_terminal {
                 self.write_spec(spec, &crate::util::sanitize_control(path_bytes))?;
             } else {
                 self.write_spec(spec, path_bytes)?;

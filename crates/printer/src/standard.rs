@@ -54,6 +54,8 @@ struct Config {
     separator_field_context: Arc<Vec<u8>>,
     separator_path: Option<u8>,
     path_terminator: Option<u8>,
+    /// True if output is going to an interactive terminal.
+    is_terminal: bool,
 }
 
 impl Default for Config {
@@ -79,6 +81,7 @@ impl Default for Config {
             separator_field_context: Arc::new(b"-".to_vec()),
             separator_path: None,
             path_terminator: None,
+            is_terminal: false,
         }
     }
 }
@@ -182,6 +185,14 @@ impl StandardBuilder {
         config: HyperlinkConfig,
     ) -> &mut StandardBuilder {
         self.config.hyperlink = config;
+        self
+    }
+
+    /// Configure for output to an interactive terminal. When `true`,
+    /// matched lines and printed paths are escaped to defang terminal
+    /// control sequences from filenames or file contents. Default `false`.
+    pub fn is_terminal(&mut self, yes: bool) -> &mut StandardBuilder {
+        self.config.is_terminal = yes;
         self
     }
 
@@ -1433,7 +1444,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     fn write_spec(&self, spec: &ColorSpec, buf: &[u8]) -> io::Result<()> {
         let mut wtr = self.wtr().borrow_mut();
         wtr.set_color(spec)?;
-        if wtr.supports_color() {
+        if self.config().is_terminal {
             wtr.write_all(&crate::util::sanitize_control(buf))?;
         } else {
             wtr.write_all(buf)?;
@@ -1445,7 +1456,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     fn write_path(&self, path: &PrinterPath) -> io::Result<()> {
         let mut wtr = self.wtr().borrow_mut();
         wtr.set_color(self.config().colors.path())?;
-        if wtr.supports_color() {
+        if self.config().is_terminal {
             wtr.write_all(&crate::util::sanitize_control(path.as_bytes()))?;
         } else {
             wtr.write_all(path.as_bytes())?;
@@ -1526,7 +1537,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
 
     fn write(&self, buf: &[u8]) -> io::Result<()> {
         let mut wtr = self.wtr().borrow_mut();
-        if wtr.supports_color() {
+        if self.config().is_terminal {
             wtr.write_all(&crate::util::sanitize_control(buf))
         } else {
             wtr.write_all(buf)
@@ -3996,5 +4007,59 @@ e
         let got = printer_contents(&mut printer);
         let expected = "hello\nworld\r\n";
         assert_eq_printed!(expected, got);
+    }
+
+    // Sanitization gating: gated on is_terminal, not supports_color.
+
+    #[test]
+    fn sanitize_is_terminal_true_no_color() {
+        let payload = b"safe\x1b]52;c;ZXZpbA==\x07line\n";
+        let matcher = RegexMatcher::new("safe").unwrap();
+        let mut printer = StandardBuilder::new()
+            .is_terminal(true)
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(false)
+            .build()
+            .search_reader(&matcher, &payload[..], &mut printer.sink(&matcher))
+            .unwrap();
+        let got = printer.get_mut().get_ref().to_owned();
+        assert!(!got.contains(&0x1b), "ESC should not pass to a tty: {:?}", got);
+        assert!(!got.contains(&0x07), "BEL should not pass to a tty");
+    }
+
+    #[test]
+    fn sanitize_is_terminal_false_passes_through() {
+        let payload = b"safe\x1b]52;c;ZXZpbA==\x07line\n";
+        let matcher = RegexMatcher::new("safe").unwrap();
+        let mut printer = StandardBuilder::new()
+            .is_terminal(false)
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(false)
+            .build()
+            .search_reader(&matcher, &payload[..], &mut printer.sink(&matcher))
+            .unwrap();
+        let got = printer.get_mut().get_ref().to_owned();
+        assert!(got.contains(&0x1b), "pipe output must be byte-exact");
+        assert!(got.contains(&0x07), "pipe output must be byte-exact");
+    }
+
+    #[test]
+    fn sanitize_is_terminal_true_with_color() {
+        let payload = b"safe\x1b]52;c;evil\x07after\n";
+        let matcher = RegexMatcher::new("safe").unwrap();
+        let mut printer = StandardBuilder::new()
+            .color_specs(ColorSpecs::default_with_color())
+            .is_terminal(true)
+            .build(Ansi::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(false)
+            .build()
+            .search_reader(&matcher, &payload[..], &mut printer.sink(&matcher))
+            .unwrap();
+        let got = printer_contents_ansi(&mut printer);
+        assert!(!got.contains("\x1b]52"), "OSC52 must not pass: {:?}", got);
+        assert!(got.contains("\\x1B]"), "expected escaped ESC: {:?}", got);
     }
 }

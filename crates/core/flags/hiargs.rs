@@ -549,6 +549,7 @@ impl HiArgs {
         builder
             .color_specs(self.colors.clone())
             .hyperlink(self.hyperlink_config.clone())
+            .is_terminal(self.is_terminal_stdout)
             .separator(self.path_separator.clone())
             .terminator(self.path_terminator.unwrap_or(b'\n'));
         builder
@@ -616,6 +617,7 @@ impl HiArgs {
             .column(self.column)
             .heading(self.heading)
             .hyperlink(self.hyperlink_config.clone())
+            .is_terminal(self.is_terminal_stdout)
             .max_columns_preview(self.max_columns_preview)
             .max_columns(self.max_columns)
             .only_matching(self.only_matching)
@@ -656,6 +658,7 @@ impl HiArgs {
             .color_specs(self.colors.clone())
             .exclude_zero(!self.include_zero)
             .hyperlink(self.hyperlink_config.clone())
+            .is_terminal(self.is_terminal_stdout)
             .kind(kind)
             .path(self.with_filename)
             .path_terminator(self.path_terminator.clone())
