@@ -7,7 +7,10 @@ const IGNORE_FILE: &'static str =
 
 fn get_gitignore() -> Gitignore {
     let mut builder = GitignoreBuilder::new("ROOT");
-    let error = builder.add(IGNORE_FILE);
+    // Use absolute path so it works regardless of the synthetic root used
+    // for path matching.
+    let absolute = std::env::current_dir().unwrap().join(IGNORE_FILE);
+    let error = builder.add(&absolute);
     assert!(error.is_none(), "failed to open gitignore file");
     builder.build().unwrap()
 }

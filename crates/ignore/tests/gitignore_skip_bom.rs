@@ -9,7 +9,8 @@ const IGNORE_FILE: &'static str = "tests/gitignore_skip_bom.gitignore";
 #[test]
 fn gitignore_skip_bom() {
     let mut builder = GitignoreBuilder::new("ROOT");
-    let error = builder.add(IGNORE_FILE);
+    let absolute = std::env::current_dir().unwrap().join(IGNORE_FILE);
+    let error = builder.add(&absolute);
     assert!(error.is_none(), "failed to open gitignore file");
     let g = builder.build().unwrap();
 

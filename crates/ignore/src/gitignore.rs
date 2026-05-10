@@ -386,13 +386,17 @@ impl GitignoreBuilder {
     ///
     /// The file given should be formatted as a `gitignore` file.
     ///
+    /// If `path` is relative, it is resolved relative to the root path
+    /// given to [`GitignoreBuilder::new`]. Absolute paths are used as-is.
+    ///
     /// Note that partial errors can be returned. For example, if there was
     /// a problem adding one glob, an error for that will be returned, but
     /// all other valid globs will still be added.
     pub fn add<P: AsRef<Path>>(&mut self, path: P) -> Option<Error> {
         let path = path.as_ref();
-        let file = match File::open(path) {
-            Err(err) => return Some(Error::Io(err).with_path(path)),
+        let path = self.root.join(path);
+        let file = match File::open(&path) {
+            Err(err) => return Some(Error::Io(err).with_path(&path)),
             Ok(file) => file,
         };
         log::debug!("opened gitignore file: {}", path.display());
@@ -403,7 +407,7 @@ impl GitignoreBuilder {
             let line = match line {
                 Ok(line) => line,
                 Err(err) => {
-                    errs.push(Error::Io(err).tagged(path, lineno));
+                    errs.push(Error::Io(err).tagged(&path, lineno));
                     break;
                 }
             };
@@ -414,7 +418,7 @@ impl GitignoreBuilder {
                 if i == 0 { line.trim_start_matches(UTF8_BOM) } else { &line };
 
             if let Err(err) = self.add_line(Some(path.to_path_buf()), &line) {
-                errs.push(err.tagged(path, lineno));
+                errs.push(err.tagged(&path, lineno));
             }
         }
         errs.into_error_option()
