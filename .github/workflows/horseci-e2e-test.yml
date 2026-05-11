@@ -1,0 +1,7 @@
+name: Test
+on: [pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - run: echo 'Success!'
