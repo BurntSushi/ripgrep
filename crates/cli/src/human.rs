@@ -64,7 +64,7 @@ impl std::fmt::Display for ParseSizeError {
 
 impl From<ParseSizeError> for std::io::Error {
     fn from(size_err: ParseSizeError) -> std::io::Error {
-        std::io::Error::new(std::io::ErrorKind::Other, size_err)
+        std::io::Error::other(size_err)
     }
 }
 

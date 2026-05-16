@@ -73,7 +73,7 @@ impl From<CommandError> for io::Error {
         match cmderr.kind {
             CommandErrorKind::Io(ioerr) => ioerr,
             CommandErrorKind::Stderr(_) => {
-                io::Error::new(io::ErrorKind::Other, cmderr)
+                io::Error::other(cmderr)
             }
         }
     }
