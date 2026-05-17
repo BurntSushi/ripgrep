@@ -119,7 +119,7 @@ use std::{
 };
 
 use {
-    aho_corasick::AhoCorasick,
+    aho_corasick::{AhoCorasick, AhoCorasickBuilder},
     bstr::{B, ByteSlice, ByteVec},
     regex_automata::{
         PatternSet,
@@ -470,7 +470,9 @@ impl GlobSet {
 
         let mut len = 0;
         let mut lits = LiteralStrategy::new();
+        let mut ci_lits = MultiStrategyBuilder::new();
         let mut base_lits = BasenameLiteralStrategy::new();
+        let mut ci_base_lits = MultiStrategyBuilder::new();
         let mut exts = ExtensionStrategy::new();
         let mut prefixes = MultiStrategyBuilder::new();
         let mut suffixes = MultiStrategyBuilder::new();
@@ -484,8 +486,14 @@ impl GlobSet {
                 MatchStrategy::Literal(lit) => {
                     lits.add(i, lit);
                 }
+                MatchStrategy::CaseInsensitiveLiteral(lit) => {
+                    ci_lits.add(i, lit);
+                }
                 MatchStrategy::BasenameLiteral(lit) => {
                     base_lits.add(i, lit);
+                }
+                MatchStrategy::CaseInsensitiveBasenameLiteral(lit) => {
+                    ci_base_lits.add(i, lit);
                 }
                 MatchStrategy::Extension(ext) => {
                     exts.add(i, ext);
@@ -513,17 +521,20 @@ impl GlobSet {
             }
         }
         debug!(
-            "built glob set; {} literals, {} basenames, {} extensions, \
+            "built glob set; {} literals, {} case insensitive literals, \
+                {} basenames, {} case insensitive basenames, {} extensions, \
                 {} prefixes, {} suffixes, {} required extensions, {} regexes",
             lits.0.len(),
+            ci_lits.literals.len(),
             base_lits.0.len(),
+            ci_base_lits.literals.len(),
             exts.0.len(),
             prefixes.literals.len(),
             suffixes.literals.len(),
             required_exts.0.len(),
             regexes.literals.len()
         );
-        let mut strats = Vec::with_capacity(7);
+        let mut strats = Vec::with_capacity(9);
         // Only add strategies that are populated
         if !exts.0.is_empty() {
             strats.push(GlobSetMatchStrategy::Extension(exts));
@@ -531,8 +542,18 @@ impl GlobSet {
         if !base_lits.0.is_empty() {
             strats.push(GlobSetMatchStrategy::BasenameLiteral(base_lits));
         }
+        if !ci_base_lits.is_empty() {
+            strats.push(GlobSetMatchStrategy::CaseInsensitiveBasenameLiteral(
+                ci_base_lits.case_insensitive(),
+            ));
+        }
         if !lits.0.is_empty() {
             strats.push(GlobSetMatchStrategy::Literal(lits));
+        }
+        if !ci_lits.is_empty() {
+            strats.push(GlobSetMatchStrategy::CaseInsensitiveLiteral(
+                ci_lits.case_insensitive(),
+            ));
         }
         if !suffixes.is_empty() {
             strats.push(GlobSetMatchStrategy::Suffix(suffixes.suffix()));
@@ -653,7 +674,9 @@ impl<'a> Candidate<'a> {
 #[derive(Clone, Debug)]
 enum GlobSetMatchStrategy {
     Literal(LiteralStrategy),
+    CaseInsensitiveLiteral(CaseInsensitiveLiteralStrategy),
     BasenameLiteral(BasenameLiteralStrategy),
+    CaseInsensitiveBasenameLiteral(CaseInsensitiveLiteralStrategy),
     Extension(ExtensionStrategy),
     Prefix(PrefixStrategy),
     Suffix(SuffixStrategy),
@@ -666,7 +689,17 @@ impl GlobSetMatchStrategy {
         use self::GlobSetMatchStrategy::*;
         match *self {
             Literal(ref s) => s.is_match(candidate),
+            CaseInsensitiveLiteral(ref s) => {
+                s.is_match(candidate.path.as_bytes())
+            }
             BasenameLiteral(ref s) => s.is_match(candidate),
+            CaseInsensitiveBasenameLiteral(ref s) => {
+                if candidate.basename.is_empty() {
+                    false
+                } else {
+                    s.is_match(candidate.basename.as_bytes())
+                }
+            }
             Extension(ref s) => s.is_match(candidate),
             Prefix(ref s) => s.is_match(candidate),
             Suffix(ref s) => s.is_match(candidate),
@@ -683,7 +716,15 @@ impl GlobSetMatchStrategy {
         use self::GlobSetMatchStrategy::*;
         match *self {
             Literal(ref s) => s.matches_into(candidate, matches),
+            CaseInsensitiveLiteral(ref s) => {
+                s.matches_into(candidate.path.as_bytes(), matches)
+            }
             BasenameLiteral(ref s) => s.matches_into(candidate, matches),
+            CaseInsensitiveBasenameLiteral(ref s) => {
+                if !candidate.basename.is_empty() {
+                    s.matches_into(candidate.basename.as_bytes(), matches);
+                }
+            }
             Extension(ref s) => s.matches_into(candidate, matches),
             Prefix(ref s) => s.matches_into(candidate, matches),
             Suffix(ref s) => s.matches_into(candidate, matches),
@@ -717,6 +758,29 @@ impl LiteralStrategy {
     ) {
         if let Some(hits) = self.0.get(candidate.path.as_bytes()) {
             matches.extend(hits);
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct CaseInsensitiveLiteralStrategy {
+    matcher: AhoCorasick,
+    map: Vec<usize>,
+}
+
+impl CaseInsensitiveLiteralStrategy {
+    fn is_match(&self, path: &[u8]) -> bool {
+        self.matcher
+            .find_overlapping_iter(path)
+            .any(|m| m.start() == 0 && m.end() == path.len())
+    }
+
+    #[inline(never)]
+    fn matches_into(&self, path: &[u8], matches: &mut Vec<usize>) {
+        for m in self.matcher.find_overlapping_iter(path) {
+            if m.start() == 0 && m.end() == path.len() {
+                matches.push(self.map[m.pattern()]);
+            }
         }
     }
 }
@@ -968,6 +1032,14 @@ impl MultiStrategyBuilder {
         }
     }
 
+    fn case_insensitive(self) -> CaseInsensitiveLiteralStrategy {
+        let matcher = AhoCorasickBuilder::new()
+            .ascii_case_insensitive(true)
+            .build(&self.literals)
+            .unwrap();
+        CaseInsensitiveLiteralStrategy { matcher, map: self.map }
+    }
+
     fn regex_set(self) -> Result<RegexSetStrategy, Error> {
         let matcher = new_regex_set(self.literals)?;
         let pattern_len = matcher.pattern_len();
@@ -1053,9 +1125,15 @@ pub fn escape(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::glob::Glob;
+    use crate::{GlobBuilder, glob::Glob};
 
     use super::{GlobSet, GlobSetBuilder};
+
+    fn ci_glob(glob: &str) -> Glob {
+        let mut builder = GlobBuilder::new(glob);
+        builder.case_insensitive(true);
+        builder.build().unwrap()
+    }
 
     #[test]
     fn set_works() {
@@ -1084,6 +1162,49 @@ mod tests {
         assert!(!set.is_match(""));
         assert!(!set.is_match("a"));
         assert!(set.matches_all("a"));
+    }
+
+    #[test]
+    fn case_insensitive_literals_are_not_regexes() {
+        let mut builder = GlobSetBuilder::new();
+        builder.add(ci_glob("Foo"));
+        builder.add(ci_glob("FOO"));
+        builder.add(ci_glob("bar"));
+        let set = builder.build().unwrap();
+
+        assert_eq!(vec![0, 1], set.matches("foo"));
+        assert_eq!(vec![2], set.matches("BAR"));
+        assert!(!set.is_match("src/foo"));
+        assert!(!set.is_match("quux"));
+        assert!(set.strats.iter().any(|s| matches!(
+            s,
+            super::GlobSetMatchStrategy::CaseInsensitiveLiteral(_)
+        )));
+        assert!(
+            !set.strats
+                .iter()
+                .any(|s| matches!(s, super::GlobSetMatchStrategy::Regex(_)))
+        );
+    }
+
+    #[test]
+    fn case_insensitive_basename_literals_are_not_regexes() {
+        let mut builder = GlobSetBuilder::new();
+        builder.add(ci_glob("**/Readme"));
+        let set = builder.build().unwrap();
+
+        assert_eq!(vec![0], set.matches("README"));
+        assert_eq!(vec![0], set.matches("src/readme"));
+        assert!(!set.is_match("src/readme/more"));
+        assert!(set.strats.iter().any(|s| matches!(
+            s,
+            super::GlobSetMatchStrategy::CaseInsensitiveBasenameLiteral(_)
+        )));
+        assert!(
+            !set.strats
+                .iter()
+                .any(|s| matches!(s, super::GlobSetMatchStrategy::Regex(_)))
+        );
     }
 
     #[test]
