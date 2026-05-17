@@ -21,6 +21,7 @@
 * [When I run `rg`, why does it execute some other command?](#rg-other-cmd)
 * [How do I create an alias for ripgrep on Windows?](#rg-alias-windows)
 * [How do I create a PowerShell profile?](#powershell-profile)
+* [Why do paths and encoding differ between Windows shells?](#windows-paths-encoding)
 * [How do I pipe non-ASCII content to ripgrep on Windows?](#pipe-non-ascii-windows)
 * [How can I search and replace with ripgrep?](#search-and-replace)
 * [How is ripgrep licensed?](#license)
@@ -827,6 +828,26 @@ for more details.
 
 Any PowerShell code in this file gets evaluated at the start of console. This
 way you can have own aliases to be created at start.
+
+
+<h3 name="windows-paths-encoding">
+Why do paths and encoding differ between Windows shells?
+</h3>
+
+ripgrep prints file paths using the platform's native path separator (`\` on
+Windows). When running under MSYS2, Git Bash, or Cygwin, your shell may rewrite
+paths or alter how non-ASCII text is displayed depending on locale and console
+settings. This can make the same search look different in `cmd.exe` versus Git
+Bash even though ripgrep is behaving consistently for each environment.
+
+If you want forward slashes in paths when using MSYS2-based shells, set
+`MSYS_NO_PATHCONV=1` for the specific invocation (see also
+[Why does using a leading `/` on Windows fail?](#because-cygwin)). For garbled
+non-ASCII output when piping in PowerShell, see
+[How do I pipe non-ASCII content to ripgrep on Windows?](#pipe-non-ascii-windows).
+
+For more background, see issue
+[#1667](https://github.com/BurntSushi/ripgrep/issues/1667).
 
 
 <h3 name="pipe-non-ascii-windows">
