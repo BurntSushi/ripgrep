@@ -273,8 +273,10 @@ impl Ignore {
             entries,
             &self.0.custom_ignore_filenames,
         );
-        let (ig, err) =
-            self.add_child_path_with_found_ignore_files(dir.as_ref(), Some(&files));
+        let (ig, err) = self.add_child_path_with_found_ignore_files(
+            dir.as_ref(),
+            Some(&files),
+        );
         (Ignore(Arc::new(ig)), err)
     }
 
@@ -321,12 +323,13 @@ impl Ignore {
     ) -> (IgnoreInner, Option<Error>) {
         let check_vcs_dir = self.0.opts.require_git
             && (self.0.opts.git_ignore || self.0.opts.git_exclude);
-        let git_type =
-            if check_vcs_dir && ignore_files_list.is_none_or(|i| i.has_git_dir) {
-                dir.join(".git").metadata().ok().map(|md| md.file_type())
-            } else {
-                None
-            };
+        let git_type = if check_vcs_dir
+            && ignore_files_list.is_none_or(|i| i.has_git_dir)
+        {
+            dir.join(".git").metadata().ok().map(|md| md.file_type())
+        } else {
+            None
+        };
         let has_jj = check_vcs_dir
             && ignore_files_list.is_none_or(|i| i.has_jj_dir)
             && dir.join(".jj").exists();
@@ -338,7 +341,10 @@ impl Ignore {
         } else {
             let custom_ignore_names: Vec<&OsString> = match ignore_files_list {
                 None => self.0.custom_ignore_filenames.iter().collect(),
-                Some(m) => self.0.custom_ignore_filenames.iter()
+                Some(m) => self
+                    .0
+                    .custom_ignore_filenames
+                    .iter()
                     .zip(m.custom_ignore_files.iter())
                     .filter_map(|(name, matched)| (*matched).then_some(name))
                     .collect(),

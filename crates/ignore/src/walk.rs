@@ -1531,7 +1531,9 @@ impl Work {
                 ),
             }
         }
-        let (ig, err) = self.ignore.add_child_with_entries(self.dent.path(), &result.entries);
+        let (ig, err) = self
+            .ignore
+            .add_child_with_entries(self.dent.path(), &result.entries);
         self.ignore = ig;
         self.dent.err = err;
         Ok(result)
@@ -1706,7 +1708,8 @@ impl<'s> Worker<'s> {
         // entry before passing the error value.
         let depth = work.dent.depth();
         let readdir = if descend
-            && self.max_depth.is_none_or(|m| work.dent.depth() < m) {
+            && self.max_depth.is_none_or(|m| work.dent.depth() < m)
+        {
             Some(work.read_dir())
         } else {
             work.add_ignore();
