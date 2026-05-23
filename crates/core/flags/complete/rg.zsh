@@ -130,6 +130,9 @@ _rg() {
     '(pretty-vimgrep)--heading[show matches grouped by file name]'
     "(pretty-vimgrep)--no-heading[don't show matches grouped by file name]"
 
+    '(no-hierarchy)--hierarchy[print hierarchical parent lines for each match]'
+    '(hierarchy)--no-hierarchy[do not print hierarchical parent lines for each match]'
+
     + '(hidden)' # Hidden-file options
     {-.,--hidden}'[search hidden files and directories]'
     $no"--no-hidden[don't search hidden files and directories]"
