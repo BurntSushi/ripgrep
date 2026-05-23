@@ -2850,12 +2850,11 @@ impl Flag for Hierarchy {
         Category::Output
     }
     fn doc_short(&self) -> &'static str {
-        r"Adds a Top-Level Context Line."
+        r"adds a top-Level context line"
     }
     fn doc_long(&self) -> &'static str {
         r"When enabled, ripgrep prints an additional top-level context
 line before matched results to visually group related output.
-
 This is useful when searching across deeply nested files, structured
 documents, logs, or hierarchical data where extra context improves
 readability and navigation"
