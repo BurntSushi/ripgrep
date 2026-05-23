@@ -416,7 +416,9 @@ impl<W: WriteColor> SearchWorker<W> {
                 search_path(m, searcher, printer, path, self.config.hierarchy)
             }
             #[cfg(feature = "pcre2")]
-            PCRE2(ref m) => search_path(m, searcher, printer, path),
+            PCRE2(ref m) => {
+                search_path(m, searcher, printer, path, self.config.hierarchy)
+            }
         }
     }
 
