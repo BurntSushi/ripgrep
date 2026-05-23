@@ -7,6 +7,7 @@ read and matched using the regex engine) and the printer. For example, the
 search worker is where things like preprocessors or decompression happens.
 */
 
+use std::collections::HashMap;
 use std::{io, path::Path};
 
 use {grep::matcher::Matcher, termcolor::WriteColor};
@@ -20,8 +21,67 @@ struct Config {
     preprocessor: Option<std::path::PathBuf>,
     preprocessor_globs: ignore::overrides::Override,
     search_zip: bool,
+    hierarchy: bool,
     binary_implicit: grep::searcher::BinaryDetection,
     binary_explicit: grep::searcher::BinaryDetection,
+}
+
+struct HierarchySink<S> {
+    pub inner: S,
+    map: HashMap<u64, Vec<(u64, Vec<u8>)>>,
+}
+
+impl<S: grep::searcher::Sink> grep::searcher::Sink for HierarchySink<S> {
+    type Error = S::Error;
+
+    fn matched(
+        &mut self,
+        searcher: &grep::searcher::Searcher,
+        mat: &grep::searcher::SinkMatch<'_>,
+    ) -> Result<bool, Self::Error> {
+        if let Some(n) = mat.line_number() {
+            if let Some(parents) = self.map.get(&n) {
+                for (line_num, content) in parents {
+                    println!(
+                        "{}: {}",
+                        line_num,
+                        String::from_utf8_lossy(content)
+                    );
+                }
+            }
+        }
+        self.inner.matched(searcher, mat)
+    }
+
+    fn context(
+        &mut self,
+        searcher: &grep::searcher::Searcher,
+        ctx: &grep::searcher::SinkContext<'_>,
+    ) -> Result<bool, Self::Error> {
+        self.inner.context(searcher, ctx)
+    }
+
+    fn context_break(
+        &mut self,
+        searcher: &grep::searcher::Searcher,
+    ) -> Result<bool, Self::Error> {
+        self.inner.context_break(searcher)
+    }
+
+    fn begin(
+        &mut self,
+        searcher: &grep::searcher::Searcher,
+    ) -> Result<bool, Self::Error> {
+        self.inner.begin(searcher)
+    }
+
+    fn finish(
+        &mut self,
+        searcher: &grep::searcher::Searcher,
+        finish: &grep::searcher::SinkFinish,
+    ) -> Result<(), Self::Error> {
+        self.inner.finish(searcher, finish)
+    }
 }
 
 impl Default for Config {
@@ -30,6 +90,7 @@ impl Default for Config {
             preprocessor: None,
             preprocessor_globs: ignore::overrides::Override::empty(),
             search_zip: false,
+            hierarchy: false,
             binary_implicit: grep::searcher::BinaryDetection::none(),
             binary_explicit: grep::searcher::BinaryDetection::none(),
         }
@@ -110,6 +171,13 @@ impl SearchWorkerBuilder {
         globs: ignore::overrides::Override,
     ) -> &mut SearchWorkerBuilder {
         self.config.preprocessor_globs = globs;
+        self
+    }
+
+    /// when this set, a sink is created at the time of file searching to
+    /// to provide extra hierarchical context.
+    pub(crate) fn hierarchy(&mut self, yes: bool) -> &mut SearchWorkerBuilder {
+        self.config.hierarchy = yes;
         self
     }
 
@@ -344,7 +412,9 @@ impl<W: WriteColor> SearchWorker<W> {
 
         let (searcher, printer) = (&mut self.searcher, &mut self.printer);
         match self.matcher {
-            RustRegex(ref m) => search_path(m, searcher, printer, path),
+            RustRegex(ref m) => {
+                search_path(m, searcher, printer, path, self.config.hierarchy)
+            }
             #[cfg(feature = "pcre2")]
             PCRE2(ref m) => search_path(m, searcher, printer, path),
         }
@@ -382,15 +452,38 @@ fn search_path<M: Matcher, W: WriteColor>(
     searcher: &mut grep::searcher::Searcher,
     printer: &mut Printer<W>,
     path: &Path,
+    hierarchy: bool,
 ) -> io::Result<SearchResult> {
     match *printer {
         Printer::Standard(ref mut p) => {
             let mut sink = p.sink_with_path(&matcher, path);
-            searcher.search_path(&matcher, path, &mut sink)?;
-            Ok(SearchResult {
-                has_match: sink.has_match(),
-                stats: sink.stats().map(|s| s.clone()),
-            })
+            if hierarchy {
+                match build_hierarchy_map(path) {
+                    Ok(map) => {
+                        let mut hsink = HierarchySink { inner: sink, map };
+                        searcher.search_path(&matcher, path, &mut hsink)?;
+                        Ok(SearchResult {
+                            has_match: hsink.inner.has_match(),
+                            stats: hsink.inner.stats().map(|s| s.clone()),
+                        })
+                    }
+                    Err(_) => {
+                        // if we can't build the map, fall back to normal search
+                        let mut sink = p.sink_with_path(&matcher, path);
+                        searcher.search_path(&matcher, path, &mut sink)?;
+                        Ok(SearchResult {
+                            has_match: sink.has_match(),
+                            stats: sink.stats().map(|s| s.clone()),
+                        })
+                    }
+                }
+            } else {
+                searcher.search_path(&matcher, path, &mut sink)?;
+                Ok(SearchResult {
+                    has_match: sink.has_match(),
+                    stats: sink.stats().map(|s| s.clone()),
+                })
+            }
         }
         Printer::Summary(ref mut p) => {
             let mut sink = p.sink_with_path(&matcher, path);
@@ -446,4 +539,36 @@ fn search_reader<M: Matcher, R: io::Read, W: WriteColor>(
             })
         }
     }
+}
+
+fn build_hierarchy_map(
+    path: &Path,
+) -> io::Result<HashMap<u64, Vec<(u64, Vec<u8>)>>> {
+    use std::io::BufRead;
+    let file = std::fs::File::open(path)?;
+    let reader = std::io::BufReader::new(file);
+
+    let mut stack: Vec<(u64, Vec<u8>, usize)> = vec![];
+    let mut map = HashMap::new();
+    let mut line_num = 0u64;
+
+    for line in reader.lines() {
+        let line = line?;
+        line_num += 1;
+        let trimmed = line.trim_start();
+        let current_indent = line.len() - trimmed.len();
+        while let Some(top) = stack.last() {
+            if top.2 >= current_indent {
+                stack.pop();
+            } else {
+                break;
+            }
+        }
+        map.insert(
+            line_num,
+            stack.iter().map(|(ln, bytes, _)| (*ln, bytes.clone())).collect(),
+        );
+        stack.push((line_num, line.into_bytes(), current_indent));
+    }
+    Ok(map)
 }

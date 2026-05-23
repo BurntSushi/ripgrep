@@ -57,6 +57,8 @@ pub(crate) struct HiArgs {
     globs: ignore::overrides::Override,
     heading: bool,
     hidden: bool,
+    /// Whether to print hierarchical parent lines for each match.
+    hierarchy: bool,
     hyperlink_config: grep::printer::HyperlinkConfig,
     ignore_file_case_insensitive: bool,
     ignore_file: Vec<PathBuf>,
@@ -163,6 +165,7 @@ impl HiArgs {
             Some(false) => false,
             Some(true) => !low.vimgrep,
         };
+        let hierarchy = low.hierarchy.unwrap_or(false);
         let path_terminator = if low.null { Some(b'\x00') } else { None };
         let quit_after_match = stats.is_none() && low.quiet;
         let threads = if low.sort.is_some() || paths.is_one_file {
@@ -274,6 +277,7 @@ impl HiArgs {
             follow: low.follow,
             heading,
             hidden: low.hidden,
+            hierarchy,
             hyperlink_config,
             ignore_file: low.ignore_file,
             ignore_file_case_insensitive: low.ignore_file_case_insensitive,
@@ -358,6 +362,12 @@ impl HiArgs {
         let mut builder = HaystackBuilder::new();
         builder.strip_dot_prefix(self.paths.has_implicit_path);
         builder
+    }
+
+    /// Whether to print hierarchical parent lines for each match.
+    #[allow(dead_code)]
+    pub(crate) fn hierarchy(&self) -> bool {
+        self.hierarchy
     }
 
     /// Return the matcher that should be used for searching using the engine
@@ -703,7 +713,8 @@ impl HiArgs {
             .preprocessor_globs(self.pre_globs.clone())
             .search_zip(self.search_zip)
             .binary_detection_explicit(self.binary.explicit.clone())
-            .binary_detection_implicit(self.binary.implicit.clone());
+            .binary_detection_implicit(self.binary.implicit.clone())
+            .hierarchy(self.hierarchy);
         Ok(builder.build(matcher, searcher, printer))
     }
 

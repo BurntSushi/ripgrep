@@ -77,6 +77,7 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &Heading,
     &Help,
     &Hidden,
+    &Hierarchy,
     &HostnameBin,
     &HyperlinkFormat,
     &IGlob,
@@ -2830,6 +2831,62 @@ fn test_hidden() {
 
     let args = parse_low_raw(["--no-hidden", "-."]).unwrap();
     assert_eq!(true, args.hidden);
+}
+
+#[derive(Debug)]
+struct Hierarchy;
+
+impl Flag for Hierarchy {
+    fn is_switch(&self) -> bool {
+        true
+    }
+    fn name_long(&self) -> &'static str {
+        "hierarchy"
+    }
+    fn name_negated(&self) -> Option<&'static str> {
+        Some("no-hierarchy")
+    }
+    fn doc_category(&self) -> Category {
+        Category::Output
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Adds a Top-Level Context Line."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"When enabled, ripgrep prints an additional top-level context
+line before matched results to visually group related output.
+
+This is useful when searching across deeply nested files, structured
+documents, logs, or hierarchical data where extra context improves
+readability and navigation"
+    }
+    fn update(
+        &self,
+        value: FlagValue,
+        args: &mut crate::flags::lowargs::LowArgs,
+    ) -> anyhow::Result<()> {
+        args.hierarchy = Some(value.unwrap_switch());
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_hierarchy() {
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(None, args.hierarchy);
+
+    let args = parse_low_raw(["--hierarchy"]).unwrap();
+    assert_eq!(Some(true), args.hierarchy);
+
+    let args = parse_low_raw(["--no-hierarchy"]).unwrap();
+    assert_eq!(Some(false), args.hierarchy);
+
+    let args = parse_low_raw(["--hierarchy", "--no-hierarchy"]).unwrap();
+    assert_eq!(Some(false), args.hierarchy);
+
+    let args = parse_low_raw(["--no-hierarchy", "--hierarchy"]).unwrap();
+    assert_eq!(Some(true), args.hierarchy);
 }
 
 /// --hostname-bin
