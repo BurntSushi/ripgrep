@@ -7,6 +7,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use anyhow::Context;
+
 use {
     bstr::BString,
     grep::printer::{ColorSpecs, SummaryKind},
@@ -105,6 +107,21 @@ pub(crate) struct HiArgs {
     with_filename: bool,
 }
 
+fn default_thread_count() -> usize {
+    std::thread::available_parallelism().map_or(1, |n| n.get()).min(12)
+}
+
+fn threads_from_env() -> anyhow::Result<Option<usize>> {
+    let Some(raw) = std::env::var_os("RIPGREP_THREADS") else {
+        return Ok(None);
+    };
+    let raw = raw.to_string_lossy();
+    let threads = raw.parse::<usize>().with_context(|| {
+        format!("invalid RIPGREP_THREADS value: {raw:?}")
+    })?;
+    Ok(if threads == 0 { None } else { Some(threads) })
+}
+
 impl HiArgs {
     /// Convert low level arguments into high level arguments.
     ///
@@ -165,12 +182,19 @@ impl HiArgs {
         };
         let path_terminator = if low.null { Some(b'\x00') } else { None };
         let quit_after_match = stats.is_none() && low.quiet;
+        let env_threads = if low.threads.is_none() {
+            threads_from_env()?
+        } else {
+            None
+        };
         let threads = if low.sort.is_some() || paths.is_one_file {
             1
         } else if let Some(threads) = low.threads {
             threads
+        } else if let Some(threads) = env_threads {
+            threads
         } else {
-            std::thread::available_parallelism().map_or(1, |n| n.get()).min(12)
+            default_thread_count()
         };
         log::debug!("using {threads} thread(s)");
         let with_filename = low
