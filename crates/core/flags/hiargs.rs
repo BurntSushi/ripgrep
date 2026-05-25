@@ -13,6 +13,7 @@ use {
 };
 
 use crate::{
+    base64,
     flags::lowargs::{
         BinaryMode, BoundaryMode, BufferMode, CaseMode, ColorChoice,
         ContextMode, ContextSeparator, EncodingMode, EngineChoice,
@@ -141,6 +142,22 @@ impl HiArgs {
 
         let mut state = State::new()?;
         let patterns = Patterns::from_low_args(&mut state, &mut low)?;
+        // --base64 / --base64url reinterprets each pattern as a literal byte
+        // string and expands it into the set of literal substrings its
+        // base64-encoded form can take across every 3-byte alignment. This
+        // also implies -F/--fixed-strings.
+        let (patterns, fixed_strings) = match low.base64.alphabet() {
+            None => (patterns, low.fixed_strings),
+            Some(alphabet) => (
+                Patterns {
+                    patterns: base64::expand_patterns(
+                        alphabet,
+                        patterns.patterns,
+                    ),
+                },
+                true,
+            ),
+        };
         let paths = Paths::from_low_args(&mut state, &patterns, &mut low)?;
 
         let binary = BinaryDetection::from_low_args(&state, &low);
@@ -270,7 +287,7 @@ impl HiArgs {
             field_context_separator: low.field_context_separator,
             field_match_separator: low.field_match_separator,
             file_separator,
-            fixed_strings: low.fixed_strings,
+            fixed_strings,
             follow: low.follow,
             heading,
             hidden: low.hidden,

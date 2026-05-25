@@ -37,6 +37,7 @@ pub(crate) struct LowArgs {
     pub(crate) positional: Vec<OsString>,
     pub(crate) patterns: Vec<PatternSource>,
     // Everything else, sorted lexicographically.
+    pub(crate) base64: Base64Mode,
     pub(crate) binary: BinaryMode,
     pub(crate) boundary: Option<BoundaryMode>,
     pub(crate) buffer: BufferMode,
@@ -226,6 +227,34 @@ pub(crate) enum GenerateMode {
     CompleteFish,
     /// Completions for PowerShell.
     CompletePowerShell,
+}
+
+/// Indicates whether patterns should be rewritten to match a base64 encoding
+/// of the literal, and if so, which alphabet to use.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub(crate) enum Base64Mode {
+    /// Patterns are used as-is.
+    #[default]
+    Off,
+    /// Patterns are rewritten to match any base64 encoding (RFC 4648
+    /// Section 4, standard alphabet `+/`) of their literal byte contents.
+    Standard,
+    /// Patterns are rewritten to match any base64 encoding (RFC 4648
+    /// Section 5, URL- and filename-safe alphabet `-_`) of their literal
+    /// byte contents.
+    UrlSafe,
+}
+
+impl Base64Mode {
+    /// Returns the base64 alphabet implied by this mode, or `None` if base64
+    /// rewriting is disabled.
+    pub(crate) fn alphabet(self) -> Option<crate::base64::Alphabet> {
+        match self {
+            Base64Mode::Off => None,
+            Base64Mode::Standard => Some(crate::base64::Alphabet::Standard),
+            Base64Mode::UrlSafe => Some(crate::base64::Alphabet::UrlSafe),
+        }
+    }
 }
 
 /// Indicates how ripgrep should treat binary data.

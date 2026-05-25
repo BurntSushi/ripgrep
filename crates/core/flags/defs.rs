@@ -24,10 +24,10 @@ use {anyhow::Context as AnyhowContext, bstr::ByteVec};
 use crate::flags::{
     Category, Flag, FlagValue,
     lowargs::{
-        BinaryMode, BoundaryMode, BufferMode, CaseMode, ColorChoice,
-        ContextMode, EncodingMode, EngineChoice, GenerateMode, LoggingMode,
-        LowArgs, MmapMode, Mode, PatternSource, SearchMode, SortMode,
-        SortModeKind, SpecialMode, TypeChange,
+        Base64Mode, BinaryMode, BoundaryMode, BufferMode, CaseMode,
+        ColorChoice, ContextMode, EncodingMode, EngineChoice, GenerateMode,
+        LoggingMode, LowArgs, MmapMode, Mode, PatternSource, SearchMode,
+        SortMode, SortModeKind, SpecialMode, TypeChange,
     },
 };
 
@@ -47,6 +47,8 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &Regexp,
     &File,
     &AfterContext,
+    &Base64,
+    &Base64Url,
     &BeforeContext,
     &Binary,
     &BlockBuffered,
@@ -334,6 +336,142 @@ fn test_auto_hybrid_regex() {
     let args =
         parse_low_raw(["--auto-hybrid-regex", "--engine=default"]).unwrap();
     assert_eq!(EngineChoice::Default, args.engine);
+}
+
+/// --base64
+#[derive(Debug)]
+struct Base64;
+
+impl Flag for Base64 {
+    fn is_switch(&self) -> bool {
+        true
+    }
+    fn name_long(&self) -> &'static str {
+        "base64"
+    }
+    fn name_negated(&self) -> Option<&'static str> {
+        Some("no-base64")
+    }
+    fn doc_category(&self) -> Category {
+        Category::Search
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Search for base64-encoded patterns."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+When this flag is set, each pattern is treated as a literal byte string and is
+transformed into a regex that matches any base64 encoding of that string,
+using the standard alphabet defined in RFC 4648 (with \fB+\fP and \fB/\fP). This is useful for searching for
+credentials, tokens or other literal byte sequences that may be embedded
+inside base64-encoded blobs such as JWTs, JSON payloads, certificates or
+environment dumps.
+.sp
+Because base64 packs 8-bit bytes into 6-bit groups, the same literal can
+appear in encoded output at three different bit offsets depending on what
+bytes surround it. The generated regex enumerates every such alignment, so a
+match will be found regardless of where the literal sits relative to the
+encoder's 3-byte boundary.
+.sp
+This flag implies \flag{fixed-strings}: each pattern is read as a literal
+byte string and the expanded encodings are then matched as literals. Combining
+\flag{base64} with \flag{ignore-case} or \flag{word-regexp} is usually not
+meaningful, since base64 is case-sensitive and word boundaries do not align
+with encoded data.
+.sp
+This flag overrides \flag{base64url}.
+"
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        args.base64 = if v.unwrap_switch() {
+            Base64Mode::Standard
+        } else {
+            Base64Mode::Off
+        };
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_base64() {
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(Base64Mode::Off, args.base64);
+
+    let args = parse_low_raw(["--base64"]).unwrap();
+    assert_eq!(Base64Mode::Standard, args.base64);
+
+    let args = parse_low_raw(["--base64", "--no-base64"]).unwrap();
+    assert_eq!(Base64Mode::Off, args.base64);
+
+    let args = parse_low_raw(["--no-base64", "--base64"]).unwrap();
+    assert_eq!(Base64Mode::Standard, args.base64);
+
+    let args = parse_low_raw(["--base64url", "--base64"]).unwrap();
+    assert_eq!(Base64Mode::Standard, args.base64);
+}
+
+/// --base64url
+#[derive(Debug)]
+struct Base64Url;
+
+impl Flag for Base64Url {
+    fn is_switch(&self) -> bool {
+        true
+    }
+    fn name_long(&self) -> &'static str {
+        "base64url"
+    }
+    fn name_negated(&self) -> Option<&'static str> {
+        Some("no-base64url")
+    }
+    fn doc_category(&self) -> Category {
+        Category::Search
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Search for URL-safe base64-encoded patterns."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Like \flag{base64}, but uses the URL- and filename-safe alphabet from RFC
+4648 (\fB-\fP and \fB_\fP instead of \fB+\fP and \fB/\fP). This variant is
+what appears in JSON Web Tokens (JWTs), OIDC ID tokens, signed URLs, S3
+pre-signed requests and other contexts where the encoded data needs to
+survive a URL or file path without escaping.
+.sp
+See \flag{base64} for the full description of how the rewritten regex is
+built.
+.sp
+This flag overrides \flag{base64}.
+"
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        args.base64 = if v.unwrap_switch() {
+            Base64Mode::UrlSafe
+        } else {
+            Base64Mode::Off
+        };
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_base64url() {
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(Base64Mode::Off, args.base64);
+
+    let args = parse_low_raw(["--base64url"]).unwrap();
+    assert_eq!(Base64Mode::UrlSafe, args.base64);
+
+    let args = parse_low_raw(["--base64url", "--no-base64url"]).unwrap();
+    assert_eq!(Base64Mode::Off, args.base64);
+
+    // The two flags override each other; last one wins.
+    let args = parse_low_raw(["--base64", "--base64url"]).unwrap();
+    assert_eq!(Base64Mode::UrlSafe, args.base64);
 }
 
 /// -B/--before-context

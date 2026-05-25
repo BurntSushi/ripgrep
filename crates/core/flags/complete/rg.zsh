@@ -45,6 +45,12 @@ _rg() {
     '(: * -)'{-V,--version}'[display version information]'
     '(: * -)'--pcre2-version'[print the version of PCRE2 used by ripgrep, if available]'
 
+    + '(base64)' # Base64-encoded pattern options
+    '--base64[search for base64-encoded patterns]'
+    $no"--no-base64[disable base64-encoded pattern search]"
+    '--base64url[search for URL-safe base64-encoded patterns]'
+    $no"--no-base64url[disable URL-safe base64-encoded pattern search]"
+
     + '(buffered)' # buffering options
     '--line-buffered[force line buffering]'
     $no"--no-line-buffered[don't force line buffering]"

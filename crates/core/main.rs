@@ -11,6 +11,7 @@ use crate::flags::{HiArgs, SearchMode};
 #[macro_use]
 mod messages;
 
+mod base64;
 mod flags;
 mod haystack;
 mod logger;
