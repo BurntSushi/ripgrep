@@ -71,7 +71,6 @@ fn pattern_literals(alphabet: Alphabet, query: &[u8]) -> Vec<String> {
     // lead_count * trail_count across offsets 0/1/2), attained when the
     // query length is 2 mod 3.
     let mut alternatives: Vec<String> = Vec::with_capacity(264);
-    let mut encoded = String::new();
     // `+ 3` covers `offset` leading pad bytes (up to 2) plus one trailing
     // byte appended in the inner loop.
     let mut padded: Vec<u8> = Vec::with_capacity(query.len() + 3);
@@ -107,21 +106,19 @@ fn pattern_literals(alphabet: Alphabet, query: &[u8]) -> Vec<String> {
                     // query.
                     let tb = (trail as u8) << (8 - trail_bits);
                     padded.push(tb);
-                    encoded.clear();
-                    encode(table, &padded, &mut encoded);
+                    let encoded = encode(table, &padded);
                     // Skip the leading chars covered by `lead` and drop the
                     // trailing char covered by `trail`; what remains is the
                     // run of characters that `query` actually contributes to
                     // the output stream at this alignment.
-                    let slice = &encoded[offset..encoded.len() - 1];
-                    alternatives.push(slice.to_string());
+                    alternatives
+                        .push(encoded[offset..encoded.len() - 1].to_string());
                     padded.pop();
                 }
             } else {
-                encoded.clear();
-                encode(table, &padded, &mut encoded);
                 // Skip the leading chars covered by `lead`. No trailing
                 // char to drop: the query ends on a 6-bit boundary.
+                let encoded = encode(table, &padded);
                 alternatives.push(encoded[offset..].to_string());
             }
         }
@@ -130,58 +127,61 @@ fn pattern_literals(alphabet: Alphabet, query: &[u8]) -> Vec<String> {
     alternatives
 }
 
-/// Encode `input` into `out` using raw (unpadded) base64 with the given
+/// Returns the raw (unpadded) base64 encoding of `input` using the given
 /// 64-byte alphabet table.
-fn encode(table: &[u8; 64], input: &[u8], out: &mut String) {
-    let mut i = 0;
-    while i + 3 <= input.len() {
-        let n = (u32::from(input[i]) << 16)
-            | (u32::from(input[i + 1]) << 8)
-            | u32::from(input[i + 2]);
-        out.push(table[((n >> 18) & 0x3f) as usize] as char);
-        out.push(table[((n >> 12) & 0x3f) as usize] as char);
-        out.push(table[((n >> 6) & 0x3f) as usize] as char);
-        out.push(table[(n & 0x3f) as usize] as char);
-        i += 3;
+fn encode(alphabet: &[u8; 64], bytes: &[u8]) -> String {
+    let mut out = String::new();
+    let mut it = bytes.chunks_exact(3);
+    while let Some(chunk) = it.next() {
+        let group24 = (usize::from(chunk[0]) << 16)
+            | (usize::from(chunk[1]) << 8)
+            | usize::from(chunk[2]);
+        let index1 = (group24 >> 18) & 0b111_111;
+        let index2 = (group24 >> 12) & 0b111_111;
+        let index3 = (group24 >> 6) & 0b111_111;
+        let index4 = (group24 >> 0) & 0b111_111;
+        out.push(char::from(alphabet[index1]));
+        out.push(char::from(alphabet[index2]));
+        out.push(char::from(alphabet[index3]));
+        out.push(char::from(alphabet[index4]));
     }
-    match input.len() - i {
-        0 => {}
-        1 => {
-            let n = u32::from(input[i]) << 16;
-            out.push(table[((n >> 18) & 0x3f) as usize] as char);
-            out.push(table[((n >> 12) & 0x3f) as usize] as char);
+    match it.remainder() {
+        &[] => {}
+        &[byte0] => {
+            let group8 = usize::from(byte0);
+            let index1 = (group8 >> 2) & 0b111_111;
+            let index2 = (group8 << 4) & 0b111_111;
+            out.push(char::from(alphabet[index1]));
+            out.push(char::from(alphabet[index2]));
         }
-        2 => {
-            let n =
-                (u32::from(input[i]) << 16) | (u32::from(input[i + 1]) << 8);
-            out.push(table[((n >> 18) & 0x3f) as usize] as char);
-            out.push(table[((n >> 12) & 0x3f) as usize] as char);
-            out.push(table[((n >> 6) & 0x3f) as usize] as char);
+        &[byte0, byte1] => {
+            let group16 = (usize::from(byte0) << 8) | usize::from(byte1);
+            let index1 = (group16 >> 10) & 0b111_111;
+            let index2 = (group16 >> 4) & 0b111_111;
+            let index3 = (group16 << 2) & 0b111_111;
+            out.push(char::from(alphabet[index1]));
+            out.push(char::from(alphabet[index2]));
+            out.push(char::from(alphabet[index3]));
         }
-        _ => unreachable!(),
+        _ => unreachable!("remainder must have length < 3"),
     }
+    out
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn encode_string(table: &[u8; 64], input: &[u8]) -> String {
-        let mut s = String::new();
-        encode(table, input, &mut s);
-        s
-    }
-
     #[test]
     fn encode_known_answers_standard() {
         // RFC 4648 test vectors (raw, no padding).
-        assert_eq!(encode_string(STANDARD, b""), "");
-        assert_eq!(encode_string(STANDARD, b"f"), "Zg");
-        assert_eq!(encode_string(STANDARD, b"fo"), "Zm8");
-        assert_eq!(encode_string(STANDARD, b"foo"), "Zm9v");
-        assert_eq!(encode_string(STANDARD, b"foob"), "Zm9vYg");
-        assert_eq!(encode_string(STANDARD, b"fooba"), "Zm9vYmE");
-        assert_eq!(encode_string(STANDARD, b"foobar"), "Zm9vYmFy");
+        assert_eq!(encode(STANDARD, b""), "");
+        assert_eq!(encode(STANDARD, b"f"), "Zg");
+        assert_eq!(encode(STANDARD, b"fo"), "Zm8");
+        assert_eq!(encode(STANDARD, b"foo"), "Zm9v");
+        assert_eq!(encode(STANDARD, b"foob"), "Zm9vYg");
+        assert_eq!(encode(STANDARD, b"fooba"), "Zm9vYmE");
+        assert_eq!(encode(STANDARD, b"foobar"), "Zm9vYmFy");
     }
 
     #[test]
@@ -189,8 +189,8 @@ mod tests {
         // Bytes that produce `+` and `/` under the standard alphabet must
         // produce `-` and `_` under the URL-safe alphabet.
         // 0xfb, 0xff packs to indices 0x3e (`+` / `-`) and 0x3f (`/` / `_`).
-        assert_eq!(encode_string(STANDARD, &[0xfb, 0xff, 0xff]), "+///");
-        assert_eq!(encode_string(URL_SAFE, &[0xfb, 0xff, 0xff]), "-___");
+        assert_eq!(encode(STANDARD, &[0xfb, 0xff, 0xff]), "+///");
+        assert_eq!(encode(URL_SAFE, &[0xfb, 0xff, 0xff]), "-___");
     }
 
     #[test]
@@ -269,8 +269,7 @@ mod tests {
                         bytes.extend_from_slice(p);
                         bytes.extend_from_slice(q);
                         bytes.extend_from_slice(s);
-                        let mut encoded = String::new();
-                        encode(table, &bytes, &mut encoded);
+                        let encoded = encode(table, &bytes);
                         assert!(
                             matcher.is_match(encoded.as_bytes()).unwrap(),
                             "matcher did not match {encoded:?} \
