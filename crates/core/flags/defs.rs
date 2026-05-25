@@ -7103,6 +7103,11 @@ impl Flag for Threads {
 This flag sets the approximate number of threads to use. A value of \fB0\fP
 (which is the default) causes ripgrep to choose the thread count using
 heuristics.
+.sp
+Setting the \fBRIPGREP_THREADS\fP environment variable has the same effect as
+passing this flag when \fB--threads\fP is not explicitly set on the command
+line. A value of \fB0\fP in the environment variable also selects the default
+heuristic thread count.
 "
     }
 

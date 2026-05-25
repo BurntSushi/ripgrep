@@ -7,6 +7,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use anyhow::Context;
+
 use {
     bstr::{BString, ByteSlice, io::BufReadExt},
     grep::printer::{ColorSpecs, SummaryKind},
@@ -167,12 +169,25 @@ impl HiArgs {
         };
         let path_terminator = if low.null { Some(b'\x00') } else { None };
         let quit_after_match = stats.is_none() && low.quiet;
+        let env_threads =
+            if low.threads.is_none() { threads_from_env()? } else { None };
         let threads = if low.sort.is_some() || paths.is_one_file {
             1
         } else if let Some(threads) = low.threads {
+            log::trace!("using thread count {threads} from CLI");
+            threads
+        } else if let Some(threads) = env_threads {
+            log::trace!(
+                "using thread count {threads} from \
+                 RIPGREP_THREADS environment variable",
+            );
             threads
         } else {
-            std::thread::available_parallelism().map_or(1, |n| n.get()).min(12)
+            let threads = default_thread_count();
+            log::trace!(
+                "using default thread count heuristic: {threads} threads",
+            );
+            threads
         };
         log::debug!("using {threads} thread(s)");
         let with_filename = low
@@ -1346,6 +1361,26 @@ fn types(low: &LowArgs) -> anyhow::Result<ignore::types::Types> {
         }
     }
     Ok(builder.build()?)
+}
+
+/// Use "heuristics" to determine the default thread count.
+fn default_thread_count() -> usize {
+    std::thread::available_parallelism().map_or(1, |n| n.get()).min(12)
+}
+
+/// Find the thread count from an environment variable.
+///
+/// This returns an error if the environment variable is set to something that
+/// cannot be parsed into a `usize`.
+fn threads_from_env() -> anyhow::Result<Option<usize>> {
+    let Some(raw) = std::env::var_os("RIPGREP_THREADS") else {
+        return Ok(None);
+    };
+    let raw = raw.to_string_lossy();
+    let threads = raw
+        .parse::<usize>()
+        .with_context(|| format!("invalid RIPGREP_THREADS value: {raw:?}"))?;
+    Ok(if threads == 0 { None } else { Some(threads) })
 }
 
 /// Builds the glob "override" matcher from the CLI `-g/--glob` and `--iglob`

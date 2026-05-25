@@ -18,6 +18,8 @@ rg \- recursively search the current directory for lines matching a pattern
 .sp
 \fBrg\fP [\fIOPTIONS\fP] \fB\-\-files\fP [\fIPATH\fP...]
 .sp
+\fBrg\fP [\fIOPTIONS\fP] \fB\-\-generate\fP \fIKIND\fP
+.sp
 \fBrg\fP [\fIOPTIONS\fP] \fB\-\-type\-list\fP
 .sp
 \fIcommand\fP | \fBrg\fP [\fIOPTIONS\fP] \fIPATTERN\fP
@@ -366,6 +368,18 @@ is exactly equivalent to
 .sp
 in which case, the \fB\-\-case\-sensitive\fP flag would override the
 \fB\-\-smart\-case\fP flag.
+.
+.
+.SH ENVIRONMENT VARIABLES
+ripgrep uses environment variables in some cases to alter its runtime behavior:
+.sp
+\fBRIPGREP_CONFIG_PATH\fP is used to specify a single path to ripgrep's
+configuration file, as documented in the previous section.
+.sp
+\fBRIPGREP_THREADS\fP will set the default thread count for use by ripgrep.
+This might be useful in multi-user systems to limit resource usage by
+default. Any \fB-j/--threads\fP setting on the command line, including in a
+configuration file, overrides this environment variable.
 .
 .
 .SH SHELL COMPLETION
