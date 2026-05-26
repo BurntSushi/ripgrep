@@ -101,7 +101,10 @@ struct IgnoreInner {
     /// Note that this is never used during matching, only when adding new
     /// parent directory matchers. This avoids needing to rebuild glob sets for
     /// parent directories if many paths are being searched.
-    compiled: Arc<RwLock<HashMap<OsString, Weak<IgnoreInner>>>>,
+    ///
+    /// The key is a `Vec<OsString>` of `[parent_path, absolute_base_path]`
+    /// to ensure different root paths get distinct cache entries.
+    compiled: Arc<RwLock<HashMap<Vec<OsString>, Weak<IgnoreInner>>>>,
     /// The path to the directory that this matcher was built from.
     dir: PathBuf,
     /// An override matcher (default is empty).
@@ -212,7 +215,15 @@ impl Ignore {
         let mut ig = self.clone();
         for parent in parents.into_iter().rev() {
             let mut compiled = self.0.compiled.write().unwrap();
-            if let Some(weak) = compiled.get(parent.as_os_str()) {
+            // Use (parent, absolute_base) as cache key so different root paths
+            // get distinct cache entries. This fixes the multi-root gitignore
+            // bug where cached entries from earlier search paths had stale
+            // absolute_base values pointing to a different root directory.
+            let cache_key = vec![
+                parent.as_os_str().to_os_string(),
+                (**absolute_base).as_os_str().to_os_string(),
+            ];
+            if let Some(weak) = compiled.get(&cache_key) {
                 if let Some(prebuilt) = weak.upgrade() {
                     ig = Ignore(prebuilt);
                     continue;
@@ -230,10 +241,7 @@ impl Ignore {
                 };
             let ig_arc = Arc::new(igtmp);
             ig = Ignore(ig_arc.clone());
-            compiled.insert(
-                parent.as_os_str().to_os_string(),
-                Arc::downgrade(&ig_arc),
-            );
+            compiled.insert(cache_key, Arc::downgrade(&ig_arc));
         }
         (ig, errs.into_error_option())
     }
@@ -1236,6 +1244,30 @@ mod tests {
         let (ig2, err) = ig1.add_child(td.path().join("foo"));
         assert!(err.is_none());
         assert!(ig2.matched("bar", false).is_ignore());
+    }
+
+    #[test]
+    fn multi_root_gitignore_absolute_base() {
+        let td = tmpdir();
+        mkdirp(td.path().join(".git"));
+        mkdirp(td.path().join("src"));
+        mkdirp(td.path().join("tests"));
+        wfile(td.path().join(".gitignore"), "src/invalid");
+
+        let ig0 = IgnoreBuilder::new().build();
+        let src = td.path().join("src");
+        let tests = td.path().join("tests");
+
+        // Simulate searching `src/` then `tests/` (order from issue #3376).
+        let (_, err) = ig0.add_parents(&src);
+        assert!(err.is_none());
+        let (_, err) = ig0.add_parents(&tests);
+        assert!(err.is_none());
+        let (ig_src_root, err) = ig0.add_parents(&src);
+        assert!(err.is_none());
+        let (ig_src, err) = ig_src_root.add_child("src");
+        assert!(err.is_none());
+        assert!(ig_src.matched("invalid", false).is_ignore());
     }
 
     #[test]
