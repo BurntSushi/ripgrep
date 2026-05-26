@@ -17,9 +17,9 @@ proposed changes in your own words. This includes the pull request body and
 responses to questions. **Do not copy responses from the AI when replying to
 questions from maintainers.**
 
-This project requires a human in the loop who understands the work produced
-by AI. **Autonomous agents are not allowed to be used for contributing to our
-projects**. Pull requests that appear in violation of this will be closed,
+This project requires a human in the loop who understands the work produced by
+AI. **Autonomous agents are not allowed to be used for contributing to this
+project**. Pull requests that appear in violation of this will be closed,
 perhaps without notice.
 
 If you wish to include context from an interaction with AI in your comments, it
