@@ -627,21 +627,27 @@ rgtest!(f3317_ripgrep_threads_env, |dir: Dir, mut cmd: TestCommand| {
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/3317
-rgtest!(f3317_ripgrep_threads_env_invalid, |dir: Dir, mut cmd: TestCommand| {
-    dir.create("a", "needle");
-    dir.create("b", "needle");
-    cmd.cmd().env("RIPGREP_THREADS", "nope");
-    cmd.arg("needle").arg(".");
-    cmd.assert_exit_code(2);
-});
+rgtest!(
+    f3317_ripgrep_threads_env_invalid,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create("a", "needle");
+        dir.create("b", "needle");
+        cmd.cmd().env("RIPGREP_THREADS", "nope");
+        cmd.arg("needle").arg(".");
+        cmd.assert_exit_code(2);
+    }
+);
 
 // See: https://github.com/BurntSushi/ripgrep/issues/3317
-rgtest!(f3317_ripgrep_threads_cli_overrides_env, |dir: Dir, mut cmd: TestCommand| {
-    dir.create("file", "needle");
-    cmd.cmd().env("RIPGREP_THREADS", "nope");
-    cmd.arg("--threads").arg("1").arg("needle").arg("file");
-    cmd.assert_exit_code(0);
-});
+rgtest!(
+    f3317_ripgrep_threads_cli_overrides_env,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create("file", "needle");
+        cmd.cmd().env("RIPGREP_THREADS", "nope");
+        cmd.arg("--threads").arg("1").arg("needle").arg("file");
+        cmd.assert_exit_code(0);
+    }
+);
 
 // See: https://github.com/BurntSushi/ripgrep/issues/917
 rgtest!(f917_trim, |dir: Dir, mut cmd: TestCommand| {

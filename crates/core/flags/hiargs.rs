@@ -116,9 +116,9 @@ fn threads_from_env() -> anyhow::Result<Option<usize>> {
         return Ok(None);
     };
     let raw = raw.to_string_lossy();
-    let threads = raw.parse::<usize>().with_context(|| {
-        format!("invalid RIPGREP_THREADS value: {raw:?}")
-    })?;
+    let threads = raw
+        .parse::<usize>()
+        .with_context(|| format!("invalid RIPGREP_THREADS value: {raw:?}"))?;
     Ok(if threads == 0 { None } else { Some(threads) })
 }
 
@@ -182,11 +182,8 @@ impl HiArgs {
         };
         let path_terminator = if low.null { Some(b'\x00') } else { None };
         let quit_after_match = stats.is_none() && low.quiet;
-        let env_threads = if low.threads.is_none() {
-            threads_from_env()?
-        } else {
-            None
-        };
+        let env_threads =
+            if low.threads.is_none() { threads_from_env()? } else { None };
         let threads = if low.sort.is_some() || paths.is_one_file {
             1
         } else if let Some(threads) = low.threads {
