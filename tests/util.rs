@@ -56,8 +56,6 @@ pub fn cmd_exists(program: &str) -> bool {
 /// Directories are created from a global atomic counter to avoid duplicates.
 #[derive(Clone, Debug)]
 pub struct Dir {
-    /// The directory in which this test executable is running.
-    root: PathBuf,
     /// The directory in which the test should run. If a test needs to create
     /// files, they should go in here. This directory is also used as the CWD
     /// for any processes created by the test.
@@ -72,18 +70,13 @@ impl Dir {
     /// to a logical grouping of tests.
     pub fn new(name: &str) -> Dir {
         let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-        let root = env::current_exe()
-            .unwrap()
-            .parent()
-            .expect("executable's directory")
-            .to_path_buf();
         let dir =
             env::temp_dir().join(TEST_DIR).join(name).join(&format!("{id}"));
         if dir.exists() {
             nice_err(&dir, fs::remove_dir_all(&dir));
         }
         nice_err(&dir, repeat(|| fs::create_dir_all(&dir)));
-        Dir { root, dir, pcre2: false }
+        Dir { dir, pcre2: false }
     }
 
     /// Use PCRE2 for this test.
@@ -177,9 +170,9 @@ impl Dir {
 
     /// Returns the path to the ripgrep executable.
     pub fn bin(&self) -> process::Command {
-        let rg = self.root.join(format!("../rg{}", env::consts::EXE_SUFFIX));
+        let rg = ripgrep_bin_path();
         match cross_runner() {
-            None => process::Command::new(rg),
+            None => process::Command::new(&rg),
             Some(runner) => {
                 let mut cmd = process::Command::new(runner);
                 cmd.arg(rg);
@@ -423,6 +416,22 @@ impl TestCommand {
         }
         o
     }
+}
+
+/// Returns the path to the ripgrep binary under test.
+///
+/// Prefer `CARGO_BIN_EXE_rg` (Cargo 1.94+) so integration tests keep working
+/// when `build.build-dir` or `CARGO_BUILD_BUILD_DIR` changes the output layout.
+fn ripgrep_bin_path() -> PathBuf {
+    if let Ok(path) = env::var("CARGO_BIN_EXE_rg") {
+        return PathBuf::from(path);
+    }
+
+    env::current_exe()
+        .unwrap()
+        .parent()
+        .expect("executable's directory")
+        .join(format!("../rg{}", env::consts::EXE_SUFFIX))
 }
 
 fn nice_err<T, E: error::Error>(path: &Path, res: Result<T, E>) -> T {

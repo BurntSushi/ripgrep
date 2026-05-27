@@ -4,6 +4,9 @@ Unreleased changes. Release notes have not yet been written.
 
 Bug fixes:
 
+* [BUG #3295](https://github.com/BurntSushi/ripgrep/issues/3295):
+  Use `CARGO_BIN_EXE_rg` to locate the ripgrep binary in integration tests.
+
 * [BUG #3212](https://github.com/BurntSushi/ripgrep/pull/3212):
   Don't check for the existence of `.jj` when `--no-ignore` is used.
 
