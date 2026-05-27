@@ -4,6 +4,11 @@ Unreleased changes. Release notes have not yet been written.
 
 Bug fixes:
 
+* [BUG #3382](https://github.com/BurntSushi/ripgrep/issues/3382):
+  Ignore failing exit statuses from decompressors after their stdout has been
+  fully consumed, so truncated compressed files can still be searched and
+  counted.
+
 * [BUG #3212](https://github.com/BurntSushi/ripgrep/pull/3212):
   Don't check for the existence of `.jj` when `--no-ignore` is used.
 

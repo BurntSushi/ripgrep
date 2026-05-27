@@ -982,6 +982,38 @@ be, to a very large extent, the result of luck. Sherlock Holmes
     eqnice!(expected, cmd.stdout());
 });
 
+rgtest!(compressed_zstd_truncated_count, |dir: Dir, mut cmd: TestCommand| {
+    use std::process::Command;
+
+    if !cmd_exists("zstd") {
+        return;
+    }
+
+    dir.create("needle.txt", "aardvarks\nline two\n");
+    let zst_path = dir.path().join("trunc.zst");
+    let txt_path = dir.path().join("needle.txt");
+    let status = Command::new("zstd")
+        .arg("-f")
+        .arg("-q")
+        .arg(&txt_path)
+        .arg("-o")
+        .arg(&zst_path)
+        .status()
+        .unwrap();
+    assert!(status.success());
+
+    let mut bytes = std::fs::read(&zst_path).unwrap();
+    bytes.truncate(bytes.len().saturating_sub(4));
+    std::fs::write(&zst_path, bytes).unwrap();
+
+    cmd.arg("-z")
+        .arg("-c")
+        .arg("aardvarks")
+        .arg("trunc.zst")
+        .arg("--no-messages");
+    assert_eq!("1\n", cmd.stdout());
+});
+
 rgtest!(compressed_uncompress, |dir: Dir, mut cmd: TestCommand| {
     if !cmd_exists("uncompress") {
         return;

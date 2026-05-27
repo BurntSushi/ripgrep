@@ -114,7 +114,7 @@ impl CommandReaderBuilder {
         } else {
             StderrReader::sync(child.stderr.take().unwrap())
         };
-        Ok(CommandReader { child, stderr, eof: false })
+        Ok(CommandReader { child, stderr, eof: false, read_any: false })
     }
 
     /// When enabled, the reader will asynchronously read the contents of the
@@ -175,6 +175,8 @@ pub struct CommandReader {
     /// set and we close the reader, then we anticipate a pipe error when
     /// reaping the child process and silence it.
     eof: bool,
+    /// Whether any bytes were read from the child's stdout.
+    read_any: bool,
 }
 
 impl CommandReader {
@@ -228,14 +230,11 @@ impl CommandReader {
             Ok(())
         } else {
             let err = self.stderr.read_to_end();
-            // In the specific case where we haven't consumed the full data
-            // from the child process, then closing stdout above results in
-            // a pipe signal being thrown in most cases. But I don't think
-            // there is any reliable and portable way of detecting it. Instead,
-            // if we know we haven't hit EOF (so we anticipate a broken pipe
-            // error) and if stderr otherwise doesn't have anything on it, then
-            // we assume total success.
-            if !self.eof && err.is_empty() {
+            // If stdout was exhausted, treat a failing exit status from the
+            // child as non-fatal when we got useful output. Some decompressors
+            // (notably zstd) exit with an error after reporting a truncated
+            // frame even though all available output was produced.
+            if (self.eof && self.read_any) || (!self.eof && err.is_empty()) {
                 return Ok(());
             }
             Err(io::Error::from(err))
@@ -258,6 +257,9 @@ impl io::Read for CommandReader {
             Some(ref mut stdout) => stdout,
         };
         let nread = stdout.read(buf)?;
+        if nread > 0 {
+            self.read_any = true;
+        }
         if nread == 0 {
             self.eof = true;
             self.close().map(|_| 0)
