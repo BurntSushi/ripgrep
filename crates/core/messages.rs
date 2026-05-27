@@ -15,6 +15,7 @@ indicating that at least one error occurred. When ripgrep exits, this flag is
 consulted to determine what the exit status ought to be.
 */
 
+use std::io::{IsTerminal, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 /// When false, "messages" will not be printed.
@@ -24,6 +25,56 @@ static IGNORE_MESSAGES: AtomicBool = AtomicBool::new(false);
 /// Flipped to true when an error message is printed.
 static ERRORED: AtomicBool = AtomicBool::new(false);
 
+/// Returns true when an I/O error indicates that an output pipe was closed.
+///
+/// On Windows, a closed pipe may surface as `ERROR_NO_DATA` (os error 232)
+/// instead of `ErrorKind::BrokenPipe`.
+pub(crate) fn is_output_pipe_closed(err: &std::io::Error) -> bool {
+    if err.kind() == std::io::ErrorKind::BrokenPipe {
+        return true;
+    }
+    #[cfg(windows)]
+    {
+        if err.raw_os_error() == Some(232) {
+            return true;
+        }
+    }
+    false
+}
+
+/// Writes a single `rg: ...` line to stderr.
+///
+/// When stdout is a TTY, stdout is locked first to avoid interleaving with
+/// search output. When stdout is not a TTY, locking stdout is skipped so that
+/// error messages can still be emitted when stdout's pipe has been closed.
+pub(crate) fn write_locked_message(message: &str) {
+    let write_message =
+        |stderr: &mut std::io::StderrLock<'_>| -> std::io::Result<()> {
+            write!(stderr, "rg: ")?;
+            writeln!(stderr, "{message}")?;
+            Ok(())
+        };
+    if std::io::stdout().is_terminal() {
+        let stdout = std::io::stdout().lock();
+        let mut stderr = std::io::stderr().lock();
+        if let Err(err) = write_message(&mut stderr) {
+            if is_output_pipe_closed(&err) {
+                std::process::exit(0);
+            }
+            std::process::exit(2);
+        }
+        drop(stdout);
+    } else {
+        let mut stderr = std::io::stderr().lock();
+        if let Err(err) = write_message(&mut stderr) {
+            if is_output_pipe_closed(&err) {
+                std::process::exit(0);
+            }
+            std::process::exit(2);
+        }
+    }
+}
+
 /// Like eprintln, but locks stdout to prevent interleaving lines.
 ///
 /// This locks stdout, not stderr, even though this prints to stderr. This
@@ -32,37 +83,7 @@ static ERRORED: AtomicBool = AtomicBool::new(false);
 #[macro_export]
 macro_rules! eprintln_locked {
     ($($tt:tt)*) => {{
-        {
-            use std::io::Write;
-
-            // This is a bit of an abstraction violation because we explicitly
-            // lock stdout before printing to stderr. This avoids interleaving
-            // lines within ripgrep because `search_parallel` uses `termcolor`,
-            // which accesses the same stdout lock when writing lines.
-            let stdout = std::io::stdout().lock();
-            let mut stderr = std::io::stderr().lock();
-            // We specifically ignore any errors here. One plausible error we
-            // can get in some cases is a broken pipe error. And when that
-            // occurs, we should exit gracefully. Otherwise, just abort with
-            // an error code because there isn't much else we can do.
-            //
-            // See: https://github.com/BurntSushi/ripgrep/issues/1966
-            if let Err(err) = write!(stderr, "rg: ") {
-                if err.kind() == std::io::ErrorKind::BrokenPipe {
-                    std::process::exit(0);
-                } else {
-                    std::process::exit(2);
-                }
-            }
-            if let Err(err) = writeln!(stderr, $($tt)*) {
-                if err.kind() == std::io::ErrorKind::BrokenPipe {
-                    std::process::exit(0);
-                } else {
-                    std::process::exit(2);
-                }
-            }
-            drop(stdout);
-        }
+        $crate::messages::write_locked_message(&format!($($tt)*));
     }}
 }
 

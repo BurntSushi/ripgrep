@@ -54,7 +54,7 @@ fn main() -> ExitCode {
             // terminate.
             for cause in err.chain() {
                 if let Some(ioerr) = cause.downcast_ref::<std::io::Error>() {
-                    if ioerr.kind() == std::io::ErrorKind::BrokenPipe {
+                    if messages::is_output_pipe_closed(ioerr) {
                         return ExitCode::from(0);
                     }
                 }
