@@ -389,7 +389,7 @@ impl GlobSet {
     /// `0` of the globs will match.
     pub fn matches_all_candidate(&self, path: &Candidate<'_>) -> bool {
         for strat in &self.strats {
-            if !strat.is_match(path) {
+            if !strat.matches_all(path) {
                 return false;
             }
         }
@@ -691,6 +691,19 @@ impl GlobSetMatchStrategy {
             Regex(ref s) => s.matches_into(candidate, matches),
         }
     }
+
+    fn matches_all(&self, candidate: &Candidate<'_>) -> bool {
+        use self::GlobSetMatchStrategy::*;
+        match *self {
+            Literal(ref s) => s.matches_all(candidate),
+            BasenameLiteral(ref s) => s.matches_all(candidate),
+            Extension(ref s) => s.matches_all(candidate),
+            Prefix(ref s) => s.matches_all(candidate),
+            Suffix(ref s) => s.matches_all(candidate),
+            RequiredExtension(ref s) => s.matches_all(candidate),
+            Regex(ref s) => s.matches_all(candidate),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -707,6 +720,10 @@ impl LiteralStrategy {
 
     fn is_match(&self, candidate: &Candidate<'_>) -> bool {
         self.0.contains_key(candidate.path.as_bytes())
+    }
+
+    fn matches_all(&self, candidate: &Candidate<'_>) -> bool {
+        self.0.len() == 1 && self.is_match(candidate)
     }
 
     #[inline(never)]
@@ -738,6 +755,10 @@ impl BasenameLiteralStrategy {
             return false;
         }
         self.0.contains_key(candidate.basename.as_bytes())
+    }
+
+    fn matches_all(&self, candidate: &Candidate<'_>) -> bool {
+        self.0.len() == 1 && self.is_match(candidate)
     }
 
     #[inline(never)]
@@ -774,6 +795,10 @@ impl ExtensionStrategy {
         self.0.contains_key(candidate.ext.as_bytes())
     }
 
+    fn matches_all(&self, candidate: &Candidate<'_>) -> bool {
+        self.0.len() == 1 && self.is_match(candidate)
+    }
+
     #[inline(never)]
     fn matches_into(
         &self,
@@ -805,6 +830,19 @@ impl PrefixStrategy {
             }
         }
         false
+    }
+
+    fn matches_all(&self, candidate: &Candidate<'_>) -> bool {
+        let path = candidate.path_prefix(self.longest);
+        let mut count = 0;
+        // If all the prefixes match, we should get exactly one match for each
+        // prefix at the beginning.
+        for m in self.matcher.find_overlapping_iter(path) {
+            if m.start() == 0 {
+                count += 1;
+            }
+        }
+        count == self.map.len()
     }
 
     fn matches_into(
@@ -839,6 +877,19 @@ impl SuffixStrategy {
         false
     }
 
+    fn matches_all(&self, candidate: &Candidate<'_>) -> bool {
+        let path = candidate.path_suffix(self.longest);
+        let mut count = 0;
+        // If all the suffixes match, we should get exactly one match
+        // for each suffix at the end.
+        for m in self.matcher.find_overlapping_iter(path) {
+            if m.end() == path.len() {
+                count += 1;
+            }
+        }
+        count == self.map.len()
+    }
+
     fn matches_into(
         &self,
         candidate: &Candidate<'_>,
@@ -871,6 +922,22 @@ impl RequiredExtensionStrategy {
                 }
                 false
             }
+        }
+    }
+
+    fn matches_all(&self, candidate: &Candidate<'_>) -> bool {
+        if candidate.ext.is_empty() {
+            return false;
+        }
+        if let Some(regexes) = self.0.get(candidate.ext.as_bytes()) {
+            for &(_, ref re) in regexes {
+                if !re.is_match(candidate.path.as_bytes()) {
+                    return false;
+                }
+            }
+            true
+        } else {
+            false
         }
     }
 
@@ -916,15 +983,28 @@ impl RegexSetStrategy {
         self.matcher.is_match(candidate.path.as_bytes())
     }
 
+    fn find_matches(
+        &self,
+        candidate: &Candidate<'_>,
+    ) -> PoolGuard<'_, PatternSet, PatternSetPoolFn> {
+        let input = regex_automata::Input::new(candidate.path.as_bytes());
+        let mut patset = self.patset.get();
+        patset.clear();
+        self.matcher.which_overlapping_matches(&input, &mut patset);
+        patset
+    }
+
+    fn matches_all(&self, candidate: &Candidate<'_>) -> bool {
+        let patset = self.find_matches(candidate);
+        patset.is_full()
+    }
+
     fn matches_into(
         &self,
         candidate: &Candidate<'_>,
         matches: &mut Vec<usize>,
     ) {
-        let input = regex_automata::Input::new(candidate.path.as_bytes());
-        let mut patset = self.patset.get();
-        patset.clear();
-        self.matcher.which_overlapping_matches(&input, &mut patset);
+        let patset = self.find_matches(candidate);
         for i in patset.iter() {
             matches.push(self.map[i]);
         }
@@ -1053,17 +1133,21 @@ pub fn escape(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::glob::Glob;
+    use crate::glob::{Glob, GlobBuilder};
 
     use super::{GlobSet, GlobSetBuilder};
 
+    fn build_glob_set(globs: &[&str]) -> GlobSet {
+        let mut builder = GlobSetBuilder::new();
+        for glob in globs {
+            builder.add(Glob::new(glob).unwrap());
+        }
+        builder.build().unwrap()
+    }
+
     #[test]
     fn set_works() {
-        let mut builder = GlobSetBuilder::new();
-        builder.add(Glob::new("src/**/*.rs").unwrap());
-        builder.add(Glob::new("*.c").unwrap());
-        builder.add(Glob::new("src/lib.rs").unwrap());
-        let set = builder.build().unwrap();
+        let set = build_glob_set(&["src/**/*.rs", "*.c", "src/lib.rs"]);
 
         assert!(set.is_match("foo.c"));
         assert!(set.is_match("src/foo.c"));
@@ -1071,6 +1155,9 @@ mod tests {
         assert!(!set.is_match("tests/foo.rs"));
         assert!(set.is_match("src/foo.rs"));
         assert!(set.is_match("src/grep/src/main.rs"));
+
+        assert!(!set.matches_all("src/lib.rs"));
+        assert!(!set.matches_all("src/a/b.c"));
 
         let matches = set.matches("src/lib.rs");
         assert_eq!(2, matches.len());
@@ -1084,6 +1171,87 @@ mod tests {
         assert!(!set.is_match(""));
         assert!(!set.is_match("a"));
         assert!(set.matches_all("a"));
+    }
+
+    #[test]
+    fn matches_all_literals() {
+        let set = build_glob_set(&["abc", "def"]);
+
+        assert!(!set.matches_all("abc"));
+        assert!(!set.matches_all("def"));
+
+        let set = build_glob_set(&["abc"]);
+
+        assert!(set.matches_all("abc"));
+    }
+
+    #[test]
+    fn matches_all_basename_literals() {
+        let set = build_glob_set(&["**/abc", "**/a.c"]);
+
+        assert!(!set.matches_all("foo/abc"));
+        assert!(!set.matches_all("foo/a.c"));
+
+        let set = build_glob_set(&["**/a.c"]);
+        assert!(set.matches_all("foo/a.c"));
+    }
+
+    #[test]
+    fn matches_all_extensions() {
+        let set = build_glob_set(&["**/*.rs", "**/*.c"]);
+
+        assert!(!set.matches_all("foo/a.rs"));
+        assert!(!set.matches_all("foo/a.c"));
+
+        let set = build_glob_set(&["**/*.rs", "*.rs"]);
+        assert!(set.matches_all("foo/a.rs"));
+    }
+
+    #[test]
+    fn matches_all_required_extensions() {
+        let set = build_glob_set(&["*.rs", "**/m*.rs", "a/*.rs"]);
+
+        assert!(set.matches_all("a/main.rs"));
+
+        assert!(!set.matches_all("main.rs"));
+        assert!(!set.matches_all("a/lib.rs"));
+    }
+
+    #[test]
+    fn matches_all_prefix() {
+        let set = build_glob_set(&["a*", "ab*", "ab/c*"]);
+
+        assert!(set.matches_all("ab/c/def"));
+        assert!(set.matches_all("ab/cd"));
+
+        assert!(!set.matches_all("abc"));
+        assert!(!set.matches_all("ab/x"));
+        assert!(!set.matches_all("a"));
+    }
+
+    #[test]
+    fn matches_all_suffix() {
+        let set = build_glob_set(&["*.rs", "*s", "*/main.rs"]);
+
+        assert!(set.matches_all("a/b/c/main.rs"));
+
+        assert!(!set.matches_all("foo.rs"));
+        assert!(!set.matches_all("as"));
+    }
+
+    #[test]
+    fn matches_all_regex() {
+        let set = GlobSet::new(&[
+            GlobBuilder::new("c*").case_insensitive(true).build().unwrap(),
+            Glob::new("*{rs,c}").unwrap(),
+        ])
+        .unwrap();
+
+        assert!(set.matches_all("c/main.rs"));
+        assert!(set.matches_all("C/main.c"));
+
+        assert!(!set.matches_all("Ca"));
+        assert!(!set.matches_all("foo.c"));
     }
 
     #[test]
