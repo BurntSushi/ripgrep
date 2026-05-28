@@ -201,7 +201,7 @@ impl Error {
     /// [`From`]: https://doc.rust-lang.org/stable/std/convert/trait.From.html
     /// [`Error`]: struct.Error.html
     /// [`into_io_error`]: struct.Error.html#method.into_io_error
-    /// [impl]: struct.Error.html#impl-From%3CError%3E
+    /// [impl]: enum.Error.html#impl-From%3CError%3E
     pub fn io_error(&self) -> Option<&std::io::Error> {
         match *self {
             Error::Partial(ref errs) => {
