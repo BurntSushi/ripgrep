@@ -1463,6 +1463,11 @@ struct Work {
     root_device: Option<u64>,
 }
 
+#[derive(Debug, Default)]
+struct ReadDirResult {
+    entries: Vec<Result<fs::DirEntry, Error>>,
+}
+
 impl Work {
     /// Returns true if and only if this work item is a directory.
     fn is_dir(&self) -> bool {
@@ -1489,6 +1494,13 @@ impl Work {
         err
     }
 
+    /// Adds ignore rules for this directory without reading its contents.
+    fn add_ignore(&mut self) {
+        let (ig, err) = self.ignore.add_child(self.dent.path());
+        self.ignore = ig;
+        self.dent.err = err;
+    }
+
     /// Reads the directory contents of this work item and adds ignore
     /// rules for this directory.
     ///
@@ -1496,7 +1508,7 @@ impl Work {
     /// an error is returned. If there was a problem reading the ignore
     /// rules for this directory, then the error is attached to this
     /// work item's directory entry.
-    fn read_dir(&mut self) -> Result<fs::ReadDir, Error> {
+    fn read_dir(&mut self) -> Result<ReadDirResult, Error> {
         let readdir = match fs::read_dir(self.dent.path()) {
             Ok(readdir) => readdir,
             Err(err) => {
@@ -1506,10 +1518,24 @@ impl Work {
                 return Err(err);
             }
         };
-        let (ig, err) = self.ignore.add_child(self.dent.path());
+        let mut result = ReadDirResult::default();
+        for entry in readdir {
+            match entry {
+                Ok(entry) => result.entries.push(Ok(entry)),
+                Err(err) => {
+                    let err =
+                        Error::from(err).with_depth(self.dent.depth() + 1);
+                    result.entries.push(Err(err));
+                }
+            }
+        }
+        let (ig, err) = self.ignore.add_child_with_dir_entries(
+            self.dent.path(),
+            result.entries.iter().filter_map(|entry| entry.as_ref().ok()),
+        );
         self.ignore = ig;
         self.dent.err = err;
-        Ok(readdir)
+        Ok(result)
     }
 }
 
@@ -1679,8 +1705,15 @@ impl<'s> Worker<'s> {
         // have sufficient read permissions to list the directory.
         // In that case we still want to provide the closure with a valid
         // entry before passing the error value.
-        let readdir = work.read_dir();
         let depth = work.dent.depth();
+        let should_descend =
+            descend && self.max_depth.map_or(true, |max| depth < max);
+        let readdir = if should_descend {
+            Some(work.read_dir())
+        } else {
+            work.add_ignore();
+            None
+        };
         if should_visit {
             let state = self.visitor.visit(Ok(work.dent));
             if !state.is_continue() {
@@ -1690,6 +1723,9 @@ impl<'s> Worker<'s> {
         if !descend {
             return WalkState::Skip;
         }
+        let Some(readdir) = readdir else {
+            return WalkState::Skip;
+        };
 
         let readdir = match readdir {
             Ok(readdir) => readdir,
@@ -1698,10 +1734,7 @@ impl<'s> Worker<'s> {
             }
         };
 
-        if self.max_depth.map_or(false, |max| depth >= max) {
-            return WalkState::Skip;
-        }
-        for result in readdir {
+        for result in readdir.entries {
             let state = self.generate_work(
                 &work.ignore,
                 depth + 1,
@@ -1733,14 +1766,12 @@ impl<'s> Worker<'s> {
         ig: &Ignore,
         depth: usize,
         root_device: Option<u64>,
-        result: Result<fs::DirEntry, io::Error>,
+        result: Result<fs::DirEntry, Error>,
     ) -> WalkState {
         let fs_dent = match result {
             Ok(fs_dent) => fs_dent,
             Err(err) => {
-                return self
-                    .visitor
-                    .visit(Err(Error::from(err).with_depth(depth)));
+                return self.visitor.visit(Err(err));
             }
         };
         let mut dent = match DirEntryRaw::from_entry(depth, &fs_dent) {

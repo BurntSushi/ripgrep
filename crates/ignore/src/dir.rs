@@ -16,7 +16,7 @@
 use std::{
     collections::HashMap,
     ffi::{OsStr, OsString},
-    fs::{File, FileType},
+    fs::{self, File, FileType},
     io::{self, BufRead},
     path::{Path, PathBuf},
     sync::{Arc, RwLock, Weak},
@@ -150,6 +150,15 @@ struct IgnoreInner {
     opts: IgnoreOptions,
 }
 
+#[derive(Clone, Debug)]
+struct IgnoreFiles {
+    has_ignore: bool,
+    has_git_ignore: bool,
+    has_git_dir: bool,
+    has_jj_dir: bool,
+    custom_ignore_files: Vec<bool>,
+}
+
 impl Ignore {
     /// Return the directory path of this matcher.
     pub(crate) fn path(&self) -> &Path {
@@ -254,34 +263,118 @@ impl Ignore {
         (Ignore(Arc::new(ig)), err)
     }
 
+    /// Like add_child, but uses successfully read directory entries to avoid
+    /// probing for ignore files known not to exist.
+    pub(crate) fn add_child_with_dir_entries<'a, P, I>(
+        &self,
+        dir: P,
+        entries: I,
+    ) -> (Ignore, Option<Error>)
+    where
+        P: AsRef<Path>,
+        I: IntoIterator<Item = &'a fs::DirEntry>,
+    {
+        let files = self.collect_ignore_files(entries);
+        let (ig, err) =
+            self.add_child_path_with_files(dir.as_ref(), Some(&files));
+        (Ignore(Arc::new(ig)), err)
+    }
+
     /// Like add_child, but takes a full path and returns an IgnoreInner.
     fn add_child_path(&self, dir: &Path) -> (IgnoreInner, Option<Error>) {
+        self.add_child_path_with_files(dir, None)
+    }
+
+    fn collect_ignore_files<'a, I>(&self, entries: I) -> IgnoreFiles
+    where
+        I: IntoIterator<Item = &'a fs::DirEntry>,
+    {
+        let custom_ignore_filenames = &self.0.custom_ignore_filenames;
+        let mut files = IgnoreFiles {
+            has_ignore: false,
+            has_git_ignore: false,
+            has_git_dir: false,
+            has_jj_dir: false,
+            custom_ignore_files: vec![false; custom_ignore_filenames.len()],
+        };
+        for entry in entries {
+            let file_name = entry.file_name();
+            let file_name = file_name.as_os_str();
+            if file_name == OsStr::new(".ignore") {
+                files.has_ignore = true;
+            } else if file_name == OsStr::new(".gitignore") {
+                files.has_git_ignore = true;
+            } else if file_name == OsStr::new(".git") {
+                files.has_git_dir = true;
+            } else if file_name == OsStr::new(".jj") {
+                files.has_jj_dir = true;
+            }
+            for (i, custom_name) in custom_ignore_filenames.iter().enumerate()
+            {
+                if file_name == custom_name.as_os_str() {
+                    files.custom_ignore_files[i] = true;
+                }
+            }
+        }
+        files
+    }
+
+    fn add_child_path_with_files(
+        &self,
+        dir: &Path,
+        files: Option<&IgnoreFiles>,
+    ) -> (IgnoreInner, Option<Error>) {
         let check_vcs_dir = self.0.opts.require_git
             && (self.0.opts.git_ignore || self.0.opts.git_exclude);
-        let git_type = if check_vcs_dir {
+        let git_type = if check_vcs_dir
+            && files.map_or(true, |files| files.has_git_dir)
+        {
             dir.join(".git").metadata().ok().map(|md| md.file_type())
         } else {
             None
         };
-        let has_git =
-            check_vcs_dir && (git_type.is_some() || dir.join(".jj").exists());
+        let has_jj = check_vcs_dir
+            && files.map_or(true, |files| files.has_jj_dir)
+            && dir.join(".jj").exists();
+        let has_git = check_vcs_dir && (git_type.is_some() || has_jj);
 
         let mut errs = PartialErrorBuilder::default();
         let custom_ig_matcher = if self.0.custom_ignore_filenames.is_empty() {
             Gitignore::empty()
         } else {
-            let (m, err) = create_gitignore(
-                &dir,
-                &dir,
-                &self.0.custom_ignore_filenames,
-                self.0.opts.ignore_case_insensitive,
-            );
-            errs.maybe_push(err);
-            m
+            let names: Vec<&OsStr> = match files {
+                None => self
+                    .0
+                    .custom_ignore_filenames
+                    .iter()
+                    .map(OsString::as_os_str)
+                    .collect(),
+                Some(files) => self
+                    .0
+                    .custom_ignore_filenames
+                    .iter()
+                    .zip(files.custom_ignore_files.iter())
+                    .filter_map(|(name, matched)| {
+                        matched.then_some(name.as_os_str())
+                    })
+                    .collect(),
+            };
+            if names.is_empty() {
+                Gitignore::empty()
+            } else {
+                let (m, err) = create_gitignore(
+                    &dir,
+                    &dir,
+                    &names,
+                    self.0.opts.ignore_case_insensitive,
+                );
+                errs.maybe_push(err);
+                m
+            }
         };
         let ig_matcher = if !self.0.opts.ignore {
             Gitignore::empty()
-        } else {
+        } else if files.map_or(true, |files| files.has_ignore) {
             let (m, err) = create_gitignore(
                 &dir,
                 &dir,
@@ -290,10 +383,12 @@ impl Ignore {
             );
             errs.maybe_push(err);
             m
+        } else {
+            Gitignore::empty()
         };
         let gi_matcher = if !self.0.opts.git_ignore {
             Gitignore::empty()
-        } else {
+        } else if files.map_or(true, |files| files.has_git_ignore) {
             let (m, err) = create_gitignore(
                 &dir,
                 &dir,
@@ -302,11 +397,13 @@ impl Ignore {
             );
             errs.maybe_push(err);
             m
+        } else {
+            Gitignore::empty()
         };
 
         let gi_exclude_matcher = if !self.0.opts.git_exclude {
             Gitignore::empty()
-        } else {
+        } else if files.map_or(true, |files| files.has_git_dir) {
             match resolve_git_commondir(dir, git_type) {
                 Ok(git_dir) => {
                     let (m, err) = create_gitignore(
@@ -323,6 +420,8 @@ impl Ignore {
                     Gitignore::empty()
                 }
             }
+        } else {
+            Gitignore::empty()
         };
         let ig = IgnoreInner {
             compiled: self.0.compiled.clone(),
@@ -961,6 +1060,13 @@ mod tests {
         std::fs::create_dir_all(path).unwrap();
     }
 
+    fn read_entries<P: AsRef<Path>>(path: P) -> Vec<std::fs::DirEntry> {
+        std::fs::read_dir(path)
+            .unwrap()
+            .map(|result| result.unwrap())
+            .collect()
+    }
+
     fn partial(err: Error) -> Vec<Error> {
         match err {
             Error::Partial(errs) => errs,
@@ -1007,6 +1113,22 @@ mod tests {
         wfile(td.path().join(".gitignore"), "foo\n!bar");
 
         let (ig, err) = IgnoreBuilder::new().build().add_child(td.path());
+        assert!(err.is_none());
+        assert!(ig.matched("foo", false).is_ignore());
+        assert!(ig.matched("bar", false).is_whitelist());
+        assert!(ig.matched("baz", false).is_none());
+    }
+
+    #[test]
+    fn gitignore_from_prefetched_dir_entries() {
+        let td = tmpdir();
+        mkdirp(td.path().join(".git"));
+        wfile(td.path().join(".gitignore"), "foo\n!bar");
+        let entries = read_entries(td.path());
+
+        let (ig, err) = IgnoreBuilder::new()
+            .build()
+            .add_child_with_dir_entries(td.path(), entries.iter());
         assert!(err.is_none());
         assert!(ig.matched("foo", false).is_ignore());
         assert!(ig.matched("bar", false).is_whitelist());
@@ -1066,6 +1188,21 @@ mod tests {
     }
 
     #[test]
+    fn ignore_from_prefetched_dir_entries() {
+        let td = tmpdir();
+        wfile(td.path().join(".ignore"), "foo\n!bar");
+        let entries = read_entries(td.path());
+
+        let (ig, err) = IgnoreBuilder::new()
+            .build()
+            .add_child_with_dir_entries(td.path(), entries.iter());
+        assert!(err.is_none());
+        assert!(ig.matched("foo", false).is_ignore());
+        assert!(ig.matched("bar", false).is_whitelist());
+        assert!(ig.matched("baz", false).is_none());
+    }
+
+    #[test]
     fn custom_ignore() {
         let td = tmpdir();
         let custom_ignore = ".customignore";
@@ -1075,6 +1212,23 @@ mod tests {
             .add_custom_ignore_filename(custom_ignore)
             .build()
             .add_child(td.path());
+        assert!(err.is_none());
+        assert!(ig.matched("foo", false).is_ignore());
+        assert!(ig.matched("bar", false).is_whitelist());
+        assert!(ig.matched("baz", false).is_none());
+    }
+
+    #[test]
+    fn custom_ignore_from_prefetched_dir_entries() {
+        let td = tmpdir();
+        let custom_ignore = ".customignore";
+        wfile(td.path().join(custom_ignore), "foo\n!bar");
+        let entries = read_entries(td.path());
+
+        let (ig, err) = IgnoreBuilder::new()
+            .add_custom_ignore_filename(custom_ignore)
+            .build()
+            .add_child_with_dir_entries(td.path(), entries.iter());
         assert!(err.is_none());
         assert!(ig.matched("foo", false).is_ignore());
         assert!(ig.matched("bar", false).is_whitelist());
