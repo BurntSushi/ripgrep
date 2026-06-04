@@ -93,6 +93,12 @@ struct IgnoreOptions {
 #[derive(Clone, Debug)]
 pub(crate) struct Ignore {
     inner: Arc<IgnoreInner>,
+    // Parent matchers are cached independently of the path being walked, but
+    // matching them still needs the canonicalized path originally passed to
+    // `add_parents`. For example, when walking `/tmp/project/src`, parent
+    // matchers use `/tmp/project/src` to rewrite `foo.py` before matching it
+    // against ignore files from `/tmp/project` and its ancestors.
+    absolute_base: Option<Arc<PathBuf>>,
 }
 
 #[derive(Clone, Debug)]
@@ -114,12 +120,9 @@ struct IgnoreInner {
     ///
     /// If this is the root directory or there are otherwise no more
     /// directories to match, then `parent` is `None`.
-    parent: Option<Ignore>,
+    parent: Option<Arc<IgnoreInner>>,
     /// Whether this is an absolute parent matcher, as added by add_parent.
     is_absolute_parent: bool,
-    /// The absolute base path of this matcher. Populated only if parent
-    /// directories are added.
-    absolute_base: Option<Arc<PathBuf>>,
     /// The directory that gitignores should be interpreted relative to.
     ///
     /// Usually this is the directory containing the gitignore file. But in
@@ -154,6 +157,7 @@ struct IgnoreInner {
 
 impl Ignore {
     /// Return the directory path of this matcher.
+    #[cfg(test)]
     pub(crate) fn path(&self) -> &Path {
         &self.inner.dir
     }
@@ -163,14 +167,12 @@ impl Ignore {
         self.inner.parent.is_none()
     }
 
-    /// Returns true if this matcher was added via the `add_parents` method.
-    pub(crate) fn is_absolute_parent(&self) -> bool {
-        self.inner.is_absolute_parent
-    }
-
     /// Return this matcher's parent, if one exists.
     pub(crate) fn parent(&self) -> Option<Ignore> {
-        self.inner.parent.clone()
+        self.inner.parent.as_ref().map(|parent| Ignore {
+            inner: parent.clone(),
+            absolute_base: self.absolute_base.clone(),
+        })
     }
 
     /// Create a new `Ignore` matcher with the parent directories of `dir`.
@@ -216,14 +218,16 @@ impl Ignore {
             let mut compiled = self.inner.compiled.write().unwrap();
             if let Some(weak) = compiled.get(parent.as_os_str()) {
                 if let Some(prebuilt) = weak.upgrade() {
-                    ig = Ignore { inner: prebuilt };
+                    ig = Ignore {
+                        inner: prebuilt,
+                        absolute_base: Some(absolute_base.clone()),
+                    };
                     continue;
                 }
             }
             let (mut igtmp, err) = ig.add_child_path(parent);
             errs.maybe_push(err);
             igtmp.is_absolute_parent = true;
-            igtmp.absolute_base = Some(absolute_base.clone());
             igtmp.has_git =
                 if self.inner.opts.require_git && self.inner.opts.git_ignore {
                     parent.join(".git").exists() || parent.join(".jj").exists()
@@ -231,7 +235,10 @@ impl Ignore {
                     false
                 };
             let ig_arc = Arc::new(igtmp);
-            ig = Ignore { inner: ig_arc.clone() };
+            ig = Ignore {
+                inner: ig_arc.clone(),
+                absolute_base: Some(absolute_base.clone()),
+            };
             compiled.insert(
                 parent.as_os_str().to_os_string(),
                 Arc::downgrade(&ig_arc),
@@ -253,7 +260,13 @@ impl Ignore {
         dir: P,
     ) -> (Ignore, Option<Error>) {
         let (ig, err) = self.add_child_path(dir.as_ref());
-        (Ignore { inner: Arc::new(ig) }, err)
+        (
+            Ignore {
+                inner: Arc::new(ig),
+                absolute_base: self.absolute_base.clone(),
+            },
+            err,
+        )
     }
 
     /// Like add_child, but takes a full path and returns an IgnoreInner.
@@ -332,9 +345,8 @@ impl Ignore {
             dir: dir.to_path_buf(),
             overrides: self.inner.overrides.clone(),
             types: self.inner.types.clone(),
-            parent: Some(self.clone()),
+            parent: Some(self.inner.clone()),
             is_absolute_parent: false,
-            absolute_base: self.inner.absolute_base.clone(),
             global_gitignores_relative_to: self
                 .inner
                 .global_gitignores_relative_to
@@ -575,29 +587,46 @@ impl Ignore {
 
     /// Returns an iterator over parent ignore matchers, including this one.
     pub(crate) fn parents(&self) -> Parents<'_> {
-        Parents(Some(self))
+        Parents(Some(IgnoreRef { inner: &self.inner }))
     }
 
     /// Returns the first absolute path of the first absolute parent, if
     /// one exists.
     fn absolute_base(&self) -> Option<&Path> {
-        self.inner.absolute_base.as_ref().map(|p| &***p)
+        self.absolute_base.as_ref().map(|p| &***p)
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct IgnoreRef<'a> {
+    inner: &'a IgnoreInner,
+}
+
+impl IgnoreRef<'_> {
+    pub(crate) fn path(&self) -> &Path {
+        &self.inner.dir
+    }
+
+    pub(crate) fn is_absolute_parent(&self) -> bool {
+        self.inner.is_absolute_parent
     }
 }
 
 /// An iterator over all parents of an ignore matcher, including itself.
-///
-/// The lifetime `'a` refers to the lifetime of the initial `Ignore` matcher.
-pub(crate) struct Parents<'a>(Option<&'a Ignore>);
+pub(crate) struct Parents<'a>(Option<IgnoreRef<'a>>);
 
 impl<'a> Iterator for Parents<'a> {
-    type Item = &'a Ignore;
+    type Item = IgnoreRef<'a>;
 
-    fn next(&mut self) -> Option<&'a Ignore> {
+    fn next(&mut self) -> Option<IgnoreRef<'a>> {
         match self.0.take() {
             None => None,
             Some(ig) => {
-                self.0 = ig.inner.parent.as_ref();
+                self.0 = ig
+                    .inner
+                    .parent
+                    .as_deref()
+                    .map(|inner| IgnoreRef { inner });
                 Some(ig)
             }
         }
@@ -700,7 +729,6 @@ impl IgnoreBuilder {
                 types: self.types.clone(),
                 parent: None,
                 is_absolute_parent: true,
-                absolute_base: None,
                 global_gitignores_relative_to,
                 explicit_ignores: Arc::new(self.explicit_ignores.clone()),
                 custom_ignore_filenames: Arc::new(
@@ -714,6 +742,7 @@ impl IgnoreBuilder {
                 has_git: false,
                 opts: self.opts,
             }),
+            absolute_base: None,
         }
     }
 
@@ -966,7 +995,7 @@ fn strip_if_is_prefix<'a, P: AsRef<Path> + ?Sized>(
 
 #[cfg(test)]
 mod tests {
-    use std::{io::Write, path::Path};
+    use std::{io::Write, path::Path, sync::Arc};
 
     use crate::{
         Error, dir::IgnoreBuilder, gitignore::Gitignore, tests::TempDir,
@@ -1276,6 +1305,29 @@ mod tests {
         assert!(ig2.matched("src/llvm", true).is_none());
         assert!(ig2.matched("foo", false).is_ignore());
         assert!(ig2.matched("src/foo", false).is_ignore());
+    }
+
+    #[test]
+    fn absolute_parent_matchers_are_cached_across_roots() {
+        let td = tmpdir();
+        mkdirp(td.path().join(".git"));
+        mkdirp(td.path().join("src/build"));
+        mkdirp(td.path().join("tests/build"));
+        wfile(td.path().join(".gitignore"), "tests/**/build/\n");
+
+        let ig0 = IgnoreBuilder::new().build();
+        let (src_parents, err) = ig0.add_parents(td.path().join("src"));
+        assert!(err.is_none());
+        let (src, err) = src_parents.add_child(td.path().join("src"));
+        assert!(err.is_none());
+        let (tests_parents, err) = ig0.add_parents(td.path().join("tests"));
+        assert!(err.is_none());
+        let (tests, err) = tests_parents.add_child(td.path().join("tests"));
+        assert!(err.is_none());
+
+        assert!(Arc::ptr_eq(&src_parents.inner, &tests_parents.inner));
+        assert!(src.matched("build", true).is_none());
+        assert!(tests.matched("build", true).is_ignore());
     }
 
     #[test]
