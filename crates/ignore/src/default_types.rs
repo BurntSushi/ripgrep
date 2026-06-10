@@ -186,6 +186,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["mint"], &["*.mint"]),
     (&["mk"], &["mkfile"]),
     (&["ml"], &["*.ml"]),
+    (&["mojo"], &["*.mojo"]),
     (&["motoko"], &["*.mo"]),
     (&["msbuild"], &[
         "*.csproj", "*.fsproj", "*.vcxproj", "*.proj", "*.props", "*.targets",
