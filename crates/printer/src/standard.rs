@@ -1026,6 +1026,29 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         Ok(())
     }
 
+    fn match_index_for_replacement_offset(
+        matches: &[Match],
+        offset: usize,
+    ) -> usize {
+        for (i, m) in matches.iter().enumerate() {
+            if offset < m.end() {
+                return i;
+            }
+        }
+        matches.len().saturating_sub(1)
+    }
+
+    fn line_number_for_replacement_output(
+        &self,
+        match_index: usize,
+        fallback_count: usize,
+    ) -> Option<u64> {
+        let line_term = self.searcher.line_terminator().as_byte();
+        self.sunk
+            .line_number_for_match(line_term, match_index)
+            .or_else(|| self.sunk.line_number().map(|n| n + fallback_count as u64))
+    }
+
     fn sink_slow_multi_line(&self) -> io::Result<()> {
         debug_assert!(!self.sunk.matches().is_empty());
         debug_assert!(self.multi_line());
@@ -1044,9 +1067,11 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         let mut stepper = LineStep::new(line_term, 0, bytes.len());
         while let Some((start, end)) = stepper.next(bytes) {
             let mut line = Match::new(start, end);
+            let match_index =
+                Self::match_index_for_replacement_offset(matches, line.start());
             self.write_prelude(
                 self.sunk.absolute_byte_offset() + line.start() as u64,
-                self.sunk.line_number().map(|n| n + count),
+                self.line_number_for_replacement_output(match_index, count),
                 Some(matches[0].start() as u64 + 1),
             )?;
             count += 1;
@@ -1091,7 +1116,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                     let upto = cmp::min(line.end(), m.end());
                     self.write_prelude(
                         self.sunk.absolute_byte_offset() + m.start() as u64,
-                        self.sunk.line_number().map(|n| n + count),
+                        self.line_number_for_replacement_output(midx, count),
                         Some(m.start() as u64 + 1),
                     )?;
 
@@ -1116,7 +1141,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         let line_term = self.searcher.line_terminator().as_byte();
         let spec = self.config().colors.matched();
         let bytes = self.sunk.bytes();
-        for &m in self.sunk.matches() {
+        for (match_index, &m) in self.sunk.matches().iter().enumerate() {
             let mut count = 0;
             let mut stepper = LineStep::new(line_term, 0, bytes.len());
             while let Some((start, end)) = stepper.next(bytes) {
@@ -1129,7 +1154,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                 }
                 self.write_prelude(
                     self.sunk.absolute_byte_offset() + line.start() as u64,
-                    self.sunk.line_number().map(|n| n + count),
+                    self.line_number_for_replacement_output(match_index, count),
                     Some(m.start().saturating_sub(line.start()) as u64 + 1),
                 )?;
                 count += 1;
@@ -3586,6 +3611,51 @@ line 3 x
 
         let got = printer_contents(&mut printer);
         let expected = "1:hello?world?\n";
+        assert_eq_printed!(expected, got);
+    }
+
+    // See: https://github.com/BurntSushi/ripgrep/issues/2779
+    #[test]
+    fn replacement_adjacent_multiline_matches_line_numbers() {
+        let matcher = RegexMatcherBuilder::new()
+            .multi_line(true)
+            .build(r"^:properties:\n:id: (.*)\n:end:")
+            .unwrap();
+        let haystack = "\
+:properties:
+:id: fnord
+:end:
+:properties:
+:id: boccob
+:end:
+:properties:
+:id: d321fdddffff
+:end:
+:properties:
+:id: clowns
+:end:
+";
+        let mut printer = StandardBuilder::new()
+            .replacement(Some(b"$1".to_vec()))
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(true)
+            .multi_line(true)
+            .build()
+            .search_reader(
+                &matcher,
+                haystack.as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "\
+1:fnord
+4:boccob
+7:d321fdddffff
+10:clowns
+";
         assert_eq_printed!(expected, got);
     }
 
