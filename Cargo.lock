@@ -242,7 +242,7 @@ dependencies = [
 
 [[package]]
 name = "ignore"
-version = "0.4.25"
+version = "0.4.26"
 dependencies = [
  "bstr",
  "crossbeam-channel",

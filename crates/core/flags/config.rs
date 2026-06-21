@@ -15,7 +15,13 @@ use bstr::{ByteSlice, io::BufReadExt};
 /// Return a sequence of arguments derived from ripgrep rc configuration files.
 pub fn args() -> Vec<OsString> {
     let config_path = match std::env::var_os("RIPGREP_CONFIG_PATH") {
-        None => return vec![],
+        None => {
+            log::debug!(
+                "RIPGREP_CONFIG_PATH environment variable is not set, \
+                 therefore not reading any config file"
+            );
+            return vec![];
+        }
         Some(config_path) => {
             if config_path.is_empty() {
                 return vec![];
