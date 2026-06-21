@@ -110,6 +110,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["hbs"], &["*.hbs"]),
     (&["hs"], &["*.hs", "*.lhs"]),
     (&["html"], &["*.htm", "*.html", "*.ejs"]),
+    (&["hurl"], &["*.hurl"]),
     (&["hy"], &["*.hy"]),
     (&["idris"], &["*.idr", "*.lidr"]),
     (&["janet"], &["*.janet"]),
