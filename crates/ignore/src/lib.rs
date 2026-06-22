@@ -192,16 +192,15 @@ impl Error {
     /// This method returns a borrowed value that is bound to the lifetime of the [`Error`]. To
     /// obtain an owned value, the [`into_io_error`] can be used instead.
     ///
-    /// > This is the original [`std::io::Error`] and is _not_ the same as
-    /// > [`impl From<Error> for std::io::Error`][impl] which contains
-    /// > additional context about the error.
+    /// > This returns the [`std::io::Error`] stored in [`Error::Io`], if present. It does
+    /// > not include additional context from wrappers such as [`Error::WithPath`].
     ///
     /// [`None`]: https://doc.rust-lang.org/stable/std/option/enum.Option.html#variant.None
     /// [`std::io::Error`]: https://doc.rust-lang.org/stable/std/io/struct.Error.html
-    /// [`From`]: https://doc.rust-lang.org/stable/std/convert/trait.From.html
     /// [`Error`]: struct.Error.html
+    /// [`Error::Io`]: enum.Error.html#variant.Io
+    /// [`Error::WithPath`]: enum.Error.html#variant.WithPath
     /// [`into_io_error`]: struct.Error.html#method.into_io_error
-    /// [impl]: struct.Error.html#impl-From%3CError%3E
     pub fn io_error(&self) -> Option<&std::io::Error> {
         match *self {
             Error::Partial(ref errs) => {
