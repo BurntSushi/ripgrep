@@ -213,7 +213,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["pod"], &["*.pod"]),
     (&["postscript"], &["*.eps", "*.ps"]),
     (&["prolog"], &["*.pl", "*.pro", "*.prolog", "*.P"]),
-    (&["protobuf"], &["*.proto"]),
+    (&["proto", "protobuf"], &["*.proto"]),
     (&["ps"], &["*.cdxml", "*.ps1", "*.ps1xml", "*.psd1", "*.psm1"]),
     (&["puppet"], &["*.epp", "*.erb", "*.pp", "*.rb"]),
     (&["purs"], &["*.purs"]),
@@ -361,6 +361,16 @@ mod tests {
                 previous_name
             );
             previous_name = name;
+        }
+    }
+
+    #[test]
+    fn default_types_aliases_are_sorted() {
+        for (aliases, _) in DEFAULT_TYPES.iter() {
+            assert!(
+                aliases.is_sorted(),
+                "this alias list is not sorted: {aliases:?}",
+            );
         }
     }
 }
