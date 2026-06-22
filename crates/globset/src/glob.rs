@@ -17,9 +17,13 @@ pub(crate) enum MatchStrategy {
     /// A pattern matches if and only if the entire file path matches this
     /// literal string.
     Literal(String),
+    /// Like Literal, but matches ASCII case insensitively.
+    CaseInsensitiveLiteral(String),
     /// A pattern matches if and only if the file path's basename matches this
     /// literal string.
     BasenameLiteral(String),
+    /// Like BasenameLiteral, but matches ASCII case insensitively.
+    CaseInsensitiveBasenameLiteral(String),
     /// A pattern matches if and only if the file path's extension matches this
     /// literal string.
     Extension(String),
@@ -49,7 +53,15 @@ pub(crate) enum MatchStrategy {
 impl MatchStrategy {
     /// Returns a matching strategy for the given pattern.
     pub(crate) fn new(pat: &Glob) -> MatchStrategy {
-        if let Some(lit) = pat.basename_literal() {
+        if pat.is_case_insensitive() {
+            if let Some(lit) = pat.basename_literal_anycase() {
+                MatchStrategy::CaseInsensitiveBasenameLiteral(lit)
+            } else if let Some(lit) = pat.literal_anycase() {
+                MatchStrategy::CaseInsensitiveLiteral(lit)
+            } else {
+                MatchStrategy::Regex
+            }
+        } else if let Some(lit) = pat.basename_literal() {
             MatchStrategy::BasenameLiteral(lit)
         } else if let Some(lit) = pat.literal() {
             MatchStrategy::Literal(lit)
@@ -177,8 +189,14 @@ impl GlobStrategic {
 
         match self.strategy {
             MatchStrategy::Literal(ref lit) => lit.as_bytes() == byte_path,
+            MatchStrategy::CaseInsensitiveLiteral(ref lit) => {
+                lit.as_bytes().eq_ignore_ascii_case(byte_path)
+            }
             MatchStrategy::BasenameLiteral(ref lit) => {
                 lit.as_bytes() == &*candidate.basename
+            }
+            MatchStrategy::CaseInsensitiveBasenameLiteral(ref lit) => {
+                lit.as_bytes().eq_ignore_ascii_case(&candidate.basename)
             }
             MatchStrategy::Extension(ref ext) => {
                 ext.as_bytes() == &*candidate.ext
@@ -327,6 +345,10 @@ impl Glob {
         &self.re
     }
 
+    fn is_case_insensitive(&self) -> bool {
+        self.opts.case_insensitive
+    }
+
     /// Returns the pattern as a literal if and only if the pattern must match
     /// an entire path exactly.
     ///
@@ -335,6 +357,10 @@ impl Glob {
         if self.opts.case_insensitive {
             return None;
         }
+        self.literal_anycase()
+    }
+
+    fn literal_anycase(&self) -> Option<String> {
         let mut lit = String::new();
         for t in &*self.tokens {
             let Token::Literal(c) = *t else { return None };
@@ -511,6 +537,10 @@ impl Glob {
         if self.opts.case_insensitive {
             return None;
         }
+        self.basename_tokens_anycase()
+    }
+
+    fn basename_tokens_anycase(&self) -> Option<&[Token]> {
         let start = match *self.tokens.get(0)? {
             Token::RecursivePrefix => 1,
             _ => {
@@ -558,6 +588,15 @@ impl Glob {
     /// does not contain a path separator.
     fn basename_literal(&self) -> Option<String> {
         let tokens = self.basename_tokens()?;
+        Self::tokens_to_literal(tokens)
+    }
+
+    fn basename_literal_anycase(&self) -> Option<String> {
+        let tokens = self.basename_tokens_anycase()?;
+        Self::tokens_to_literal(tokens)
+    }
+
+    fn tokens_to_literal(tokens: &[Token]) -> Option<String> {
         let mut lit = String::new();
         for t in tokens {
             let Token::Literal(c) = *t else { return None };
