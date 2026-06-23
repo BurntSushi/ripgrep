@@ -22,7 +22,7 @@ For example, the [`grep-regex`](https://crates.io/crates/grep-regex)
 crate provides an implementation of the `Matcher` trait using Rust's
 [`regex`](https://crates.io/crates/regex) crate.
 
-Finally, a `Sink` describes how callers receive search results producer by a
+Finally, a `Sink` describes how callers receive search results produced by a
 `Searcher`. This includes routines that are called at the beginning and end of
 a search, in addition to routines that are called when matching or contextual
 lines are found by the `Searcher`. Implementations of `Sink` can be trivially
