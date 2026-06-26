@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc be30b1cd7dd4ee9c4195c190df8807fd6054932b37f149e61da1cdce9feb8dff # shrinks to flags = [SyntheticFlag { long: "flag0long", short: None, negated: None, switch: true, variable: None, category: Input, short_doc: "does a thing", long_doc: "long documentation for flag 0", aliases: [], completion: Other, choices: [] }, SyntheticFlag { long: "flag1long", short: None, negated: None, switch: false, variable: Some("VAL1"), category: Input, short_doc: "does a thing", long_doc: "long documentation for flag 1", aliases: [], completion: Filename, choices: [] }]

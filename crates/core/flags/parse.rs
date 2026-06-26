@@ -144,17 +144,6 @@ pub(crate) fn parse_low_raw(
     Ok(args)
 }
 
-/// Return the metadata for the flag of the given name.
-pub(super) fn lookup(name: &str) -> Option<&'static dyn Flag> {
-    // N.B. Creating a new parser might look expensive, but it only builds
-    // the lookup trie exactly once. That is, we get a `&'static Parser` from
-    // `Parser::new()`.
-    match Parser::new().find_long(name) {
-        FlagLookup::Match(&FlagInfo { flag, .. }) => Some(flag),
-        _ => None,
-    }
-}
-
 /// A parser for turning a sequence of command line arguments into a more
 /// strictly typed set of arguments.
 #[derive(Debug)]

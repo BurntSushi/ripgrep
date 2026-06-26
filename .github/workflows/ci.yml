@@ -183,15 +183,6 @@ jobs:
       if: matrix.target != ''
       run: ${{ env.CARGO }} test --verbose --workspace ${{ env.TARGET_FLAGS }}
 
-    - name: Test zsh shell completions (Unix, sans cross)
-      # We could test this when using Cross, but we'd have to execute the
-      # 'rg' binary (done in test-complete) with qemu, which is a pain and
-      # doesn't really gain us much. If shell completion works in one place,
-      # it probably works everywhere.
-      if: matrix.target == '' && !startsWith(matrix.os, 'windows')
-      shell: bash
-      run: ci/test-complete
-
     - name: Print hostname detected by grep-cli crate
       shell: bash
       run: ${{ env.CARGO }} test --manifest-path crates/cli/Cargo.toml ${{ env.TARGET_FLAGS }} --lib print_hostname -- --nocapture

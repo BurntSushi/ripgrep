@@ -6,9 +6,15 @@ The short version is used when the `-h` flag is given, while the long version
 is used when the `--help` flag is given.
 */
 
-use std::{collections::BTreeMap, fmt::Write};
+use std::fmt::Write;
 
-use crate::flags::{Category, Flag, defs::FLAGS, doc::version};
+use crate::flags::{
+    Flag, RegistryView,
+    doc::{
+        markup::{MarkupFlavor, render_markup},
+        version,
+    },
+};
 
 const TEMPLATE_SHORT: &'static str = include_str!("template.short.help");
 const TEMPLATE_LONG: &'static str = include_str!("template.long.help");
@@ -22,22 +28,41 @@ macro_rules! write {
 
 /// Generate short documentation, i.e., for `-h`.
 pub(crate) fn generate_short() -> String {
-    let mut cats: BTreeMap<Category, (Vec<String>, Vec<String>)> =
-        BTreeMap::new();
+    // The registry is validated once per generation and is the single source
+    // of truth for both flag ordering (via `by_category`) and markup
+    // resolution. Short docs are resolved through the shared renderer so any
+    // markup tags they contain are expanded identically to the long help
+    // (Requirement 9.3); the real registry's short docs contain no markup, so
+    // this leaves their text byte-stable.
+    generate_short_with(
+        &RegistryView::load()
+            .expect("ripgrep's flag registry should validate"),
+    )
+}
+
+/// Generate short documentation (`-h`) from the given `registry`.
+///
+/// This is the registry-accepting seam used by `generate_short` (which passes
+/// the real `FLAGS` registry) and by property tests (which pass synthetic
+/// registries).
+pub(crate) fn generate_short_with(registry: &RegistryView) -> String {
+    let mut cats: Vec<(&'static str, (Vec<String>, Vec<String>))> = vec![];
     let (mut maxcol1, mut maxcol2) = (0, 0);
-    for flag in FLAGS.iter().copied() {
-        let columns =
-            cats.entry(flag.doc_category()).or_insert((vec![], vec![]));
-        let (col1, col2) = generate_short_flag(flag);
-        maxcol1 = maxcol1.max(col1.len());
-        maxcol2 = maxcol2.max(col2.len());
-        columns.0.push(col1);
-        columns.1.push(col2);
+    for (cat, flags) in registry.by_category() {
+        let (mut col1s, mut col2s) = (vec![], vec![]);
+        for flag in flags {
+            let (col1, col2) = generate_short_flag(flag, registry);
+            maxcol1 = maxcol1.max(col1.len());
+            maxcol2 = maxcol2.max(col2.len());
+            col1s.push(col1);
+            col2s.push(col2);
+        }
+        cats.push((cat.as_str(), (col1s, col2s)));
     }
     let mut out =
         TEMPLATE_SHORT.replace("!!VERSION!!", &version::generate_digits());
-    for (cat, (col1, col2)) in cats.iter() {
-        let var = format!("!!{name}!!", name = cat.as_str());
+    for (name, (col1, col2)) in cats.iter() {
+        let var = format!("!!{name}!!");
         let val = format_short_columns(col1, col2, maxcol1, maxcol2);
         out = out.replace(&var, &val);
     }
@@ -48,7 +73,10 @@ pub(crate) fn generate_short() -> String {
 ///
 /// The first element corresponds to the flag name while the second element
 /// corresponds to the documentation string.
-fn generate_short_flag(flag: &dyn Flag) -> (String, String) {
+fn generate_short_flag(
+    flag: &dyn Flag,
+    registry: &RegistryView,
+) -> (String, String) {
     let (mut col1, mut col2) = (String::new(), String::new());
 
     // Some of the variable names are fine for longer form
@@ -73,8 +101,13 @@ fn generate_short_flag(flag: &dyn Flag) -> (String, String) {
         write!(col1, r"={var}");
     }
 
-    // And now the second column, with the description.
-    write!(col2, "{}", flag.doc_short());
+    // And now the second column, with the description. Resolve any
+    // `\flag{..}`/`\flag-negate{..}` markup against the registry so short help
+    // renders markup-resolved short docs (Requirement 9.3). The real
+    // registry's docs are known-valid, so resolution must succeed here.
+    let short = render_markup(flag.doc_short(), registry, MarkupFlavor::Plain)
+        .expect("flag documentation markup should resolve");
+    write!(col2, "{}", short);
 
     (col1, col2)
 }
@@ -109,26 +142,45 @@ fn format_short_columns(
 
 /// Generate long documentation, i.e., for `--help`.
 pub(crate) fn generate_long() -> String {
-    let mut cats = BTreeMap::new();
-    for flag in FLAGS.iter().copied() {
-        let mut cat = cats.entry(flag.doc_category()).or_insert(String::new());
-        if !cat.is_empty() {
-            write!(cat, "\n\n");
-        }
-        generate_long_flag(flag, &mut cat);
-    }
+    // The registry is validated once per generation; all markup is resolved
+    // against this single source of truth. `by_category` is the shared
+    // ordering authority: categories in fixed declaration order and flags in
+    // registry order, so each flag appears under exactly one matching category
+    // heading (Requirements 7.2, 7.3, 9.2).
+    generate_long_with(
+        &RegistryView::load()
+            .expect("ripgrep's flag registry should validate"),
+    )
+}
 
+/// Generate long documentation (`--help`) from the given `registry`.
+///
+/// This is the registry-accepting seam used by `generate_long` (which passes
+/// the real `FLAGS` registry) and by property tests (which pass synthetic
+/// registries).
+pub(crate) fn generate_long_with(registry: &RegistryView) -> String {
     let mut out =
         TEMPLATE_LONG.replace("!!VERSION!!", &version::generate_digits());
-    for (cat, value) in cats.iter() {
+    for (cat, flags) in registry.by_category() {
+        let mut value = String::new();
+        for flag in flags {
+            if !value.is_empty() {
+                write!(value, "\n\n");
+            }
+            generate_long_flag(flag, registry, &mut value);
+        }
         let var = format!("!!{name}!!", name = cat.as_str());
-        out = out.replace(&var, value);
+        out = out.replace(&var, &value);
     }
     out
 }
 
 /// Write generated documentation for `flag` to `out`.
-fn generate_long_flag(flag: &dyn Flag, out: &mut String) {
+fn generate_long_flag(
+    flag: &dyn Flag,
+    registry: &RegistryView,
+    out: &mut String,
+) {
     if let Some(byte) = flag.name_short() {
         let name = char::from(byte);
         write!(out, r"    -{name}");
@@ -148,30 +200,11 @@ fn generate_long_flag(flag: &dyn Flag, out: &mut String) {
     write!(out, "\n");
 
     let doc = flag.doc_long().trim();
-    let doc = super::render_custom_markup(doc, "flag", |name, out| {
-        let Some(flag) = crate::flags::parse::lookup(name) else {
-            unreachable!(r"found unrecognized \flag{{{name}}} in --help docs")
-        };
-        if let Some(name) = flag.name_short() {
-            write!(out, r"-{}/", char::from(name));
-        }
-        write!(out, r"--{}", flag.name_long());
-    });
-    let doc = super::render_custom_markup(&doc, "flag-negate", |name, out| {
-        let Some(flag) = crate::flags::parse::lookup(name) else {
-            unreachable!(
-                r"found unrecognized \flag-negate{{{name}}} in --help docs"
-            )
-        };
-        let Some(name) = flag.name_negated() else {
-            let long = flag.name_long();
-            unreachable!(
-                "found \\flag-negate{{{long}}} in --help docs but \
-                 {long} does not have a negation"
-            );
-        };
-        write!(out, r"--{name}");
-    });
+    // Resolve `\flag{..}` and `\flag-negate{..}` markup against the registry.
+    // The real registry's documentation is known-valid, so resolution must
+    // succeed here.
+    let doc = render_markup(doc, registry, MarkupFlavor::Plain)
+        .expect("flag documentation markup should resolve");
 
     let mut cleaned = remove_roff(&doc);
     if let Some(negated) = flag.name_negated() {
@@ -256,4 +289,213 @@ fn remove_roff(v: &str) -> String {
         .replace(r"\fP", "")
         .replace(r"\-", "-")
         .replace(r"\\", r"\")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::flags::{Category, Flag, FlagValue, RegistryView};
+
+    /// A minimal synthetic flag used to build synthetic registries for
+    /// exercising the help generators in isolation. Unlike the fixed flags in
+    /// `man.rs`'s tests, this carries owned-then-leaked short and long
+    /// documentation so a property test can vary the docs (including embedding
+    /// `\flag{..}` markup) and then assert on the rendered output.
+    ///
+    /// Every synthetic flag is a switch with no value variable, so synthetic
+    /// registries always validate (a non-switch flag would require a value
+    /// variable).
+    #[derive(Debug)]
+    struct TestFlag {
+        long: &'static str,
+        short: Option<u8>,
+        doc_short: &'static str,
+        doc_long: &'static str,
+    }
+
+    impl Flag for TestFlag {
+        fn is_switch(&self) -> bool {
+            true
+        }
+        fn name_short(&self) -> Option<u8> {
+            self.short
+        }
+        fn name_long(&self) -> &'static str {
+            self.long
+        }
+        fn doc_category(&self) -> Category {
+            Category::Search
+        }
+        fn doc_short(&self) -> &'static str {
+            self.doc_short
+        }
+        fn doc_long(&self) -> &'static str {
+            self.doc_long
+        }
+        fn update(
+            &self,
+            _: FlagValue,
+            _: &mut crate::flags::lowargs::LowArgs,
+        ) -> anyhow::Result<()> {
+            Ok(())
+        }
+    }
+
+    use proptest::prelude::*;
+
+    /// An owned, generated flag definition produced by `proptest`. Converted
+    /// to a `'static` [`TestFlag`] by [`synth_view`].
+    #[derive(Clone, Debug)]
+    struct SynthFlag {
+        long: String,
+        short: Option<u8>,
+        doc_short: String,
+        doc_long: String,
+    }
+
+    /// Leak an owned string into a `'static` string slice.
+    fn leak_str(s: String) -> &'static str {
+        Box::leak(s.into_boxed_str())
+    }
+
+    /// Build a validated [`RegistryView`] from owned synthetic flags.
+    fn synth_view(flags: Vec<SynthFlag>) -> RegistryView {
+        let leaked: Vec<&'static dyn Flag> = flags
+            .into_iter()
+            .map(|f| {
+                let tf = TestFlag {
+                    long: leak_str(f.long),
+                    short: f.short,
+                    doc_short: leak_str(f.doc_short),
+                    doc_long: leak_str(f.doc_long),
+                };
+                &*Box::leak(Box::new(tf)) as &'static dyn Flag
+            })
+            .collect();
+        let slice: &'static [&'static dyn Flag] =
+            Box::leak(leaked.into_boxed_slice());
+        RegistryView::new(slice).expect("synthetic registry should validate")
+    }
+
+    /// The pool of distinct short-name bytes, used to keep generated short
+    /// names unique within a registry.
+    fn short_pool() -> Vec<u8> {
+        let mut pool = Vec::new();
+        pool.extend(b'a'..=b'z');
+        pool.extend(b'A'..=b'Z');
+        pool.extend(b'0'..=b'9');
+        pool
+    }
+
+    /// Strategy producing a valid synthetic registry of switch flags with
+    /// unique long and short names.
+    ///
+    /// Each flag's short and long documentation is a distinctive plain-text
+    /// token (`shortdocN` / `longdocN`, alphanumeric so wrapping and roff
+    /// cleanup never split or alter it) followed by a `\flag{flag0long}`
+    /// markup tag. Flag 0's long name is always `flag0long`, so the tag always
+    /// resolves; when rendered as plain text it yields `--flag0long` (possibly
+    /// prefixed by a short-name reference), which the test asserts appears in
+    /// both the short and long help. This exercises both the per-flag doc text
+    /// and markup resolution (Requirements 9.3, 9.4).
+    fn synth_registry() -> impl Strategy<Value = Vec<SynthFlag>> {
+        prop::collection::vec(any::<bool>(), 1..8).prop_map(|wants_shorts| {
+            let pool = short_pool();
+            wants_shorts
+                .into_iter()
+                .enumerate()
+                .map(|(i, wants_short)| {
+                    let long = format!("flag{i}long");
+                    let short = if wants_short && i < pool.len() {
+                        Some(pool[i])
+                    } else {
+                        None
+                    };
+                    // Reference flag 0's long name, which always exists.
+                    let doc_short = format!(r"shortdoc{i} \flag{{flag0long}}");
+                    let doc_long = format!(r"longdoc{i} \flag{{flag0long}}");
+                    SynthFlag { long, short, doc_short, doc_long }
+                })
+                .collect()
+        })
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(100))]
+
+        // Feature: unified-flag-source, Property 24: Help renders every flag's documentation with markup resolved
+        //
+        // **Validates: Requirements 9.3, 9.4**
+        //
+        // For any registry, the short help contains each flag's
+        // markup-resolved short documentation and the long help contains each
+        // flag's markup-resolved long documentation. Each flag's docs carry a
+        // distinctive plain token plus a `\flag{flag0long}` cross-reference;
+        // the test asserts both the token and the resolved reference
+        // (`--flag0long`) appear in the corresponding help output.
+        #[test]
+        fn prop_help_renders_docs_with_markup_resolved(
+            flags in synth_registry(),
+        ) {
+            let view = synth_view(flags.clone());
+            let short = generate_short_with(&view);
+            let long = generate_long_with(&view);
+
+            for (i, _flag) in flags.iter().enumerate() {
+                // Short help renders the markup-resolved short doc
+                // (Requirement 9.3): the per-flag token is present...
+                let short_token = format!("shortdoc{i}");
+                prop_assert!(
+                    short.contains(short_token.as_str()),
+                    "short help missing short doc token {short_token:?}",
+                );
+                // ...and the long help renders the markup-resolved long doc
+                // (Requirement 9.4): the per-flag token is present.
+                let long_token = format!("longdoc{i}");
+                prop_assert!(
+                    long.contains(long_token.as_str()),
+                    "long help missing long doc token {long_token:?}",
+                );
+            }
+
+            // Every flag's docs embed `\flag{flag0long}`, which must resolve
+            // to flag 0's long reference `--flag0long` in both artifacts.
+            prop_assert!(
+                short.contains("--flag0long"),
+                "short help did not resolve \\flag{{flag0long}} markup",
+            );
+            prop_assert!(
+                long.contains("--flag0long"),
+                "long help did not resolve \\flag{{flag0long}} markup",
+            );
+        }
+    }
+
+    // Unit test for Requirement 2.5: a flag whose short documentation is
+    // empty still renders in the `-h` short help with its name column present
+    // and an empty description (no crash, empty second column).
+    #[test]
+    fn short_help_renders_empty_doc_short() {
+        let view = synth_view(vec![SynthFlag {
+            long: "emptyflag".to_string(),
+            short: None,
+            doc_short: String::new(),
+            doc_long: "long documentation".to_string(),
+        }]);
+        let short = generate_short_with(&view);
+
+        // The flag's name column is present in the short help.
+        let line = short
+            .lines()
+            .find(|l| l.contains("--emptyflag"))
+            .expect("short help should contain the flag name");
+        // The description (second column) is empty: once the name and the
+        // surrounding padding are stripped, nothing of substance remains.
+        assert_eq!(
+            line.trim(),
+            "--emptyflag",
+            "expected an empty description for a flag with empty doc_short, \
+             got line {line:?}",
+        );
+    }
 }

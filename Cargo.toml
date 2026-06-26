@@ -64,6 +64,7 @@ textwrap = { version = "0.16.0", default-features = false }
 version = "0.6.0"
 
 [dev-dependencies]
+proptest = "1"
 serde = "1.0.77"
 serde_derive = "1.0.77"
 walkdir = "2"

@@ -347,11 +347,28 @@ fn types(args: &HiArgs) -> anyhow::Result<ExitCode> {
     Ok(ExitCode::from(if count == 0 { 1 } else { 0 }))
 }
 
-/// Implements ripgrep's "generate" modes.
+/// Implements ripgrep's "generate" modes (the `Generate_Command`).
 ///
 /// These modes correspond to generating some kind of ancillary data related
 /// to ripgrep. At present, this includes ripgrep's man page (in roff format)
 /// and supported shell completions.
+///
+/// Each recognized `--generate <mode>` is dispatched to exactly one generator,
+/// and only that generator's artifact is written to standard output, followed
+/// by a single trailing newline (Requirements 8.1-8.5). On success the command
+/// terminates with a zero exit status (Requirement 8.7).
+///
+/// Artifact generation is computed in full before anything is written to
+/// stdout. This ordering guarantees that a generation failure (for example, an
+/// invalid registry or unresolved documentation markup) surfaces as an `Err`
+/// from this function *before* any artifact bytes reach stdout. `main` maps
+/// that `Err` to a diagnostic on stderr and a non-zero exit status, so a failed
+/// generation leaves stdout empty (Requirement 8.6, generation-failure path).
+///
+/// An unrecognized mode (Requirement 8.6) and a missing mode argument
+/// (Requirement 8.8) are both rejected earlier, during flag parsing, where they
+/// produce an error on stderr, no artifact on stdout, and a non-zero exit
+/// status; they therefore never reach this dispatch.
 fn generate(mode: crate::flags::GenerateMode) -> anyhow::Result<ExitCode> {
     use crate::flags::GenerateMode;
 
