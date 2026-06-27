@@ -742,6 +742,68 @@ sherlock:be, to a very large extent, the result of luck. Sherlock Holmes
     eqnice!(expected, cmd.stdout());
 });
 
+// Multiple explicit search roots must apply parent .gitignore rules using each
+// root's own path base. Searching `src` before `tests` used to leak the wrong
+// absolute base into cached parent matchers so `src/invalid` was not ignored.
+// See: https://github.com/BurntSushi/ripgrep/issues/3376
+rgtest!(ignore_git_multi_root_order, |dir: Dir, mut cmd: TestCommand| {
+    dir.create_dir(".git");
+    dir.create(".gitignore", "src/invalid\n");
+    dir.create_dir("src");
+    dir.create_dir("tests");
+    dir.create("src/invalid", "this\n");
+    dir.create("src/valid", "this\n");
+    dir.create("tests/valid", "this\n");
+
+    cmd.args(&["--files-with-matches", "this", "src", "tests"]);
+    let got = cmd.stdout();
+    assert!(
+        !got.contains("invalid"),
+        "src/invalid must stay ignored with multiple roots, got:\n{}",
+        got
+    );
+    assert!(got.contains("src/valid"), "missing src/valid in:\n{}", got);
+    assert!(got.contains("tests/valid"), "missing tests/valid in:\n{}", got);
+
+    // Reverse CLI order should behave the same.
+    let mut cmd = dir.command();
+    cmd.args(&["--files-with-matches", "this", "tests", "src"]);
+    let got = cmd.stdout();
+    assert!(
+        !got.contains("invalid"),
+        "src/invalid must stay ignored with roots reversed, got:\n{}",
+        got
+    );
+});
+
+// Same multi-root path-base issue for `.rgignore`.
+// See: https://github.com/BurntSushi/ripgrep/issues/3320
+rgtest!(ignore_rgignore_multi_root_order, |dir: Dir, mut cmd: TestCommand| {
+    dir.create(".rgignore", "beta/**/*.svg\n");
+    dir.create_dir("alpha");
+    dir.create_dir("beta");
+    dir.create("alpha/a.txt", "AWS\n");
+    dir.create("beta/x.svg", "AWS\n");
+
+    cmd.args(&["--files-with-matches", "AWS", "alpha", "beta"]);
+    let got = cmd.stdout();
+    assert!(
+        !got.contains("x.svg"),
+        "beta/x.svg must be ignored with multiple roots, got:\n{}",
+        got
+    );
+    assert!(got.contains("alpha/a.txt"), "missing alpha/a.txt in:\n{}", got);
+
+    let mut cmd = dir.command();
+    cmd.args(&["--files-with-matches", "AWS", "beta", "alpha"]);
+    let got = cmd.stdout();
+    assert!(
+        !got.contains("x.svg"),
+        "beta/x.svg must be ignored with roots reversed, got:\n{}",
+        got
+    );
+});
+
 rgtest!(symlink_nofollow, |dir: Dir, mut cmd: TestCommand| {
     dir.create_dir("foo");
     dir.create_dir("foo/bar");

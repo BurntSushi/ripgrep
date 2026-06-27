@@ -96,8 +96,18 @@ pub(crate) struct Ignore {
     // Parent matchers are cached independently of the path being walked, but
     // matching them still needs the canonicalized path originally passed to
     // `add_parents`. For example, when walking `/tmp/project/src`, parent
-    // matchers use `/tmp/project/src` to rewrite `foo.py` before matching it
-    // against ignore files from `/tmp/project` and its ancestors.
+    // matchers use `/tmp/project/src` to rewrite `/tmp/project/src/foo.py`
+    // before matching it against ignore files from `/tmp/project` and its
+    // ancestors.
+    //
+    // For ripgrep itself, this means that `rg pat src tests` must rewrite
+    // `src/foo` relative to `.../src`, and not whatever root was prepared
+    // first.
+    //
+    // See: https://github.com/BurntSushi/ripgrep/pull/3420
+    // See: https://github.com/BurntSushi/ripgrep/issues/3376
+    // See: https://github.com/BurntSushi/ripgrep/issues/3419
+    // See: https://github.com/BurntSushi/ripgrep/issues/3320
     absolute_base: Option<Arc<PathBuf>>,
 }
 
@@ -1328,6 +1338,122 @@ mod tests {
         assert!(Arc::ptr_eq(&src_parents.inner, &tests_parents.inner));
         assert!(src.matched("build", true).is_none());
         assert!(tests.matched("build", true).is_ignore());
+    }
+
+    /// Parent matchers are shared across search roots, but path rewriting for
+    /// absolute parents must use each root's own base path. Otherwise a rule
+    /// like `src/invalid` is matched against the wrong absolute path when
+    /// `src` is searched before a sibling root (e.g. `tests`).
+    ///
+    /// Paths passed to `matched` use the same relative layout as `Walk` when
+    /// roots are given as relative directory names.
+    ///
+    /// Regression for: https://github.com/BurntSushi/ripgrep/issues/3376
+    /// and https://github.com/BurntSushi/ripgrep/issues/3419
+    #[test]
+    fn multi_root_gitignore_order_independent() {
+        let td = tmpdir();
+        let cwd = std::env::current_dir().unwrap();
+        // Use paths relative to CWD like the CLI walk does for `rg pat src tests`.
+        let root = td.path().strip_prefix(&cwd).unwrap_or(td.path());
+        let src_root = root.join("src");
+        let tests_root = root.join("tests");
+
+        mkdirp(td.path().join(".git"));
+        mkdirp(td.path().join("src"));
+        mkdirp(td.path().join("tests"));
+        wfile(td.path().join(".gitignore"), "src/invalid\n");
+        wfile(td.path().join("src/invalid"), "x");
+        wfile(td.path().join("src/valid"), "x");
+        wfile(td.path().join("tests/valid"), "x");
+
+        let ig0 = IgnoreBuilder::new().build();
+
+        // Historically buggy order: search `src` first, then `tests`.
+        let (src_parents, err) = ig0.add_parents(&src_root);
+        assert!(err.is_none());
+        let (src, err) = src_parents.add_child(&src_root);
+        assert!(err.is_none());
+        let (tests_parents, err) = ig0.add_parents(&tests_root);
+        assert!(err.is_none());
+        let (tests, err) = tests_parents.add_child(&tests_root);
+        assert!(err.is_none());
+
+        assert!(Arc::ptr_eq(&src_parents.inner, &tests_parents.inner));
+        // Each root must carry its own absolute_base even though inners are shared.
+        assert_ne!(
+            src.absolute_base.as_ref().unwrap().as_path(),
+            tests.absolute_base.as_ref().unwrap().as_path()
+        );
+        assert!(
+            src.matched(src_root.join("invalid"), false).is_ignore(),
+            "parent .gitignore must apply for the src root even when \
+             another root was prepared in the same process"
+        );
+        assert!(src.matched(src_root.join("valid"), false).is_none());
+        assert!(tests.matched(tests_root.join("valid"), false).is_none());
+
+        // Reverse order should behave the same way.
+        let ig0 = IgnoreBuilder::new().build();
+        let (tests_parents, err) = ig0.add_parents(&tests_root);
+        assert!(err.is_none());
+        let (tests, err) = tests_parents.add_child(&tests_root);
+        assert!(err.is_none());
+        let (src_parents, err) = ig0.add_parents(&src_root);
+        assert!(err.is_none());
+        let (src, err) = src_parents.add_child(&src_root);
+        assert!(err.is_none());
+
+        assert!(src.matched(src_root.join("invalid"), false).is_ignore());
+        assert!(src.matched(src_root.join("valid"), false).is_none());
+        assert!(tests.matched(tests_root.join("valid"), false).is_none());
+    }
+
+    /// Same multi-root / order issue for non-git ignore files (e.g. `.rgignore`
+    /// via custom ignore names).
+    ///
+    /// Regression for: https://github.com/BurntSushi/ripgrep/issues/3320
+    #[test]
+    fn multi_root_custom_ignore_order_independent() {
+        let td = tmpdir();
+        let cwd = std::env::current_dir().unwrap();
+        let root = td.path().strip_prefix(&cwd).unwrap_or(td.path());
+        let alpha_root = root.join("alpha");
+        let beta_root = root.join("beta");
+
+        mkdirp(td.path().join("alpha"));
+        mkdirp(td.path().join("beta"));
+        wfile(td.path().join(".rgignore"), "beta/**/*.svg\n");
+        wfile(td.path().join("alpha/a.txt"), "x");
+        wfile(td.path().join("beta/x.svg"), "x");
+
+        let ig0 = IgnoreBuilder::new()
+            .add_custom_ignore_filename(".rgignore")
+            .ignore(false)
+            .git_ignore(false)
+            .git_global(false)
+            .git_exclude(false)
+            .build();
+
+        let (alpha_parents, err) = ig0.add_parents(&alpha_root);
+        assert!(err.is_none());
+        let (alpha, err) = alpha_parents.add_child(&alpha_root);
+        assert!(err.is_none());
+        let (beta_parents, err) = ig0.add_parents(&beta_root);
+        assert!(err.is_none());
+        let (beta, err) = beta_parents.add_child(&beta_root);
+        assert!(err.is_none());
+
+        assert_ne!(
+            alpha.absolute_base.as_ref().unwrap().as_path(),
+            beta.absolute_base.as_ref().unwrap().as_path()
+        );
+        assert!(alpha.matched(alpha_root.join("a.txt"), false).is_none());
+        assert!(
+            beta.matched(beta_root.join("x.svg"), false).is_ignore(),
+            "parent .rgignore must apply for the beta root regardless of \
+             which root was set up first"
+        );
     }
 
     #[test]
