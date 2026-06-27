@@ -84,7 +84,7 @@ assert!(matcher.matched("y.cpp", false).is_whitelist());
 ```
 */
 
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{collections::BTreeMap, path::Path, sync::Arc};
 
 use {
     globset::{GlobBuilder, GlobSet, GlobSetBuilder},
@@ -303,7 +303,7 @@ impl Types {
 /// TypesBuilder builds a type matcher from a set of file type definitions and
 /// a set of file type selections.
 pub struct TypesBuilder {
-    types: HashMap<String, FileTypeDef>,
+    types: BTreeMap<String, FileTypeDef>,
     selections: Vec<Selection<()>>,
 }
 
@@ -314,7 +314,7 @@ impl TypesBuilder {
     /// of default type definitions can be added with `add_defaults`, and
     /// additional type definitions can be added with `select` and `negate`.
     pub fn new() -> TypesBuilder {
-        TypesBuilder { types: HashMap::new(), selections: vec![] }
+        TypesBuilder { types: BTreeMap::new(), selections: vec![] }
     }
 
     /// Build the current set of file type definitions *and* selections into
@@ -371,7 +371,6 @@ impl TypesBuilder {
             def.globs.sort();
             defs.push(def);
         }
-        defs.sort_by(|def1, def2| def1.name().cmp(def2.name()));
         defs
     }
 
