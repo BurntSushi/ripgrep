@@ -205,6 +205,17 @@ impl Ignore {
                 return (self.clone(), None);
             }
         };
+        // Nearest VCS root at or above the search path. Git ignore files in
+        // directories strictly above this root are not applied (see
+        // `matched_ignore`), so we also avoid reading them. `.ignore` and
+        // custom ignore files are still read for those parents.
+        let git_root = if self.inner.opts.require_git
+            && (self.inner.opts.git_ignore || self.inner.opts.git_exclude)
+        {
+            nearest_vcs_root(&absolute_base)
+        } else {
+            None
+        };
         // List of parents, from child to root.
         let mut parents = vec![];
         let mut path = &**absolute_base;
@@ -215,22 +226,48 @@ impl Ignore {
         let mut errs = PartialErrorBuilder::default();
         let mut ig = self.clone();
         for parent in parents.into_iter().rev() {
-            let mut compiled = self.inner.compiled.write().unwrap();
-            if let Some(weak) = compiled.get(parent.as_os_str()) {
-                if let Some(prebuilt) = weak.upgrade() {
-                    ig = Ignore {
-                        inner: prebuilt,
-                        absolute_base: Some(absolute_base.clone()),
-                    };
-                    continue;
+            // Only skip git-specific ignore files when they would not apply
+            // because they sit above the repository boundary.
+            let read_git_ignore_files = match git_root.as_deref() {
+                // No VCS in the search path ancestry: parent `.gitignore`
+                // files would never be consulted under `require_git`.
+                None if self.inner.opts.require_git
+                    && (self.inner.opts.git_ignore
+                        || self.inner.opts.git_exclude) =>
+                {
+                    false
+                }
+                Some(root) => {
+                    // `parent` is strictly above the VCS root.
+                    !(root != parent && root.starts_with(parent))
+                }
+                // `require_git` is off: keep historical behavior and read
+                // every parent `.gitignore`.
+                None => true,
+            };
+            // Parent matchers are cached by path alone. When we omit git
+            // ignore files for a parent above a VCS boundary, that incomplete
+            // matcher must not be stored or reused for other search roots
+            // that may need those rules.
+            if read_git_ignore_files {
+                let compiled = self.inner.compiled.write().unwrap();
+                if let Some(weak) = compiled.get(parent.as_os_str()) {
+                    if let Some(prebuilt) = weak.upgrade() {
+                        ig = Ignore {
+                            inner: prebuilt,
+                            absolute_base: Some(absolute_base.clone()),
+                        };
+                        continue;
+                    }
                 }
             }
-            let (mut igtmp, err) = ig.add_child_path(parent);
+            let (mut igtmp, err) =
+                ig.add_child_path(parent, read_git_ignore_files);
             errs.maybe_push(err);
             igtmp.is_absolute_parent = true;
             igtmp.has_git =
                 if self.inner.opts.require_git && self.inner.opts.git_ignore {
-                    parent.join(".git").exists() || parent.join(".jj").exists()
+                    is_vcs_dir(parent)
                 } else {
                     false
                 };
@@ -239,10 +276,13 @@ impl Ignore {
                 inner: ig_arc.clone(),
                 absolute_base: Some(absolute_base.clone()),
             };
-            compiled.insert(
-                parent.as_os_str().to_os_string(),
-                Arc::downgrade(&ig_arc),
-            );
+            if read_git_ignore_files {
+                let mut compiled = self.inner.compiled.write().unwrap();
+                compiled.insert(
+                    parent.as_os_str().to_os_string(),
+                    Arc::downgrade(&ig_arc),
+                );
+            }
         }
         (ig, errs.into_error_option())
     }
@@ -259,7 +299,7 @@ impl Ignore {
         &self,
         dir: P,
     ) -> (Ignore, Option<Error>) {
-        let (ig, err) = self.add_child_path(dir.as_ref());
+        let (ig, err) = self.add_child_path(dir.as_ref(), true);
         (
             Ignore {
                 inner: Arc::new(ig),
@@ -270,7 +310,15 @@ impl Ignore {
     }
 
     /// Like add_child, but takes a full path and returns an IgnoreInner.
-    fn add_child_path(&self, dir: &Path) -> (IgnoreInner, Option<Error>) {
+    ///
+    /// When `read_git_ignore_files` is false, `.gitignore` and git exclude
+    /// files are not opened for this directory. Non-git ignore files such as
+    /// `.ignore` and custom ignore names are still read when enabled.
+    fn add_child_path(
+        &self,
+        dir: &Path,
+        read_git_ignore_files: bool,
+    ) -> (IgnoreInner, Option<Error>) {
         let check_vcs_dir = self.inner.opts.require_git
             && (self.inner.opts.git_ignore || self.inner.opts.git_exclude);
         let git_type = if check_vcs_dir {
@@ -307,7 +355,8 @@ impl Ignore {
             errs.maybe_push(err);
             m
         };
-        let gi_matcher = if !self.inner.opts.git_ignore {
+        let gi_matcher = if !self.inner.opts.git_ignore || !read_git_ignore_files
+        {
             Gitignore::empty()
         } else {
             let (m, err) = create_gitignore(
@@ -320,7 +369,9 @@ impl Ignore {
             m
         };
 
-        let gi_exclude_matcher = if !self.inner.opts.git_exclude {
+        let gi_exclude_matcher = if !self.inner.opts.git_exclude
+            || !read_git_ignore_files
+        {
             Gitignore::empty()
         } else {
             match resolve_git_commondir(dir, git_type) {
@@ -887,6 +938,23 @@ impl IgnoreBuilder {
 
 /// Creates a new gitignore matcher for the directory given.
 ///
+/// Returns true if `dir` looks like a VCS repository root (Git or Jujutsu).
+fn is_vcs_dir(dir: &Path) -> bool {
+    dir.join(".git").exists() || dir.join(".jj").exists()
+}
+
+/// Walk from `start` toward the filesystem root and return the nearest
+/// directory that contains a VCS metadata directory, if any.
+fn nearest_vcs_root(start: &Path) -> Option<PathBuf> {
+    let mut path = start;
+    loop {
+        if is_vcs_dir(path) {
+            return Some(path.to_path_buf());
+        }
+        path = path.parent()?;
+    }
+}
+
 /// The matcher is meant to match files below `dir`.
 /// Ignore globs are extracted from each of the file names relative to
 /// `dir_for_ignorefile` in the order given (earlier names have lower
@@ -1285,6 +1353,52 @@ mod tests {
         let (ig2, err) = ig1.add_child(td.path().join("foo"));
         assert!(err.is_none());
         assert!(ig2.matched("bar", false).is_ignore());
+    }
+
+    /// `.gitignore` files above a nested Git boundary must not be opened, but
+    /// `.ignore` in those same parents must still be respected.
+    ///
+    /// Regression for: https://github.com/BurntSushi/ripgrep/issues/3434
+    #[test]
+    fn absolute_parent_skips_gitignore_above_git_boundary() {
+        let td = tmpdir();
+        // outer/
+        //   .gitignore  (would ignore `bar` if applied)
+        //   .ignore     (ignores `from_ignore`)
+        //   inner/
+        //     .git/
+        //     bar
+        //     from_ignore
+        mkdirp(td.path().join("inner/.git"));
+        wfile(td.path().join(".gitignore"), "bar\n");
+        wfile(td.path().join(".ignore"), "from_ignore\n");
+        wfile(td.path().join("inner/bar"), "x");
+        wfile(td.path().join("inner/from_ignore"), "x");
+
+        let ig0 = IgnoreBuilder::new().build();
+        let (ig1, err) = ig0.add_parents(td.path().join("inner"));
+        assert!(err.is_none());
+        let (ig2, err) = ig1.add_child(td.path().join("inner"));
+        assert!(err.is_none());
+
+        // Outer `.gitignore` is past the Git boundary: not applied, and the
+        // parent matcher must not have loaded those rules either.
+        assert!(ig2.matched("bar", false).is_none());
+        let td_canon = td.path().canonicalize().unwrap();
+        let outer = ig2
+            .parents()
+            .find(|ig| {
+                ig.inner.is_absolute_parent && ig.inner.dir == td_canon
+            })
+            .expect("outer absolute parent matcher");
+        assert!(
+            outer.inner.git_ignore_matcher.is_empty(),
+            "parent .gitignore above git boundary should not be read"
+        );
+
+        // Non-git ignore files still apply from parents above the boundary.
+        assert!(ig2.matched("from_ignore", false).is_ignore());
+        assert!(!outer.inner.ignore_matcher.is_empty());
     }
 
     #[test]
