@@ -47,6 +47,10 @@ _rg() {
     '--block-buffered[force block buffering]'
     $no"--no-block-buffered[don't force block buffering]"
 
+    + '(byte-offset)'
+    {-b,--byte-offset}'[show 0-based byte offset for each matching line]'
+    $no"--no-byte-offset[don't show byte offset for each matching line]"
+
     + '(case)' # Case-sensitivity options
     {-i,--ignore-case}'[search case-insensitively]'
     {-s,--case-sensitive}'[search case-sensitively]'
@@ -64,6 +68,10 @@ _rg() {
     + '(column)' # Column options
     '--column[show column numbers for matches]'
     $no"--no-column[don't show column numbers for matches]"
+
+    + '(context-separator)'
+    '--context-separator=[specify string used to separate non-continuous context lines in output]:separator'
+    $no"--no-context-separator[don't print context separators]"
 
     + '(count)' # Counting options
     {-c,--count}'[only show count of matching lines for each file]'
@@ -169,6 +177,10 @@ _rg() {
     + '(ignore-files)' # custom global ignore file options
     "--no-ignore-files[don't respect --ignore-file flags]"
     $no'--ignore-files[respect --ignore-file files]'
+
+    + '(invert-match)'
+    {-v,--invert-match}'[invert matching]'
+    $no"--no-invert-match[do not invert matching]"
 
     + '(json)' # JSON options
     '--json[output results in JSON Lines format]'
@@ -300,8 +312,6 @@ _rg() {
     $no"--no-search-zip[don't search in compressed files]"
 
     + misc # Other options — no need to separate these at the moment
-    '(-b --byte-offset)'{-b,--byte-offset}'[show 0-based byte offset for each matching line]'
-    $no"--no-byte-offset[don't show byte offsets for each matching line]"
     '--color=[specify when to use colors in output]:when:((
       never\:"never use colors"
       auto\:"use colors or not based on stdout, TERM, etc."
@@ -309,8 +319,6 @@ _rg() {
       ansi\:"always use ANSI colors (even on Windows)"
     ))'
     '*--colors=[specify color and style settings]: :->colorspec'
-    '--context-separator=[specify string used to separate non-continuous context lines in output]:separator'
-    $no"--no-context-separator[don't print context separators]"
     '--debug[show debug messages]'
     '--field-context-separator[set string to delimit fields in context lines]'
     '--field-match-separator[set string to delimit fields in matching lines]'
@@ -320,8 +328,6 @@ _rg() {
     '--dfa-size-limit=[specify upper size limit of generated DFA]:DFA size (bytes)'
     "(1 stats)--files[show each file that would be searched (but don't search)]"
     '*--ignore-file=[specify additional ignore file]:ignore file:_files'
-    '(-v --invert-match)'{-v,--invert-match}'[invert matching]'
-    $no"--no-invert-match[do not invert matching]"
     '(-M --max-columns)'{-M+,--max-columns=}'[specify max length of lines to print]:number of bytes'
     '(-m --max-count)'{-m+,--max-count=}'[specify max number of matches per file]:number of matches'
     '--max-filesize=[specify size above which files should be ignored]:file size (bytes)'
