@@ -13,9 +13,8 @@
 # below.
 
 _rg() {
-  local curcontext=$curcontext no='!' descr ret=1
-  local -a context line state state_descr args tmp suf
-  local -A opt_args
+  local no='!'
+  local -a args
 
   # ripgrep has many options which negate the effect of a more common one — for
   # example, `--no-column` to negate `--column`, and `--messages` to negate
@@ -281,7 +280,7 @@ _rg() {
 
     + type
     '*'{-t+,--type=}'[only search files matching specified type]: :_rg_types'
-    '*--type-add=[add new glob for specified file type]: :->typespec'
+    '*--type-add=[add new glob for specified file type]: :_rg_type_specs'
     '*--type-clear=[clear globs previously defined for specified file type]: :_rg_types'
     # This should actually be exclusive with everything but other type options
     '(: *)--type-list[show all supported file types and their associated globs]'
@@ -306,7 +305,7 @@ _rg() {
       always\:"always use colors"
       ansi\:"always use ANSI colors (even on Windows)"
     ))'
-    '*--colors=[specify color and style settings]: :->colorspec'
+    '*--colors=[specify color and style settings]: :_rg_color_specs'
     '--debug[show debug messages]'
     '--field-context-separator[set string to delimit fields in context lines]'
     '--field-match-separator[set string to delimit fields in matching lines]'
@@ -347,58 +346,64 @@ _rg() {
     return 0
   }
 
-  _arguments -C -s -S : $args && ret=0
+  _arguments -s -S : $args
+}
 
-  case $state in
-    colorspec)
-      if [[ ${IPREFIX#--*=}$PREFIX == [^:]# ]]; then
-        suf=( -qS: )
-        tmp=(
-          'column:specify coloring for column numbers'
-          'line:specify coloring for line numbers'
-          'match:specify coloring for match text'
-          'highlight:specify coloring for matching lines'
-          'path:specify coloring for file names'
-        )
-        descr='color/style type'
-      elif [[ ${IPREFIX#--*=}$PREFIX == (column|line|match|highlight|path):[^:]# ]]; then
-        suf=( -qS: )
-        tmp=(
-          'none:clear color/style for type'
-          'bg:specify background color'
-          'fg:specify foreground color'
-          'style:specify text style'
-        )
-        descr='color/style attribute'
-      elif [[ ${IPREFIX#--*=}$PREFIX == [^:]##:(bg|fg):[^:]# ]]; then
-        tmp=( black blue green red cyan magenta yellow white )
-        descr='color name or r,g,b'
-      elif [[ ${IPREFIX#--*=}$PREFIX == [^:]##:style:[^:]# ]]; then
-        tmp=( {,no}bold {,no}intense {,no}underline )
-        descr='style name'
-      else
-        _message -e colorspec 'no more arguments'
-      fi
+# Complete colour specs
+(( $+functions[_rg_color_specs] )) ||
+_rg_color_specs() {
+  local tag=color-specs
 
-      (( $#tmp )) && {
-        compset -P '*:'
-        _describe -t colorspec $descr tmp $suf && ret=0
-      }
-      ;;
+  if compset -P '[^:]##:(bg|fg):'; then
+    _describe -t $tag 'color name or r,g,b' '(
+      black blue green red cyan magenta yellow white
+    )'
 
-    typespec)
-      if compset -P '[^:]##:include:'; then
-        _sequence -s , _rg_types && ret=0
-      # @todo This bit in particular could be better, but it's a little
-      # complex, and attempting to solve it seems to run us up against a crash
-      # bug — zsh # 40362
-      elif compset -P '[^:]##:'; then
-        _message 'glob or include directive' && ret=1
-      elif [[ ! -prefix *:* ]]; then
-        _rg_types -qS : && ret=0
-      fi
-      ;;
-  esac
+  elif compset -P '[^:]##:style:'; then
+    _describe -t $tag 'style name' '(
+      {,no}bold {,no}intense {,no}underline
+    )'
+
+  elif compset -P '[^:]##:'; then
+    _describe -t $tag 'color/style attribute' \
+      '(
+        bg:"specify background color"
+        fg:"specify foreground color"
+        style:"specify text style"
+      )' -qS: \
+      -- \
+      '( none:"clear color/style for type" )'
+
+  else
+    _describe -t $tag 'color/style type' '(
+      column:"specify coloring for column numbers"
+      line:"specify coloring for line numbers"
+      match:"specify coloring for match text"
+      highlight:"specify coloring for matching lines"
+      path:"specify coloring for file names"
+    )' -qS:
+  fi
+}
+
+# Complete type specs
+(( $+functions[_rg_type_specs] )) ||
+_rg_type_specs() {
+  local ret=1
+  local -a expl
+
+  if compset -P '[^:]##:include:'; then
+    _sequence -s , _rg_types && ret=0
+
+  elif compset -P '[^:]##:'; then
+    _describe -t type-specs-include 'include directive' '(
+      include:"include other type definitions"
+    )' -qS: && ret=0
+    _wanted type-specs-glob expl 'glob pattern' _files && ret=0
+
+  else
+    _wanted type-specs-name expl 'file type (or new name)' \
+      _rg_types -qS: && ret=0
+  fi
 
   return ret
 }
