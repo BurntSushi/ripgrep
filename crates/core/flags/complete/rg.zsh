@@ -35,10 +35,6 @@ _rg() {
     no=
   fi
 
-  # We make heavy use of argument groups here to prevent the option specs from
-  # growing unwieldy. These aren't supported in zsh <5.4, though, so we'll strip
-  # them out below if necessary. This makes the exclusions inaccurate on those
-  # older versions, but oh well — it's not that big a deal
   args=(
     + '(exclusive)' # Misc. fully exclusive options
     '(: * -)'{-h,--help}'[display help information]'
@@ -348,10 +344,6 @@ _rg() {
     print -rl - $args
     return 0
   }
-
-  # Strip out argument groups where unsupported (see above)
-  [[ $ZSH_VERSION == (4|5.<0-3>)(.*)# ]] &&
-  args=( ${(@)args:#(#i)(+|[a-z0-9][a-z0-9_-]#|\([a-z0-9][a-z0-9_-]#\))} )
 
   _arguments -C -s -S : $args && ret=0
 
