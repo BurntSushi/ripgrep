@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 
-emulate zsh -o extended_glob -o no_function_argzero -o no_unset
+emulate zsh -o extended_glob -o no_unset -o warn_create_global
 
 ##
 # Compares options in `rg --help` output to options in zsh completion function
@@ -18,8 +18,8 @@ get_comp_args() {
 
 main() {
     local diff
-    local  rg="${0:a:h}/../${TARGET_DIR:-target}/release/rg"
-    local _rg="${0:a:h}/../crates/core/flags/complete/rg.zsh"
+    local  rg=${ZSH_ARGZERO:a:h}/../${TARGET_DIR:-target}/release/rg
+    local _rg=${ZSH_ARGZERO:a:h}/../crates/core/flags/complete/rg.zsh
     local -a help_args comp_args
 
     [[ -e $rg ]] || rg=${rg/%\/release\/rg/\/debug\/rg}
@@ -28,11 +28,11 @@ main() {
     _rg=${_rg:a}
 
     [[ -e $rg ]] || {
-        print -r >&2 "File not found: $rg"
+        print -ru2 - "${ZSH_ARGZERO:t}: rg not found: $rg"
         return 1
     }
     [[ -e $_rg ]] || {
-        print -r >&2 "File not found: $_rg"
+        print -ru2 - "${ZSH_ARGZERO:t}: _rg not found: $_rg"
         return 1
     }
 
@@ -46,51 +46,42 @@ main() {
         $rg --help |
         $rg -i -- '^\s+--?[a-z0-9.]|--[a-z]' |
         $rg -ior '$1' -- $'[\t /\"\'`.,](-[a-z0-9.]|--[a-z0-9-]+)(,|\\b)' |
-        $rg -v -- --print0 | # False positives
-        sort -u
+        $rg -vw -- --print0 # False positives
     )"} )
+    help_args=( ${(ou)help_args} )
 
     # 'Parse' options out of the completion function
     comp_args=( ${(f)"$( get_comp_args $_rg )"} )
-
-    # Note that we currently exclude hidden (!...) options; matching these
-    # properly against the `--help` output could be irritating
+    comp_args=( ${comp_args#\!}       ) # Strip hidden indicator
     comp_args=( ${comp_args#\(*\)}    ) # Strip excluded options
     comp_args=( ${comp_args#\*}       ) # Strip repetition indicator
     comp_args=( ${comp_args%%-[:[]*}  ) # Strip everything after -optname-
     comp_args=( ${comp_args%%[:+=[]*} ) # Strip everything after other optspecs
     comp_args=( ${comp_args##[^-]*}   ) # Remove non-options
-    comp_args=( ${(f)"$( print -rl - $comp_args | sort -u )"} )
+    comp_args=( ${(ou)comp_args} )
 
     (( $#help_args )) || {
-        print -r >&2 'Failed to get help_args'
+        print -ru2 - "${ZSH_ARGZERO:t}: Failed to get help_args"
         return 1
     }
     (( $#comp_args )) || {
-        print -r >&2 'Failed to get comp_args'
+        print -ru2 - "${ZSH_ARGZERO:t}: Failed to get comp_args"
         return 1
     }
 
-    diff="$(
-        if diff --help 2>&1 | grep -qF -- '--label'; then
-            diff -U2 \
-                --label '`rg --help`' \
-                --label '`_rg`' \
-                =( print -rl - $help_args ) =( print -rl - $comp_args )
-        else
-            diff -U2 \
-                -L '`rg --help`' \
-                -L '`_rg`' \
-                =( print -rl - $help_args ) =( print -rl - $comp_args )
-        fi
-    )"
+    diff=$(
+        diff -U2 \
+            -L 'rg --help' \
+            -L '_rg' \
+            =( print -rl - $help_args ) =( print -rl - $comp_args )
+    )
 
     (( $#diff )) && {
-        printf >&2 '%s\n' 'zsh completion options differ from `--help` options:'
-        printf >&2 '%s\n' $diff
+        print -ru2 - "${ZSH_ARGZERO:t}: zsh completion options differ from --help options:"
+        print -rlu2 - $diff
         return 1
     }
-    printf 'OK\n'
+    print -r - OK
     return 0
 }
 
