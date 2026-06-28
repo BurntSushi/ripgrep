@@ -36,12 +36,12 @@ _rg() {
   fi
 
   args=(
-    + '(exclusive)' # Misc. fully exclusive options
+    + '(exclusive)'
     '(: * -)'{-h,--help}'[display help information]'
     '(: * -)'{-V,--version}'[display version information]'
     '(: * -)'--pcre2-version'[print the version of PCRE2 used by ripgrep, if available]'
 
-    + '(buffered)' # buffering options
+    + '(buffered)'
     '--line-buffered[force line buffering]'
     $no"--no-line-buffered[don't force line buffering]"
     '--block-buffered[force block buffering]'
@@ -51,21 +51,21 @@ _rg() {
     {-b,--byte-offset}'[show 0-based byte offset for each matching line]'
     $no"--no-byte-offset[don't show byte offset for each matching line]"
 
-    + '(case)' # Case-sensitivity options
+    + '(case)'
     {-i,--ignore-case}'[search case-insensitively]'
     {-s,--case-sensitive}'[search case-sensitively]'
     {-S,--smart-case}'[search case-insensitively if pattern is all lowercase]'
 
-    + '(context-a)' # Context (after) options
+    + '(context-a)'
     '(context-c)'{-A+,--after-context=}'[specify lines to show after each match]:number of lines'
 
-    + '(context-b)' # Context (before) options
+    + '(context-b)'
     '(context-c)'{-B+,--before-context=}'[specify lines to show before each match]:number of lines'
 
-    + '(context-c)' # Context (combined) options
+    + '(context-c)'
     '(context-a context-b)'{-C+,--context=}'[specify lines to show before and after each match]:number of lines'
 
-    + '(column)' # Column options
+    + '(column)'
     '--column[show column numbers for matches]'
     $no"--no-column[don't show column numbers for matches]"
 
@@ -73,99 +73,99 @@ _rg() {
     '--context-separator=[specify string used to separate non-continuous context lines in output]:separator'
     $no"--no-context-separator[don't print context separators]"
 
-    + '(count)' # Counting options
+    + '(count)'
     {-c,--count}'[only show count of matching lines for each file]'
     '--count-matches[only show count of individual matches for each file]'
     '--include-zero[include files with zero matches in summary]'
     $no"--no-include-zero[don't include files with zero matches in summary]"
 
-    + '(encoding)' # Encoding options
+    + '(encoding)'
     {-E+,--encoding=}'[specify text encoding of files to search]: :_rg_encodings'
     $no'--no-encoding[use default text encoding]'
 
-    + '(engine)' # Engine choice options
+    + '(engine)'
     '--engine=[specify regex engine to use]:regex engine:((
       default\:"default engine"
       pcre2\:"identical to --pcre2"
       auto\:"identical to --auto-hybrid-regex"
     ))'
 
-    + file # File-input options
+    + file
     '(1)*'{-f+,--file=}'[specify file containing patterns to search for]: :_files'
 
-    + '(file-match)' # Files with/without match options
+    + '(file-match)'
     '(stats)'{-l,--files-with-matches}'[only show names of files with matches]'
     '(stats)--files-without-match[only show names of files without matches]'
 
-    + '(file-name)' # File-name options
+    + '(file-name)'
     {-H,--with-filename}'[show file name for matches]'
     {-I,--no-filename}"[don't show file name for matches]"
 
-    + '(file-system)' # File system options
+    + '(file-system)'
     "--one-file-system[don't descend into directories on other file systems]"
     $no'--no-one-file-system[descend into directories on other file systems]'
 
-    + '(fixed)' # Fixed-string options
+    + '(fixed)'
     {-F,--fixed-strings}'[treat pattern as literal string instead of regular expression]'
     $no"--no-fixed-strings[don't treat pattern as literal string]"
 
-    + '(follow)' # Symlink-following options
+    + '(follow)'
     {-L,--follow}'[follow symlinks]'
     $no"--no-follow[don't follow symlinks]"
 
-    + glob # File-glob options
+    + glob
     '*'{-g+,--glob=}'[include/exclude files matching specified glob]:glob pattern:_files'
     '*--iglob=[include/exclude files matching specified case-insensitive glob]:glob pattern:_files'
 
-    + '(glob-case-insensitive)' # File-glob case sensitivity options
+    + '(glob-case-insensitive)'
     '--glob-case-insensitive[treat -g/--glob patterns case insensitively]'
     $no'--no-glob-case-insensitive[treat -g/--glob patterns case sensitively]'
 
-    + '(heading)' # Heading options
+    + '(heading)'
     '(pretty-vimgrep)--heading[show matches grouped by file name]'
     "(pretty-vimgrep)--no-heading[don't show matches grouped by file name]"
 
-    + '(hidden)' # Hidden-file options
+    + '(hidden)'
     {-.,--hidden}'[search hidden files and directories]'
     $no"--no-hidden[don't search hidden files and directories]"
 
-    + '(hybrid)' # hybrid regex options
+    + '(hybrid)'
     '--auto-hybrid-regex[DEPRECATED: dynamically use PCRE2 if necessary]'
     $no"--no-auto-hybrid-regex[DEPRECATED: don't dynamically use PCRE2 if necessary]"
 
-    + '(ignore)' # Ignore-file options
+    + '(ignore)'
     "(--no-ignore-global --no-ignore-parent --no-ignore-vcs --no-ignore-dot)--no-ignore[don't respect ignore files]"
     $no'(--ignore-global --ignore-parent --ignore-vcs --ignore-dot)--ignore[respect ignore files]'
 
-    + '(ignore-file-case-insensitive)' # Ignore-file case sensitivity options
+    + '(ignore-file-case-insensitive)'
     '--ignore-file-case-insensitive[process ignore files case insensitively]'
     $no'--no-ignore-file-case-insensitive[process ignore files case sensitively]'
 
-    + '(ignore-exclude)' # Local exclude (ignore)-file options
+    + '(ignore-exclude)'
     "--no-ignore-exclude[don't respect local exclude (ignore) files]"
     $no'--ignore-exclude[respect local exclude (ignore) files]'
 
-    + '(ignore-global)' # Global ignore-file options
+    + '(ignore-global)'
     "--no-ignore-global[don't respect global ignore files]"
     $no'--ignore-global[respect global ignore files]'
 
-    + '(ignore-parent)' # Parent ignore-file options
+    + '(ignore-parent)'
     "--no-ignore-parent[don't respect ignore files in parent directories]"
     $no'--ignore-parent[respect ignore files in parent directories]'
 
-    + '(ignore-vcs)' # VCS ignore-file options
+    + '(ignore-vcs)'
     "--no-ignore-vcs[don't respect version control ignore files]"
     $no'--ignore-vcs[respect version control ignore files]'
 
-    + '(require-git)' # git specific settings
+    + '(require-git)'
     "--no-require-git[don't require git repository to respect gitignore rules]"
     $no'--require-git[require git repository to respect gitignore rules]'
 
-    + '(ignore-dot)' # .ignore options
+    + '(ignore-dot)'
     "--no-ignore-dot[don't respect .ignore files]"
     $no'--ignore-dot[respect .ignore files]'
 
-    + '(ignore-files)' # custom global ignore file options
+    + '(ignore-files)'
     "--no-ignore-files[don't respect --ignore-file flags]"
     $no'--ignore-files[respect --ignore-file files]'
 
@@ -173,77 +173,77 @@ _rg() {
     {-v,--invert-match}'[invert matching]'
     $no"--no-invert-match[don't invert matching]"
 
-    + '(json)' # JSON options
+    + '(json)'
     '--json[output results in JSON Lines format]'
     $no"--no-json[don't output results in JSON Lines format]"
 
-    + '(line-number)' # Line-number options
+    + '(line-number)'
     {-n,--line-number}'[show line numbers for matches]'
     {-N,--no-line-number}"[don't show line numbers for matches]"
 
-    + '(line-terminator)' # Line-terminator options
+    + '(line-terminator)'
     '--crlf[use CRLF as line terminator]'
     $no"--no-crlf[don't use CRLF as line terminator]"
     '(text)--null-data[use NUL as line terminator]'
 
-    + '(max-columns-preview)' # max column preview options
+    + '(max-columns-preview)'
     '--max-columns-preview[show preview for long lines (with -M)]'
     $no"--no-max-columns-preview[don't show preview for long lines (with -M)]"
 
-    + '(max-depth)' # Directory-depth options
+    + '(max-depth)'
     {-d,--max-depth}'[specify max number of directories to descend]:number of directories'
     '!--maxdepth=:number of directories'
 
-    + '(messages)' # Error-message options
+    + '(messages)'
     '(--no-ignore-messages)--no-messages[suppress some error messages]'
     $no"--messages[don't suppress error messages affected by --no-messages]"
 
-    + '(messages-ignore)' # Ignore-error message options
+    + '(messages-ignore)'
     "--no-ignore-messages[don't show ignore-file parse error messages]"
     $no'--ignore-messages[show ignore-file parse error messages]'
 
-    + '(mmap)' # mmap options
+    + '(mmap)'
     '--mmap[search using memory maps when possible]'
     "--no-mmap[don't search using memory maps]"
 
-    + '(multiline)' # Multiline options
+    + '(multiline)'
     {-U,--multiline}'[permit matching across multiple lines]'
     $no'(multiline-dotall)--no-multiline[restrict matches to at most one line each]'
 
-    + '(multiline-dotall)' # Multiline DOTALL options
+    + '(multiline-dotall)'
     '(--no-multiline)--multiline-dotall[allow "." to match newline (with -U)]'
     $no"(--no-multiline)--no-multiline-dotall[don't allow \".\" to match newline (with -U)]"
 
-    + '(only)' # Only-match options
+    + '(only)'
     {-o,--only-matching}'[show only matching part of each line]'
 
-    + '(passthru)' # Pass-through options
+    + '(passthru)'
     '(--vimgrep)--passthru[show both matching and non-matching lines]'
     '!(--vimgrep)--passthrough'
 
-    + '(pcre2)' # PCRE2 options
+    + '(pcre2)'
     {-P,--pcre2}'[enable matching with PCRE2]'
     $no'(pcre2-unicode)--no-pcre2[disable matching with PCRE2]'
 
-    + '(pcre2-unicode)' # PCRE2 Unicode options
+    + '(pcre2-unicode)'
     $no'(--no-pcre2 --no-pcre2-unicode)--pcre2-unicode[DEPRECATED: enable PCRE2 Unicode mode (with -P)]'
     '(--no-pcre2 --pcre2-unicode)--no-pcre2-unicode[DEPRECATED: disable PCRE2 Unicode mode (with -P)]'
 
-    + '(pre)' # Preprocessing options
+    + '(pre)'
     '(-z --search-zip)--pre=[specify preprocessor utility]:preprocessor utility:_command_names -e'
     $no'--no-pre[disable preprocessor utility]'
 
-    + '(pretty-vimgrep)' # Pretty/vimgrep display options
+    + '(pretty-vimgrep)'
     '(heading)'{-p,--pretty}'[alias for --color=always --heading -n]'
     '(heading passthru)--vimgrep[show results in vim-compatible format]'
 
-    + regexp # Explicit pattern options
+    + regexp
     '(1 file)*'{-e+,--regexp=}'[specify search pattern]:pattern'
 
-    + '(replace)' # Replacement options
+    + '(replace)'
     {-r+,--replace=}'[specify string used to replace matches]:replace string'
 
-    + '(sort)' # File-sorting options
+    + '(sort)'
     '(threads)--sort=[sort results in ascending order (disables parallelism)]:sort method:((
       none\:"no sorting"
       path\:"sort by file path"
@@ -261,24 +261,24 @@ _rg() {
     '(threads)--sort-files[DEPRECATED: sort results by file path (disables parallelism)]'
     $no"--no-sort-files[DEPRECATED: don't sort results]"
 
-    + '(stats)' # Statistics options
+    + '(stats)'
     '(--files file-match)--stats[show search statistics]'
     $no"--no-stats[don't show search statistics]"
 
-    + '(text)' # Binary-search options
+    + '(text)'
     {-a,--text}'[search binary files as if they were text]'
     "--binary[search binary files, don't print binary data]"
     $no"--no-binary[don't search binary files]"
     $no"(--null-data)--no-text[don't search binary files as if they were text]"
 
-    + '(threads)' # Thread-count options
+    + '(threads)'
     '(sort)'{-j+,--threads=}'[specify approximate number of threads to use]:number of threads'
 
-    + '(trim)' # Trim options
+    + '(trim)'
     '--trim[trim any ASCII whitespace prefix from each line]'
     $no"--no-trim[don't trim ASCII whitespace prefix from each line]"
 
-    + type # Type options
+    + type
     '*'{-t+,--type=}'[only search files matching specified type]: :_rg_types'
     '*--type-add=[add new glob for specified file type]: :->typespec'
     '*--type-clear=[clear globs previously defined for specified file type]: :_rg_types'
@@ -286,19 +286,19 @@ _rg() {
     '(: *)--type-list[show all supported file types and their associated globs]'
     '*'{-T+,--type-not=}"[don't search files matching specified file type]: :_rg_types"
 
-    + '(word-line)' # Whole-word/line match options
+    + '(word-line)'
     {-w,--word-regexp}'[only show matches surrounded by word boundaries]'
     {-x,--line-regexp}'[only show matches surrounded by line boundaries]'
 
-    + '(unicode)' # Unicode options
+    + '(unicode)'
     $no'--unicode[enable Unicode mode]'
     '--no-unicode[disable Unicode mode]'
 
-    + '(zip)' # Compression options
+    + '(zip)'
     '(--pre)'{-z,--search-zip}'[search in compressed files]'
     $no"--no-search-zip[don't search in compressed files]"
 
-    + misc # Other options — no need to separate these at the moment
+    + misc
     '--color=[specify when to use colors in output]:when to use colors:((
       never\:"never use colors"
       auto\:"use colors or not based on stdout, TERM, etc."
@@ -334,9 +334,9 @@ _rg() {
     '*'{-u,--unrestricted}'[reduce level of "smart" searching]'
     '--stop-on-nonmatch[stop on first non-matching line after a matching one]'
 
-    + operand # Operands
+    + operand
     '(--files --type-list file regexp)1: :_guard "^-*" "search pattern"'
-    '(--type-list)*: :_files'
+    '(--type-list)*:file or directory to search:_files'
   )
 
   # This is used with test-complete to verify that there are no options
