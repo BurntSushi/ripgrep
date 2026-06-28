@@ -28,8 +28,9 @@ _rg() {
   if
     # We also want to list all of these options during testing
     [[ $_RG_COMPLETE_LIST_ARGS == (1|t*|y*) ]] ||
-    # (--[imnp]* => --ignore*, --messages, --no-*, --pcre2-unicode)
-    [[ $PREFIX$SUFFIX == --[imnp]* ]] ||
+    # --[imnpru]* => --ignore*, --messages, --no-*, --pcre2-unicode,
+    #                --require-git, --unicode
+    [[ $PREFIX$SUFFIX == --[imnpru]* ]] ||
     zstyle -t ":completion:${curcontext}:" complete-all
   then
     no=
