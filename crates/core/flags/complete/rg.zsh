@@ -57,13 +57,19 @@ _rg() {
     {-S,--smart-case}'[search case-insensitively if pattern is all lowercase]'
 
     + '(context-a)'
-    '(context-c)'{-A+,--after-context=}'[specify lines to show after each match]:number of lines'
+    '(context-c)'{-A+,--after-context=}'[specify lines to show after each match]: :\
+      _numbers -d0 -l0 "lines of context after match"
+    '
 
     + '(context-b)'
-    '(context-c)'{-B+,--before-context=}'[specify lines to show before each match]:number of lines'
+    '(context-c)'{-B+,--before-context=}'[specify lines to show before each match]: :\
+      _numbers -d0 -l0 "lines of context before match"
+    '
 
     + '(context-c)'
-    '(context-a context-b)'{-C+,--context=}'[specify lines to show before and after each match]:number of lines'
+    '(context-a context-b)'{-C+,--context=}'[specify lines to show before and after each match]: :\
+      _numbers -d0 -l0 "lines of context before/after match"
+    '
 
     + '(column)'
     '--column[show column numbers for matches]'
@@ -191,8 +197,9 @@ _rg() {
     $no"--no-max-columns-preview[don't show preview for long lines (with -M)]"
 
     + '(max-depth)'
-    {-d,--max-depth}'[specify max number of directories to descend]:number of directories'
-    '!--maxdepth=:number of directories'
+    {-d,--max-depth,\!--maxdepth}'[specify max number of directories to descend into]: :\
+      _numbers -dunlimited -l0 "max directories to descend into"
+    '
 
     + '(messages)'
     '(--no-ignore-messages)--no-messages[suppress some error messages]'
@@ -272,7 +279,9 @@ _rg() {
     $no"(--null-data)--no-text[don't search binary files as if they were text]"
 
     + '(threads)'
-    '(sort)'{-j+,--threads=}'[specify approximate number of threads to use]:number of threads'
+    '(sort)'{-j+,--threads=}'[specify approximate number of threads to use]: :\
+      _numbers -d0 -l0 "max threads"
+    '
 
     + '(trim)'
     '--trim[trim any ASCII whitespace prefix from each line]'
@@ -319,18 +328,28 @@ _rg() {
     '--hostname-bin=[specify executable for getting system hostname]:hostname executable:_command_names -e'
     '--hyperlink-format=[specify pattern for hyperlinks]: :_rg_hyperlink_formats'
     '--trace[show more verbose debug messages]'
-    '--dfa-size-limit=[specify upper size limit of generated DFA]:DFA size (bytes)'
+    '--dfa-size-limit=[specify upper size limit of generated DFA]: :\
+      _numbers -ubytes "max DFA size" K M G
+    '
     "(1 stats)--files[show each file that would be searched (but don't search)]"
     '*--ignore-file=[specify additional ignore file]:ignore file:_files'
-    '(-M --max-columns)'{-M+,--max-columns=}'[specify max length of lines to print]:number of bytes'
-    '(-m --max-count)'{-m+,--max-count=}'[specify max number of matches per file]:number of matches'
-    '--max-filesize=[specify size above which files should be ignored]:file size (bytes)'
+    '(-M --max-columns)'{-M+,--max-columns=}'[specify max length of lines to print]: :\
+      _numbers -ubytes -d0 -l0 "max line length"
+    '
+    '(-m --max-count)'{-m+,--max-count=}'[specify max number of matches per file]: :\
+      _numbers -dunlimited -l0 "max matches per file"
+    '
+    '--max-filesize=[specify size above which files should be ignored]: :\
+      _numbers -ubytes -dunlimited -l0 "max file size" K M G
+    '
     "--no-config[don't load configuration files]"
     '(-0 --null)'{-0,--null}'[print NUL byte after file names]'
     '--path-separator=[specify path separator to use when printing file names]:separator'
     '*--pre-glob=[include/exclude files matching specified glob for preprocessing (with --pre)]:glob pattern:_files'
     '(-q --quiet)'{-q,--quiet}'[suppress normal output]'
-    '--regex-size-limit=[specify upper size limit of compiled regex]:regex size (bytes)'
+    '--regex-size-limit=[specify upper size limit of compiled regex]: :\
+      _numbers -ubytes "max compiled regex size" K M G
+    '
     '*'{-u,--unrestricted}'[reduce level of "smart" searching]'
     '--stop-on-nonmatch[stop on first non-matching line after a matching one]'
 
