@@ -84,8 +84,8 @@ _rg() {
     $no'--no-encoding[use default text encoding]'
 
     + '(engine)' # Engine choice options
-    '--engine=[select which regex engine to use]:when:((
-      default\:"use default engine"
+    '--engine=[specify regex engine to use]:regex engine:((
+      default\:"default engine"
       pcre2\:"identical to --pcre2"
       auto\:"identical to --auto-hybrid-regex"
     ))'
@@ -113,18 +113,9 @@ _rg() {
     {-L,--follow}'[follow symlinks]'
     $no"--no-follow[don't follow symlinks]"
 
-    + '(generate)' # Options for generating ancillary data
-    '--generate=[generate man page or completion scripts]:when:((
-      man\:"man page"
-      complete-bash\:"shell completions for bash"
-      complete-zsh\:"shell completions for zsh"
-      complete-fish\:"shell completions for fish"
-      complete-powershell\:"shell completions for PowerShell"
-    ))'
-
     + glob # File-glob options
-    '*'{-g+,--glob=}'[include/exclude files matching specified glob]:glob'
-    '*--iglob=[include/exclude files matching specified case-insensitive glob]:glob'
+    '*'{-g+,--glob=}'[include/exclude files matching specified glob]:glob pattern:_files'
+    '*--iglob=[include/exclude files matching specified case-insensitive glob]:glob pattern:_files'
 
     + '(glob-case-insensitive)' # File-glob case sensitivity options
     '--glob-case-insensitive[treat -g/--glob patterns case insensitively]'
@@ -180,7 +171,7 @@ _rg() {
 
     + '(invert-match)'
     {-v,--invert-match}'[invert matching]'
-    $no"--no-invert-match[do not invert matching]"
+    $no"--no-invert-match[don't invert matching]"
 
     + '(json)' # JSON options
     '--json[output results in JSON Lines format]'
@@ -201,7 +192,6 @@ _rg() {
 
     + '(max-depth)' # Directory-depth options
     {-d,--max-depth}'[specify max number of directories to descend]:number of directories'
-    '--maxdepth=[alias for --max-depth]:number of directories'
     '!--maxdepth=:number of directories'
 
     + '(messages)' # Error-message options
@@ -229,7 +219,7 @@ _rg() {
 
     + '(passthru)' # Pass-through options
     '(--vimgrep)--passthru[show both matching and non-matching lines]'
-    '(--vimgrep)--passthrough[alias for --passthru]'
+    '!(--vimgrep)--passthrough'
 
     + '(pcre2)' # PCRE2 options
     {-P,--pcre2}'[enable matching with PCRE2]'
@@ -243,15 +233,12 @@ _rg() {
     '(-z --search-zip)--pre=[specify preprocessor utility]:preprocessor utility:_command_names -e'
     $no'--no-pre[disable preprocessor utility]'
 
-    + pre-glob # Preprocessing glob options
-    '*--pre-glob[include/exclude files for preprocessing with --pre]'
-
     + '(pretty-vimgrep)' # Pretty/vimgrep display options
     '(heading)'{-p,--pretty}'[alias for --color=always --heading -n]'
     '(heading passthru)--vimgrep[show results in vim-compatible format]'
 
     + regexp # Explicit pattern options
-    '(1 file)*'{-e+,--regexp=}'[specify pattern]:pattern'
+    '(1 file)*'{-e+,--regexp=}'[specify search pattern]:pattern'
 
     + '(replace)' # Replacement options
     {-r+,--replace=}'[specify string used to replace matches]:replace string'
@@ -272,7 +259,7 @@ _rg() {
       created\:"sort by creation time"
     ))'
     '(threads)--sort-files[DEPRECATED: sort results by file path (disables parallelism)]'
-    $no"--no-sort-files[DEPRECATED: do not sort results]"
+    $no"--no-sort-files[DEPRECATED: don't sort results]"
 
     + '(stats)' # Statistics options
     '(--files file-match)--stats[show search statistics]'
@@ -312,7 +299,7 @@ _rg() {
     $no"--no-search-zip[don't search in compressed files]"
 
     + misc # Other options — no need to separate these at the moment
-    '--color=[specify when to use colors in output]:when:((
+    '--color=[specify when to use colors in output]:when to use colors:((
       never\:"never use colors"
       auto\:"use colors or not based on stdout, TERM, etc."
       always\:"always use colors"
@@ -322,7 +309,14 @@ _rg() {
     '--debug[show debug messages]'
     '--field-context-separator[set string to delimit fields in context lines]'
     '--field-match-separator[set string to delimit fields in matching lines]'
-    '--hostname-bin=[executable for getting system hostname]:hostname executable:_command_names -e'
+    '--generate=[generate specified data (e.g. man page or completion script)]:data to generate:((
+      man\:"man page"
+      complete-bash\:"shell completions for bash"
+      complete-zsh\:"shell completions for zsh"
+      complete-fish\:"shell completions for fish"
+      complete-powershell\:"shell completions for PowerShell"
+    ))'
+    '--hostname-bin=[specify executable for getting system hostname]:hostname executable:_command_names -e'
     '--hyperlink-format=[specify pattern for hyperlinks]: :_rg_hyperlink_formats'
     '--trace[show more verbose debug messages]'
     '--dfa-size-limit=[specify upper size limit of generated DFA]:DFA size (bytes)'
@@ -334,13 +328,14 @@ _rg() {
     "--no-config[don't load configuration files]"
     '(-0 --null)'{-0,--null}'[print NUL byte after file names]'
     '--path-separator=[specify path separator to use when printing file names]:separator'
+    '*--pre-glob=[include/exclude files matching specified glob for preprocessing (with --pre)]:glob pattern:_files'
     '(-q --quiet)'{-q,--quiet}'[suppress normal output]'
     '--regex-size-limit=[specify upper size limit of compiled regex]:regex size (bytes)'
     '*'{-u,--unrestricted}'[reduce level of "smart" searching]'
     '--stop-on-nonmatch[stop on first non-matching line after a matching one]'
 
     + operand # Operands
-    '(--files --type-list file regexp)1: :_guard "^-*" pattern'
+    '(--files --type-list file regexp)1: :_guard "^-*" "search pattern"'
     '(--type-list)*: :_files'
   )
 
