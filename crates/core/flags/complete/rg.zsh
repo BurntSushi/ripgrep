@@ -411,29 +411,25 @@ _rg_type_specs() {
 # Complete encodings
 (( $+functions[_rg_encodings] )) ||
 _rg_encodings() {
-  local -a expl
-  local -aU _encodings
-
-  _encodings=(
+  local -aU encodings=(
 !ENCODINGS!
   )
-
-  _wanted encodings expl encoding compadd -a "$@" - _encodings
+  encodings=( ${encodings//:/\\:} )
+  _describe -t encodings encoding encodings "$@"
 }
 
 # Complete file types
 (( $+functions[_rg_types] )) ||
 _rg_types() {
-  local -a expl
-  local -aU _types
+  local -aU types=(
+    # this assumes none of the patterns contain colons
+    ${(@)${(f)"$( _call_program types $words[1] --type-list )"}//:[[:space:]]##/:}
+  )
 
-  _types=( ${(@)${(f)"$( _call_program types $words[1] --type-list )"}//:[[:space:]]##/:} )
+  zstyle -t ":completion:${curcontext}:types" extra-verbose ||
+  types=( ${types%%:*} )
 
-  if zstyle -t ":completion:${curcontext}:types" extra-verbose; then
-    _describe -t types 'file type' _types
-  else
-    _wanted types expl 'file type' compadd "$@" - ${(@)_types%%:*}
-  fi
+  _describe -t types 'file type' types "$@"
 }
 
 # Complete hyperlink format-string aliases
@@ -441,25 +437,25 @@ _rg_types() {
 _rg_hyperlink_format_aliases() {
   _describe -t format-aliases 'hyperlink format alias' '(
 !HYPERLINK_ALIASES!
-  )'
+  )' "$@"
 }
 
 # Complete custom hyperlink format strings
 (( $+functions[_rg_hyperlink_format_strings] )) ||
 _rg_hyperlink_format_strings() {
-  local op='{' ed='}'
+  local bs
   local -a pfx sfx rmv
 
-  compquote op ed
+  [[ -n $compstate[quote] ]] || bs=\\
 
-  sfx=( -S $ed )
-  rmv=( -r ${(q)ed[1]} )
+  sfx=( -S "$bs}" )
+  rmv=( -r '}\-' )
 
-  compset -S "$op*"
-  compset -S "$ed*" && sfx=( -S '' )
-  compset -P "*$ed"
-  compset -p ${#PREFIX%$op*}
-  compset -P $op || pfx=( -P $op )
+  compset -S "$bs{*"
+  compset -S "$bs}*" && sfx=( -S '' )
+  compset -P '*}'
+  compset -P '[^{}]##'
+  compset -P '*{' || pfx=( -P "$bs{" )
 
   WSL_DISTRO_NAME=${WSL_DISTRO_NAME:-\$WSL_DISTRO_NAME} \
   _describe -t format-variables 'hyperlink format variable' '(
