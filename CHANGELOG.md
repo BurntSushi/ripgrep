@@ -2,10 +2,25 @@ TBD
 ===
 Unreleased changes. Release notes have not yet been written.
 
+Platform support:
+
+* [FEATURE #2739](https://github.com/BurntSushi/ripgrep/issues/2739):
+  Add `aarch64-unknown-linux-musl` tests and release artifacts.
+
 Bug fixes:
 
 * [BUG #3212](https://github.com/BurntSushi/ripgrep/pull/3212):
   Don't check for the existence of `.jj` when `--no-ignore` is used.
+* [BUG #3419](https://github.com/BurntSushi/ripgrep/issues/3419):
+  Fix parent gitignore matching when searching multiple roots that share
+  cached parent matchers.
+
+Feature enhancements:
+
+* [FEATURE #3271](https://github.com/BurntSushi/ripgrep/pull/3271):
+  Add a `container` file type covering `Dockerfile` and `Containerfile`.
+* [FEATURE #3444](https://github.com/BurntSushi/ripgrep/pull/3444):
+  Add a `hurl` file type.
 
 
 15.1.0
