@@ -389,7 +389,7 @@ _rg_color_specs() {
         bg:"specify background color"
         fg:"specify foreground color"
         style:"specify text style"
-      )' -qS: \
+      )' -r: -S: \
       -- \
       '( none:"clear color/style for type" )'
 
@@ -400,7 +400,7 @@ _rg_color_specs() {
       match:"specify coloring for match text"
       highlight:"specify coloring for matching lines"
       path:"specify coloring for file names"
-    )' -qS:
+    )' -r: -S:
   fi
 }
 
@@ -416,12 +416,12 @@ _rg_type_specs() {
   elif compset -P '[^:]##:'; then
     _describe -t type-specs-include 'include directive' '(
       include:"include other type definitions"
-    )' -qS: && ret=0
+    )' -r: -S: && ret=0
     _wanted type-specs-glob expl 'glob pattern' _files && ret=0
 
   else
     _wanted type-specs-name expl 'file type (or new name)' \
-      _rg_types -qS: && ret=0
+      _rg_types -r: -S: && ret=0
   fi
 
   return ret
