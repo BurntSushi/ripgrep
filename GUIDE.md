@@ -33,19 +33,21 @@ line does not match the pattern, then the line is not printed.
 The best way to see how this works is with an example. To show an example, we
 need something to search. Let's try searching ripgrep's source code. First
 grab a ripgrep source archive from
-https://github.com/BurntSushi/ripgrep/archive/0.7.1.zip
+https://github.com/BurntSushi/ripgrep/archive/refs/tags/15.1.0.zip
 and extract it:
 
 ```
-$ curl -LO https://github.com/BurntSushi/ripgrep/archive/0.7.1.zip
-$ unzip 0.7.1.zip
-$ cd ripgrep-0.7.1
+$ curl -LO https://github.com/BurntSushi/ripgrep/archive/refs/tags/15.1.0.zip
+$ unzip 15.1.0.zip
+$ cd ripgrep-15.1.0
 $ ls
-benchsuite  grep       tests         Cargo.toml       LICENSE-MIT
-ci          ignore     wincolor      CHANGELOG.md     README.md
-complete    pkg        appveyor.yml  compile          snapcraft.yaml
-doc         src        build.rs      COPYING          UNLICENSE
-globset     termcolor  Cargo.lock    HomebrewFormula
+CHANGELOG.md          LICENSE-MIT           crates
+COPYING               README.md             fuzz
+Cargo.lock            RELEASE-CHECKLIST.md  pkg
+Cargo.toml            UNLICENSE             rustfmt.toml
+FAQ.md                benchsuite            scripts
+GUIDE.md              build.rs              tests
+HomebrewFormula       ci
 ```
 
 Let's try our first search by looking for all occurrences of the word `fast`
@@ -53,11 +55,11 @@ in `README.md`:
 
 ```
 $ rg fast README.md
-75:  faster than both. (N.B. It is not, strictly speaking, a "drop-in" replacement
-88:  color and full Unicode support. Unlike GNU grep, `ripgrep` stays fast while
-119:### Is it really faster than everything else?
-124:Summarizing, `ripgrep` is fast because:
-129:  optimizations to make searching very fast.
+119:  because it contains most of their features and is generally faster. (See
+134:  color and full Unicode support. Unlike GNU grep, ripgrep stays fast while
+183:### Is it really faster than everything else?
+188:Summarizing, ripgrep is fast because:
+193:  optimizations to make searching very fast. (PCRE2 support can be opted into
 ```
 
 (**Note:** If you see an error message from ripgrep saying that it didn't
@@ -80,8 +82,8 @@ by some number of other letters?
 
 ```
 $ rg 'fast\w+' README.md
-75:  faster than both. (N.B. It is not, strictly speaking, a "drop-in" replacement
-119:### Is it really faster than everything else?
+119:  because it contains most of their features and is generally faster. (See
+183:### Is it really faster than everything else?
 ```
 
 In this example, we used the pattern `fast\w+`. This pattern tells ripgrep to
@@ -96,11 +98,11 @@ Here's a different variation on this same theme:
 
 ```
 $ rg 'fast\w*' README.md
-75:  faster than both. (N.B. It is not, strictly speaking, a "drop-in" replacement
-88:  color and full Unicode support. Unlike GNU grep, `ripgrep` stays fast while
-119:### Is it really faster than everything else?
-124:Summarizing, `ripgrep` is fast because:
-129:  optimizations to make searching very fast.
+119:  because it contains most of their features and is generally faster. (See
+134:  color and full Unicode support. Unlike GNU grep, ripgrep stays fast while
+183:### Is it really faster than everything else?
+188:Summarizing, ripgrep is fast because:
+193:  optimizations to make searching very fast. (PCRE2 support can be opted into
 ```
 
 In this case, we used `fast\w*` for our pattern instead of `fast\w+`. The `*`
@@ -123,52 +125,62 @@ the default mode of operation for ripgrep, which means doing this is very
 simple.
 
 Using our unzipped archive of ripgrep source code, here's how to find all
-function definitions whose name is `write`:
+function definitions whose name is `write` under the `crates` directory:
 
 ```
-$ rg 'fn write\('
-src/printer.rs
-469:    fn write(&mut self, buf: &[u8]) {
+$ rg --sort path 'fn write\(' crates
+crates/cli/src/wtr.rs
+69:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
 
-termcolor/src/lib.rs
-227:    fn write(&mut self, b: &[u8]) -> io::Result<usize> {
-250:    fn write(&mut self, b: &[u8]) -> io::Result<usize> {
-428:    fn write(&mut self, b: &[u8]) -> io::Result<usize> { self.wtr.write(b) }
-441:    fn write(&mut self, b: &[u8]) -> io::Result<usize> { self.wtr.write(b) }
-454:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-511:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-848:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-915:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-949:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-1114:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-1348:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-1353:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+crates/globset/src/fnv.rs
+24:    fn write(&mut self, bytes: &[u8]) {
+
+crates/printer/src/counter.rs
+55:    fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
+
+crates/printer/src/path.rs
+150:    pub fn write(&mut self, path: &Path) -> io::Result<()> {
+
+crates/printer/src/standard.rs
+1519:    fn write(&self, buf: &[u8]) -> io::Result<()> {
+
+crates/printer/src/summary.rs
+625:    fn write(&self, buf: &[u8]) -> io::Result<()> {
 ```
 
 (**Note:** We escape the `(` here because `(` has special significance inside
 regular expressions. You could also use `rg -F 'fn write('` to achieve the
 same thing, where `-F` interprets your pattern as a literal string instead of
-a regular expression.)
+a regular expression. We use `--sort path` to keep the sample output stable;
+without it, the order of files can vary.)
 
-In this example, we didn't specify a file at all. Instead, ripgrep defaulted
-to searching your current directory in the absence of a path. In general,
+In this example, we didn't specify a file at all. Instead, we specified the
+`crates` directory. ripgrep searched that directory recursively. If we hadn't
+provided any path, ripgrep would have searched the current directory. In general,
 `rg foo` is equivalent to `rg foo ./`.
 
-This particular search showed us results in both the `src` and `termcolor`
-directories. The `src` directory is the core ripgrep code where as `termcolor`
-is a dependency of ripgrep (and is used by other tools). What if we only wanted
-to search core ripgrep code? Well, that's easy, just specify the directory you
+This particular search showed us results in several crates. What if we only
+wanted to search one crate? Well, that's easy, just specify the directory you
 want:
 
 ```
-$ rg 'fn write\(' src
-src/printer.rs
-469:    fn write(&mut self, buf: &[u8]) {
+$ rg --sort path 'fn write\(' crates/printer
+crates/printer/src/counter.rs
+55:    fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
+
+crates/printer/src/path.rs
+150:    pub fn write(&mut self, path: &Path) -> io::Result<()> {
+
+crates/printer/src/standard.rs
+1519:    fn write(&self, buf: &[u8]) -> io::Result<()> {
+
+crates/printer/src/summary.rs
+625:    fn write(&self, buf: &[u8]) -> io::Result<()> {
 ```
 
-Here, ripgrep limited its search to the `src` directory. Another way of doing
-this search would be to `cd` into the `src` directory and simply use `rg 'fn
-write\('` again.
+Here, ripgrep limited its search to the `crates/printer` directory. Another
+way of doing this search would be to `cd` into the `crates/printer` directory
+and simply use `rg 'fn write\('` again.
 
 
 ### Automatic filtering
@@ -444,11 +456,11 @@ when we searched for the word `fast` in ripgrep's README?
 
 ```
 $ rg fast README.md
-75:  faster than both. (N.B. It is not, strictly speaking, a "drop-in" replacement
-88:  color and full Unicode support. Unlike GNU grep, `ripgrep` stays fast while
-119:### Is it really faster than everything else?
-124:Summarizing, `ripgrep` is fast because:
-129:  optimizations to make searching very fast.
+119:  because it contains most of their features and is generally faster. (See
+134:  color and full Unicode support. Unlike GNU grep, ripgrep stays fast while
+183:### Is it really faster than everything else?
+188:Summarizing, ripgrep is fast because:
+193:  optimizations to make searching very fast. (PCRE2 support can be opted into
 ```
 
 What if we wanted to *replace* all occurrences of `fast` with `FAST`? That's
@@ -456,11 +468,11 @@ easy with ripgrep's `--replace` flag:
 
 ```
 $ rg fast README.md --replace FAST
-75:  FASTer than both. (N.B. It is not, strictly speaking, a "drop-in" replacement
-88:  color and full Unicode support. Unlike GNU grep, `ripgrep` stays FAST while
-119:### Is it really FASTer than everything else?
-124:Summarizing, `ripgrep` is FAST because:
-129:  optimizations to make searching very FAST.
+119:  because it contains most of their features and is generally FASTer. (See
+134:  color and full Unicode support. Unlike GNU grep, ripgrep stays FAST while
+183:### Is it really FASTer than everything else?
+188:Summarizing, ripgrep is FAST because:
+193:  optimizations to make searching very FAST. (PCRE2 support can be opted into
 ```
 
 or, more succinctly,
@@ -476,11 +488,11 @@ you need to include the entire line in your match. For example:
 
 ```
 $ rg '^.*fast.*$' README.md -r FAST
-75:FAST
-88:FAST
 119:FAST
-124:FAST
-129:FAST
+134:FAST
+183:FAST
+188:FAST
+193:FAST
 ```
 
 Alternatively, you can combine the `--only-matching` (or `-o` for short) with
@@ -488,11 +500,11 @@ the `--replace` flag to achieve the same result:
 
 ```
 $ rg fast README.md --only-matching --replace FAST
-75:FAST
-88:FAST
 119:FAST
-124:FAST
-129:FAST
+134:FAST
+183:FAST
+188:FAST
+193:FAST
 ```
 
 or, more succinctly,
@@ -512,8 +524,8 @@ replacement string. For example:
 
 ```
 $ rg 'fast\s+(\w+)' README.md -r 'fast-$1'
-88:  color and full Unicode support. Unlike GNU grep, `ripgrep` stays fast-while
-124:Summarizing, `ripgrep` is fast-because:
+134:  color and full Unicode support. Unlike GNU grep, ripgrep stays fast-while
+188:Summarizing, ripgrep is fast-because:
 ```
 
 Our replacement string here, `fast-$1`, consists of `fast-` followed by the
@@ -528,8 +540,8 @@ above command:
 
 ```
 $ rg 'fast\s+(?P<word>\w+)' README.md -r 'fast-$word'
-88:  color and full Unicode support. Unlike GNU grep, `ripgrep` stays fast-while
-124:Summarizing, `ripgrep` is fast-because:
+134:  color and full Unicode support. Unlike GNU grep, ripgrep stays fast-while
+188:Summarizing, ripgrep is fast-because:
 ```
 
 It is important to note that ripgrep **will never modify your files**. The
