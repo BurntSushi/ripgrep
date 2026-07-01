@@ -294,7 +294,10 @@ impl Error {
             };
         }
         let path = err.path().map(|p| p.to_path_buf());
-        let mut ig_err = Error::Io(std::io::Error::from(err));
+        let mut ig_err = Error::WithDepth {
+            depth,
+            err: Box::new(Error::Io(std::io::Error::from(err))),
+        };
         if let Some(path) = path {
             ig_err = Error::WithPath { path, err: Box::new(ig_err) };
         }
