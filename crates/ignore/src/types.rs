@@ -580,4 +580,21 @@ mod tests {
             assert_eq!(btypes.definitions(), original_defs);
         }
     }
+    #[test]
+    fn test_deterministic_order() {
+        // Verify that building types produces the same order
+        // regardless of HashMap iteration quirks. BTreeMap
+        // guarantees deterministic ordering by name.
+        let mut btypes = TypesBuilder::new();
+        for tydef in types() {
+            btypes.add_def(tydef).unwrap();
+        }
+        let _ = btypes.build().unwrap();
+        let defs = btypes.definitions();
+        let names: Vec<&str> = defs.iter().map(|d| d.name()).collect();
+        assert_eq!(names, vec![
+            "combo", "foo", "html", "js", "py", "python", "rust",
+        ]);
+    }
+
 }
