@@ -257,6 +257,16 @@ impl Error {
         }
     }
 
+    /// Return the path associated with the error.
+    pub fn path(&self) -> Option<&Path> {
+        match *self {
+            Error::WithPath { ref path, .. } => Some(path),
+            Error::WithDepth { ref err, .. }
+            | Error::WithLineNumber { ref err, .. } => err.path(),
+            _ => None,
+        }
+    }
+
     /// Turn an error into a tagged error with the given file path.
     fn with_path<P: AsRef<Path>>(self, path: P) -> Error {
         Error::WithPath {
