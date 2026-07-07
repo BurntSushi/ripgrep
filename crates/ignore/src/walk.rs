@@ -179,7 +179,9 @@ impl DirEntryInner {
                 Err(err.with_path("<stdin>"))
             }
             Walkdir(ref x) => x.metadata().map_err(|err| {
-                Error::Io(io::Error::from(err)).with_path(x.path())
+                Error::Io(io::Error::from(err))
+                    .with_depth(x.depth())
+                    .with_path(x.path())
             }),
             Raw(ref x) => x.metadata(),
         }
@@ -299,7 +301,9 @@ impl DirEntryRaw {
         } else {
             fs::symlink_metadata(&self.path)
         }
-        .map_err(|err| Error::Io(io::Error::from(err)).with_path(&self.path))
+        .map_err(|err| {
+            Error::Io(err).with_depth(self.depth).with_path(&self.path)
+        })
     }
 
     fn file_type(&self) -> FileType {
@@ -324,7 +328,7 @@ impl DirEntryRaw {
         ent: &fs::DirEntry,
     ) -> Result<DirEntryRaw, Error> {
         let ty = ent.file_type().map_err(|err| {
-            let err = Error::Io(io::Error::from(err)).with_path(ent.path());
+            let err = Error::Io(err).with_depth(depth).with_path(ent.path());
             Error::WithDepth { depth, err: Box::new(err) }
         })?;
         DirEntryRaw::from_entry_os(depth, ent, ty)
@@ -337,7 +341,7 @@ impl DirEntryRaw {
         ty: fs::FileType,
     ) -> Result<DirEntryRaw, Error> {
         let md = ent.metadata().map_err(|err| {
-            let err = Error::Io(io::Error::from(err)).with_path(ent.path());
+            let err = Error::Io(err).with_depth(depth).with_path(ent.path());
             Error::WithDepth { depth, err: Box::new(err) }
         })?;
         Ok(DirEntryRaw {
@@ -386,8 +390,8 @@ impl DirEntryRaw {
         pb: PathBuf,
         link: bool,
     ) -> Result<DirEntryRaw, Error> {
-        let md =
-            fs::metadata(&pb).map_err(|err| Error::Io(err).with_path(&pb))?;
+        let md = fs::metadata(&pb)
+            .map_err(|err| Error::Io(err).with_depth(depth).with_path(&pb))?;
         Ok(DirEntryRaw {
             path: pb,
             ty: md.file_type(),
@@ -405,8 +409,8 @@ impl DirEntryRaw {
     ) -> Result<DirEntryRaw, Error> {
         use std::os::unix::fs::MetadataExt;
 
-        let md =
-            fs::metadata(&pb).map_err(|err| Error::Io(err).with_path(&pb))?;
+        let md = fs::metadata(&pb)
+            .map_err(|err| Error::Io(err).with_depth(depth).with_path(&pb))?;
         Ok(DirEntryRaw {
             path: pb,
             ty: md.file_type(),
@@ -1990,9 +1994,9 @@ fn path_equals(dent: &DirEntry, handle: &Handle) -> Result<bool, Error> {
     if dent.is_stdin() || never_equal(dent, handle) {
         return Ok(false);
     }
-    Handle::from_path(dent.path())
-        .map(|h| &h == handle)
-        .map_err(|err| Error::Io(err).with_path(dent.path()))
+    Handle::from_path(dent.path()).map(|h| &h == handle).map_err(|err| {
+        Error::Io(err).with_depth(dent.depth()).with_path(dent.path())
+    })
 }
 
 /// Returns true if the given walkdir entry corresponds to a directory.
