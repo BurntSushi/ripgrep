@@ -514,7 +514,7 @@ where
         // Otherwise, it's possible for the regex (via look-around) to observe
         // the line terminator and not match because of it.
         let mut m = Match::new(0, range.end);
-        // No need to rember the line terminator as we aren't doing a replace
+        // No need to remember the line terminator as we aren't doing a replace
         // here.
         trim_line_terminator(searcher, bytes, &mut m);
         bytes = &bytes[..m.end()];
