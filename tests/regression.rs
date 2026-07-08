@@ -1679,7 +1679,7 @@ rgtest!(r3179_global_gitignore_cwd, |dir: Dir, mut cmd: TestCommand| {
     // canonicalization. But it's not actually quite clear
     // to me how to do it. I *believe* the solution here is
     // that gitignore matching should be relative to the directory
-    // path given to `WalkBuider::{add,new}`, and *not* to the
+    // path given to `WalkBuilder::{add,new}`, and *not* to the
     // CWD. But this is a very big change to how `ignore` works
     // I think. At least conceptually. So that will need to be
     // something we do when we rewrite `ignore`. Sigh.

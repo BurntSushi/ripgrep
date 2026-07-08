@@ -11,7 +11,7 @@ on:
 # `schedule` event. By specifying any permission explicitly all others are set
 # to none. By using the principle of least privilege the damage a compromised
 # workflow can do (because of an injection or compromised third party tool or
-# action) is restricted. Currently the worklow doesn't need any additional
+# action) is restricted. Currently the workflow doesn't need any additional
 # permission except for pulling the code. Adding labels to issues, commenting
 # on pull-requests, etc. may need additional permissions:
 #
