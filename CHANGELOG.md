@@ -2,6 +2,11 @@ TBD
 ===
 Unreleased changes. Release notes have not yet been written.
 
+Platform support:
+
+* `aarch64-unknown-linux-musl` is now included in the release binaries for
+  ripgrep.
+
 Performance improvements:
 
 * [PERF #3293](https://github.com/BurntSushi/ripgrep/issues/3293):
@@ -11,6 +16,10 @@ Bug fixes:
 
 * [BUG #3212](https://github.com/BurntSushi/ripgrep/pull/3212):
   Don't check for the existence of `.jj` when `--no-ignore` is used.
+* [BUG #3320](https://github.com/BurntSushi/ripgrep/pull/3419),
+  [BUG #3376](https://github.com/BurntSushi/ripgrep/pull/3376),
+  [BUG #3419](https://github.com/BurntSushi/ripgrep/pull/3419):
+  Fix gitignore matching bug when searching across multiple directories.
 
 
 15.1.0 (2025-10-22)
