@@ -1086,12 +1086,14 @@ impl Walk {
                 &ent.metadata().ok(),
             ));
         }
-        if let Some(Filter(filter)) = &self.filter {
-            if !filter(ent) {
-                return Ok(true);
-            }
-        }
         Ok(false)
+    }
+
+    fn skip_entry_filtered(&self, ent: &DirEntry) -> bool {
+        if let Some(Filter(filter)) = &self.filter {
+            return !filter(ent);
+        }
+        false
     }
 }
 
@@ -1138,17 +1140,19 @@ impl Iterator for Walk {
                         Err(err) => return Some(Err(err)),
                         Ok(should_skip) => should_skip,
                     };
-                    if should_skip {
-                        self.it.as_mut().unwrap().it.skip_current_dir();
-                        // Still need to push this on the stack because
-                        // we'll get a WalkEvent::Exit event for this dir.
-                        // We don't care if it errors though.
-                        let (igtmp, _) = self.ig.add_child(ent.path());
-                        self.ig = igtmp;
-                        continue;
-                    }
                     let (igtmp, err) = self.ig.add_child(ent.path());
                     self.ig = igtmp;
+                    if should_skip {
+                        self.it.as_mut().unwrap().it.skip_current_dir();
+                        continue;
+                    }
+                    // Advance the ignore stack before running the user-supplied
+                    // filter so a caught panic still leaves the subsequent
+                    // WalkEvent::Exit balanced.
+                    if self.skip_entry_filtered(&ent) {
+                        self.it.as_mut().unwrap().it.skip_current_dir();
+                        continue;
+                    }
                     ent.err = err;
                     return Some(Ok(ent));
                 }
@@ -1158,7 +1162,7 @@ impl Iterator for Walk {
                         Err(err) => return Some(Err(err)),
                         Ok(should_skip) => should_skip,
                     };
-                    if should_skip {
+                    if should_skip || self.skip_entry_filtered(&ent) {
                         continue;
                     }
                     return Some(Ok(ent));
@@ -2053,8 +2057,12 @@ mod tests {
     use std::ffi::OsStr;
     use std::fs::{self, File};
     use std::io::Write;
+    use std::panic::{AssertUnwindSafe, catch_unwind};
     use std::path::Path;
-    use std::sync::{Arc, Mutex};
+    use std::sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    };
 
     use super::{DirEntry, WalkBuilder, WalkState};
     use crate::tests::TempDir;
@@ -2493,6 +2501,67 @@ mod tests {
             &WalkBuilder::new(td.path())
                 .filter_entry(|entry| entry.file_name() != OsStr::new("a")),
             &["x", "x/y", "x/y/foo"],
+        );
+    }
+
+    #[test]
+    fn filter_entry_panic_should_not_drop_ignore_rules_for_later_siblings() {
+        let td = tmpdir();
+        let root = td.path().to_path_buf();
+        mkdirp(root.join("a"));
+        mkdirp(root.join("x"));
+        wfile(root.join(".ignore"), "x/\n");
+        wfile(root.join("x/file"), "");
+        let panic_path = root.join("a");
+        let panic_once = Arc::new(AtomicBool::new(true));
+
+        assert_paths(td.path(), &WalkBuilder::new(&root), &["a"]);
+
+        let mut builder = WalkBuilder::new(&root);
+        builder.filter_entry({
+            let panic_once = panic_once.clone();
+            let panic_path = panic_path.clone();
+            move |entry| {
+                if entry.path() == panic_path.as_path()
+                    && panic_once.swap(false, Ordering::SeqCst)
+                {
+                    panic!("panic from filter_entry");
+                }
+                true
+            }
+        });
+
+        let mut walk = builder.build();
+        let mut first = None;
+        for _ in 0..8 {
+            let result = catch_unwind(AssertUnwindSafe(|| walk.next()));
+            if result.is_err() {
+                first = Some(result);
+                break;
+            }
+        }
+        assert!(first.is_some(), "the filter predicate should panic once");
+
+        let mut recovered = vec![];
+        for _ in 0..16 {
+            match catch_unwind(AssertUnwindSafe(|| walk.next())) {
+                Ok(Some(Ok(dent))) => {
+                    let path = dent.path().strip_prefix(&root).unwrap();
+                    if !path.as_os_str().is_empty() {
+                        recovered.push(normal_path(path.to_str().unwrap()));
+                    }
+                }
+                Ok(Some(Err(_))) => {}
+                Ok(None) => break,
+                Err(_) => {
+                    panic!("unexpected follow-up panic after the first catch");
+                }
+            }
+        }
+        assert!(
+            !recovered.iter().any(|path| path == "x" || path == "x/file"),
+            "caught panic corrupted walker state and leaked later sibling \
+             paths that should stay ignored: {recovered:?}",
         );
     }
 }
