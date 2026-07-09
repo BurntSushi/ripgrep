@@ -12,6 +12,11 @@ Performance improvements:
 * [PERF #3293](https://github.com/BurntSushi/ripgrep/issues/3293):
   Improves directory traversal time on very large corpora.
 
+Feature enhancements:
+
+* [FEATURE #3275](https://github.com/BurntSushi/ripgrep/issues/3275):
+  ripgrep now respects `GIT_CONFIG_GLOBAL` and `GIT_CONFIG_SYSTEM`.
+
 Bug fixes:
 
 * [BUG #3212](https://github.com/BurntSushi/ripgrep/pull/3212):

@@ -123,6 +123,17 @@ impl Gitignore {
     /// The global config file path is specified by git's `core.excludesFile`
     /// config option.
     ///
+    /// # Behavior
+    ///
+    /// This routine does its best to discover any global git exclude files.
+    /// This will try to parse out the `excludesFile` config option in your
+    /// global git configuration, if necessary.
+    ///
+    /// The specific things this routine tries (which are subject to change
+    /// based on how git behaves) are:
+    ///
+    ///
+    ///
     /// Git's config file location is `$HOME/.gitconfig`. If `$HOME/.gitconfig`
     /// does not exist or does not specify `core.excludesFile`, then
     /// `$XDG_CONFIG_HOME/git/ignore` is read. If `$XDG_CONFIG_HOME` is not
@@ -568,32 +579,56 @@ impl GitignoreBuilder {
 ///
 /// Note that the file path returned may not exist.
 pub fn gitconfig_excludes_path() -> Option<PathBuf> {
-    // git supports $HOME/.gitconfig and $XDG_CONFIG_HOME/git/config. Notably,
-    // both can be active at the same time, where $HOME/.gitconfig takes
-    // precedent. So if $HOME/.gitconfig defines a `core.excludesFile`, then
-    // we're done.
-    match gitconfig_home_contents().and_then(|x| parse_excludes_file(&x)) {
-        Some(path) => return Some(path),
-        None => {}
+    // When GIT_CONFIG_GLOBAL is set, it replaces both $HOME/.gitconfig and
+    // $XDG_CONFIG_HOME/git/config (per git 2.32+). Otherwise, git supports
+    // $HOME/.gitconfig and $XDG_CONFIG_HOME/git/config simultaneously, where
+    // $HOME/.gitconfig takes precedent.
+    gitconfig_global_env_contents()
+        .and_then(|x| parse_excludes_file(&x))
+        .or_else(|| {
+            gitconfig_home_contents().and_then(|x| parse_excludes_file(&x))
+        })
+        .or_else(|| {
+            gitconfig_xdg_contents().and_then(|x| parse_excludes_file(&x))
+        })
+        // System-level config has the lowest priority for core.excludesFile.
+        // GIT_CONFIG_SYSTEM overrides the default /etc/gitconfig path.
+        .or_else(|| {
+            gitconfig_system_contents().and_then(|x| parse_excludes_file(&x))
+        })
+        .or_else(excludes_file_default)
+}
+
+/// Returns the file contents of git's global config file from the path
+/// specified by the `GIT_CONFIG_GLOBAL` environment variable.
+fn gitconfig_global_env_contents() -> Option<Vec<u8>> {
+    let path = std::env::var_os("GIT_CONFIG_GLOBAL").map(PathBuf::from)?;
+    if path.as_os_str().is_empty() {
+        return None;
     }
-    match gitconfig_xdg_contents().and_then(|x| parse_excludes_file(&x)) {
-        Some(path) => return Some(path),
-        None => {}
-    }
-    excludes_file_default()
+    let mut file = BufReader::new(File::open(path).ok()?);
+    let mut contents = vec![];
+    file.read_to_end(&mut contents).ok().map(|_| contents)
+}
+
+/// Returns the file contents of git's system-level config file.
+///
+/// Checks `GIT_CONFIG_SYSTEM` first, then falls back to `/etc/gitconfig`.
+fn gitconfig_system_contents() -> Option<Vec<u8>> {
+    let path = std::env::var_os("GIT_CONFIG_SYSTEM")
+        .map(PathBuf::from)
+        .filter(|x| !x.as_os_str().is_empty())
+        .unwrap_or_else(|| PathBuf::from("/etc/gitconfig"));
+    let mut file = BufReader::new(File::open(path).ok()?);
+    let mut contents = vec![];
+    file.read_to_end(&mut contents).ok().map(|_| contents)
 }
 
 /// Returns the file contents of git's global config file, if one exists, in
 /// the user's home directory.
 fn gitconfig_home_contents() -> Option<Vec<u8>> {
-    let home = match home_dir() {
-        None => return None,
-        Some(home) => home,
-    };
-    let mut file = match File::open(home.join(".gitconfig")) {
-        Err(_) => return None,
-        Ok(file) => BufReader::new(file),
-    };
+    let home = home_dir()?;
+    let mut file = BufReader::new(File::open(home.join(".gitconfig")).ok()?);
     let mut contents = vec![];
     file.read_to_end(&mut contents).ok().map(|_| contents)
 }
@@ -602,13 +637,11 @@ fn gitconfig_home_contents() -> Option<Vec<u8>> {
 /// the user's XDG_CONFIG_HOME directory.
 fn gitconfig_xdg_contents() -> Option<Vec<u8>> {
     let path = std::env::var_os("XDG_CONFIG_HOME")
-        .and_then(|x| if x.is_empty() { None } else { Some(PathBuf::from(x)) })
+        .map(PathBuf::from)
+        .filter(|x| !x.as_os_str().is_empty())
         .or_else(|| home_dir().map(|p| p.join(".config")))
-        .map(|x| x.join("git/config"));
-    let mut file = match path.and_then(|p| File::open(p).ok()) {
-        None => return None,
-        Some(file) => BufReader::new(file),
-    };
+        .map(|x| x.join("git/config"))?;
+    let mut file = BufReader::new(File::open(path).ok()?);
     let mut contents = vec![];
     file.read_to_end(&mut contents).ok().map(|_| contents)
 }
@@ -618,7 +651,8 @@ fn gitconfig_xdg_contents() -> Option<Vec<u8>> {
 /// Specifically, this respects XDG_CONFIG_HOME.
 fn excludes_file_default() -> Option<PathBuf> {
     std::env::var_os("XDG_CONFIG_HOME")
-        .and_then(|x| if x.is_empty() { None } else { Some(PathBuf::from(x)) })
+        .map(PathBuf::from)
+        .filter(|x| !x.as_os_str().is_empty())
         .or_else(|| home_dir().map(|p| p.join(".config")))
         .map(|x| x.join("git/ignore"))
 }

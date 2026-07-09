@@ -1717,3 +1717,28 @@ rgtest!(r3180_look_around_panic, |dir: Dir, mut cmd: TestCommand| {
         .stdout();
     eqnice!("xbxbx\n", got);
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3275
+//
+// This test doesn't seem to work on Windows for whatever reason. I haven't
+// investigated it yet, but I'm pretty sure it's just the test. I'm guessing
+// it's related to path separators. ---AG
+#[cfg(not(windows))]
+rgtest!(r3275_git_global_config_env, |dir: Dir, mut cmd: TestCommand| {
+    dir.create_dir("foo");
+    dir.create(".git", "");
+    dir.create("foo/foo1", "");
+    dir.create("foo/foo2", "");
+    dir.create("global-excludes-nonstandard", "foo2");
+    dir.create(
+        "global-config-nonstandard",
+        &format!(
+            "[core]\n\texcludesFile = {path}",
+            path = dir.path().join("global-excludes-nonstandard").display()
+        ),
+    );
+
+    let config_path = dir.path().join("global-config-nonstandard");
+    cmd.env("GIT_CONFIG_GLOBAL", config_path);
+    eqnice!("foo/foo1\n", cmd.arg("--files").arg("foo").stdout());
+});

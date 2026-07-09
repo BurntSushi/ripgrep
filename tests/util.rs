@@ -274,6 +274,16 @@ impl TestCommand {
         self
     }
 
+    /// Set an environment variable for this command.
+    pub fn env(
+        &mut self,
+        key: impl AsRef<OsStr>,
+        val: impl AsRef<OsStr>,
+    ) -> &mut TestCommand {
+        self.cmd.env(key, val);
+        self
+    }
+
     /// Set the working directory for this command.
     ///
     /// The path given is interpreted relative to the directory that this
