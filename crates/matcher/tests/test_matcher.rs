@@ -79,6 +79,18 @@ fn shortest_match() {
 }
 
 #[test]
+#[should_panic]
+fn match_new_panics_on_invalid_range() {
+    Match::new(2, 1);
+}
+
+#[test]
+#[should_panic]
+fn match_offset_panics_on_overflow() {
+    Match::new(1, 2).offset(usize::MAX);
+}
+
+#[test]
 fn captures() {
     let matcher = matcher(r"(?P<a>\w+)\s+(?P<b>\w+)");
     assert_eq!(matcher.capture_count(), 3);

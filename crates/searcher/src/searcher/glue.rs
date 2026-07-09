@@ -120,7 +120,7 @@ impl<'s, M: Matcher, S: Sink> SliceByLine<'s, M, S> {
                 std::cmp::min(self.slice.len(), DEFAULT_BUFFER_CAPACITY);
             let binary_range = Range::new(0, binary_upto);
             if !self.core.detect_binary(self.slice, &binary_range)? {
-                while !self.slice[self.core.pos()..].is_empty()
+                while self.core.pos() < self.slice.len()
                     && self.core.match_by_line(self.slice)?
                 {}
             }

@@ -34,6 +34,11 @@ pub(crate) struct Core<'s, M: 's, S> {
     has_sunk: bool,
     has_matched: bool,
     count: u64,
+    /// Cached result of is_line_by_line_fast(), computed once at construction.
+    use_fast_line_search: bool,
+    /// Cached binary detection byte (if any), to avoid re-matching the
+    /// BinaryDetection enum on every call to detect_binary().
+    binary_detect_byte: Option<u8>,
 }
 
 impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
@@ -45,7 +50,11 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
     ) -> Core<'s, M, S> {
         let line_number =
             if searcher.config.line_number { Some(1) } else { None };
-        let core = Core {
+        let binary_detect_byte = match searcher.config.binary.0 {
+            BinaryDetection::Quit(b) | BinaryDetection::Convert(b) => Some(b),
+            _ => None,
+        };
+        let mut core = Core {
             config: &searcher.config,
             matcher,
             searcher,
@@ -61,9 +70,12 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
             has_sunk: false,
             has_matched: false,
             count: 0,
+            use_fast_line_search: false,
+            binary_detect_byte,
         };
         if !core.searcher.multi_line_with_matcher(&core.matcher) {
-            if core.is_line_by_line_fast() {
+            core.use_fast_line_search = core.is_line_by_line_fast();
+            if core.use_fast_line_search {
                 log::trace!("searcher core: will use fast line searcher");
             } else {
                 log::trace!("searcher core: will use slow line searcher");
@@ -78,10 +90,6 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
 
     pub(crate) fn set_pos(&mut self, pos: usize) {
         self.pos = pos;
-    }
-
-    fn count(&self) -> u64 {
-        self.count
     }
 
     fn increment_count(&mut self) {
@@ -171,7 +179,7 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
         &mut self,
         buf: &[u8],
     ) -> Result<bool, S::Error> {
-        if self.is_line_by_line_fast() {
+        if self.use_fast_line_search {
             match self.match_by_line_fast(buf)? {
                 FastMatchResult::SwitchToSlow => self.match_by_line_slow(buf),
                 FastMatchResult::Continue => Ok(true),
@@ -220,10 +228,9 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
         if self.binary_byte_offset.is_some() {
             return Ok(self.config.binary.quit_byte().is_some());
         }
-        let binary_byte = match self.config.binary.0 {
-            BinaryDetection::Quit(b) => b,
-            BinaryDetection::Convert(b) => b,
-            _ => return Ok(false),
+        let binary_byte = match self.binary_detect_byte {
+            Some(b) => b,
+            None => return Ok(false),
         };
         if let Some(i) = buf[*range].find_byte(binary_byte) {
             let offset = range.start() + i;
@@ -389,7 +396,7 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
         use FastMatchResult::*;
 
         debug_assert!(!self.config.passthru);
-        while !buf[self.pos()..].is_empty() {
+        while self.pos() < buf.len() {
             if self.config.stop_on_nonmatch && self.has_matched {
                 return Ok(SwitchToSlow);
             }
@@ -481,7 +488,8 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
         debug_assert!(self.is_line_by_line_fast());
 
         let mut pos = self.pos();
-        while !buf[pos..].is_empty() {
+        let buf_len = buf.len();
+        while pos < buf_len {
             if self.has_exceeded_match_limit() {
                 return Ok(None);
             }
@@ -708,6 +716,9 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
     }
 
     fn has_exceeded_match_limit(&self) -> bool {
-        self.config.max_matches.map_or(false, |limit| self.count() >= limit)
+        match self.config.max_matches {
+            None => false,
+            Some(limit) => self.count >= limit,
+        }
     }
 }

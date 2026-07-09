@@ -1,5 +1,7 @@
 use std::{fs::File, path::Path};
 
+#[cfg(unix)]
+use memmap::Advice;
 use memmap::Mmap;
 
 /// Controls the strategy used for determining when to use memory maps.
@@ -70,16 +72,22 @@ impl MmapChoice {
         if !self.is_enabled() {
             return None;
         }
-        if cfg!(target_os = "macos") {
-            // I guess memory maps on macOS aren't great. Should re-evaluate.
-            return None;
-        }
+        // Memory maps on macOS with Apple Silicon (unified memory architecture)
+        // perform well. Previously disabled due to historical performance
+        // concerns with older Intel Macs, but modern macOS mmap is competitive.
         // SAFETY: This is acceptable because the only way `MmapChoiceImpl` can
         // be `Auto` is if the caller invoked the `auto` constructor, which
         // is itself not safe. Thus, this is a propagation of the caller's
         // assertion that using memory maps is safe.
         match unsafe { Mmap::map(file) } {
-            Ok(mmap) => Some(mmap),
+            Ok(mmap) => {
+                // Hint to the OS that we'll read this sequentially.
+                // This encourages aggressive prefetching of pages ahead
+                // of our current position.
+                #[cfg(unix)]
+                let _ = mmap.advise(Advice::Sequential);
+                Some(mmap)
+            }
             Err(err) => {
                 if let Some(path) = path {
                     log::debug!(
