@@ -497,7 +497,7 @@ impl Ignore {
     /// ignored or not.
     ///
     /// The match contains information about its origin.
-    fn matched<'a, P: AsRef<Path>>(
+    pub(crate) fn matched<'a, P: AsRef<Path>>(
         &'a self,
         path: P,
         is_dir: bool,
@@ -545,7 +545,7 @@ impl Ignore {
 
     /// Performs matching only on the ignore files for this directory and
     /// all parent directories.
-    fn matched_ignore<'a>(
+    pub(crate) fn matched_ignore<'a>(
         &'a self,
         path: &Path,
         is_dir: bool,
@@ -919,6 +919,11 @@ impl IgnoreBuilder {
     pub(crate) fn hidden(&mut self, yes: bool) -> &mut IgnoreBuilder {
         self.opts.hidden = yes;
         self
+    }
+
+    /// Whether ignoring hidden files is enabled or not.
+    pub(crate) fn is_hidden(&self) -> bool {
+        self.opts.hidden
     }
 
     /// Enables reading `.ignore` files.

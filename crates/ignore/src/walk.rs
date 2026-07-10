@@ -18,6 +18,7 @@ use crate::{
     Error, PartialErrorBuilder,
     dir::{Ignore, IgnoreBuilder},
     gitignore::GitignoreBuilder,
+    incremental::{IncrementalIgnore, IncrementalIgnoreOptions},
     overrides::Override,
     types::Types,
 };
@@ -629,10 +630,7 @@ impl WalkBuilder {
             })
             .collect::<Vec<_>>()
             .into_iter();
-        let ig_root = self
-            .get_or_set_current_dir()
-            .map(|cwd| self.ig_builder.build_with_cwd(Some(cwd.to_path_buf())))
-            .unwrap_or_else(|| self.ig_builder.build());
+        let ig_root = self.build_ignore();
         Walk {
             its,
             it: None,
@@ -644,16 +642,63 @@ impl WalkBuilder {
         }
     }
 
+    /// Build matchers for checking paths against ignore files without
+    /// recursively walking the configured roots.
+    ///
+    /// The returned matchers use the path-based filtering configuration
+    /// on this builder, including glob overrides, file type selections,
+    /// parent ignore files, `.ignore`, `.gitignore`, global Git
+    /// ignore files, explicitly added ignore files and custom ignore
+    /// file names. For example, ripgrep configures `.rgignore` via
+    /// [`WalkBuilder::add_custom_ignore_filename`]. Minimum and maximum depth
+    /// limits, maximum file size and hidden-file filtering are also applied.
+    /// Other options that only control traversal or require a directory entry,
+    /// such as custom entry predicates, are not applied.
+    ///
+    /// One matcher is returned for each configured path, in the same order as
+    /// the paths were added to this builder. Each matcher accepts paths
+    /// relative to its own [`IncrementalIgnore::root`]. The matcher for the
+    /// special `-` path representing standard input always returns a non-match
+    /// for all inputs.
+    ///
+    /// Ignore matchers are loaded lazily and cached by directory.
+    /// Thus, the first query may read ignore files from the root and
+    /// its parents, while later queries reuse the compiled matchers.
+    /// Errors encountered while loading ignore files are returned by
+    /// [`IncrementalIgnore::matched_with_errors`]. Once an ignore file has
+    /// been loaded, changes to it are not observed. Build new matchers to
+    /// reload changed ignore files.
+    ///
+    /// Matchers built together share the builder's base ignore configuration
+    /// and compiled parent matchers.
+    pub fn build_matchers(&self) -> Vec<IncrementalIgnore> {
+        let ignore = self.build_ignore();
+        let options = IncrementalIgnoreOptions {
+            min_depth: self.min_depth,
+            max_depth: self.max_depth,
+            max_filesize: self.max_filesize,
+            hidden: self.ig_builder.is_hidden(),
+            follow_links: self.follow_links,
+        };
+        self.paths
+            .iter()
+            .map(move |path| {
+                IncrementalIgnore::new(
+                    path.clone(),
+                    ignore.clone(),
+                    options.clone(),
+                )
+            })
+            .collect()
+    }
+
     /// Build a new `WalkParallel` iterator.
     ///
     /// Note that this *doesn't* return something that implements `Iterator`.
     /// Instead, the returned value must be run with a closure. e.g.,
     /// `builder.build_parallel().run(|| |path| { println!("{path:?}"); WalkState::Continue })`.
     pub fn build_parallel(&self) -> WalkParallel {
-        let ig_root = self
-            .get_or_set_current_dir()
-            .map(|cwd| self.ig_builder.build_with_cwd(Some(cwd.to_path_buf())))
-            .unwrap_or_else(|| self.ig_builder.build());
+        let ig_root = self.build_ignore();
         WalkParallel {
             paths: self.paths.clone().into_iter(),
             ig_root,
@@ -1052,6 +1097,13 @@ impl WalkBuilder {
             result
         });
         result.as_ref().ok().map(|path| &**path)
+    }
+
+    /// Build the root ignore matcher shared by all consumers of this builder.
+    fn build_ignore(&self) -> Ignore {
+        self.get_or_set_current_dir()
+            .map(|cwd| self.ig_builder.build_with_cwd(Some(cwd.to_path_buf())))
+            .unwrap_or_else(|| self.ig_builder.build())
     }
 }
 

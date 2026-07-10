@@ -48,6 +48,7 @@ See the documentation for `WalkBuilder` for many other options.
 
 use std::path::{Path, PathBuf};
 
+pub use crate::incremental::{IncrementalIgnore, IncrementalMatch};
 pub use crate::walk::{
     DirEntry, ParallelVisitor, ParallelVisitorBuilder, Walk, WalkBuilder,
     WalkParallel, WalkState,
@@ -56,6 +57,7 @@ pub use crate::walk::{
 mod default_types;
 mod dir;
 pub mod gitignore;
+mod incremental;
 pub mod overrides;
 mod pathutil;
 pub mod types;
