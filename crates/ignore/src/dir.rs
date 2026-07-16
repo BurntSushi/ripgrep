@@ -25,7 +25,7 @@ use std::{
 use crate::{
     gitignore::{self, Gitignore, GitignoreBuilder},
     overrides::{self, Override},
-    pathutil::{is_hidden, strip_prefix},
+    pathutil::{is_hidden_entry, strip_prefix},
     types::{self, Types},
     walk::DirEntry,
     {Error, Match, PartialErrorBuilder},
@@ -487,7 +487,7 @@ impl Ignore {
         dent: &DirEntry,
     ) -> Match<IgnoreMatch<'a>> {
         let m = self.matched(dent.path(), dent.is_dir());
-        if m.is_none() && self.inner.opts.hidden && is_hidden(dent) {
+        if m.is_none() && self.inner.opts.hidden && is_hidden_entry(dent) {
             return Match::Ignore(IgnoreMatch::hidden());
         }
         m

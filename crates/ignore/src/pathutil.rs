@@ -2,58 +2,63 @@ use std::{ffi::OsStr, path::Path};
 
 use crate::walk::DirEntry;
 
-/// Returns true if and only if this entry is considered to be hidden.
+/// Returns true if and only if this directory entry is considered to be
+/// hidden.
 ///
-/// This only returns true if the base name of the path starts with a `.`.
+/// # Platform behavior
 ///
-/// On Unix, this implements a more optimized check.
-#[cfg(unix)]
-pub(crate) fn is_hidden(dent: &DirEntry) -> bool {
-    use std::os::unix::ffi::OsStrExt;
-
-    if let Some(name) = file_name(dent.path()) {
-        name.as_bytes().get(0) == Some(&b'.')
-    } else {
-        false
-    }
-}
-
-/// Returns true if and only if this entry is considered to be hidden.
+/// ## Windows
 ///
-/// On Windows, this returns true if one of the following is true:
+/// This returns true if one of the following is true:
 ///
 /// * The base name of the path starts with a `.`.
 /// * The file attributes have the `HIDDEN` property set.
-#[cfg(windows)]
-pub(crate) fn is_hidden(dent: &DirEntry) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    use winapi_util::file;
-
-    // This looks like we're doing an extra stat call, but on Windows, the
-    // directory traverser reuses the metadata retrieved from each directory
-    // entry and stores it on the DirEntry itself. So this is "free."
-    if let Ok(md) = dent.metadata() {
-        if file::is_hidden(md.file_attributes() as u64) {
-            return true;
-        }
-    }
-    if let Some(name) = file_name(dent.path()) {
-        name.to_str().map(|s| s.starts_with(".")).unwrap_or(false)
-    } else {
-        false
-    }
-}
-
-/// Returns true if and only if this entry is considered to be hidden.
+///
+/// ## All other platforms
 ///
 /// This only returns true if the base name of the path starts with a `.`.
-#[cfg(not(any(unix, windows)))]
-pub(crate) fn is_hidden(dent: &DirEntry) -> bool {
-    if let Some(name) = file_name(dent.path()) {
-        name.to_str().map(|s| s.starts_with(".")).unwrap_or(false)
-    } else {
-        false
+pub(crate) fn is_hidden_entry(dent: &DirEntry) -> bool {
+    #[cfg(unix)]
+    fn imp(dent: &DirEntry) -> bool {
+        use std::os::unix::ffi::OsStrExt;
+
+        if let Some(name) = file_name(dent.path()) {
+            name.as_bytes().get(0) == Some(&b'.')
+        } else {
+            false
+        }
     }
+
+    #[cfg(windows)]
+    fn imp(dent: &DirEntry) -> bool {
+        use std::os::windows::fs::MetadataExt;
+        use winapi_util::file;
+
+        // This looks like we're doing an extra stat call, but on Windows, the
+        // directory traverser reuses the metadata retrieved from each directory
+        // entry and stores it on the DirEntry itself. So this is "free."
+        if let Ok(md) = dent.metadata() {
+            if file::is_hidden(md.file_attributes() as u64) {
+                return true;
+            }
+        }
+        if let Some(name) = file_name(dent.path()) {
+            name.to_str().map(|s| s.starts_with(".")).unwrap_or(false)
+        } else {
+            false
+        }
+    }
+
+    #[cfg(not(any(unix, windows)))]
+    fn imp(dent: &DirEntry) -> bool {
+        if let Some(name) = file_name(dent.path()) {
+            name.to_str().map(|s| s.starts_with(".")).unwrap_or(false)
+        } else {
+            false
+        }
+    }
+
+    imp(dent)
 }
 
 /// Strip `prefix` from the `path` and return the remainder.
