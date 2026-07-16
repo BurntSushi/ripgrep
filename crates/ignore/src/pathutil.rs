@@ -2,6 +2,42 @@ use std::{ffi::OsStr, path::Path};
 
 use crate::walk::DirEntry;
 
+/// Returns true if and only if this path is considered to be hidden.
+///
+/// # Platform behavior
+///
+/// ## Windows
+///
+/// This returns true if one of the following is true:
+///
+/// * The base name of the path starts with a `.`.
+/// * The file attributes have the `HIDDEN` property set.
+///
+/// ## All other platforms
+///
+/// This only returns true if the base name of the path starts with a `.`.
+pub(crate) fn is_hidden_path(dent: &Path) -> bool {
+    #[cfg(not(windows))]
+    fn imp(path: &Path) -> bool {
+        is_hidden_path_only(path)
+    }
+
+    #[cfg(windows)]
+    fn imp(path: &Path) -> bool {
+        use std::os::windows::fs::MetadataExt;
+        use winapi_util::file;
+
+        if let Ok(md) = path.metadata() {
+            if file::is_hidden(md.file_attributes() as u64) {
+                return true;
+            }
+        }
+        is_hidden_path_only(path)
+    }
+
+    imp(dent)
+}
+
 /// Returns true if and only if this directory entry is considered to be
 /// hidden.
 ///
@@ -18,15 +54,9 @@ use crate::walk::DirEntry;
 ///
 /// This only returns true if the base name of the path starts with a `.`.
 pub(crate) fn is_hidden_entry(dent: &DirEntry) -> bool {
-    #[cfg(unix)]
+    #[cfg(not(windows))]
     fn imp(dent: &DirEntry) -> bool {
-        use std::os::unix::ffi::OsStrExt;
-
-        if let Some(name) = file_name(dent.path()) {
-            name.as_bytes().get(0) == Some(&b'.')
-        } else {
-            false
-        }
+        is_hidden_path_only(dent.path())
     }
 
     #[cfg(windows)]
@@ -42,23 +72,38 @@ pub(crate) fn is_hidden_entry(dent: &DirEntry) -> bool {
                 return true;
             }
         }
-        if let Some(name) = file_name(dent.path()) {
-            name.to_str().map(|s| s.starts_with(".")).unwrap_or(false)
-        } else {
-            false
-        }
-    }
-
-    #[cfg(not(any(unix, windows)))]
-    fn imp(dent: &DirEntry) -> bool {
-        if let Some(name) = file_name(dent.path()) {
-            name.to_str().map(|s| s.starts_with(".")).unwrap_or(false)
-        } else {
-            false
-        }
+        is_hidden_path_only(dent.path())
     }
 
     imp(dent)
+}
+
+/// Returns true if and only if this path is considered to be hidden from only
+/// the path itself.
+///
+/// This has the same behavior on all platforms.
+fn is_hidden_path_only(path: &Path) -> bool {
+    #[cfg(unix)]
+    fn imp(path: &Path) -> bool {
+        use std::os::unix::ffi::OsStrExt;
+
+        if let Some(name) = file_name(path) {
+            name.as_bytes().get(0) == Some(&b'.')
+        } else {
+            false
+        }
+    }
+
+    #[cfg(not(unix))]
+    fn imp(path: &Path) -> bool {
+        if let Some(name) = file_name(path) {
+            name.to_str().map(|s| s.starts_with(".")).unwrap_or(false)
+        } else {
+            false
+        }
+    }
+
+    imp(path)
 }
 
 /// Strip `prefix` from the `path` and return the remainder.
