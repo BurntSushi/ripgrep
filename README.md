@@ -72,7 +72,7 @@ doing equivalent work:
 
 Now we'll move to searching on single large file. Here is a straight-up
 comparison between ripgrep, ugrep and GNU grep on a file cached in memory
-(~13GB, [`OpenSubtitles.raw.en.gz`](http://opus.nlpl.eu/download.php?f=OpenSubtitles/v2018/mono/OpenSubtitles.raw.en.gz), decompressed):
+(~13GB, [`OpenSubtitles.raw.en.gz`](https://object.pouta.csc.fi/OPUS-OpenSubtitles/v2018/mono/en.txt.gz), decompressed):
 
 | Tool | Command | Line count | Time |
 | ---- | ------- | ---------- | ---- |
