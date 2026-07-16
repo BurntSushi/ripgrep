@@ -1445,21 +1445,28 @@ impl WalkParallel {
         let quit_now = Arc::new(AtomicBool::new(false));
         let active_workers = Arc::new(AtomicUsize::new(threads));
         let stacks = Stack::new_for_each_thread(threads, stack);
+        // Collect all of the workers first. In the case that
+        // `builder.build()` panics, we want that to happen and
+        // propagate before we actually start to run any of the
+        // workers.
+        let workers: Vec<_> = stacks
+            .into_iter()
+            .map(|stack| Worker {
+                visitor: builder.build(),
+                stack,
+                quit_now: quit_now.clone(),
+                active_workers: active_workers.clone(),
+                max_depth: self.max_depth,
+                min_depth: self.min_depth,
+                max_filesize: self.max_filesize,
+                follow_links: self.follow_links,
+                skip: self.skip.clone(),
+                filter: self.filter.clone(),
+            })
+            .collect();
         std::thread::scope(|s| {
-            let handles: Vec<_> = stacks
+            let handles: Vec<_> = workers
                 .into_iter()
-                .map(|stack| Worker {
-                    visitor: builder.build(),
-                    stack,
-                    quit_now: quit_now.clone(),
-                    active_workers: active_workers.clone(),
-                    max_depth: self.max_depth,
-                    min_depth: self.min_depth,
-                    max_filesize: self.max_filesize,
-                    follow_links: self.follow_links,
-                    skip: self.skip.clone(),
-                    filter: self.filter.clone(),
-                })
                 .map(|worker| s.spawn(|| worker.run()))
                 .collect();
             for handle in handles {
@@ -1905,6 +1912,9 @@ impl<'s> Worker<'s> {
                     }
                     // Wait for next `Work` or `Quit` message.
                     loop {
+                        if self.is_quit_now() {
+                            return None;
+                        }
                         if let Some(v) = self.recv() {
                             self.activate_worker();
                             value = Some(v);
@@ -1955,6 +1965,14 @@ impl<'s> Worker<'s> {
     /// Reactivates a worker.
     fn activate_worker(&self) {
         self.active_workers.fetch_add(1, AtomicOrdering::Release);
+    }
+}
+
+impl<'s> Drop for Worker<'s> {
+    fn drop(&mut self) {
+        if std::thread::panicking() {
+            self.quit_now();
+        }
     }
 }
 
@@ -2603,5 +2621,40 @@ mod tests {
                 "a/b/c",
             ],
         );
+    }
+
+    // This should always panic and never hang.
+    //
+    // Ref: https://github.com/BurntSushi/ripgrep/issues/3009
+    #[test]
+    #[should_panic]
+    fn panic_in_parallel() {
+        let td = tmpdir();
+        wfile(td.path().join("foo.txt"), "");
+
+        WalkBuilder::new(td.path())
+            .threads(40)
+            .build_parallel()
+            .run(|| Box::new(|_| panic!("oops!")));
+    }
+
+    // This should always panic and never hang. The first call to the visitor
+    // builder is used while processing the root paths. Previously, a panic on
+    // the third call occurred after the first worker had already been spawned,
+    // leaving it waiting indefinitely for workers that were never created.
+    #[test]
+    #[should_panic(expected = "builder panic")]
+    fn panic_in_parallel_builder() {
+        let td = tmpdir();
+        wfile(td.path().join("foo.txt"), "");
+
+        let mut builds = 0;
+        WalkBuilder::new(td.path()).threads(2).build_parallel().run(|| {
+            builds += 1;
+            if builds == 3 {
+                panic!("builder panic");
+            }
+            Box::new(|_| WalkState::Continue)
+        });
     }
 }
