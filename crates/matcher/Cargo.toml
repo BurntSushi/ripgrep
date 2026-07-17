@@ -12,8 +12,8 @@ readme = "README.md"
 keywords = ["regex", "pattern", "trait"]
 license = "Unlicense OR MIT"
 autotests = false
-edition = "2024"
-rust-version = "1.85"
+edition.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 memchr = "2.6.3"

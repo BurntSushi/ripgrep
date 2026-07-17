@@ -24,8 +24,8 @@ exclude = [
 ]
 build = "build.rs"
 autotests = false
-edition = "2024"
-rust-version = "1.96"
+edition.workspace = true
+rust-version.workspace = true
 
 [[bin]]
 bench = false
@@ -48,6 +48,10 @@ members = [
   "crates/searcher",
   "crates/ignore",
 ]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.96"
 
 [dependencies]
 anyhow = "1.0.75"
