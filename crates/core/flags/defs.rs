@@ -155,6 +155,79 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &SortFiles,
 ];
 
+impl LowArgs {
+    /// Returns a flag that does not support indexing, if it's enabled.
+    ///
+    /// If there aren't any flags enabled that don't support indexing, then
+    /// `None` is returned.
+    ///
+    /// The idea of this routine is to start out very paranoid about what is
+    /// allowed to be used when indexing is enabled. Ideally, most or all of
+    /// these would eventually become supported.
+    pub(super) fn indexing_unsupported_flag(
+        &self,
+    ) -> Option<&'static dyn Flag> {
+        if matches!(self.mode, Mode::Search(SearchMode::FilesWithoutMatch)) {
+            return Some(&FilesWithoutMatch);
+        }
+        if matches!(self.binary, BinaryMode::AsText) {
+            return Some(&Binary);
+        }
+        if !matches!(self.encoding, EncodingMode::Auto) {
+            return Some(&Encoding);
+        }
+        if matches!(self.engine, EngineChoice::PCRE2) {
+            return Some(&Engine);
+        }
+        if self.follow {
+            return Some(&Follow);
+        }
+        if !self.globs.is_empty() {
+            return Some(&Glob);
+        }
+        if self.hidden {
+            return Some(&Hidden);
+        }
+        if !self.iglobs.is_empty() {
+            return Some(&Glob);
+        }
+        if !self.ignore_file.is_empty() {
+            return Some(&IgnoreFile);
+        }
+        if self.no_ignore_dot {
+            return Some(&NoIgnoreDot);
+        }
+        if self.no_ignore_exclude {
+            return Some(&NoIgnoreExclude);
+        }
+        if self.no_ignore_files {
+            return Some(&NoIgnoreFiles);
+        }
+        if self.no_ignore_global {
+            return Some(&NoIgnoreGlobal);
+        }
+        if self.no_ignore_parent {
+            return Some(&NoIgnoreParent);
+        }
+        if self.no_ignore_vcs {
+            return Some(&NoIgnoreVcs);
+        }
+        if self.no_require_git {
+            return Some(&NoRequireGit);
+        }
+        if self.one_file_system {
+            return Some(&OneFileSystem);
+        }
+        if self.pre.is_some() {
+            return Some(&Pre);
+        }
+        if self.search_zip {
+            return Some(&SearchZip);
+        }
+        None
+    }
+}
+
 /// -A/--after-context
 #[derive(Debug)]
 struct AfterContext;

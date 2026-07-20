@@ -121,6 +121,15 @@ impl HiArgs {
         if let Some(ref sort) = low.sort {
             sort.supported()?;
         }
+        // We aggressively ban things from indexing at present.
+        if (low.index > 0 || matches!(low.mode, Mode::Index(_)))
+            && let Some(flag) = low.indexing_unsupported_flag()
+        {
+            anyhow::bail!(
+                "flag --{} does not support indexing",
+                flag.name_long()
+            );
+        }
 
         // We modify the mode in-place on `low` so that subsequent conversions
         // see the correct mode.
