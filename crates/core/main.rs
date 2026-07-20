@@ -13,6 +13,7 @@ mod messages;
 
 mod flags;
 mod haystack;
+mod index;
 mod logger;
 mod search;
 
