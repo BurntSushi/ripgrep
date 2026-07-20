@@ -25,9 +25,9 @@ use crate::flags::{
     Category, Flag, FlagValue,
     lowargs::{
         BinaryMode, BoundaryMode, BufferMode, CaseMode, ColorChoice,
-        ContextMode, EncodingMode, EngineChoice, GenerateMode, LoggingMode,
-        LowArgs, MmapMode, Mode, PatternSource, SearchMode, SortMode,
-        SortModeKind, SpecialMode, TypeChange,
+        ContextMode, EncodingMode, EngineChoice, GenerateMode, IndexMode,
+        LoggingMode, LowArgs, MmapMode, Mode, PatternSource, SearchMode,
+        SortMode, SortModeKind, SpecialMode, TypeChange,
     },
 };
 
@@ -84,6 +84,10 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &IgnoreFile,
     &IgnoreFileCaseInsensitive,
     &IncludeZero,
+    &Index,
+    &IndexCrud,
+    &IndexForce,
+    &IndexPath,
     &InvertMatch,
     &JSON,
     &LineBuffered,
@@ -3371,6 +3375,304 @@ fn test_include_zero() {
 
     let args = parse_low_raw(["--include-zero", "--no-include-zero"]).unwrap();
     assert_eq!(false, args.include_zero);
+}
+
+/// -X/--index
+#[derive(Debug)]
+struct Index;
+
+impl Flag for Index {
+    fn is_switch(&self) -> bool {
+        true
+    }
+    fn name_short(&self) -> Option<u8> {
+        Some(b'X')
+    }
+    fn name_long(&self) -> &'static str {
+        "index"
+    }
+    fn doc_category(&self) -> Category {
+        Category::Indexing
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Use a search index when one is available."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Enable searching with an index. Without this flag, ripgrep never uses an
+index.
+.sp
+ripgrep looks for an index in the following order. The first step that finds
+one or more indexes wins:
+.sp
+.IP 1. 4
+When path operands are given on the command line, each operand is interpreted
+as an index directory and every index is searched in command line order. An
+operand that is not a valid index is an error.
+.sp
+.IP 2. 4
+The index named by the \fBRIPGREP_INDEX_PATH\fP environment variable.
+.sp
+.IP 3. 4
+A valid index in a \fB.ripgrep\fP directory in the current working directory.
+.sp
+.IP 4. 4
+A valid index in a \fB.ripgrep\fP directory in the nearest parent of the current
+working directory.
+.PP
+If no index is found, ripgrep performs an ordinary search.
+.sp
+Indexed candidates are filtered by explicit glob and file-type selections,
+hidden-file and depth settings, and the maximum file size. Ignore files,
+including \fB.gitignore\fP, are not read or reapplied during an indexed search.
+Options that require transformed contents or every file make the query
+ineligible for candidate filtering and therefore trigger the fallback below.
+.sp
+This flag may be given at most twice. When it is given once and the query
+cannot use an index, ripgrep performs an ordinary search. When it is given
+twice and an index was found, ripgrep stops instead of performing an ordinary
+search if the query cannot use the index.
+"
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        check_indexing_allowed()?;
+        assert!(v.unwrap_switch(), "--index has no negation");
+        args.index = args.index.saturating_add(1);
+        anyhow::ensure!(
+            args.index <= 2,
+            "-X/--index may be given at most twice"
+        );
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_index() {
+    if !cfg!(feature = "unstable-index") {
+        assert!(parse_low_raw(["-X"]).is_err());
+        return;
+    }
+
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(0, args.index);
+    assert_eq!(Mode::Search(SearchMode::Standard), args.mode);
+
+    let args = parse_low_raw(["-X"]).unwrap();
+    assert_eq!(1, args.index);
+    assert_eq!(Mode::Search(SearchMode::Standard), args.mode);
+
+    let args = parse_low_raw(["--index"]).unwrap();
+    assert_eq!(1, args.index);
+
+    let args = parse_low_raw(["-XX"]).unwrap();
+    assert_eq!(2, args.index);
+
+    let args = parse_low_raw(["-X", "--index"]).unwrap();
+    assert_eq!(2, args.index);
+
+    let result = parse_low_raw(["-XXX"]);
+    assert!(result.is_err(), "{result:?}");
+}
+
+/// --x-crud
+#[derive(Debug)]
+struct IndexCrud;
+
+impl Flag for IndexCrud {
+    fn is_switch(&self) -> bool {
+        true
+    }
+    fn name_long(&self) -> &'static str {
+        "x-crud"
+    }
+    fn doc_category(&self) -> Category {
+        Category::Indexing
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Create or update a search index."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Create or update an index for the files and directories given on the command
+line. When no path is given, this recursively indexes the current working
+directory. The files added to the index are exactly those selected by
+ripgrep's normal traversal and filtering options.
+.sp
+An existing file is re-indexed only when its modification time is newer than
+the time at which it was indexed. Use \flag{x-force} to re-index every selected
+file, including files on file systems with unreliable or deliberately
+preserved modification times. A previously indexed path that is no longer
+accessible is removed from the index.
+.sp
+ripgrep chooses the index location in the following order:
+.sp
+.IP 1. 4
+The path given by \flag{x-path}.
+.sp
+.IP 2. 4
+The path in the \fBRIPGREP_INDEX_PATH\fP environment variable.
+.sp
+.IP 3. 4
+A valid index in a \fB.ripgrep\fP directory in the current working directory.
+.sp
+.IP 4. 4
+A valid index in a \fB.ripgrep\fP directory in the nearest parent of the current
+working directory.
+.sp
+.IP 5. 4
+A \fB.ripgrep\fP directory in the current working directory, which is created
+when necessary.
+.PP
+If the final location already exists but does not contain a valid index, then
+ripgrep reports an error.
+.sp
+For example, this creates or incrementally updates an index for the current
+directory:
+.sp
+.EX
+    rg --x-crud
+.EE
+.sp
+This updates one path in the same index:
+.sp
+.EX
+    rg --x-crud path/to/file
+.EE
+"
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        check_indexing_allowed()?;
+        assert!(v.unwrap_switch(), "--x-crud has no negation");
+        args.mode.update(Mode::Index(IndexMode::Crud));
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_index_crud() {
+    if !cfg!(feature = "unstable-index") {
+        assert!(parse_low_raw(["--x-crud"]).is_err());
+        return;
+    }
+
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(Mode::Search(SearchMode::Standard), args.mode);
+
+    let args = parse_low_raw(["--x-crud"]).unwrap();
+    assert_eq!(Mode::Index(IndexMode::Crud), args.mode);
+
+    let args = parse_low_raw(["--files", "--x-crud", "foo"]).unwrap();
+    assert_eq!(Mode::Index(IndexMode::Crud), args.mode);
+    assert_eq!(vec![std::ffi::OsString::from("foo")], args.positional);
+
+    let args = parse_low_raw(["--x-crud", "--files"]).unwrap();
+    assert_eq!(Mode::Files, args.mode);
+}
+
+/// --x-force
+#[derive(Debug)]
+struct IndexForce;
+
+impl Flag for IndexForce {
+    fn is_switch(&self) -> bool {
+        true
+    }
+    fn name_long(&self) -> &'static str {
+        "x-force"
+    }
+    fn doc_category(&self) -> Category {
+        Category::Indexing
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Force selected files to be re-indexed."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+When used with \flag{x-crud}, re-index every selected file even when its
+modification time indicates that the index is already up to date.
+"
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        check_indexing_allowed()?;
+        assert!(v.unwrap_switch(), "--x-force has no negation");
+        args.index_force = true;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_index_force() {
+    if !cfg!(feature = "unstable-index") {
+        assert!(parse_low_raw(["--x-force"]).is_err());
+        return;
+    }
+
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(false, args.index_force);
+
+    let args = parse_low_raw(["--x-force"]).unwrap();
+    assert_eq!(true, args.index_force);
+}
+
+/// --x-path
+#[derive(Debug)]
+struct IndexPath;
+
+impl Flag for IndexPath {
+    fn is_switch(&self) -> bool {
+        false
+    }
+    fn name_long(&self) -> &'static str {
+        "x-path"
+    }
+    fn doc_variable(&self) -> Option<&'static str> {
+        Some("PATH")
+    }
+    fn doc_category(&self) -> Category {
+        Category::Indexing
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Set the path of the index to update."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Set the index path used by \flag{x-crud}. This takes precedence over
+\fBRIPGREP_INDEX_PATH\fP and automatic discovery of a \fB.ripgrep\fP directory.
+"
+    }
+    fn completion_type(&self) -> CompletionType {
+        CompletionType::Filename
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        check_indexing_allowed()?;
+        args.index_path = Some(PathBuf::from(v.unwrap_value()));
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_index_path() {
+    if !cfg!(feature = "unstable-index") {
+        assert!(parse_low_raw(["--x-path"]).is_err());
+        return;
+    }
+
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(None, args.index_path);
+
+    let args = parse_low_raw(["--x-path", "foo"]).unwrap();
+    assert_eq!(Some(PathBuf::from("foo")), args.index_path);
+
+    let args = parse_low_raw(["--x-path=foo", "--x-path", "bar"]).unwrap();
+    assert_eq!(Some(PathBuf::from("bar")), args.index_path);
 }
 
 /// -v/--invert-match
@@ -7570,6 +7872,13 @@ fn test_word_regexp() {
 
     let args = parse_low_raw(["-w", "-x"]).unwrap();
     assert_eq!(Some(BoundaryMode::Line), args.boundary);
+}
+
+fn check_indexing_allowed() -> anyhow::Result<()> {
+    if cfg!(feature = "unstable-index") {
+        return Ok(());
+    }
+    anyhow::bail!("{}", crate::flags::INDEXING_NOT_SUPPORTED)
 }
 
 mod convert {

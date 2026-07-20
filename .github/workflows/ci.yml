@@ -171,6 +171,9 @@ jobs:
         fi
         set -x
 
+    - name: Run tests with indexing enabled
+      run: ${{ env.CARGO }} test --verbose --workspace --features unstable-index ${{ env.TARGET_FLAGS }}
+
     - name: Run tests with PCRE2 (sans cross)
       if: matrix.target == ''
       run: ${{ env.CARGO }} test --verbose --workspace --features pcre2 ${{ env.TARGET_FLAGS }}
