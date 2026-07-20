@@ -13,7 +13,7 @@ readme = "README.md"
 keywords = ["glob", "ignore", "gitignore", "pattern", "file"]
 license = "Unlicense OR MIT"
 edition.workspace = true
-rust-version.workspace = true
+rust-version = "1.88"
 
 [lib]
 name = "ignore"

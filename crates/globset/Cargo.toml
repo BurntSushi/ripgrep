@@ -14,7 +14,7 @@ readme = "README.md"
 keywords = ["regex", "glob", "multiple", "set", "pattern"]
 license = "Unlicense OR MIT"
 edition.workspace = true
-rust-version.workspace = true
+rust-version = "1.88"
 
 [lib]
 name = "globset"
