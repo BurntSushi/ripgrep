@@ -183,6 +183,9 @@ jobs:
       if: matrix.target != ''
       run: ${{ env.CARGO }} test --verbose --workspace ${{ env.TARGET_FLAGS }}
 
+    - name: Run tests with indexing enabled
+      run: ${{ env.CARGO }} test --verbose --workspace --features unstable-index ${{ env.TARGET_FLAGS }}
+
     - name: Test zsh shell completions (Unix, sans cross)
       # We could test this when using Cross, but we'd have to execute the
       # 'rg' binary (done in test-complete) with qemu, which is a pain and

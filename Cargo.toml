@@ -70,6 +70,9 @@ walkdir = "2"
 
 [features]
 pcre2 = ["grep/pcre2"]
+# This provides opt-in support for indexing. This is currently in active
+# development and may have very serious bugs. Use at your own risk.
+unstable-index = []
 
 [profile.release]
 debug = 1

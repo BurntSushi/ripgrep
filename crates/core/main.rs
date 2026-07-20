@@ -86,6 +86,7 @@ fn run(result: crate::flags::ParseResult<HiArgs>) -> anyhow::Result<ExitCode> {
         Mode::Search(_) if !args.matches_possible() => false,
         Mode::Search(mode) if args.threads() == 1 => search(&args, mode)?,
         Mode::Search(mode) => search_parallel(&args, mode)?,
+        Mode::Index(_) => anyhow::bail!("indexing not yet implemented"),
         Mode::Files if args.threads() == 1 => files(&args)?,
         Mode::Files => files_parallel(&args)?,
         Mode::Types => return types(&args),
