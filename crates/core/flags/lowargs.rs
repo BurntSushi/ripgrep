@@ -57,6 +57,7 @@ pub(crate) struct LowArgs {
     pub(crate) follow: bool,
     pub(crate) glob_case_insensitive: bool,
     pub(crate) globs: Vec<String>,
+    pub(crate) grok_trace: bool,
     pub(crate) heading: Option<bool>,
     pub(crate) hidden: bool,
     pub(crate) hostname_bin: Option<PathBuf>,

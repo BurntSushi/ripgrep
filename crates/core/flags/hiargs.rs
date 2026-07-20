@@ -55,6 +55,7 @@ pub(crate) struct HiArgs {
     fixed_strings: bool,
     follow: bool,
     globs: ignore::overrides::Override,
+    grok_trace: bool,
     heading: bool,
     hidden: bool,
     hyperlink_config: grep::printer::HyperlinkConfig,
@@ -272,6 +273,7 @@ impl HiArgs {
             file_separator,
             fixed_strings: low.fixed_strings,
             follow: low.follow,
+            grok_trace: low.grok_trace,
             heading,
             hidden: low.hidden,
             hyperlink_config,
@@ -533,6 +535,11 @@ impl HiArgs {
     /// This is generally useful for determining what action ripgrep should
     /// take. The main mode is of course to "search," but there are other
     /// non-search modes such as `--type-list` and `--files`.
+    /// Returns true when the experimental `--grok-trace` flag is enabled.
+    pub(crate) fn grok_trace(&self) -> bool {
+        self.grok_trace
+    }
+
     pub(crate) fn mode(&self) -> Mode {
         self.mode
     }

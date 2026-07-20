@@ -74,6 +74,7 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &Generate,
     &Glob,
     &GlobCaseInsensitive,
+    &GrokTrace,
     &Heading,
     &Help,
     &Hidden,
@@ -2644,6 +2645,52 @@ fn test_glob_case_insensitive() {
     ])
     .unwrap();
     assert_eq!(true, args.glob_case_insensitive);
+}
+
+/// --grok-trace
+///
+/// Experimental flag that prints a fixed banner to stdout before search.
+#[derive(Debug)]
+struct GrokTrace;
+
+impl Flag for GrokTrace {
+    fn is_switch(&self) -> bool {
+        true
+    }
+    fn name_long(&self) -> &'static str {
+        "grok-trace"
+    }
+    fn doc_category(&self) -> Category {
+        Category::Logging
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Experimental: print Grok trace banner."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Experimental flag. When set, print the string \fBGrok trace active\fP to
+stdout before executing a normal search.
+"
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        assert!(v.unwrap_switch(), "--grok-trace can only be enabled");
+        args.grok_trace = true;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_grok_trace() {
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(false, args.grok_trace);
+
+    let args = parse_low_raw(["--grok-trace"]).unwrap();
+    assert_eq!(true, args.grok_trace);
+
+    let args = parse_low_raw(["--debug", "--grok-trace"]).unwrap();
+    assert_eq!(true, args.grok_trace);
 }
 
 /// --heading

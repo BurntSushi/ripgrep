@@ -82,6 +82,10 @@ fn run(result: crate::flags::ParseResult<HiArgs>) -> anyhow::Result<ExitCode> {
         ParseResult::Special(mode) => return special(mode),
         ParseResult::Ok(args) => args,
     };
+    // Experimental --grok-trace: emit a fixed banner before normal search.
+    if args.grok_trace() {
+        println!("Grok trace active");
+    }
     let matched = match args.mode() {
         Mode::Search(_) if !args.matches_possible() => false,
         Mode::Search(mode) if args.threads() == 1 => search(&args, mode)?,
