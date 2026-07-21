@@ -1102,7 +1102,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                             bytes, this_line, matches, &mut midx,
                         )?;
                     } else {
-                        self.write_spec(spec, &bytes[this_line])?;
+                        self.write_spec(spec, &bytes[this_line], self.config().colors.matched_blink())?;
                         self.write_line_term()?;
                     }
                 }
@@ -1150,7 +1150,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                         line = line.with_start(upto);
                     } else {
                         let upto = cmp::min(line.end(), m.end());
-                        self.write_spec(spec, &bytes[line.with_end(upto)])?;
+                        self.write_spec(spec, &bytes[line.with_end(upto)], self.config().colors.matched_blink())?;
                         line = line.with_start(upto);
                     }
                 }
@@ -1430,9 +1430,12 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         self.write(self.searcher.line_terminator().as_bytes())
     }
 
-    fn write_spec(&self, spec: &ColorSpec, buf: &[u8]) -> io::Result<()> {
+    fn write_spec(&self, spec: &ColorSpec, buf: &[u8], blink: bool) -> io::Result<()> {
         let mut wtr = self.wtr().borrow_mut();
         wtr.set_color(spec)?;
+        if blink && wtr.supports_color() {
+            wtr.write_all(b"\x1b[5m")?;
+        }
         wtr.write_all(buf)?;
         wtr.reset()?;
         Ok(())
@@ -1441,6 +1444,9 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     fn write_path(&self, path: &PrinterPath) -> io::Result<()> {
         let mut wtr = self.wtr().borrow_mut();
         wtr.set_color(self.config().colors.path())?;
+        if self.config().colors.path_blink() && wtr.supports_color() {
+            wtr.write_all(b"\x1b[5m")?;
+        }
         wtr.write_all(path.as_bytes())?;
         wtr.reset()
     }
@@ -1476,7 +1482,13 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         if self.in_color_match.get() {
             return Ok(());
         }
-        self.wtr().borrow_mut().set_color(self.config().colors.matched())?;
+        {
+            let mut w = self.wtr().borrow_mut();
+            w.set_color(self.config().colors.matched())?;
+            if self.config().colors.matched_blink() && w.supports_color() {
+                w.write_all(b"\x1b[5m")?;
+            }
+        }
         self.in_color_match.set(true);
         Ok(())
     }
@@ -1486,9 +1498,13 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
             return Ok(());
         }
         if self.highlight_on() {
-            self.wtr()
-                .borrow_mut()
-                .set_color(self.config().colors.highlight())?;
+            {
+                let mut w = self.wtr().borrow_mut();
+                w.set_color(self.config().colors.highlight())?;
+                if self.config().colors.highlight_blink() && w.supports_color() {
+                    w.write_all(b"\x1b[5m")?;
+                }
+            }
         } else {
             self.wtr().borrow_mut().reset()?;
         }
@@ -1502,9 +1518,11 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
 
     fn start_line_highlight(&self) -> io::Result<()> {
         if self.highlight_on() {
-            self.wtr()
-                .borrow_mut()
-                .set_color(self.config().colors.highlight())?;
+            let mut w = self.wtr().borrow_mut();
+            w.set_color(self.config().colors.highlight())?;
+            if self.config().colors.highlight_blink() && w.supports_color() {
+                w.write_all(b"\x1b[5m")?;
+            }
         }
         Ok(())
     }
@@ -1682,7 +1700,7 @@ impl<'a, M: Matcher, W: WriteColor> PreludeWriter<'a, M, W> {
         let Some(line_number) = line else { return Ok(()) };
         self.write_separator()?;
         let n = DecimalFormatter::new(line_number);
-        self.std.write_spec(self.config().colors.line(), n.as_bytes())?;
+        self.std.write_spec(self.config().colors.line(), n.as_bytes(), self.config().colors.line_blink())?;
         self.next_separator = PreludeSeparator::FieldSeparator;
         Ok(())
     }
@@ -1696,7 +1714,7 @@ impl<'a, M: Matcher, W: WriteColor> PreludeWriter<'a, M, W> {
         let Some(column_number) = column else { return Ok(()) };
         self.write_separator()?;
         let n = DecimalFormatter::new(column_number);
-        self.std.write_spec(self.config().colors.column(), n.as_bytes())?;
+        self.std.write_spec(self.config().colors.column(), n.as_bytes(), self.config().colors.column_blink())?;
         self.next_separator = PreludeSeparator::FieldSeparator;
         Ok(())
     }
@@ -1709,7 +1727,7 @@ impl<'a, M: Matcher, W: WriteColor> PreludeWriter<'a, M, W> {
         }
         self.write_separator()?;
         let n = DecimalFormatter::new(offset);
-        self.std.write_spec(self.config().colors.column(), n.as_bytes())?;
+        self.std.write_spec(self.config().colors.column(), n.as_bytes(), self.config().colors.column_blink())?;
         self.next_separator = PreludeSeparator::FieldSeparator;
         Ok(())
     }
