@@ -528,6 +528,7 @@ impl GitignoreBuilder {
             .case_insensitive(self.case_insensitive)
             .backslash_escape(true)
             .allow_unclosed_class(self.allow_unclosed_class)
+            .literal_braces(true)
             .build()
             .map_err(|err| Error::Glob {
                 glob: Some(glob.original.clone()),
