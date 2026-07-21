@@ -110,6 +110,10 @@ jobs:
           target: s390x-unknown-linux-gnu
           strip: s390x-linux-gnu-strip
           qemu: qemu-s390x
+        - build: stable-riscv64
+          os: ubuntu-24.04-riscv
+          rust: stable
+          target: riscv64gc-unknown-linux-gnu
         - build: macos
           os: macos-latest
           rust: nightly
@@ -140,7 +144,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install packages (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
+      if: startsWith(matrix.os, 'ubuntu')
       shell: bash
       run: |
         ci/ubuntu-install-packages
@@ -204,6 +208,11 @@ jobs:
           "ghcr.io/cross-rs/${{ matrix.target }}:main" \
           "${{ matrix.strip }}" \
           "/$BIN"
+
+    - name: Strip release binary (native riscv64)
+      if: matrix.build == 'stable-riscv64'
+      shell: bash
+      run: strip "$BIN"
 
     - name: Determine archive name
       shell: bash
