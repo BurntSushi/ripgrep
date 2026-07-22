@@ -733,22 +733,60 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
             mat.bytes_range_in_buffer(),
         )?;
         self.replace(searcher, mat.buffer(), mat.bytes_range_in_buffer())?;
-        self.stats.add_matches(self.json.matches.len() as u64);
-        self.stats.add_matched_lines(mat.lines().count() as u64);
 
-        let submatches = SubMatches::new(
-            mat.bytes(),
-            &self.json.matches,
-            self.replacer.replacement(),
-        );
-        let msg = jsont::Message::Match(jsont::Match {
-            path: self.path,
-            lines: mat.bytes(),
-            line_number: mat.line_number(),
-            absolute_offset: mat.absolute_byte_offset(),
-            submatches: submatches.as_slice(),
-        });
-        self.json.write_message(&msg)?;
+        let line_count = mat.lines().count();
+        self.stats.add_matches(self.json.matches.len() as u64);
+        self.stats.add_matched_lines(line_count as u64);
+
+        if line_count <= 1 {
+            let submatches = SubMatches::new(
+                mat.bytes(),
+                &self.json.matches,
+                self.replacer.replacement(),
+            );
+            let msg = jsont::Message::Match(jsont::Match {
+                path: self.path,
+                lines: mat.bytes(),
+                line_number: mat.line_number(),
+                absolute_offset: mat.absolute_byte_offset(),
+                submatches: submatches.as_slice(),
+            });
+            self.json.write_message(&msg)?;
+        } else {
+            let all_matches = self.json.matches.clone();
+            let mut line_offset: usize = 0;
+            let mut line_num: u64 = 0;
+            for line in mat.lines() {
+                let line_start = line_offset;
+                let line_end = line_offset + line.len();
+                let line_matches: Vec<Match> = all_matches
+                    .iter()
+                    .filter(|m| m.start() < line_end && m.end() > line_start)
+                    .map(|m| {
+                        let s = m.start().max(line_start) - line_start;
+                        let e = m.end().min(line_end) - line_start;
+                        Match::new(s, e)
+                    })
+                    .collect();
+
+                if !line_matches.is_empty() {
+                    let submatches =
+                        SubMatches::new(line, &line_matches, None);
+                    let msg = jsont::Message::Match(jsont::Match {
+                        path: self.path,
+                        lines: line,
+                        line_number: mat.line_number().map(|n| n + line_num),
+                        absolute_offset: mat.absolute_byte_offset()
+                            + line_start as u64,
+                        submatches: submatches.as_slice(),
+                    });
+                    self.json.write_message(&msg)?;
+                }
+
+                line_offset = line_end;
+                line_num += 1;
+            }
+        }
         Ok(true)
     }
 
