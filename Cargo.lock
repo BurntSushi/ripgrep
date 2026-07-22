@@ -418,6 +418,7 @@ dependencies = [
  "anyhow",
  "bstr",
  "grep",
+ "grep-index",
  "ignore",
  "lexopt",
  "log",

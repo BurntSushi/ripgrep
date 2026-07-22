@@ -58,6 +58,7 @@ rust-version = "1.96"
 anyhow = "1.0.75"
 bstr = "1.7.0"
 grep = { version = "0.4.1", path = "crates/grep" }
+grep-index = { version = "0.0.1", path = "crates/index", optional = true }
 ignore = { version = "0.4.29", path = "crates/ignore" }
 lexopt = "0.3.0"
 log = "0.4.5"
@@ -77,7 +78,7 @@ walkdir = "2"
 pcre2 = ["grep/pcre2"]
 # This provides opt-in support for indexing. This is currently in active
 # development and may have very serious bugs. Use at your own risk.
-unstable-index = []
+unstable-index = ["dep:grep-index"]
 
 [profile.release]
 debug = 1
