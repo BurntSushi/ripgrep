@@ -8,7 +8,7 @@ use std::{
 };
 
 use {
-    bstr::BString,
+    bstr::{BString, ByteSlice, io::BufReadExt},
     grep::printer::{ColorSpecs, SummaryKind},
 };
 
@@ -16,8 +16,9 @@ use crate::{
     flags::lowargs::{
         BinaryMode, BoundaryMode, BufferMode, CaseMode, ColorChoice,
         ContextMode, ContextSeparator, EncodingMode, EngineChoice,
-        FieldContextSeparator, FieldMatchSeparator, LowArgs, MmapMode, Mode,
-        PatternSource, SearchMode, SortMode, SortModeKind, TypeChange,
+        FieldContextSeparator, FieldMatchSeparator, InputSource, LowArgs,
+        MmapMode, Mode, PatternSource, SearchMode, SortMode, SortModeKind,
+        TypeChange,
     },
     haystack::{Haystack, HaystackBuilder},
     search::{PatternMatcher, Printer, SearchWorker, SearchWorkerBuilder},
@@ -1030,11 +1031,19 @@ impl Patterns {
         // If we got nothing from -e/--regexp and -f/--file, then the first
         // positional is a pattern.
         if low.patterns.is_empty() {
-            anyhow::ensure!(
-                !low.positional.is_empty(),
-                "ripgrep requires at least one pattern to execute a search"
-            );
-            let ospat = low.positional.remove(0);
+            let Some(ospat) = low
+                .inputs
+                .iter()
+                .position(|i| matches!(i, InputSource::PositionalArgument(_)))
+                .and_then(|i| match low.inputs.remove(i) {
+                    InputSource::PositionalArgument(pattern) => Some(pattern),
+                    _ => None,
+                })
+            else {
+                anyhow::bail!(
+                    "ripgrep requires at least one pattern to execute a search"
+                );
+            };
             let Ok(pat) = ospat.into_string() else {
                 anyhow::bail!("pattern given is not valid UTF-8")
             };
@@ -1104,26 +1113,27 @@ struct Paths {
 
 impl Paths {
     /// Drain the search paths out of the given low arguments.
+    ///
+    /// This includes collecting files from `--in`/`--in0`.
     fn from_low_args(
         state: &mut State,
         _: &Patterns,
         low: &mut LowArgs,
     ) -> anyhow::Result<Paths> {
         // We require a `&Patterns` even though we don't use it to ensure that
-        // patterns have already been read from LowArgs. This let's us safely
+        // patterns have already been read from LowArgs. This lets us safely
         // assume that all remaining positional arguments are intended to be
         // file paths.
+        if state.stdin_consumed && low.inputs.iter().any(|i| i.is_stdin()) {
+            anyhow::bail!(
+                "error: attempted to read patterns or input file paths \
+                 from stdin while also searching stdin",
+            );
+        }
 
-        let mut paths = Vec::with_capacity(low.positional.len());
-        for osarg in low.positional.drain(..) {
-            let path = PathBuf::from(osarg);
-            if state.stdin_consumed && path == Path::new("-") {
-                anyhow::bail!(
-                    "error: attempted to read patterns from stdin \
-                     while also searching stdin",
-                );
-            }
-            paths.push(path);
+        let mut paths = Vec::with_capacity(low.inputs.len());
+        for input in low.inputs.drain(..) {
+            Self::add_paths_from_input(state, input, &mut paths)?;
         }
         log::debug!("number of paths given to search: {}", paths.len());
         if !paths.is_empty() {
@@ -1172,6 +1182,95 @@ impl Paths {
     /// Returns true if ripgrep will only search stdin and nothing else.
     fn is_only_stdin(&self) -> bool {
         self.paths.len() == 1 && self.paths[0] == Path::new("-")
+    }
+
+    /// Interprets `input` and adds its content to `output`.
+    ///
+    /// `input` may be a positional argument or a source specified through
+    /// an `--in` or `--in0` flag, whose goal is to reuse existing input file
+    /// sets and to enable usage of chained ripgrep calls, such as:
+    /// `rg foo -l0 | rg bar --in0=- -l0 | rg baz --in0=-`
+    fn add_paths_from_input(
+        state: &mut State,
+        input: InputSource,
+        output: &mut Vec<PathBuf>,
+    ) -> anyhow::Result<()> {
+        // We need to handle a combination of the following:
+        // - Positional arguments or input files
+        // - In case of input files: with LF/CRLF or NUL terminators
+        // - Files or stdin: this needs to handle `stdin_consumed`
+        match input {
+            InputSource::PositionalArgument(_) => {
+                if state.stdin_consumed && input.is_stdin() {
+                    anyhow::bail!(
+                        "error: attempted to read from stdin: stdin \
+                         has already been consumed",
+                    );
+                }
+                Self::consume_input(std::io::empty(), input, output)?;
+                state.stdin_consumed = true;
+            }
+            InputSource::LineTerminated(ref path)
+            | InputSource::NulTerminated(ref path) => {
+                if input.is_stdin() {
+                    anyhow::ensure!(
+                        !state.stdin_consumed,
+                        "error: attempted to read {} from stdin: stdin \
+                         has already been consumed",
+                        input.flag().unwrap_or("input")
+                    );
+                    let stdin = std::io::stdin();
+                    let locked = stdin.lock();
+                    Self::consume_input(locked, input, output)?;
+                    state.stdin_consumed = true;
+                } else {
+                    let file = std::fs::File::open(path).map_err(|err| {
+                        std::io::Error::other(format!("{}: {}", input, err))
+                    })?;
+                    Self::consume_input(file, input, output)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Consumes `input` by adding paths from the associated `read` to `output`.
+    ///
+    /// In the case of positional arguments, `read` is not relevant.
+    fn consume_input(
+        read: impl std::io::Read,
+        input: InputSource,
+        output: &mut Vec<PathBuf>,
+    ) -> anyhow::Result<()> {
+        match input {
+            InputSource::PositionalArgument(osstr) => {
+                output.push(PathBuf::from(osstr));
+            }
+            InputSource::LineTerminated(_) => std::io::BufReader::new(read)
+                .for_byte_line(|line| {
+                    if line.contains(&b'\x00') {
+                        return Err(std::io::Error::other(format!(
+                            "{}: file contains a NUL byte, \
+                             did you intend to use --in0 instead of --in?",
+                            input
+                        )));
+                    }
+                    let s = ByteSlice::to_path(line).map_err(|err| {
+                        std::io::Error::other(format!("{}: {}", input, err))
+                    })?;
+                    output.push(PathBuf::from(s));
+                    Ok(true)
+                })?,
+            InputSource::NulTerminated(_) => std::io::BufReader::new(read)
+                .for_byte_record(b'\x00', |record| {
+                    let s = ByteSlice::to_path(record).map_err(|err| {
+                        std::io::Error::other(format!("{}: {}", input, err))
+                    })?;
+                    output.push(PathBuf::from(s));
+                    Ok(true)
+                })?,
+        };
+        Ok(())
     }
 }
 

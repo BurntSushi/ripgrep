@@ -275,6 +275,7 @@ impl TestCommand {
     }
 
     /// Set an environment variable for this command.
+    #[allow(dead_code)] // unused on Windows
     pub fn env(
         &mut self,
         key: impl AsRef<OsStr>,
