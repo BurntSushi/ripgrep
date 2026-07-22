@@ -45,7 +45,7 @@ pub(crate) struct HiArgs {
     context: ContextMode,
     context_separator: ContextSeparator,
     crlf: bool,
-    cwd: PathBuf,
+    cwd: Option<PathBuf>,
     dfa_size_limit: Option<usize>,
     encoding: EncodingMode,
     engine: EngineChoice,
@@ -910,8 +910,10 @@ impl HiArgs {
             .git_ignore(!self.no_ignore_vcs)
             .git_exclude(!self.no_ignore_vcs && !self.no_ignore_exclude)
             .require_git(!self.no_require_git)
-            .ignore_case_insensitive(self.ignore_file_case_insensitive)
-            .current_dir(&self.cwd);
+            .ignore_case_insensitive(self.ignore_file_case_insensitive);
+        if let Some(ref cwd) = self.cwd {
+            builder.current_dir(cwd);
+        }
         if !self.no_ignore_dot {
             builder.add_custom_ignore_filename(".rgignore");
         }
@@ -974,8 +976,8 @@ struct State {
     /// providing good error messages when the user has tried to read from stdin
     /// in two different places. For example, `rg -f - -`.
     stdin_consumed: bool,
-    /// The current working directory.
-    cwd: PathBuf,
+    /// The current working directory, when it could be discovered.
+    cwd: Option<PathBuf>,
 }
 
 impl State {
@@ -986,8 +988,16 @@ impl State {
     fn new() -> anyhow::Result<State> {
         use std::io::IsTerminal;
 
-        let cwd = current_dir()?;
-        log::debug!("read CWD from environment: {}", cwd.display());
+        let cwd = match current_dir() {
+            Ok(cwd) => {
+                log::debug!("read CWD from environment: {}", cwd.display());
+                Some(cwd)
+            }
+            Err(err) => {
+                log::debug!("failed to read CWD from environment: {err}");
+                None
+            }
+        };
         Ok(State {
             is_terminal_stdout: std::io::stdout().is_terminal(),
             stdin_consumed: false,
@@ -1250,7 +1260,9 @@ fn globs(
     if low.globs.is_empty() && low.iglobs.is_empty() {
         return Ok(ignore::overrides::Override::empty());
     }
-    let mut builder = ignore::overrides::OverrideBuilder::new(&state.cwd);
+    let mut builder = ignore::overrides::OverrideBuilder::new(
+        state.cwd.as_deref().unwrap_or(Path::new(".")),
+    );
     // Make all globs case insensitive with --glob-case-insensitive.
     if low.glob_case_insensitive {
         builder.case_insensitive(true).unwrap();
@@ -1274,7 +1286,9 @@ fn preprocessor_globs(
     if low.pre_glob.is_empty() {
         return Ok(ignore::overrides::Override::empty());
     }
-    let mut builder = ignore::overrides::OverrideBuilder::new(&state.cwd);
+    let mut builder = ignore::overrides::OverrideBuilder::new(
+        state.cwd.as_deref().unwrap_or(Path::new(".")),
+    );
     for glob in low.pre_glob.iter() {
         builder.add(glob)?;
     }
