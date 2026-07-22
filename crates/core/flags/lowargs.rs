@@ -107,6 +107,7 @@ pub(crate) struct LowArgs {
     pub(crate) threads: Option<usize>,
     pub(crate) trim: bool,
     pub(crate) type_changes: Vec<TypeChange>,
+    pub(crate) type_case_insensitive: bool,
     pub(crate) unrestricted: usize,
     pub(crate) vimgrep: bool,
     pub(crate) with_filename: Option<bool>,

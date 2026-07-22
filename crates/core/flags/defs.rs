@@ -142,6 +142,7 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &TypeNot,
     &TypeAdd,
     &TypeClear,
+    &TypeCaseInsensitive,
     &TypeList,
     &Unrestricted,
     &Version,
@@ -7455,6 +7456,65 @@ fn test_type_clear() {
         ],
         args.type_changes
     );
+}
+
+/// --type-case-insensitive
+#[derive(Debug)]
+struct TypeCaseInsensitive;
+
+impl Flag for TypeCaseInsensitive {
+    fn is_switch(&self) -> bool {
+        true
+    }
+    fn name_long(&self) -> &'static str {
+        "type-case-insensitive"
+    }
+    fn name_negated(&self) -> Option<&'static str> {
+        Some("no-type-case-insensitive")
+    }
+    fn doc_category(&self) -> Category {
+        Category::Filter
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Search all \flag{type} patterns case insensitively."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Process all file type patterns given with the \flag{type} flag case
+insensitively. For example, \fBrg --type-case-insensitive -t html\fP will
+match files with extensions \fB.html\fP, \fB.HTML\fP, \fB.htm\fP and
+\fB.HTM\fP.
+"
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        args.type_case_insensitive = v.unwrap_switch();
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_type_case_insensitive() {
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(false, args.type_case_insensitive);
+
+    let args = parse_low_raw(["--type-case-insensitive"]).unwrap();
+    assert_eq!(true, args.type_case_insensitive);
+
+    let args = parse_low_raw([
+        "--type-case-insensitive",
+        "--no-type-case-insensitive",
+    ])
+    .unwrap();
+    assert_eq!(false, args.type_case_insensitive);
+
+    let args = parse_low_raw([
+        "--no-type-case-insensitive",
+        "--type-case-insensitive",
+    ])
+    .unwrap();
+    assert_eq!(true, args.type_case_insensitive);
 }
 
 /// --type-not

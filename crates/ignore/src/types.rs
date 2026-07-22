@@ -305,6 +305,7 @@ impl Types {
 pub struct TypesBuilder {
     types: HashMap<String, FileTypeDef>,
     selections: Vec<Selection<()>>,
+    case_insensitive: bool,
 }
 
 impl TypesBuilder {
@@ -314,7 +315,20 @@ impl TypesBuilder {
     /// of default type definitions can be added with `add_defaults`, and
     /// additional type definitions can be added with `select` and `negate`.
     pub fn new() -> TypesBuilder {
-        TypesBuilder { types: HashMap::new(), selections: vec![] }
+        TypesBuilder {
+            types: HashMap::new(),
+            selections: vec![],
+            case_insensitive: false,
+        }
+    }
+
+    /// Enable or disable case insensitive matching for all file type globs.
+    ///
+    /// When enabled, a type like `html` will match files with extensions
+    /// `.html`, `.HTML`, `.htm`, `.HTM`, etc.
+    pub fn case_insensitive(&mut self, yes: bool) -> &mut TypesBuilder {
+        self.case_insensitive = yes;
+        self
     }
 
     /// Build the current set of file type definitions *and* selections into
@@ -338,6 +352,7 @@ impl TypesBuilder {
                 build_set.add(
                     GlobBuilder::new(glob)
                         .literal_separator(true)
+                        .case_insensitive(self.case_insensitive)
                         .build()
                         .map_err(|err| Error::Glob {
                             glob: Some(glob.to_string()),

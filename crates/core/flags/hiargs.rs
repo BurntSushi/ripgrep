@@ -1222,6 +1222,9 @@ impl BinaryDetection {
 fn types(low: &LowArgs) -> anyhow::Result<ignore::types::Types> {
     let mut builder = ignore::types::TypesBuilder::new();
     builder.add_defaults();
+    if low.type_case_insensitive {
+        builder.case_insensitive(true);
+    }
     for tychange in low.type_changes.iter() {
         match *tychange {
             TypeChange::Clear { ref name } => {
