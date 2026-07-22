@@ -3484,27 +3484,16 @@ as an index directory and every index is searched in command line order. An
 operand that is not a valid index is an error.
 .sp
 .IP 2. 4
-The index named by the \fBRIPGREP_INDEX_PATH\fP environment variable.
-.sp
-.IP 3. 4
 A valid index in a \fB.ripgrep\fP directory in the current working directory.
 .sp
-.IP 4. 4
+.IP 3. 4
 A valid index in a \fB.ripgrep\fP directory in the nearest parent of the current
 working directory.
 .PP
-If no index is found, ripgrep performs an ordinary search.
+If no index is found, ripgrep returns an error.
 .sp
-Indexed candidates are filtered by explicit glob and file-type selections,
-hidden-file and depth settings, and the maximum file size. Ignore files,
-including \fB.gitignore\fP, are not read or reapplied during an indexed search.
-Options that require transformed contents or every file make the query
-ineligible for candidate filtering and therefore trigger the fallback below.
-.sp
-This flag may be given at most twice. When it is given once and the query
-cannot use an index, ripgrep performs an ordinary search. When it is given
-twice and an index was found, ripgrep stops instead of performing an ordinary
-search if the query cannot use the index.
+When indexing is enabled, most flags that do filtering or require transforming
+the contents of a file in some way, aren't supported.
 "
     }
 
@@ -3585,16 +3574,13 @@ ripgrep chooses the index location in the following order:
 The path given by \flag{x-path}.
 .sp
 .IP 2. 4
-The path in the \fBRIPGREP_INDEX_PATH\fP environment variable.
-.sp
-.IP 3. 4
 A valid index in a \fB.ripgrep\fP directory in the current working directory.
 .sp
-.IP 4. 4
+.IP 3. 4
 A valid index in a \fB.ripgrep\fP directory in the nearest parent of the current
 working directory.
 .sp
-.IP 5. 4
+.IP 4. 4
 A \fB.ripgrep\fP directory in the current working directory, which is created
 when necessary.
 .PP
@@ -3715,8 +3701,7 @@ impl Flag for IndexPath {
     }
     fn doc_long(&self) -> &'static str {
         r"
-Set the index path used by \flag{x-crud}. This takes precedence over
-\fBRIPGREP_INDEX_PATH\fP and automatic discovery of a \fB.ripgrep\fP directory.
+Set the index path used by \flag{x-crud}.
 "
     }
     fn completion_type(&self) -> CompletionType {

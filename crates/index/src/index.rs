@@ -27,6 +27,10 @@ impl Index {
     pub fn path(&self) -> &Path {
         &self.path
     }
+
+    pub fn writer(&self) -> IndexWriter<'_> {
+        IndexWriter { index: self }
+    }
 }
 
 #[derive(Default)]
@@ -213,5 +217,24 @@ impl std::fmt::Debug for Handle {
             Handle::ReadWrite(_) => write!(f, "<redb read-write database>"),
             Handle::ReadOnly(_) => write!(f, "<redb read-only database>"),
         }
+    }
+}
+
+pub struct IndexWriter<'i> {
+    index: &'i Index,
+}
+
+impl<'i> IndexWriter<'i> {
+    pub fn add(
+        &mut self,
+        path: impl AsRef<Path>,
+        contents: &[u8],
+    ) -> anyhow::Result<()> {
+        let path = path.as_ref();
+        anyhow::ensure!(
+            !path.is_absolute(),
+            "file paths must be relative to root"
+        );
+        Ok(())
     }
 }
