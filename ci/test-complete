@@ -43,10 +43,10 @@ main() {
     # where a long option starting with certain letters (see `_rg`) is found.
     # Occasionally we may have to handle some manually, however
     help_args=( ${(f)"$(
-        $rg --help |
-        $rg -i -- '^\s+--?[a-z0-9.]|--[a-z]' |
-        $rg -ior '$1' -- $'[\t /\"\'`.,](-[a-z0-9.]|--[a-z0-9-]+)(,|\\b)' |
-        $rg -vw -- --print0 # False positives
+        $rg --no-config --help |
+        $rg --no-config -i -- '^\s+--?[a-z0-9.]|--[a-z]' |
+        $rg --no-config -ior '$1' -- $'[\t /\"\'`.,](-[a-z0-9.]|--[a-z0-9-]+)(,|\\b)' |
+        $rg --no-config -vw -- --print0 # False positives
     )"} )
     help_args=( ${(ou)help_args} )
 
