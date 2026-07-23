@@ -488,14 +488,14 @@ fn try_resolve_binary<P: AsRef<Path>>(
 }
 
 fn default_decompression_commands() -> Vec<DecompressionCommand> {
-    const ARGS_GZIP: &[&str] = &["gzip", "-d", "-c"];
-    const ARGS_BZIP: &[&str] = &["bzip2", "-d", "-c"];
-    const ARGS_XZ: &[&str] = &["xz", "-d", "-c"];
-    const ARGS_LZ4: &[&str] = &["lz4", "-d", "-c"];
-    const ARGS_LZMA: &[&str] = &["xz", "--format=lzma", "-d", "-c"];
-    const ARGS_BROTLI: &[&str] = &["brotli", "-d", "-c"];
-    const ARGS_ZSTD: &[&str] = &["zstd", "-q", "-d", "-c"];
-    const ARGS_UNCOMPRESS: &[&str] = &["uncompress", "-c"];
+    const ARGS_GZIP: &[&str] = &["gzip", "-d", "-c", "--"];
+    const ARGS_BZIP: &[&str] = &["bzip2", "-d", "-c", "--"];
+    const ARGS_XZ: &[&str] = &["xz", "-d", "-c", "--"];
+    const ARGS_LZ4: &[&str] = &["lz4", "-d", "-c", "--"];
+    const ARGS_LZMA: &[&str] = &["xz", "--format=lzma", "-d", "-c", "--"];
+    const ARGS_BROTLI: &[&str] = &["brotli", "-d", "-c", "--"];
+    const ARGS_ZSTD: &[&str] = &["zstd", "-q", "-d", "-c", "--"];
+    const ARGS_UNCOMPRESS: &[&str] = &["uncompress", "-c", "--"];
 
     fn add(glob: &str, args: &[&str], cmds: &mut Vec<DecompressionCommand>) {
         let bin = match resolve_binary(Path::new(args[0])) {
