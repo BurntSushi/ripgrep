@@ -469,8 +469,10 @@ impl GlobSet {
         }
 
         let mut len = 0;
-        let mut lits = LiteralStrategy::new();
-        let mut base_lits = BasenameLiteralStrategy::new();
+        let mut lits = LiteralStrategy::new(false);
+        let mut lits_ci = LiteralStrategy::new(true);
+        let mut base_lits = BasenameLiteralStrategy::new(false);
+        let mut base_lits_ci = BasenameLiteralStrategy::new(true);
         let mut exts = ExtensionStrategy::new();
         let mut prefixes = MultiStrategyBuilder::new();
         let mut suffixes = MultiStrategyBuilder::new();
@@ -480,12 +482,21 @@ impl GlobSet {
             len += 1;
 
             let p = p.as_ref();
+            let case_insensitive = p.is_case_insensitive();
             match MatchStrategy::new(p) {
                 MatchStrategy::Literal(lit) => {
-                    lits.add(i, lit);
+                    if case_insensitive {
+                        lits_ci.add(i, lit);
+                    } else {
+                        lits.add(i, lit);
+                    }
                 }
                 MatchStrategy::BasenameLiteral(lit) => {
-                    base_lits.add(i, lit);
+                    if case_insensitive {
+                        base_lits_ci.add(i, lit);
+                    } else {
+                        base_lits.add(i, lit);
+                    }
                 }
                 MatchStrategy::Extension(ext) => {
                     exts.add(i, ext);
@@ -494,6 +505,9 @@ impl GlobSet {
                     prefixes.add(i, prefix);
                 }
                 MatchStrategy::Suffix { suffix, component } => {
+                    // `suffix()` never returns `Some` for a
+                    // case-insensitive pattern, so this is always the
+                    // case-sensitive literal strategy.
                     if component {
                         lits.add(i, suffix[1..].to_string());
                     }
@@ -513,17 +527,20 @@ impl GlobSet {
             }
         }
         debug!(
-            "built glob set; {} literals, {} basenames, {} extensions, \
+            "built glob set; {} literals, {} case-insensitive literals, \
+                {} basenames, {} case-insensitive basenames, {} extensions, \
                 {} prefixes, {} suffixes, {} required extensions, {} regexes",
             lits.0.len(),
+            lits_ci.0.len(),
             base_lits.0.len(),
+            base_lits_ci.0.len(),
             exts.0.len(),
             prefixes.literals.len(),
             suffixes.literals.len(),
             required_exts.0.len(),
             regexes.literals.len()
         );
-        let mut strats = Vec::with_capacity(7);
+        let mut strats = Vec::with_capacity(9);
         // Only add strategies that are populated
         if !exts.0.is_empty() {
             strats.push(GlobSetMatchStrategy::Extension(exts));
@@ -531,8 +548,14 @@ impl GlobSet {
         if !base_lits.0.is_empty() {
             strats.push(GlobSetMatchStrategy::BasenameLiteral(base_lits));
         }
+        if !base_lits_ci.0.is_empty() {
+            strats.push(GlobSetMatchStrategy::BasenameLiteral(base_lits_ci));
+        }
         if !lits.0.is_empty() {
             strats.push(GlobSetMatchStrategy::Literal(lits));
+        }
+        if !lits_ci.0.is_empty() {
+            strats.push(GlobSetMatchStrategy::Literal(lits_ci));
         }
         if !suffixes.is_empty() {
             strats.push(GlobSetMatchStrategy::Suffix(suffixes.suffix()));
@@ -707,19 +730,28 @@ impl GlobSetMatchStrategy {
 }
 
 #[derive(Clone, Debug)]
-struct LiteralStrategy(fnv::HashMap<Vec<u8>, Vec<usize>>);
+struct LiteralStrategy(fnv::HashMap<Vec<u8>, Vec<usize>>, bool);
 
 impl LiteralStrategy {
-    fn new() -> LiteralStrategy {
-        LiteralStrategy(fnv::HashMap::default())
+    fn new(case_insensitive: bool) -> LiteralStrategy {
+        LiteralStrategy(fnv::HashMap::default(), case_insensitive)
     }
 
     fn add(&mut self, global_index: usize, lit: String) {
-        self.0.entry(lit.into_bytes()).or_insert(vec![]).push(global_index);
+        let lit = if self.1 {
+            lit.into_bytes().to_ascii_lowercase()
+        } else {
+            lit.into_bytes()
+        };
+        self.0.entry(lit).or_insert(vec![]).push(global_index);
     }
 
     fn is_match(&self, candidate: &Candidate<'_>) -> bool {
-        self.0.contains_key(candidate.path.as_bytes())
+        if self.1 {
+            self.0.contains_key(&candidate.path.to_ascii_lowercase())
+        } else {
+            self.0.contains_key(candidate.path.as_bytes())
+        }
     }
 
     fn matches_all(&self, candidate: &Candidate<'_>) -> bool {
@@ -732,29 +764,43 @@ impl LiteralStrategy {
         candidate: &Candidate<'_>,
         matches: &mut Vec<usize>,
     ) {
-        if let Some(hits) = self.0.get(candidate.path.as_bytes()) {
+        let hits = if self.1 {
+            self.0.get(&candidate.path.to_ascii_lowercase())
+        } else {
+            self.0.get(candidate.path.as_bytes())
+        };
+        if let Some(hits) = hits {
             matches.extend(hits);
         }
     }
 }
 
 #[derive(Clone, Debug)]
-struct BasenameLiteralStrategy(fnv::HashMap<Vec<u8>, Vec<usize>>);
+struct BasenameLiteralStrategy(fnv::HashMap<Vec<u8>, Vec<usize>>, bool);
 
 impl BasenameLiteralStrategy {
-    fn new() -> BasenameLiteralStrategy {
-        BasenameLiteralStrategy(fnv::HashMap::default())
+    fn new(case_insensitive: bool) -> BasenameLiteralStrategy {
+        BasenameLiteralStrategy(fnv::HashMap::default(), case_insensitive)
     }
 
     fn add(&mut self, global_index: usize, lit: String) {
-        self.0.entry(lit.into_bytes()).or_insert(vec![]).push(global_index);
+        let lit = if self.1 {
+            lit.into_bytes().to_ascii_lowercase()
+        } else {
+            lit.into_bytes()
+        };
+        self.0.entry(lit).or_insert(vec![]).push(global_index);
     }
 
     fn is_match(&self, candidate: &Candidate<'_>) -> bool {
         if candidate.basename.is_empty() {
             return false;
         }
-        self.0.contains_key(candidate.basename.as_bytes())
+        if self.1 {
+            self.0.contains_key(&candidate.basename.to_ascii_lowercase())
+        } else {
+            self.0.contains_key(candidate.basename.as_bytes())
+        }
     }
 
     fn matches_all(&self, candidate: &Candidate<'_>) -> bool {
@@ -770,7 +816,12 @@ impl BasenameLiteralStrategy {
         if candidate.basename.is_empty() {
             return;
         }
-        if let Some(hits) = self.0.get(candidate.basename.as_bytes()) {
+        let hits = if self.1 {
+            self.0.get(&candidate.basename.to_ascii_lowercase())
+        } else {
+            self.0.get(candidate.basename.as_bytes())
+        };
+        if let Some(hits) = hits {
             matches.extend(hits);
         }
     }

@@ -162,6 +162,8 @@ struct GlobStrategic {
     strategy: MatchStrategy,
     /// The pattern, as a compiled regex.
     re: Regex,
+    /// Whether the pattern was compiled with case-insensitive matching.
+    case_insensitive: bool,
 }
 
 #[cfg(test)]
@@ -176,9 +178,19 @@ impl GlobStrategic {
         let byte_path = &*candidate.path;
 
         match self.strategy {
-            MatchStrategy::Literal(ref lit) => lit.as_bytes() == byte_path,
+            MatchStrategy::Literal(ref lit) => {
+                if self.case_insensitive {
+                    byte_path.to_ascii_lowercase() == lit.as_bytes()
+                } else {
+                    lit.as_bytes() == byte_path
+                }
+            }
             MatchStrategy::BasenameLiteral(ref lit) => {
-                lit.as_bytes() == &*candidate.basename
+                if self.case_insensitive {
+                    candidate.basename.to_ascii_lowercase() == lit.as_bytes()
+                } else {
+                    lit.as_bytes() == &*candidate.basename
+                }
             }
             MatchStrategy::Extension(ref ext) => {
                 ext.as_bytes() == &*candidate.ext
@@ -301,7 +313,11 @@ impl Glob {
         let strategy = MatchStrategy::new(self);
         let re =
             new_regex(&self.re).expect("regex compilation shouldn't fail");
-        GlobStrategic { strategy, re }
+        GlobStrategic {
+            strategy,
+            re,
+            case_insensitive: self.is_case_insensitive(),
+        }
     }
 
     /// Returns the original glob pattern used to build this pattern.
@@ -327,18 +343,24 @@ impl Glob {
         &self.re
     }
 
+    /// Returns whether this pattern was built with case-insensitive
+    /// matching.
+    pub(crate) fn is_case_insensitive(&self) -> bool {
+        self.opts.case_insensitive
+    }
+
     /// Returns the pattern as a literal if and only if the pattern must match
     /// an entire path exactly.
     ///
     /// The basic format of these patterns is `{literal}`.
     fn literal(&self) -> Option<String> {
-        if self.opts.case_insensitive {
-            return None;
-        }
         let mut lit = String::new();
         for t in &*self.tokens {
             let Token::Literal(c) = *t else { return None };
             lit.push(c);
+        }
+        if self.opts.case_insensitive {
+            lit = lit.to_ascii_lowercase();
         }
         if lit.is_empty() { None } else { Some(lit) }
     }
@@ -508,9 +530,6 @@ impl Glob {
     /// doesn't *always* match when a file path has a basename of `foo`. e.g.,
     /// `foo` doesn't match `abc/foo`.
     fn basename_tokens(&self) -> Option<&[Token]> {
-        if self.opts.case_insensitive {
-            return None;
-        }
         let start = match *self.tokens.get(0)? {
             Token::RecursivePrefix => 1,
             _ => {
@@ -562,6 +581,9 @@ impl Glob {
         for t in tokens {
             let Token::Literal(c) = *t else { return None };
             lit.push(c);
+        }
+        if self.opts.case_insensitive {
+            lit = lit.to_ascii_lowercase();
         }
         Some(lit)
     }
@@ -1461,6 +1483,8 @@ mod tests {
     matches!(matchcasei2, "aBcDeFg", "abcdefg", CASEI);
     matches!(matchcasei3, "aBcDeFg", "ABCDEFG", CASEI);
     matches!(matchcasei4, "aBcDeFg", "AbCdEfG", CASEI);
+    matches!(matchcasei_basename1, "**/FOO", "bar/foo", CASEI);
+    matches!(matchcasei_basename2, "**/FOO", "bar/FOO", CASEI);
 
     matches!(matchalt1, "a,b", "a,b");
     matches!(matchalt2, ",", ",");
@@ -1618,7 +1642,7 @@ mod tests {
     }
 
     literal!(extract_lit1, "foo", Some(s("foo")));
-    literal!(extract_lit2, "foo", None, CASEI);
+    literal!(extract_lit2, "foo", Some(s("foo")), CASEI);
     literal!(extract_lit3, "/foo", Some(s("/foo")));
     literal!(extract_lit4, "/foo/", Some(s("/foo/")));
     literal!(extract_lit5, "/foo/bar", Some(s("/foo/bar")));
@@ -1631,7 +1655,12 @@ mod tests {
         "**/foo",
         Some(&*vec![Literal('f'), Literal('o'), Literal('o'),])
     );
-    basetokens!(extract_basetoks2, "**/foo", None, CASEI);
+    basetokens!(
+        extract_basetoks2,
+        "**/foo",
+        Some(&*vec![Literal('f'), Literal('o'), Literal('o'),]),
+        CASEI
+    );
     basetokens!(
         extract_basetoks3,
         "**/foo",
@@ -1683,4 +1712,5 @@ mod tests {
     baseliteral!(extract_baselit2, "foo", None);
     baseliteral!(extract_baselit3, "*foo", None);
     baseliteral!(extract_baselit4, "*/foo", None);
+    baseliteral!(extract_baselit5, "**/FOO", Some(s("foo")), CASEI);
 }
