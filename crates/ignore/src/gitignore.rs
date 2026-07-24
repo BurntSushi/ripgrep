@@ -465,9 +465,11 @@ impl GitignoreBuilder {
         if line.starts_with("#") {
             return Ok(self);
         }
-        if !line.ends_with("\\ ") {
-            line = line.trim_right();
-        }
+        // Trailing spaces are ignored unless escaped with a backslash, matching
+        // git (see `man gitignore`). Previously we only preserved a single
+        // trailing "\ " and over-trimmed patterns like "foo\   ", which left a
+        // dangling backslash and failed to parse (#3477).
+        line = trim_trailing_unescaped_spaces(line);
         if line.is_empty() {
             return Ok(self);
         }
@@ -659,6 +661,34 @@ fn excludes_file_default() -> Option<PathBuf> {
 
 /// Extract git's `core.excludesfile` config setting from the raw file contents
 /// given.
+
+/// Trim trailing spaces that are not escaped by a backslash.
+///
+/// Git ignores trailing spaces in gitignore patterns unless they are quoted
+/// with a backslash (`\ `). Spaces after an odd number of consecutive
+/// backslashes are treated as escaped and preserved; unescaped trailing spaces
+/// are removed.
+fn trim_trailing_unescaped_spaces(line: &str) -> &str {
+    let bytes = line.as_bytes();
+    let mut end = bytes.len();
+    while end > 0 && bytes[end - 1] == b' ' {
+        // Count consecutive backslashes immediately before this space.
+        let mut bs = 0;
+        let mut j = end - 1;
+        while j > 0 && bytes[j - 1] == b'\\' {
+            bs += 1;
+            j -= 1;
+        }
+        // Odd number of backslashes => the space is escaped; stop.
+        if bs % 2 == 1 {
+            break;
+        }
+        end -= 1;
+    }
+    // Only ASCII spaces/backslashes are involved, so this is a valid &str split.
+    &line[..end]
+}
+
 fn parse_excludes_file(data: &[u8]) -> Option<PathBuf> {
     use std::sync::OnceLock;
 
@@ -859,6 +889,29 @@ mod tests {
     #[test]
     fn regression_106() {
         gi_from_str("/", " ");
+    }
+
+    // See: https://github.com/BurntSushi/ripgrep/issues/3477
+    // Escaped trailing space with extra unescaped trailing spaces must not
+    // leave a dangling backslash (git keeps the escaped space).
+    ignored!(ig_escaped_trailing_space, ROOT, "foo\\ ", "foo ");
+    ignored!(ig_escaped_trailing_space_extra, ROOT, "foo\\   ", "foo ");
+    not_ignored!(
+        ignot_escaped_trailing_space_nomatch,
+        ROOT,
+        "foo\\   ",
+        "foo"
+    );
+
+    #[test]
+    fn trim_trailing_unescaped_spaces() {
+        use super::trim_trailing_unescaped_spaces as trim;
+        assert_eq!(trim("foo"), "foo");
+        assert_eq!(trim("foo  "), "foo");
+        assert_eq!(trim("foo\\ "), "foo\\ ");
+        assert_eq!(trim("foo\\   "), "foo\\ ");
+        assert_eq!(trim(" "), "");
+        assert_eq!(trim("\\ "), "\\ ");
     }
 
     #[test]
