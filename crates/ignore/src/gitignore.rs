@@ -896,7 +896,12 @@ mod tests {
     // leave a dangling backslash (git keeps the escaped space).
     ignored!(ig_escaped_trailing_space, ROOT, "foo\\ ", "foo ");
     ignored!(ig_escaped_trailing_space_extra, ROOT, "foo\\   ", "foo ");
-    not_ignored!(ignot_escaped_trailing_space_nomatch, ROOT, "foo\\   ", "foo");
+    not_ignored!(
+        ignot_escaped_trailing_space_nomatch,
+        ROOT,
+        "foo\\   ",
+        "foo"
+    );
 
     #[test]
     fn trim_trailing_unescaped_spaces() {
