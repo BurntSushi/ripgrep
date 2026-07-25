@@ -21,6 +21,7 @@
 * [When I run `rg`, why does it execute some other command?](#rg-other-cmd)
 * [How do I create an alias for ripgrep on Windows?](#rg-alias-windows)
 * [How do I create a PowerShell profile?](#powershell-profile)
+* [Why do paths and encoding look wrong in Git Bash on Windows?](#windows-paths-encoding)
 * [How do I pipe non-ASCII content to ripgrep on Windows?](#pipe-non-ascii-windows)
 * [How can I search and replace with ripgrep?](#search-and-replace)
 * [How is ripgrep licensed?](#license)
@@ -827,6 +828,35 @@ for more details.
 
 Any PowerShell code in this file gets evaluated at the start of console. This
 way you can have own aliases to be created at start.
+
+
+<h3 name="windows-paths-encoding">
+Why do paths and encoding look wrong in Git Bash on Windows?
+</h3>
+
+ripgrep prints file paths using the platform's native path separator (`\` on
+Windows). Under Git Bash, MSYS2, or Cygwin, that can look awkward next to
+Unix-style tools, and console locale settings can also garble non-ASCII
+output even though ripgrep is emitting the file bytes unchanged.
+
+If you want forward slashes in printed paths when using those shells, set
+`--path-separator`. A common alias is:
+
+```
+alias rg='rg --path-separator //'
+```
+
+The double slash avoids Git Bash rewriting a single `/`.
+
+If non-ASCII characters (for example umlauts in file contents) look wrong in
+a Windows console, try enabling the system UTF-8 locale: Settings → Time &
+Language → Language → Administrative language settings → Change system
+locale… → check "Beta: Use Unicode UTF-8 for worldwide language support",
+then reboot. This is a system-wide change and may affect other programs.
+
+See also
+[Why does using a leading `/` on Windows fail?](#because-cygwin) and
+[How do I pipe non-ASCII content to ripgrep on Windows?](#pipe-non-ascii-windows).
 
 
 <h3 name="pipe-non-ascii-windows">
