@@ -530,3 +530,84 @@ fn default_decompression_commands() -> Vec<DecompressionCommand> {
     add("*.Z", ARGS_UNCOMPRESS, &mut cmds);
     cmds
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{DecompressionMatcher, DecompressionMatcherBuilder};
+
+    #[test]
+    fn default_matcher_matches_known_extensions() {
+        let matcher = DecompressionMatcher::new();
+        for path in [
+            "archive.gz",
+            "archive.tgz",
+            "archive.bz2",
+            "archive.tbz2",
+            "archive.xz",
+            "archive.txz",
+            "archive.lz4",
+            "archive.lzma",
+            "archive.br",
+            "archive.zst",
+            "archive.zstd",
+            "archive.Z",
+        ] {
+            assert!(
+                matcher.has_command(path),
+                "expected a decompression command for {path}",
+            );
+            assert!(
+                matcher.command(path).is_some(),
+                "expected command() to return a command for {path}",
+            );
+        }
+    }
+
+    #[test]
+    fn default_matcher_ignores_unknown_extensions() {
+        let matcher = DecompressionMatcher::new();
+        for path in ["file.txt", "file", "archive.rar", "notes.md"] {
+            assert!(
+                !matcher.has_command(path),
+                "did not expect a decompression command for {path}",
+            );
+            assert!(matcher.command(path).is_none());
+        }
+    }
+
+    #[test]
+    fn matching_uses_full_extension_not_substring() {
+        let matcher = DecompressionMatcher::new();
+        // ".gz" must be an actual extension, not merely appear in the name.
+        assert!(!matcher.has_command("gzip-notes.txt"));
+        assert!(!matcher.has_command("my.gz.backup"));
+    }
+
+    #[test]
+    fn empty_matcher_without_defaults_matches_nothing() {
+        let matcher = DecompressionMatcherBuilder::new()
+            .defaults(false)
+            .build()
+            .unwrap();
+        assert!(!matcher.has_command("archive.gz"));
+        assert!(matcher.command("archive.gz").is_none());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn last_matching_command_takes_precedence() {
+        // When two globs match the same path, command() uses the one added
+        // last. Add a custom rule for "*.gz" on top of the defaults using a
+        // binary that is guaranteed to resolve on PATH (`cat`), and confirm
+        // the custom command wins over the built-in gzip rule.
+        let matcher = DecompressionMatcherBuilder::new()
+            .associate("*.gz", "cat", &[] as &[&str])
+            .build()
+            .unwrap();
+        let cmd = matcher.command("archive.gz").expect("expected a command");
+        assert_eq!(
+            std::path::Path::new(cmd.get_program()).file_name().unwrap(),
+            "cat",
+        );
+    }
+}
