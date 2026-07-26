@@ -533,25 +533,31 @@ fn default_decompression_commands() -> Vec<DecompressionCommand> {
 
 #[cfg(test)]
 mod tests {
-    use super::{DecompressionMatcher, DecompressionMatcherBuilder};
+    use super::DecompressionMatcherBuilder;
+
+    // A binary that is virtually guaranteed to resolve on PATH for the
+    // platforms these tests run on. The built-in default rules cannot be used
+    // for asserting positive matches, because a rule is silently dropped when
+    // its decompression binary (e.g. `lz4`) is not installed on the test host.
+    #[cfg(unix)]
+    const PRESENT_BIN: &str = "cat";
+    #[cfg(windows)]
+    const PRESENT_BIN: &str = "cmd";
 
     #[test]
-    fn default_matcher_matches_known_extensions() {
-        let matcher = DecompressionMatcher::new();
-        for path in [
-            "archive.gz",
-            "archive.tgz",
-            "archive.bz2",
-            "archive.tbz2",
-            "archive.xz",
-            "archive.txz",
-            "archive.lz4",
-            "archive.lzma",
-            "archive.br",
-            "archive.zst",
-            "archive.zstd",
-            "archive.Z",
-        ] {
+    fn matches_associated_extensions() {
+        // Build a matcher (without defaults) whose globs all point at a binary
+        // that resolves on PATH, so matching behavior is deterministic and
+        // independent of which decompression tools happen to be installed.
+        let matcher = DecompressionMatcherBuilder::new()
+            .defaults(false)
+            .associate("*.gz", PRESENT_BIN, &[] as &[&str])
+            .associate("*.tar.gz", PRESENT_BIN, &[] as &[&str])
+            .associate("*.Z", PRESENT_BIN, &[] as &[&str])
+            .build()
+            .unwrap();
+
+        for path in ["archive.gz", "archive.tar.gz", "archive.Z"] {
             assert!(
                 matcher.has_command(path),
                 "expected a decompression command for {path}",
@@ -564,8 +570,12 @@ mod tests {
     }
 
     #[test]
-    fn default_matcher_ignores_unknown_extensions() {
-        let matcher = DecompressionMatcher::new();
+    fn ignores_unassociated_extensions() {
+        let matcher = DecompressionMatcherBuilder::new()
+            .defaults(false)
+            .associate("*.gz", PRESENT_BIN, &[] as &[&str])
+            .build()
+            .unwrap();
         for path in ["file.txt", "file", "archive.rar", "notes.md"] {
             assert!(
                 !matcher.has_command(path),
@@ -577,7 +587,11 @@ mod tests {
 
     #[test]
     fn matching_uses_full_extension_not_substring() {
-        let matcher = DecompressionMatcher::new();
+        let matcher = DecompressionMatcherBuilder::new()
+            .defaults(false)
+            .associate("*.gz", PRESENT_BIN, &[] as &[&str])
+            .build()
+            .unwrap();
         // ".gz" must be an actual extension, not merely appear in the name.
         assert!(!matcher.has_command("gzip-notes.txt"));
         assert!(!matcher.has_command("my.gz.backup"));
@@ -593,21 +607,20 @@ mod tests {
         assert!(matcher.command("archive.gz").is_none());
     }
 
-    #[cfg(unix)]
     #[test]
     fn last_matching_command_takes_precedence() {
         // When two globs match the same path, command() uses the one added
-        // last. Add a custom rule for "*.gz" on top of the defaults using a
-        // binary that is guaranteed to resolve on PATH (`cat`), and confirm
-        // the custom command wins over the built-in gzip rule.
+        // last. Both rules resolve to a present binary; the later, more
+        // specific rule must win.
         let matcher = DecompressionMatcherBuilder::new()
-            .associate("*.gz", "cat", &[] as &[&str])
+            .defaults(false)
+            .associate("*.gz", PRESENT_BIN, ["first"])
+            .associate("*.gz", PRESENT_BIN, ["second"])
             .build()
             .unwrap();
         let cmd = matcher.command("archive.gz").expect("expected a command");
-        assert_eq!(
-            std::path::Path::new(cmd.get_program()).file_name().unwrap(),
-            "cat",
-        );
+        let args: Vec<_> =
+            cmd.get_args().map(|a| a.to_string_lossy().into_owned()).collect();
+        assert_eq!(args, ["second"]);
     }
 }
