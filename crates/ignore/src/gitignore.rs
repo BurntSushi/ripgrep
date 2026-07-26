@@ -465,9 +465,17 @@ impl GitignoreBuilder {
         if line.starts_with("#") {
             return Ok(self);
         }
-        if !line.ends_with("\\ ") {
-            line = line.trim_right();
+        // Only trim unescaped trailing spaces
+        let mut trimmed = line;
+        while trimmed.len() > 0 && trimmed.ends_with(' ') {
+            // Check if the space is escaped (preceded by backslash)
+            let before_space = trimmed.len() - 1;
+            if before_space > 0 && trimmed.as_bytes()[before_space - 1] == b'\\' {
+                break;  // Space is escaped, don't trim
+            }
+            trimmed = &trimmed[..before_space];
         }
+        line = trimmed;
         if line.is_empty() {
             return Ok(self);
         }
