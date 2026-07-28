@@ -9,6 +9,8 @@ on:
 # We need this to be able to create releases.
 permissions:
   contents: write
+  id-token: write # for build provenance signing
+  attestations: write # to record the attestation
 
 jobs:
   # The create-release job runs purely to initialize the GitHub release itself,
@@ -281,6 +283,11 @@ jobs:
         shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
         echo "ASSET=$ARCHIVE.tar.gz" >> $GITHUB_ENV
         echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" >> $GITHUB_ENV
+
+    - name: Attest build provenance
+      uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+      with:
+        subject-path: ${{ env.ASSET }}
 
     - name: Upload release archive
       env:
