@@ -636,6 +636,7 @@ impl WalkBuilder {
             it: None,
             ig_root: ig_root.clone(),
             ig: ig_root.clone(),
+            max_depth: self.max_depth,
             max_filesize: self.max_filesize,
             skip: self.skip.clone(),
             filter: self.filter.clone(),
@@ -1118,6 +1119,7 @@ pub struct Walk {
     it: Option<WalkEventIter>,
     ig_root: Ignore,
     ig: Ignore,
+    max_depth: Option<usize>,
     max_filesize: Option<u64>,
     skip: Option<Arc<Handle>>,
     filter: Option<Filter>,
@@ -1228,12 +1230,17 @@ impl Iterator for Walk {
                         self.it.as_mut().unwrap().it.skip_current_dir();
                         // Still need to push this on the stack because
                         // we'll get a WalkEvent::Exit event for this dir.
-                        // We don't care if it errors though.
-                        let (igtmp, _) = self.ig.add_child(ent.path());
+                        // Its ignore files cannot apply to any visited entry.
+                        let (igtmp, _) =
+                            self.ig.add_child_with_entries(ent.path(), &[]);
                         self.ig = igtmp;
                         continue;
                     }
-                    let (igtmp, err) = self.ig.add_child(ent.path());
+                    let (igtmp, err) = if self.max_depth == Some(ent.depth()) {
+                        self.ig.add_child_with_entries(ent.path(), &[])
+                    } else {
+                        self.ig.add_child(ent.path())
+                    };
                     self.ig = igtmp;
                     ent.err = err;
                     return Some(Ok(ent));
@@ -2425,6 +2432,27 @@ mod tests {
             builder.max_depth(Some(2)),
             &["a", "a/b", "foo", "a/foo"],
         );
+    }
+
+    #[test]
+    fn max_depth_does_not_load_unreachable_ignore_files() {
+        let td = tmpdir();
+        let leaf = td.path().join("leaf");
+        mkdirp(&leaf);
+        wfile(leaf.join(".ignore"), "{invalid\n");
+
+        let mut builder = WalkBuilder::new(td.path());
+        builder.max_depth(Some(1));
+        let entry = builder
+            .build()
+            .find_map(|result| {
+                let entry = result.unwrap();
+                (entry.path() == leaf).then_some(entry)
+            })
+            .unwrap();
+
+        assert!(entry.error().is_none());
+        assert_paths(td.path(), &builder, &["leaf"]);
     }
 
     #[test]
