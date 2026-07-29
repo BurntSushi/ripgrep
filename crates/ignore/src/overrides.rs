@@ -111,6 +111,11 @@ impl Override {
             if !is_dir
                 || self.1.as_ref().is_some_and(|prefixes| {
                     prefixes.matched(path, true).is_none()
+                        && !path.as_os_str().is_empty()
+                        && path != Path::new(".")
+                        && path != self.path()
+                        && !crate::pathutil::strip_prefix("./", path)
+                            .is_some_and(|relative| relative == self.path())
                 })
             {
                 return Match::Ignore(Glob::unmatched());
@@ -339,6 +344,70 @@ mod tests {
         assert!(ov.matched("src/nested/main.rs", false).is_whitelist());
         assert!(ov.matched("outside", true).is_ignore());
         assert!(ov.matched("outside/nested", true).is_ignore());
+    }
+
+    #[test]
+    fn literal_prefix_preserves_override_root() {
+        let cases = [
+            (ROOT, ROOT),
+            (ROOT, ""),
+            (ROOT, "."),
+            (ROOT, "./"),
+            (".", "."),
+            (".", ""),
+            (".", "./"),
+            ("", ""),
+            ("", "."),
+            ("", "./"),
+            ("repo", "repo"),
+            ("repo", "./repo"),
+            ("./repo", "repo"),
+            ("./repo", "./repo"),
+        ];
+
+        for (root, path) in cases {
+            let ov = OverrideBuilder::new(root)
+                .add("src/**/*.rs")
+                .unwrap()
+                .build()
+                .unwrap();
+
+            assert!(
+                ov.matched(path, true).is_none(),
+                "root: {root:?}, path: {path:?}"
+            );
+            assert!(ov.matched("src", true).is_none());
+            assert!(ov.matched("src/nested/main.rs", false).is_whitelist());
+            assert!(ov.matched("outside", true).is_ignore());
+        }
+    }
+
+    #[test]
+    fn literal_prefix_preserves_explicit_root_ignores() {
+        let cases = [
+            ("repo", "repo"),
+            ("repo", "./repo"),
+            ("./repo", "repo"),
+            ("./repo", "./repo"),
+        ];
+
+        for (root, path) in cases {
+            let ov = OverrideBuilder::new(root)
+                .add("src/**/*.rs")
+                .unwrap()
+                .add("!repo")
+                .unwrap()
+                .build()
+                .unwrap();
+
+            assert!(
+                ov.matched(path, true).is_ignore(),
+                "root: {root:?}, path: {path:?}"
+            );
+            assert!(ov.matched("src", true).is_none());
+            assert!(ov.matched("src/nested/main.rs", false).is_whitelist());
+            assert!(ov.matched("outside", true).is_ignore());
+        }
     }
 
     #[test]
