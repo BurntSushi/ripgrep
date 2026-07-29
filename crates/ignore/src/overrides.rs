@@ -5,7 +5,7 @@ This provides functionality similar to `--include` or `--exclude` in command
 line tools.
 */
 
-use std::path::Path;
+use std::{collections::HashSet, path::Path};
 
 use crate::{
     Error, Match,
@@ -125,6 +125,7 @@ impl Override {
 pub struct OverrideBuilder {
     builder: GitignoreBuilder,
     directory_prefixes: Option<GitignoreBuilder>,
+    directory_prefix_components: HashSet<String>,
     case_insensitive: bool,
 }
 
@@ -139,6 +140,7 @@ impl OverrideBuilder {
         OverrideBuilder {
             builder,
             directory_prefixes: Some(GitignoreBuilder::new(path)),
+            directory_prefix_components: HashSet::new(),
             case_insensitive: false,
         }
     }
@@ -174,9 +176,20 @@ impl OverrideBuilder {
             return Ok(self);
         }
         if let Some(prefixes) = &mut self.directory_prefixes {
+            let glob =
+                if glob.ends_with("\\ ") { glob } else { glob.trim_end() };
+            let is_absolute = glob.starts_with('/');
             let glob = glob.strip_prefix('/').unwrap_or(glob);
-            match glob.split_once('/') {
-                Some((component, _))
+            let (glob, is_only_dir) = match glob.strip_suffix('/') {
+                Some(glob) => (glob.strip_suffix('\\').unwrap_or(glob), true),
+                None => (glob, false),
+            };
+            let component = glob
+                .split_once('/')
+                .map(|(component, _)| component)
+                .or_else(|| (is_absolute && is_only_dir).then_some(glob));
+            match component {
+                Some(component)
                     if !component.is_empty()
                         && component != "."
                         && component != ".."
@@ -185,8 +198,14 @@ impl OverrideBuilder {
                                 || matches!(byte, b'_' | b'-' | b'.')
                         }) =>
                 {
-                    prefixes.add_line(None, &format!("/{component}"))?;
-                    prefixes.add_line(None, &format!("/{component}/**"))?;
+                    if self
+                        .directory_prefix_components
+                        .insert(component.to_owned())
+                    {
+                        prefixes.add_line(None, &format!("/{component}"))?;
+                        prefixes
+                            .add_line(None, &format!("/{component}/**"))?;
+                    }
                 }
                 _ => self.directory_prefixes = None,
             }
@@ -352,6 +371,42 @@ mod tests {
         assert!(ov.matched("src", true).is_none());
         assert!(ov.matched("src/nested", true).is_none());
         assert!(ov.matched("src/nested/main.rs", false).is_whitelist());
+        assert!(ov.matched("outside", true).is_ignore());
+    }
+
+    #[test]
+    fn basename_directory_globs_preserve_nested_directories() {
+        for glob in ["src/", "src/   ", r"src\/"] {
+            let ov = ov(&[glob]);
+
+            assert!(ov.matched("nested", true).is_none(), "glob: {glob}");
+            assert!(
+                ov.matched("nested/src", true).is_whitelist(),
+                "glob: {glob}"
+            );
+            assert!(ov.matched("outside", true).is_none(), "glob: {glob}");
+        }
+    }
+
+    #[test]
+    fn rooted_directory_globs_prune_unmatched_directories() {
+        for glob in ["/src/", "/src/   ", r"/src\/"] {
+            let ov = ov(&[glob]);
+
+            assert!(ov.matched("src", true).is_whitelist(), "glob: {glob}");
+            assert!(ov.matched("nested", true).is_ignore(), "glob: {glob}");
+            assert!(ov.matched("outside", true).is_ignore(), "glob: {glob}");
+        }
+    }
+
+    #[test]
+    fn duplicate_literal_prefixes_are_added_once() {
+        let ov = ov(&["src/**/*.rs", "src/**/*.py", "src/lib/**"]);
+
+        assert_eq!(ov.1.as_ref().unwrap().len(), 2);
+        assert!(ov.matched("src", true).is_none());
+        assert!(ov.matched("src/nested/main.rs", false).is_whitelist());
+        assert!(ov.matched("src/nested/main.py", false).is_whitelist());
         assert!(ov.matched("outside", true).is_ignore());
     }
 

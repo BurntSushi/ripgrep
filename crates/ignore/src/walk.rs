@@ -2385,6 +2385,80 @@ mod tests {
     }
 
     #[test]
+    fn override_basename_directory_glob_keeps_nested_directories() {
+        let td = tmpdir();
+        mkdirp(td.path().join("src"));
+        mkdirp(td.path().join("nested/src"));
+
+        for glob in ["src/", "src/   ", r"src\/"] {
+            let overrides = OverrideBuilder::new(td.path())
+                .add(glob)
+                .unwrap()
+                .build()
+                .unwrap();
+            let mut builder = WalkBuilder::new(td.path());
+            builder.overrides(overrides);
+
+            assert_paths(
+                td.path(),
+                &builder,
+                &["src", "nested", "nested/src"],
+            );
+        }
+    }
+
+    #[test]
+    fn override_basename_directory_glob_disables_literal_prefix_pruning() {
+        let td = tmpdir();
+        mkdirp(td.path().join("target/nested"));
+        mkdirp(td.path().join("nested/src"));
+        wfile(td.path().join("target/nested/keep.rs"), "");
+
+        for glob in ["src/", "src/   ", r"src\/"] {
+            let overrides = OverrideBuilder::new(td.path())
+                .add("target/**/*.rs")
+                .unwrap()
+                .add(glob)
+                .unwrap()
+                .build()
+                .unwrap();
+            let mut builder = WalkBuilder::new(td.path());
+            builder.overrides(overrides);
+
+            assert_paths(
+                td.path(),
+                &builder,
+                &[
+                    "target",
+                    "target/nested",
+                    "target/nested/keep.rs",
+                    "nested",
+                    "nested/src",
+                ],
+            );
+        }
+    }
+
+    #[test]
+    fn override_rooted_directory_glob_prunes_unreachable_directories() {
+        let td = tmpdir();
+        mkdirp(td.path().join("src/child"));
+        mkdirp(td.path().join("nested/src"));
+
+        for glob in ["/src/", "/src/   ", r"/src\/"] {
+            let overrides = OverrideBuilder::new(td.path())
+                .add(glob)
+                .unwrap()
+                .build()
+                .unwrap();
+            let mut builder = WalkBuilder::new(td.path());
+            builder.overrides(overrides);
+
+            assert_paths(td.path(), &builder, &["src", "src/child"]);
+        }
+    }
+
+    #[test]
     fn override_wildcard_prefix_keeps_matching_descendants() {
         let td = tmpdir();
         mkdirp(td.path().join("first/GOOD"));

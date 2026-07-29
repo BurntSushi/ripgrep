@@ -728,6 +728,61 @@ mod tests {
         assert!(matchedf(&mut m, "blocked/keep.rs").is_ignore());
     }
 
+    #[test]
+    fn glob_overrides_preserve_nested_basename_directories() {
+        let td = tmpdir();
+        mkdirp(td.path().join("src"));
+        mkdirp(td.path().join("nested/src"));
+
+        for glob in ["src/", "src/   ", r"src\/"] {
+            let mut overrides = OverrideBuilder::new(td.path());
+            overrides.add(glob).unwrap();
+            let mut b = builder(td.path());
+            b.overrides(overrides.build().unwrap());
+
+            let mut m = one_matcher(&b);
+            let nested = matchedd(&mut m, "nested");
+            assert!(nested.is_none(), "glob: {glob}");
+            assert!(nested.should_descend(), "glob: {glob}");
+            assert!(
+                matchedd(&mut m, "nested/src").is_whitelist(),
+                "glob: {glob}"
+            );
+
+            let mut m = one_matcher(&b);
+            assert!(
+                matchedd(&mut m, "nested/src").is_whitelist(),
+                "glob: {glob}"
+            );
+            assert!(matchedd(&mut m, "nested").is_none(), "glob: {glob}");
+        }
+    }
+
+    #[test]
+    fn glob_overrides_prune_unreachable_rooted_directories() {
+        let td = tmpdir();
+        mkdirp(td.path().join("src/child"));
+        mkdirp(td.path().join("nested/src"));
+
+        for glob in ["/src/", "/src/   ", r"/src\/"] {
+            let mut overrides = OverrideBuilder::new(td.path());
+            overrides.add(glob).unwrap();
+            let mut b = builder(td.path());
+            b.overrides(overrides.build().unwrap());
+
+            let mut m = one_matcher(&b);
+            assert!(matchedd(&mut m, "src").is_whitelist(), "glob: {glob}");
+
+            let nested = matchedd(&mut m, "nested");
+            assert!(nested.is_ignore(), "glob: {glob}");
+            assert!(!nested.should_descend(), "glob: {glob}");
+            assert!(
+                matchedd(&mut m, "nested/src").is_ignore(),
+                "glob: {glob}"
+            );
+        }
+    }
+
     // Test that file type selections are applied to files, but not
     // directories.
     #[test]
