@@ -115,14 +115,15 @@ impl Override {
                 || self.1.as_ref().is_some_and(|prefixes| {
                     let normalized = crate::pathutil::strip_prefix("./", path)
                         .unwrap_or(path);
-                    if path == self.path() || normalized == self.path() {
+                    let root = self.path();
+                    if path == root || root.starts_with(normalized) {
                         return false;
                     }
                     let path = normalized;
-                    let path = if self.path() == Path::new(".") {
+                    let path = if root == Path::new(".") {
                         path
                     } else if let Some(relative) =
-                        crate::pathutil::strip_prefix(self.path(), path)
+                        crate::pathutil::strip_prefix(root, path)
                     {
                         crate::pathutil::strip_prefix("/", relative)
                             .unwrap_or(relative)
@@ -376,6 +377,8 @@ mod tests {
             ("./src/", "./src"),
             ("././src", "./src"),
             ("././src", "././src"),
+            ("a/b", "a"),
+            ("./a/b", "a"),
         ] {
             let matcher = ov_at(root, &["2/**/*.rs"]);
             assert!(

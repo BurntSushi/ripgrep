@@ -726,6 +726,14 @@ mod tests {
         let mut m = one_matcher(&b);
 
         assert!(matchedf(&mut m, "blocked/keep.rs").is_ignore());
+
+        let mut overrides = OverrideBuilder::new("a/b");
+        overrides.add("c/**/*.rs").unwrap();
+        let mut b = builder(".");
+        b.standard_filters(false).overrides(overrides.build().unwrap());
+        let mut m = one_matcher(&b);
+        assert!(matchedd(&mut m, "a").is_none());
+        assert!(matchedf(&mut m, "a/b/c/file.rs").is_whitelist());
     }
 
     #[test]
