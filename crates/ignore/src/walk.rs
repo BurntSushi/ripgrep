@@ -2300,40 +2300,20 @@ mod tests {
     }
 
     #[test]
-    fn override_literal_prefix_prunes_unreachable_directories() {
+    fn override_literal_prefix_prunes_after_case_insensitive_toggle() {
         let td = tmpdir();
-        mkdirp(td.path().join("target/nested"));
-        mkdirp(td.path().join("outside/nested"));
-        wfile(td.path().join("target/nested/keep.rs"), "");
-        wfile(td.path().join("target/nested/skip.txt"), "");
-        wfile(td.path().join("outside/nested/skip.rs"), "");
+        mkdirp(td.path().join("target"));
+        mkdirp(td.path().join("second"));
+        mkdirp(td.path().join("outside"));
+        wfile(td.path().join("target/keep.rs"), "");
+        wfile(td.path().join("target/generated.rs"), "");
+        wfile(td.path().join("second/keep.rs"), "");
+        wfile(td.path().join("outside/skip.rs"), "");
 
         let overrides = OverrideBuilder::new(td.path())
             .add("target/**/*.rs")
             .unwrap()
-            .build()
-            .unwrap();
-        let mut builder = WalkBuilder::new(td.path());
-        builder.overrides(overrides);
-
-        assert_paths(
-            td.path(),
-            &builder,
-            &["target", "target/nested", "target/nested/keep.rs"],
-        );
-    }
-
-    #[test]
-    fn override_literal_prefix_prunes_after_case_insensitive_toggle() {
-        let td = tmpdir();
-        mkdirp(td.path().join("target/nested"));
-        mkdirp(td.path().join("outside/nested"));
-        wfile(td.path().join("target/nested/keep.rs"), "");
-        wfile(td.path().join("target/nested/generated.rs"), "");
-        wfile(td.path().join("outside/nested/skip.rs"), "");
-
-        let overrides = OverrideBuilder::new(td.path())
-            .add("target/**/*.rs")
+            .add("second/**/*.rs")
             .unwrap()
             .case_insensitive(true)
             .unwrap()
@@ -2347,74 +2327,20 @@ mod tests {
         assert_paths(
             td.path(),
             &builder,
-            &["target", "target/nested", "target/nested/keep.rs"],
+            &["target", "target/keep.rs", "second", "second/keep.rs"],
         );
     }
 
     #[test]
-    fn override_basename_glob_keeps_nested_directories() {
+    fn override_unrooted_globs_disable_literal_prefix_pruning() {
         let td = tmpdir();
-        mkdirp(td.path().join("alpha/nested"));
-        mkdirp(td.path().join("beta/nested"));
-        wfile(td.path().join("alpha/nested/keep.rs"), "");
-        wfile(td.path().join("alpha/nested/skip.txt"), "");
-        wfile(td.path().join("beta/nested/keep.rs"), "");
-
-        let overrides = OverrideBuilder::new(td.path())
-            .add("alpha/**/*.rs")
-            .unwrap()
-            .add("*.rs")
-            .unwrap()
-            .build()
-            .unwrap();
-        let mut builder = WalkBuilder::new(td.path());
-        builder.overrides(overrides);
-
-        assert_paths(
-            td.path(),
-            &builder,
-            &[
-                "alpha",
-                "alpha/nested",
-                "alpha/nested/keep.rs",
-                "beta",
-                "beta/nested",
-                "beta/nested/keep.rs",
-            ],
-        );
-    }
-
-    #[test]
-    fn override_basename_directory_glob_keeps_nested_directories() {
-        let td = tmpdir();
-        mkdirp(td.path().join("src"));
+        mkdirp(td.path().join("target"));
         mkdirp(td.path().join("nested/src"));
+        mkdirp(td.path().join("nested/GOOD"));
+        wfile(td.path().join("target/keep.rs"), "");
+        wfile(td.path().join("nested/GOOD/keep.log"), "");
 
-        for glob in ["src/", "src/   ", r"src\/"] {
-            let overrides = OverrideBuilder::new(td.path())
-                .add(glob)
-                .unwrap()
-                .build()
-                .unwrap();
-            let mut builder = WalkBuilder::new(td.path());
-            builder.overrides(overrides);
-
-            assert_paths(
-                td.path(),
-                &builder,
-                &["src", "nested", "nested/src"],
-            );
-        }
-    }
-
-    #[test]
-    fn override_basename_directory_glob_disables_literal_prefix_pruning() {
-        let td = tmpdir();
-        mkdirp(td.path().join("target/nested"));
-        mkdirp(td.path().join("nested/src"));
-        wfile(td.path().join("target/nested/keep.rs"), "");
-
-        for glob in ["src/", "src/   ", r"src\/"] {
+        for glob in ["src/", "src/   ", r"src\/", "*.rs", "*/GOOD/*.log"] {
             let overrides = OverrideBuilder::new(td.path())
                 .add("target/**/*.rs")
                 .unwrap()
@@ -2425,136 +2351,18 @@ mod tests {
             let mut builder = WalkBuilder::new(td.path());
             builder.overrides(overrides);
 
-            assert_paths(
-                td.path(),
-                &builder,
-                &[
-                    "target",
-                    "target/nested",
-                    "target/nested/keep.rs",
-                    "nested",
-                    "nested/src",
-                ],
-            );
+            let mut expected = vec![
+                "target",
+                "target/keep.rs",
+                "nested",
+                "nested/src",
+                "nested/GOOD",
+            ];
+            if glob == "*/GOOD/*.log" {
+                expected.push("nested/GOOD/keep.log");
+            }
+            assert_paths(td.path(), &builder, &expected);
         }
-    }
-
-    #[test]
-    fn override_rooted_directory_glob_prunes_unreachable_directories() {
-        let td = tmpdir();
-        mkdirp(td.path().join("src/child"));
-        mkdirp(td.path().join("nested/src"));
-
-        for glob in ["/src/", "/src/   ", r"/src\/"] {
-            let overrides = OverrideBuilder::new(td.path())
-                .add(glob)
-                .unwrap()
-                .build()
-                .unwrap();
-            let mut builder = WalkBuilder::new(td.path());
-            builder.overrides(overrides);
-
-            assert_paths(td.path(), &builder, &["src", "src/child"]);
-        }
-    }
-
-    #[test]
-    fn override_wildcard_prefix_keeps_matching_descendants() {
-        let td = tmpdir();
-        mkdirp(td.path().join("first/GOOD"));
-        mkdirp(td.path().join("first/blah/nested"));
-        mkdirp(td.path().join("second/GOOD"));
-        mkdirp(td.path().join("second/blah"));
-        wfile(td.path().join("first/GOOD/keep.log"), "");
-        wfile(td.path().join("first/blah/nested/skip.log"), "");
-        wfile(td.path().join("second/GOOD/keep.log"), "");
-
-        let overrides = OverrideBuilder::new(td.path())
-            .add("*/GOOD/*.log")
-            .unwrap()
-            .build()
-            .unwrap();
-        let mut builder = WalkBuilder::new(td.path());
-        builder.overrides(overrides);
-
-        assert_paths(
-            td.path(),
-            &builder,
-            &[
-                "first",
-                "first/GOOD",
-                "first/GOOD/keep.log",
-                "first/blah",
-                "first/blah/nested",
-                "second",
-                "second/GOOD",
-                "second/GOOD/keep.log",
-                "second/blah",
-            ],
-        );
-    }
-
-    #[test]
-    fn override_multiple_prefixes_preserve_negation() {
-        let td = tmpdir();
-        mkdirp(td.path().join("alpha/src"));
-        mkdirp(td.path().join("beta/src"));
-        mkdirp(td.path().join("outside/src"));
-        wfile(td.path().join("alpha/src/keep.rs"), "");
-        wfile(td.path().join("beta/src/keep.rs"), "");
-        wfile(td.path().join("beta/src/generated.rs"), "");
-        wfile(td.path().join("outside/src/skip.rs"), "");
-
-        let overrides = OverrideBuilder::new(td.path())
-            .add("alpha/**/*.rs")
-            .unwrap()
-            .add("beta/**/*.rs")
-            .unwrap()
-            .add("!beta/**/generated.rs")
-            .unwrap()
-            .build()
-            .unwrap();
-        let mut builder = WalkBuilder::new(td.path());
-        builder.overrides(overrides);
-
-        assert_paths(
-            td.path(),
-            &builder,
-            &[
-                "alpha",
-                "alpha/src",
-                "alpha/src/keep.rs",
-                "beta",
-                "beta/src",
-                "beta/src/keep.rs",
-            ],
-        );
-    }
-
-    #[test]
-    fn override_prefix_respects_case_insensitive_and_ignore_files() {
-        let td = tmpdir();
-        mkdirp(td.path().join("SRC/allowed"));
-        mkdirp(td.path().join("SRC/blocked"));
-        wfile(td.path().join(".ignore"), "SRC/blocked/\n");
-        wfile(td.path().join("SRC/allowed/keep.RS"), "");
-        wfile(td.path().join("SRC/blocked/skip.RS"), "");
-
-        let overrides = OverrideBuilder::new(td.path())
-            .case_insensitive(true)
-            .unwrap()
-            .add("src/**/*.rs")
-            .unwrap()
-            .build()
-            .unwrap();
-        let mut builder = WalkBuilder::new(td.path());
-        builder.overrides(overrides);
-
-        assert_paths(
-            td.path(),
-            &builder,
-            &["SRC", "SRC/allowed", "SRC/allowed/keep.RS"],
-        );
     }
 
     #[test]

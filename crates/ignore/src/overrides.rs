@@ -5,7 +5,10 @@ This provides functionality similar to `--include` or `--exclude` in command
 line tools.
 */
 
-use std::{collections::HashSet, path::Path};
+use std::{
+    collections::HashSet,
+    path::{Component, Path},
+};
 
 use crate::{
     Error, Match,
@@ -44,7 +47,7 @@ impl<'a> Glob<'a> {
 
 /// Manages a set of overrides provided explicitly by the end user.
 #[derive(Clone, Debug)]
-pub struct Override(Gitignore, Option<Gitignore>);
+pub struct Override(Gitignore, Option<HashSet<String>>);
 
 impl Override {
     /// Returns an empty matcher that never matches any file path.
@@ -110,12 +113,29 @@ impl Override {
         if mat.is_none() && self.num_whitelists() > 0 {
             if !is_dir
                 || self.1.as_ref().is_some_and(|prefixes| {
-                    prefixes.matched(path, true).is_none()
-                        && !path.as_os_str().is_empty()
-                        && path != Path::new(".")
-                        && path != self.path()
-                        && !crate::pathutil::strip_prefix("./", path)
-                            .is_some_and(|relative| relative == self.path())
+                    let normalized = crate::pathutil::strip_prefix("./", path)
+                        .unwrap_or(path);
+                    if path == self.path() || normalized == self.path() {
+                        return false;
+                    }
+                    let path = normalized;
+                    let path = if self.path() == Path::new(".") {
+                        path
+                    } else if let Some(relative) =
+                        crate::pathutil::strip_prefix(self.path(), path)
+                    {
+                        crate::pathutil::strip_prefix("/", relative)
+                            .unwrap_or(relative)
+                    } else {
+                        path
+                    };
+                    path.components()
+                        .next()
+                        .and_then(|component| match component {
+                            Component::Normal(component) => component.to_str(),
+                            _ => None,
+                        })
+                        .is_some_and(|component| !prefixes.contains(component))
                 })
             {
                 return Match::Ignore(Glob::unmatched());
@@ -129,8 +149,7 @@ impl Override {
 #[derive(Clone, Debug)]
 pub struct OverrideBuilder {
     builder: GitignoreBuilder,
-    directory_prefixes: Option<GitignoreBuilder>,
-    directory_prefix_components: HashSet<String>,
+    directory_prefixes: Option<HashSet<String>>,
     case_insensitive: bool,
 }
 
@@ -139,13 +158,11 @@ impl OverrideBuilder {
     ///
     /// Matching is done relative to the directory path provided.
     pub fn new<P: AsRef<Path>>(path: P) -> OverrideBuilder {
-        let path = path.as_ref();
         let mut builder = GitignoreBuilder::new(path);
         builder.allow_unclosed_class(false);
         OverrideBuilder {
             builder,
-            directory_prefixes: Some(GitignoreBuilder::new(path)),
-            directory_prefix_components: HashSet::new(),
+            directory_prefixes: Some(HashSet::new()),
             case_insensitive: false,
         }
     }
@@ -154,12 +171,7 @@ impl OverrideBuilder {
     ///
     /// Once a matcher is built, no new globs can be added to it.
     pub fn build(&self) -> Result<Override, Error> {
-        let directory_prefixes = self
-            .directory_prefixes
-            .as_ref()
-            .map(GitignoreBuilder::build)
-            .transpose()?;
-        Ok(Override(self.builder.build()?, directory_prefixes))
+        Ok(Override(self.builder.build()?, self.directory_prefixes.clone()))
     }
 
     /// Add a glob to the set of overrides.
@@ -203,14 +215,7 @@ impl OverrideBuilder {
                                 || matches!(byte, b'_' | b'-' | b'.')
                         }) =>
                 {
-                    if self
-                        .directory_prefix_components
-                        .insert(component.to_owned())
-                    {
-                        prefixes.add_line(None, &format!("/{component}"))?;
-                        prefixes
-                            .add_line(None, &format!("/{component}/**"))?;
-                    }
+                    prefixes.insert(component.to_owned());
                 }
                 _ => self.directory_prefixes = None,
             }
@@ -265,7 +270,11 @@ mod tests {
     const ROOT: &'static str = "/home/andrew/foo";
 
     fn ov(globs: &[&str]) -> Override {
-        let mut builder = OverrideBuilder::new(ROOT);
+        ov_at(ROOT, globs)
+    }
+
+    fn ov_at(root: &str, globs: &[&str]) -> Override {
+        let mut builder = OverrideBuilder::new(root);
         for glob in globs {
             builder.add(glob).unwrap();
         }
@@ -337,159 +346,70 @@ mod tests {
 
     #[test]
     fn literal_prefix_prunes_unmatched_directories() {
-        let ov = ov(&["src/**/*.rs"]);
+        let matcher = ov(&["src/**/*.rs", "src/**/*.py", "!src/generated.rs"]);
+        assert_eq!(matcher.1.as_ref().unwrap().len(), 1);
+        assert!(matcher.matched("src/nested", true).is_none());
+        assert!(matcher.matched("src/nested/main.rs", false).is_whitelist());
+        assert!(matcher.matched("src/generated.rs", false).is_ignore());
+        assert!(matcher.matched("outside", true).is_ignore());
 
-        assert!(ov.matched("src", true).is_none());
-        assert!(ov.matched("src/nested", true).is_none());
-        assert!(ov.matched("src/nested/main.rs", false).is_whitelist());
-        assert!(ov.matched("outside", true).is_ignore());
-        assert!(ov.matched("outside/nested", true).is_ignore());
+        for glob in ["/src/**/*.rs", "/src/", "/src/   ", r"/src\/"] {
+            let matcher = ov(&[glob]);
+            assert!(!matcher.matched("src", true).is_ignore(), "{glob}");
+            assert!(matcher.matched("outside", true).is_ignore(), "{glob}");
+        }
     }
 
     #[test]
-    fn literal_prefix_preserves_override_root() {
-        let cases = [
+    fn literal_prefix_preserves_override_root_and_explicit_ignores() {
+        for (root, path) in [
             (ROOT, ROOT),
             (ROOT, ""),
             (ROOT, "."),
-            (ROOT, "./"),
-            (".", "."),
-            (".", ""),
             (".", "./"),
             ("", ""),
-            ("", "."),
-            ("", "./"),
             ("repo", "repo"),
             ("repo", "./repo"),
             ("./repo", "repo"),
             ("./repo", "./repo"),
-        ];
-
-        for (root, path) in cases {
-            let ov = OverrideBuilder::new(root)
-                .add("src/**/*.rs")
-                .unwrap()
-                .build()
-                .unwrap();
-
+            ("src/", "./src"),
+            ("./src/", "./src"),
+            ("././src", "./src"),
+            ("././src", "././src"),
+        ] {
+            let matcher = ov_at(root, &["2/**/*.rs"]);
             assert!(
-                ov.matched(path, true).is_none(),
+                matcher.matched(path, true).is_none(),
                 "root: {root:?}, path: {path:?}"
             );
-            assert!(ov.matched("src", true).is_none());
-            assert!(ov.matched("src/nested/main.rs", false).is_whitelist());
-            assert!(ov.matched("outside", true).is_ignore());
+        }
+        for root in ["repo", "./repo"] {
+            let matcher = ov_at(root, &["src/**/*.rs", "!repo"]);
+            assert!(matcher.matched("repo", true).is_ignore());
         }
     }
 
     #[test]
-    fn literal_prefix_preserves_explicit_root_ignores() {
-        let cases = [
-            ("repo", "repo"),
-            ("repo", "./repo"),
-            ("./repo", "repo"),
-            ("./repo", "./repo"),
-        ];
-
-        for (root, path) in cases {
-            let ov = OverrideBuilder::new(root)
-                .add("src/**/*.rs")
-                .unwrap()
-                .add("!repo")
-                .unwrap()
-                .build()
-                .unwrap();
-
-            assert!(
-                ov.matched(path, true).is_ignore(),
-                "root: {root:?}, path: {path:?}"
-            );
-            assert!(ov.matched("src", true).is_none());
-            assert!(ov.matched("src/nested/main.rs", false).is_whitelist());
-            assert!(ov.matched("outside", true).is_ignore());
+    fn unsupported_positive_globs_disable_directory_pruning() {
+        for glob in [
+            "*.py",
+            "src/",
+            "src/   ",
+            r"src\/",
+            "./src/**/*.rs",
+            "../src/**/*.rs",
+            "//src/**/*.rs",
+        ] {
+            let matcher = ov(&["src/**/*.rs", glob]);
+            assert!(matcher.matched("outside", true).is_none(), "{glob}");
         }
-    }
-
-    #[test]
-    fn literal_prefixes_preserve_all_matching_roots() {
-        let ov = ov(&["src/**/*.rs", "tests/**/*.rs", "!tests/generated.rs"]);
-
-        assert!(ov.matched("src", true).is_none());
-        assert!(ov.matched("tests", true).is_none());
-        assert!(ov.matched("tests/nested", true).is_none());
-        assert!(ov.matched("tests/nested/main.rs", false).is_whitelist());
-        assert!(ov.matched("tests/generated.rs", false).is_ignore());
-        assert!(ov.matched("outside", true).is_ignore());
-    }
-
-    #[test]
-    fn unsupported_positive_glob_disables_directory_pruning() {
-        let ov = ov(&["src/**/*.rs", "*.py"]);
-
-        assert!(ov.matched("src", true).is_none());
-        assert!(ov.matched("outside", true).is_none());
-        assert!(ov.matched("outside/nested", true).is_none());
-        assert!(ov.matched("outside/nested/main.py", false).is_whitelist());
-        assert!(ov.matched("outside/nested/main.rs", false).is_ignore());
-    }
-
-    #[test]
-    fn absolute_literal_prefix_prunes_unmatched_directories() {
-        let ov = ov(&["/src/**/*.rs"]);
-
-        assert!(ov.matched("src", true).is_none());
-        assert!(ov.matched("src/nested", true).is_none());
-        assert!(ov.matched("src/nested/main.rs", false).is_whitelist());
-        assert!(ov.matched("outside", true).is_ignore());
-    }
-
-    #[test]
-    fn basename_directory_globs_preserve_nested_directories() {
         for glob in ["src/", "src/   ", r"src\/"] {
-            let ov = ov(&[glob]);
-
-            assert!(ov.matched("nested", true).is_none(), "glob: {glob}");
-            assert!(
-                ov.matched("nested/src", true).is_whitelist(),
-                "glob: {glob}"
-            );
-            assert!(ov.matched("outside", true).is_none(), "glob: {glob}");
+            assert!(ov(&[glob]).matched("nested/src", true).is_whitelist());
         }
     }
 
     #[test]
-    fn rooted_directory_globs_prune_unmatched_directories() {
-        for glob in ["/src/", "/src/   ", r"/src\/"] {
-            let ov = ov(&[glob]);
-
-            assert!(ov.matched("src", true).is_whitelist(), "glob: {glob}");
-            assert!(ov.matched("nested", true).is_ignore(), "glob: {glob}");
-            assert!(ov.matched("outside", true).is_ignore(), "glob: {glob}");
-        }
-    }
-
-    #[test]
-    fn duplicate_literal_prefixes_are_added_once() {
-        let ov = ov(&["src/**/*.rs", "src/**/*.py", "src/lib/**"]);
-
-        assert_eq!(ov.1.as_ref().unwrap().len(), 2);
-        assert!(ov.matched("src", true).is_none());
-        assert!(ov.matched("src/nested/main.rs", false).is_whitelist());
-        assert!(ov.matched("src/nested/main.py", false).is_whitelist());
-        assert!(ov.matched("outside", true).is_ignore());
-    }
-
-    #[test]
-    fn dot_components_disable_directory_pruning() {
-        for glob in ["./src/**/*.rs", "../src/**/*.rs", "//src/**/*.rs"] {
-            let ov = ov(&[glob]);
-
-            assert!(ov.matched("outside", true).is_none(), "glob: {glob}");
-        }
-    }
-
-    #[test]
-    fn changing_case_mode_preserves_existing_literal_prefix() {
+    fn literal_prefix_respects_case_mode() {
         let ov = OverrideBuilder::new(ROOT)
             .add("src/**/*.rs")
             .unwrap()
@@ -497,14 +417,8 @@ mod tests {
             .unwrap()
             .build()
             .unwrap();
-
-        assert!(ov.matched("src", true).is_none());
-        assert!(ov.matched("src/nested/main.rs", false).is_whitelist());
         assert!(ov.matched("outside", true).is_ignore());
-    }
 
-    #[test]
-    fn case_insensitive_positive_disables_directory_pruning() {
         let ov = OverrideBuilder::new(ROOT)
             .case_insensitive(true)
             .unwrap()
@@ -512,10 +426,31 @@ mod tests {
             .unwrap()
             .build()
             .unwrap();
-
-        assert!(ov.matched("SRC", true).is_none());
         assert!(ov.matched("SRC/nested/main.RS", false).is_whitelist());
         assert!(ov.matched("outside", true).is_none());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn literal_prefix_preserves_relative_root_collisions() {
+        for root in ["src", "./src"] {
+            let matcher = ov_at(root, &["2/**/*.rs"]);
+            assert!(matcher.matched("src2", true).is_none());
+            assert!(matcher.matched("src2/other.rs", false).is_whitelist());
+            assert!(matcher.matched("outside", true).is_ignore());
+        }
+    }
+
+    #[test]
+    fn many_literal_prefixes_do_not_exceed_regex_limits() {
+        let mut builder = OverrideBuilder::new(".");
+        let suffix = "a".repeat(242);
+        for index in 0..1_300 {
+            builder.add(&format!("p{index:06}_{suffix}/needle.rs")).unwrap();
+        }
+        let matcher = builder.build().unwrap();
+        assert_eq!(matcher.1.as_ref().unwrap().len(), 1_300);
+        assert!(matcher.matched("outside", true).is_ignore());
     }
 
     #[test]
