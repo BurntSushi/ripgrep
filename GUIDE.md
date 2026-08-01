@@ -470,6 +470,11 @@ $ rg fast README.md -r FAST
 [snip]
 ```
 
+Here, `-r` is short for `--replace`, not recursive search. ripgrep already
+searches directories recursively by default. For example, `rg -rn PATTERN`
+replaces each match with `n`; use `rg -n PATTERN` to show line numbers without
+replacing matches.
+
 In essence, the `--replace` flag applies *only* to the matching portion of text
 in the output. If you instead wanted to replace an entire line of text, then
 you need to include the entire line in your match. For example:
