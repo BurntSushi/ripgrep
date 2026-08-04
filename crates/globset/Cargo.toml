@@ -1,6 +1,6 @@
 [package]
 name = "globset"
-version = "0.4.19"  #:version
+version = "0.4.20"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 Cross platform single glob and glob set matching. Glob set matching is the
