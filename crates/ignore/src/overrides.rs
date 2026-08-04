@@ -5,7 +5,10 @@ This provides functionality similar to `--include` or `--exclude` in command
 line tools.
 */
 
-use std::path::Path;
+use std::{
+    collections::HashSet,
+    path::{Component, Path},
+};
 
 use crate::{
     Error, Match,
@@ -44,12 +47,12 @@ impl<'a> Glob<'a> {
 
 /// Manages a set of overrides provided explicitly by the end user.
 #[derive(Clone, Debug)]
-pub struct Override(Gitignore);
+pub struct Override(Gitignore, Option<HashSet<String>>);
 
 impl Override {
     /// Returns an empty matcher that never matches any file path.
     pub fn empty() -> Override {
-        Override(Gitignore::empty())
+        Override(Gitignore::empty(), None)
     }
 
     /// Returns the directory of this override set.
@@ -88,6 +91,9 @@ impl Override {
     /// this never returns `Match::None`, since non-matches are interpreted as
     /// ignored.
     ///
+    /// A directory may also be ignored if its path cannot contain a match for
+    /// any whitelist override.
+    ///
     /// The given path is matched to the globs relative to the path given
     /// when building the override matcher. Specifically, before matching
     /// `path`, its prefix (as determined by a common suffix of the directory
@@ -102,9 +108,39 @@ impl Override {
         if self.is_empty() {
             return Match::None;
         }
+        let path = path.as_ref();
         let mat = self.0.matched(path, is_dir).invert();
-        if mat.is_none() && self.num_whitelists() > 0 && !is_dir {
-            return Match::Ignore(Glob::unmatched());
+        if mat.is_none() && self.num_whitelists() > 0 {
+            if !is_dir
+                || self.1.as_ref().is_some_and(|prefixes| {
+                    let normalized = crate::pathutil::strip_prefix("./", path)
+                        .unwrap_or(path);
+                    let root = self.path();
+                    if path == root || root.starts_with(normalized) {
+                        return false;
+                    }
+                    let path = normalized;
+                    let path = if root == Path::new(".") {
+                        path
+                    } else if let Some(relative) =
+                        crate::pathutil::strip_prefix(root, path)
+                    {
+                        crate::pathutil::strip_prefix("/", relative)
+                            .unwrap_or(relative)
+                    } else {
+                        path
+                    };
+                    path.components()
+                        .next()
+                        .and_then(|component| match component {
+                            Component::Normal(component) => component.to_str(),
+                            _ => None,
+                        })
+                        .is_some_and(|component| !prefixes.contains(component))
+                })
+            {
+                return Match::Ignore(Glob::unmatched());
+            }
         }
         mat.map(move |giglob| Glob(GlobInner::Matched(giglob)))
     }
@@ -114,6 +150,8 @@ impl Override {
 #[derive(Clone, Debug)]
 pub struct OverrideBuilder {
     builder: GitignoreBuilder,
+    directory_prefixes: Option<HashSet<String>>,
+    case_insensitive: bool,
 }
 
 impl OverrideBuilder {
@@ -123,14 +161,18 @@ impl OverrideBuilder {
     pub fn new<P: AsRef<Path>>(path: P) -> OverrideBuilder {
         let mut builder = GitignoreBuilder::new(path);
         builder.allow_unclosed_class(false);
-        OverrideBuilder { builder }
+        OverrideBuilder {
+            builder,
+            directory_prefixes: Some(HashSet::new()),
+            case_insensitive: false,
+        }
     }
 
     /// Builds a new override matcher from the globs added so far.
     ///
     /// Once a matcher is built, no new globs can be added to it.
     pub fn build(&self) -> Result<Override, Error> {
-        Ok(Override(self.builder.build()?))
+        Ok(Override(self.builder.build()?, self.directory_prefixes.clone()))
     }
 
     /// Add a glob to the set of overrides.
@@ -141,6 +183,44 @@ impl OverrideBuilder {
     /// all matches of the glob provided are treated as whitelist matches.
     pub fn add(&mut self, glob: &str) -> Result<&mut OverrideBuilder, Error> {
         self.builder.add_line(None, glob)?;
+        if glob.starts_with('!')
+            || glob.starts_with('#')
+            || glob.trim_end().is_empty()
+        {
+            return Ok(self);
+        }
+        if self.case_insensitive {
+            self.directory_prefixes = None;
+            return Ok(self);
+        }
+        if let Some(prefixes) = &mut self.directory_prefixes {
+            let glob =
+                if glob.ends_with("\\ ") { glob } else { glob.trim_end() };
+            let is_absolute = glob.starts_with('/');
+            let glob = glob.strip_prefix('/').unwrap_or(glob);
+            let (glob, is_only_dir) = match glob.strip_suffix('/') {
+                Some(glob) => (glob.strip_suffix('\\').unwrap_or(glob), true),
+                None => (glob, false),
+            };
+            let component = glob
+                .split_once('/')
+                .map(|(component, _)| component)
+                .or_else(|| (is_absolute && is_only_dir).then_some(glob));
+            match component {
+                Some(component)
+                    if !component.is_empty()
+                        && component != "."
+                        && component != ".."
+                        && component.bytes().all(|byte| {
+                            byte.is_ascii_alphanumeric()
+                                || matches!(byte, b'_' | b'-' | b'.')
+                        }) =>
+                {
+                    prefixes.insert(component.to_owned());
+                }
+                _ => self.directory_prefixes = None,
+            }
+        }
         Ok(self)
     }
 
@@ -157,6 +237,7 @@ impl OverrideBuilder {
         // TODO: This should not return a `Result`. Fix this in the next semver
         // release.
         self.builder.case_insensitive(yes)?;
+        self.case_insensitive = yes;
         Ok(self)
     }
 
@@ -190,7 +271,11 @@ mod tests {
     const ROOT: &'static str = "/home/andrew/foo";
 
     fn ov(globs: &[&str]) -> Override {
-        let mut builder = OverrideBuilder::new(ROOT);
+        ov_at(ROOT, globs)
+    }
+
+    fn ov_at(root: &str, globs: &[&str]) -> Override {
+        let mut builder = OverrideBuilder::new(root);
         for glob in globs {
             builder.add(glob).unwrap();
         }
@@ -258,6 +343,117 @@ mod tests {
         assert!(ov.matched("src/foo.c", false).is_ignore());
         assert!(ov.matched("src/foo", false).is_ignore());
         assert!(ov.matched("src/foo", true).is_none());
+    }
+
+    #[test]
+    fn literal_prefix_prunes_unmatched_directories() {
+        let matcher = ov(&["src/**/*.rs", "src/**/*.py", "!src/generated.rs"]);
+        assert_eq!(matcher.1.as_ref().unwrap().len(), 1);
+        assert!(matcher.matched("src/nested", true).is_none());
+        assert!(matcher.matched("src/nested/main.rs", false).is_whitelist());
+        assert!(matcher.matched("src/generated.rs", false).is_ignore());
+        assert!(matcher.matched("outside", true).is_ignore());
+
+        for glob in ["/src/**/*.rs", "/src/", "/src/   ", r"/src\/"] {
+            let matcher = ov(&[glob]);
+            assert!(!matcher.matched("src", true).is_ignore(), "{glob}");
+            assert!(matcher.matched("outside", true).is_ignore(), "{glob}");
+        }
+    }
+
+    #[test]
+    fn literal_prefix_preserves_override_root_and_explicit_ignores() {
+        for (root, path) in [
+            (ROOT, ROOT),
+            (ROOT, ""),
+            (ROOT, "."),
+            (".", "./"),
+            ("", ""),
+            ("repo", "repo"),
+            ("repo", "./repo"),
+            ("./repo", "repo"),
+            ("./repo", "./repo"),
+            ("src/", "./src"),
+            ("./src/", "./src"),
+            ("././src", "./src"),
+            ("././src", "././src"),
+            ("a/b", "a"),
+            ("./a/b", "a"),
+        ] {
+            let matcher = ov_at(root, &["2/**/*.rs"]);
+            assert!(
+                matcher.matched(path, true).is_none(),
+                "root: {root:?}, path: {path:?}"
+            );
+        }
+        for root in ["repo", "./repo"] {
+            let matcher = ov_at(root, &["src/**/*.rs", "!repo"]);
+            assert!(matcher.matched("repo", true).is_ignore());
+        }
+    }
+
+    #[test]
+    fn unsupported_positive_globs_disable_directory_pruning() {
+        for glob in [
+            "*.py",
+            "src/",
+            "src/   ",
+            r"src\/",
+            "./src/**/*.rs",
+            "../src/**/*.rs",
+            "//src/**/*.rs",
+        ] {
+            let matcher = ov(&["src/**/*.rs", glob]);
+            assert!(matcher.matched("outside", true).is_none(), "{glob}");
+        }
+        for glob in ["src/", "src/   ", r"src\/"] {
+            assert!(ov(&[glob]).matched("nested/src", true).is_whitelist());
+        }
+    }
+
+    #[test]
+    fn literal_prefix_respects_case_mode() {
+        let ov = OverrideBuilder::new(ROOT)
+            .add("src/**/*.rs")
+            .unwrap()
+            .case_insensitive(true)
+            .unwrap()
+            .build()
+            .unwrap();
+        assert!(ov.matched("outside", true).is_ignore());
+
+        let ov = OverrideBuilder::new(ROOT)
+            .case_insensitive(true)
+            .unwrap()
+            .add("src/**/*.rs")
+            .unwrap()
+            .build()
+            .unwrap();
+        assert!(ov.matched("SRC/nested/main.RS", false).is_whitelist());
+        assert!(ov.matched("outside", true).is_none());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn literal_prefix_preserves_relative_root_collisions() {
+        for root in ["src", "./src"] {
+            let matcher = ov_at(root, &["2/**/*.rs"]);
+            assert!(matcher.matched("src2", true).is_none());
+            assert!(matcher.matched("src2/other.rs", false).is_whitelist());
+            assert!(matcher.matched("outside", true).is_ignore());
+        }
+    }
+
+    #[test]
+    fn many_literal_prefixes_do_not_exceed_regex_limits() {
+        let mut builder = OverrideBuilder::new(".");
+        let suffix = "a".repeat(242);
+        for index in 0..1_300 {
+            builder.add(&format!("p{index:06}_{suffix}/needle.rs")).unwrap();
+        }
+        let matcher = builder.build().unwrap();
+        assert_eq!(matcher.1.as_ref().unwrap().len(), 1_300);
+        assert!(matcher.matched("outside", true).is_ignore());
     }
 
     #[test]

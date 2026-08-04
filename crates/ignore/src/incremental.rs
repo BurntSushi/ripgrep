@@ -726,6 +726,44 @@ mod tests {
         let mut m = one_matcher(&b);
 
         assert!(matchedf(&mut m, "blocked/keep.rs").is_ignore());
+
+        let mut overrides = OverrideBuilder::new("a/b");
+        overrides.add("c/**/*.rs").unwrap();
+        let mut b = builder(".");
+        b.standard_filters(false).overrides(overrides.build().unwrap());
+        let mut m = one_matcher(&b);
+        assert!(matchedd(&mut m, "a").is_none());
+        assert!(matchedf(&mut m, "a/b/c/file.rs").is_whitelist());
+    }
+
+    #[test]
+    fn glob_overrides_preserve_nested_basename_directories() {
+        let td = tmpdir();
+        mkdirp(td.path().join("src"));
+        mkdirp(td.path().join("nested/src"));
+
+        for glob in ["src/", "src/   ", r"src\/"] {
+            let mut overrides = OverrideBuilder::new(td.path());
+            overrides.add(glob).unwrap();
+            let mut b = builder(td.path());
+            b.overrides(overrides.build().unwrap());
+
+            let mut m = one_matcher(&b);
+            let nested = matchedd(&mut m, "nested");
+            assert!(nested.is_none(), "glob: {glob}");
+            assert!(nested.should_descend(), "glob: {glob}");
+            assert!(
+                matchedd(&mut m, "nested/src").is_whitelist(),
+                "glob: {glob}"
+            );
+
+            let mut m = one_matcher(&b);
+            assert!(
+                matchedd(&mut m, "nested/src").is_whitelist(),
+                "glob: {glob}"
+            );
+            assert!(matchedd(&mut m, "nested").is_none(), "glob: {glob}");
+        }
     }
 
     // Test that file type selections are applied to files, but not
