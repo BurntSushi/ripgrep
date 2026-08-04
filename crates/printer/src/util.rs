@@ -168,6 +168,8 @@ impl<M: Matcher> Replacer<M> {
 #[derive(Debug)]
 pub(crate) struct Sunk<'a> {
     bytes: &'a [u8],
+    original_bytes: &'a [u8],
+    replaced: bool,
     absolute_byte_offset: u64,
     line_number: Option<u64>,
     context_kind: Option<&'a SinkContextKind>,
@@ -180,6 +182,8 @@ impl<'a> Sunk<'a> {
     pub(crate) fn empty() -> Sunk<'static> {
         Sunk {
             bytes: &[],
+            original_bytes: &[],
+            replaced: false,
             absolute_byte_offset: 0,
             line_number: None,
             context_kind: None,
@@ -194,10 +198,14 @@ impl<'a> Sunk<'a> {
         original_matches: &'a [Match],
         replacement: Option<(&'a [u8], &'a [Match])>,
     ) -> Sunk<'a> {
+        let original_bytes = sunk.bytes();
+        let replaced = replacement.is_some();
         let (bytes, matches) =
-            replacement.unwrap_or_else(|| (sunk.bytes(), original_matches));
+            replacement.unwrap_or_else(|| (original_bytes, original_matches));
         Sunk {
             bytes,
+            original_bytes,
+            replaced,
             absolute_byte_offset: sunk.absolute_byte_offset(),
             line_number: sunk.line_number(),
             context_kind: None,
@@ -212,10 +220,14 @@ impl<'a> Sunk<'a> {
         original_matches: &'a [Match],
         replacement: Option<(&'a [u8], &'a [Match])>,
     ) -> Sunk<'a> {
+        let original_bytes = sunk.bytes();
+        let replaced = replacement.is_some();
         let (bytes, matches) =
-            replacement.unwrap_or_else(|| (sunk.bytes(), original_matches));
+            replacement.unwrap_or_else(|| (original_bytes, original_matches));
         Sunk {
             bytes,
+            original_bytes,
+            replaced,
             absolute_byte_offset: sunk.absolute_byte_offset(),
             line_number: sunk.line_number(),
             context_kind: Some(sunk.kind()),
@@ -257,6 +269,44 @@ impl<'a> Sunk<'a> {
     #[inline]
     pub(crate) fn line_number(&self) -> Option<u64> {
         self.line_number
+    }
+
+    #[inline]
+    pub(crate) fn replacement_line_number(
+        &self,
+        line_term: u8,
+        match_index: usize,
+        replacement_line_start: usize,
+    ) -> Option<u64> {
+        if !self.replaced {
+            return None;
+        }
+        let line_number = self.line_number?;
+        let original_match = self.original_matches.get(match_index)?;
+        let replacement_match = self.matches.get(match_index)?;
+        let original_before_match =
+            &self.original_bytes[..original_match.start()];
+        let original_preceding_lines = original_before_match
+            .iter()
+            .filter(|&&byte| byte == line_term)
+            .count() as u64;
+        let replacement_preceding_lines = if replacement_line_start
+            <= replacement_match.start()
+        {
+            0
+        } else {
+            let end =
+                std::cmp::min(replacement_line_start, replacement_match.end());
+            self.bytes[replacement_match.start()..end]
+                .iter()
+                .filter(|&&byte| byte == line_term)
+                .count() as u64
+        };
+        Some(
+            line_number
+                + original_preceding_lines
+                + replacement_preceding_lines,
+        )
     }
 }
 
