@@ -4,7 +4,7 @@ Provides the definition of low level arguments from CLI flags.
 
 use std::{
     ffi::{OsStr, OsString},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use {
@@ -34,7 +34,7 @@ pub(crate) struct LowArgs {
     // Essential arguments.
     pub(crate) special: Option<SpecialMode>,
     pub(crate) mode: Mode,
-    pub(crate) positional: Vec<OsString>,
+    pub(crate) inputs: Vec<InputSource>,
     pub(crate) patterns: Vec<PatternSource>,
     // Everything else, sorted lexicographically.
     pub(crate) binary: BinaryMode,
@@ -647,6 +647,57 @@ pub(crate) enum MmapMode {
     /// when multi-line search is enabled where ripgrep will read the entire
     /// contents of a file on to the heap before searching it.
     Never,
+}
+
+/// Represents a source of input paths to be searched.
+#[derive(Debug, Eq, PartialEq)]
+pub(crate) enum InputSource {
+    /// A positional argument on the command line. Provides a single path.
+    PositionalArgument(OsString),
+    /// A text file with newline-terminated paths. Comes from the `--in` flag.
+    LineTerminated(PathBuf),
+    /// A binary file with NUL-terminated paths. Comes from the `--in0` flag.
+    NulTerminated(PathBuf),
+}
+
+impl InputSource {
+    /// Returns true if this source reads from stdin.
+    pub(crate) fn is_stdin(&self) -> bool {
+        match self {
+            InputSource::PositionalArgument(osarg) => osarg == OsStr::new("-"),
+            InputSource::LineTerminated(path) => path == Path::new("-"),
+            InputSource::NulTerminated(path) => path == Path::new("-"),
+        }
+    }
+
+    /// Returns the command-line flag used for this source.
+    pub(crate) fn flag(&self) -> Option<&str> {
+        match self {
+            InputSource::PositionalArgument(_) => None,
+            InputSource::LineTerminated(_) => Some("--in"),
+            InputSource::NulTerminated(_) => Some("--in0"),
+        }
+    }
+}
+
+impl std::fmt::Display for InputSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.is_stdin() {
+            write!(f, "stdin")
+        } else {
+            match self {
+                InputSource::PositionalArgument(osarg) => {
+                    write!(f, "{}", osarg.to_string_lossy())
+                }
+                InputSource::LineTerminated(path) => {
+                    write!(f, "{}", path.display())
+                }
+                InputSource::NulTerminated(path) => {
+                    write!(f, "{}", path.display())
+                }
+            }
+        }
+    }
 }
 
 /// Represents a source of patterns that ripgrep should search for.
