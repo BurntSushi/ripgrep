@@ -4,11 +4,12 @@ Provides the definition of high level arguments from CLI flags.
 
 use std::{
     collections::HashSet,
+    io,
     path::{Path, PathBuf},
 };
 
 use {
-    bstr::BString,
+    bstr::{BString, io::BufReadExt},
     grep::printer::{ColorSpecs, SummaryKind},
 };
 
@@ -454,7 +455,17 @@ impl HiArgs {
             if self.crlf {
                 builder.crlf(true);
             }
-            let m = builder.build_many(&self.patterns.patterns)?;
+            let m = match builder.build_many(&self.patterns.patterns) {
+                Ok(m) => m,
+                Err(err) => {
+                    anyhow::bail!(
+                        self.patterns
+                            .with_source_for_error(err.to_string(), |pat| {
+                                builder.build(pat).map(|_| ())
+                            },)
+                    );
+                }
+            };
             Ok(PatternMatcher::PCRE2(m))
         }
         #[cfg(not(feature = "pcre2"))]
@@ -518,7 +529,12 @@ impl HiArgs {
         let m = match builder.build_many(&self.patterns.patterns) {
             Ok(m) => m,
             Err(err) => {
-                anyhow::bail!(suggest_text(suggest_multiline(err.to_string())))
+                let msg = self
+                    .patterns
+                    .with_source_for_error(err.to_string(), |pat| {
+                        builder.build(pat).map(|_| ())
+                    });
+                anyhow::bail!(suggest_text(suggest_multiline(msg)))
             }
         };
         Ok(PatternMatcher::RustRegex(m))
@@ -1002,7 +1018,19 @@ impl State {
 #[derive(Debug)]
 struct Patterns {
     /// The actual patterns to match.
-    patterns: Vec<String>,
+    patterns: Vec<Pattern>,
+}
+
+#[derive(Debug)]
+struct Pattern {
+    text: String,
+    source: Option<String>,
+}
+
+impl AsRef<str> for Pattern {
+    fn as_ref(&self) -> &str {
+        &self.text
+    }
 }
 
 impl Patterns {
@@ -1038,7 +1066,9 @@ impl Patterns {
             let Ok(pat) = ospat.into_string() else {
                 anyhow::bail!("pattern given is not valid UTF-8")
             };
-            return Ok(Patterns { patterns: vec![pat] });
+            return Ok(Patterns {
+                patterns: vec![Pattern { text: pat, source: None }],
+            });
         }
         // Otherwise, we need to slurp up our patterns from -e/--regexp and
         // -f/--file. We de-duplicate as we go. If we don't de-duplicate,
@@ -1052,15 +1082,16 @@ impl Patterns {
         // big impact on real world data.
         let mut seen = HashSet::new();
         let mut patterns = Vec::with_capacity(low.patterns.len());
-        let mut add = |pat: String| {
-            if !seen.contains(&pat) {
-                seen.insert(pat.clone());
+        let mut add = |pat: Pattern| {
+            if seen.insert(pat.text.clone()) {
                 patterns.push(pat);
             }
         };
         for source in low.patterns.drain(..) {
             match source {
-                PatternSource::Regexp(pat) => add(pat),
+                PatternSource::Regexp(pat) => {
+                    add(Pattern { text: pat, source: None })
+                }
                 PatternSource::File(path) => {
                     if path == Path::new("-") {
                         anyhow::ensure!(
@@ -1068,12 +1099,12 @@ impl Patterns {
                             "error reading -f/--file from stdin: stdin \
                              has already been consumed"
                         );
-                        for pat in grep::cli::patterns_from_stdin()? {
+                        for pat in patterns_from_stdin()? {
                             add(pat);
                         }
                         state.stdin_consumed = true;
                     } else {
-                        for pat in grep::cli::patterns_from_path(&path)? {
+                        for pat in patterns_from_path(&path)? {
                             add(pat);
                         }
                     }
@@ -1082,6 +1113,70 @@ impl Patterns {
         }
         Ok(Patterns { patterns })
     }
+
+    fn with_source_for_error<E, F>(
+        &self,
+        fallback: String,
+        mut build: F,
+    ) -> String
+    where
+        E: std::fmt::Display,
+        F: FnMut(&str) -> Result<(), E>,
+    {
+        for pattern in self.patterns.iter() {
+            if let Err(err) = build(&pattern.text) {
+                return match pattern.source {
+                    Some(ref source) => format!("{source}: {err}"),
+                    None => fallback,
+                };
+            }
+        }
+        fallback
+    }
+}
+
+fn patterns_from_path(path: &Path) -> io::Result<Vec<Pattern>> {
+    let file = std::fs::File::open(path).map_err(|err| {
+        io::Error::other(format!("{}: {}", path.display(), err))
+    })?;
+    patterns_from_reader(file, |line_number| {
+        format!("{}:{line_number}", path.display())
+    })
+    .map_err(|err| io::Error::other(format!("{}:{}", path.display(), err)))
+}
+
+fn patterns_from_stdin() -> io::Result<Vec<Pattern>> {
+    let stdin = io::stdin();
+    patterns_from_reader(stdin.lock(), |line_number| {
+        format!("<stdin>:{line_number}")
+    })
+    .map_err(|err| io::Error::other(format!("<stdin>:{err}")))
+}
+
+fn patterns_from_reader<R, F>(
+    rdr: R,
+    mut source: F,
+) -> io::Result<Vec<Pattern>>
+where
+    R: io::Read,
+    F: FnMut(usize) -> String,
+{
+    let mut patterns = vec![];
+    let mut line_number = 0;
+    io::BufReader::new(rdr).for_byte_line(|line| {
+        line_number += 1;
+        match grep::cli::pattern_from_bytes(line) {
+            Ok(pattern) => {
+                patterns.push(Pattern {
+                    text: pattern.to_string(),
+                    source: Some(source(line_number)),
+                });
+                Ok(true)
+            }
+            Err(err) => Err(io::Error::other(format!("{line_number}: {err}"))),
+        }
+    })?;
+    Ok(patterns)
 }
 
 /// The collection of paths we want to search for.
