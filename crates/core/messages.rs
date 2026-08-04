@@ -24,6 +24,20 @@ static IGNORE_MESSAGES: AtomicBool = AtomicBool::new(false);
 /// Flipped to true when an error message is printed.
 static ERRORED: AtomicBool = AtomicBool::new(false);
 
+// escape control bytes if stderr is a tty
+// filenames in errors cannot drive the terminal
+pub fn write_stderr<W: std::io::Write>(
+    w: &mut W,
+    buf: &[u8],
+) -> std::io::Result<()> {
+    use std::io::IsTerminal;
+    if std::io::stderr().is_terminal() {
+        w.write_all(&grep::printer::sanitize_control(buf))
+    } else {
+        w.write_all(buf)
+    }
+}
+
 /// Like eprintln, but locks stdout to prevent interleaving lines.
 ///
 /// This locks stdout, not stderr, even though this prints to stderr. This
@@ -47,14 +61,12 @@ macro_rules! eprintln_locked {
             // an error code because there isn't much else we can do.
             //
             // See: https://github.com/BurntSushi/ripgrep/issues/1966
-            if let Err(err) = write!(stderr, "rg: ") {
-                if err.kind() == std::io::ErrorKind::BrokenPipe {
-                    std::process::exit(0);
-                } else {
-                    std::process::exit(2);
-                }
-            }
-            if let Err(err) = writeln!(stderr, $($tt)*) {
+            // format into a buffer then escape before writing
+            let mut buf: Vec<u8> = Vec::with_capacity(128);
+            let _ = write!(&mut buf, "rg: ");
+            let _ = write!(&mut buf, $($tt)*);
+            buf.push(b'\n');
+            if let Err(err) = $crate::messages::write_stderr(&mut stderr, &buf) {
                 if err.kind() == std::io::ErrorKind::BrokenPipe {
                     std::process::exit(0);
                 } else {
