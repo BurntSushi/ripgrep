@@ -6371,6 +6371,11 @@ impl Flag for Replace {
 Replaces every match with the text given when printing results. Neither this
 flag nor any other ripgrep flag will modify your files.
 .sp
+Unlike grep, ripgrep searches directories recursively by default. The
+\fB-r\fP flag is short for \fB--replace\fP, not recursive search. For example,
+\fBrg -rn PATTERN\fP replaces each match with \fBn\fP. To show line numbers
+without replacing matches, use \fBrg -n PATTERN\fP.
+.sp
 Capture group indices (e.g., \fB$\fP\fI5\fP) and names (e.g., \fB$\fP\fIfoo\fP)
 are supported in the replacement string. Capture group indices are numbered
 based on the position of the opening parenthesis of the group, where the
