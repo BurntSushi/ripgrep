@@ -234,6 +234,12 @@ struct GlobOptions {
     /// When this isn't enabled, an opening `[` without a corresponding `]` is
     /// treated as an error.
     allow_unclosed_class: bool,
+    /// Whether or not to treat `{` and `}` as literal characters instead of
+    /// alternate group delimiters. When enabled, `{a,b}` will be treated as
+    /// the literal string `{a,b}` instead of matching `a` or `b`.
+    /// This is useful for compatibility with git's gitignore, which does not
+    /// support brace expansion.
+    literal_braces: bool,
 }
 
 impl GlobOptions {
@@ -244,6 +250,7 @@ impl GlobOptions {
             backslash_escape: !is_separator('\\'),
             empty_alternates: false,
             allow_unclosed_class: false,
+            literal_braces: false,
         }
     }
 }
@@ -664,6 +671,23 @@ impl<'a> GlobBuilder<'a> {
         self.opts.allow_unclosed_class = yes;
         self
     }
+
+    /// Toggle whether `{` and `}` are treated as literal characters instead of
+    /// alternate group delimiters.
+    ///
+    /// When enabled, `{a,b}` will be treated as the literal string `{a,b}`
+    /// instead of matching either `a` or `b`. Similarly, `{{cookiecutter.project_name}}`
+    /// will match that exact literal string instead of being interpreted as
+    /// nested alternate groups.
+    ///
+    /// This is useful for compatibility with git's gitignore, which does not
+    /// support brace expansion.
+    ///
+    /// By default, this is false (brace expansion is enabled).
+    pub fn literal_braces(&mut self, yes: bool) -> &mut GlobBuilder<'a> {
+        self.opts.literal_braces = yes;
+        self
+    }
 }
 
 impl Tokens {
@@ -826,8 +850,17 @@ impl<'a> Parser<'a> {
                 '?' => self.push_token(Token::Any)?,
                 '*' => self.parse_star()?,
                 '[' if !self.found_unclosed_class => self.parse_class()?,
+                '{' if self.opts.literal_braces => {
+                    self.push_token(Token::Literal('{'))?
+                }
                 '{' => self.push_alternate()?,
+                '}' if self.opts.literal_braces => {
+                    self.push_token(Token::Literal('}'))?
+                }
                 '}' => self.pop_alternate()?,
+                ',' if self.opts.literal_braces => {
+                    self.push_token(Token::Literal(','))?
+                }
                 ',' => self.parse_comma()?,
                 '\\' => self.parse_backslash()?,
                 c => self.push_token(Token::Literal(c))?,
