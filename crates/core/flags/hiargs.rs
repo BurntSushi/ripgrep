@@ -1113,6 +1113,25 @@ impl Paths {
         // patterns have already been read from LowArgs. This let's us safely
         // assume that all remaining positional arguments are intended to be
         // file paths.
+        //
+        // However, in non-search modes (like --files), when there are multiple
+        // positional arguments and no patterns were provided via -e/-f, the
+        // first positional would have been treated as a pattern in search mode.
+        // To maintain consistency with what files would actually be searched,
+        // we skip the first positional argument in this case. This ensures that
+        // --files lists the files that would actually be searched.
+        //
+        // We only apply this when there are multiple positionals because:
+        // - Single positional (like `--files .`) is likely an intentional path
+        // - Multiple positionals (like `--files . node_modules`) suggests pattern+path
+        //
+        // See: https://github.com/BurntSushi/ripgrep/issues/2820
+        if !matches!(low.mode, Mode::Search(_))
+            && low.patterns.is_empty()
+            && low.positional.len() >= 2
+        {
+            low.positional.remove(0);
+        }
 
         let mut paths = Vec::with_capacity(low.positional.len());
         for osarg in low.positional.drain(..) {
