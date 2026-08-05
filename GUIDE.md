@@ -420,6 +420,26 @@ alias rg="rg --type-add 'web:*.{html,css,js}'"
 or add `--type-add=web:*.{html,css,js}` to your ripgrep configuration file.
 ([Configuration files](#configuration-file) are covered in more detail later.)
 
+#### Case insensitive type matching
+
+By default, file type matching is case sensitive. This means that `-t html`
+will match `index.html` but not `index.HTML` or `index.HTM`. On
+case-insensitive filesystems (like those on Windows and macOS), you may have
+files with uppercase extensions. You can make type matching case insensitive
+with the `--type-case-insensitive` flag:
+
+```
+$ rg 'title' --type-case-insensitive -t html
+```
+
+This will match files with extensions like `.html`, `.HTML`, `.htm` and
+`.HTM`. If you always want case insensitive type matching, you can add it to
+your [configuration file](#configuration-file):
+
+```
+--type-case-insensitive
+```
+
 #### The special `all` file type
 
 A special option supported by the `--type` flag is `all`. `--type all` looks
