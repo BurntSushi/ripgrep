@@ -1304,4 +1304,62 @@ mod tests {
             "GlobSetBuilder { pats: [Glob(\"*foo*\"), Glob(\"*bar*\"), Glob(\"*quux*\")] }",
         );
     }
+
+    #[test]
+    fn custom_separator_works() {
+        use crate::glob::GlobBuilder;
+
+        // Test with '.' as separator
+        let glob = GlobBuilder::new("foo.*.bar")
+            .separator('.')
+            .literal_separator(true)
+            .build()
+            .unwrap()
+            .compile_matcher();
+
+        assert!(glob.is_match("foo.a.bar"));
+        assert!(!glob.is_match("foo.a.b.bar")); // * should not match across '.'
+        assert!(glob.is_match("foo./.bar")); // * matches '/' because it's not the separator
+
+        // Test with '**' and '.' as separator
+        let glob = GlobBuilder::new("foo.**.bar")
+            .separator('.')
+            .build()
+            .unwrap()
+            .compile_matcher();
+
+        assert!(glob.is_match("foo.a.bar"));
+        assert!(glob.is_match("foo.a.b.bar"));
+        assert!(glob.is_match("foo.bar"));
+    }
+
+    #[test]
+    fn custom_separator_escaping_works() {
+        use crate::glob::GlobBuilder;
+
+        // Test with '|' as separator (ensure it's escaped in regex)
+        let glob = GlobBuilder::new("a|*|b")
+            .separator('|')
+            .literal_separator(true)
+            .build()
+            .unwrap()
+            .compile_matcher();
+
+        assert!(glob.is_match("a|x|b"));
+        assert!(!glob.is_match("a|x|y|b"));
+    }
+
+    #[test]
+    fn default_separator_behavior_unchanged() {
+        use crate::glob::GlobBuilder;
+
+        let glob = GlobBuilder::new("foo/*/bar")
+            .literal_separator(true)
+            .build()
+            .unwrap()
+            .compile_matcher();
+
+        assert!(glob.is_match("foo/a/bar"));
+        assert!(!glob.is_match("foo/a/b/bar"));
+    }
 }

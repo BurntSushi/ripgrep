@@ -233,7 +233,11 @@ struct GlobOptions {
     /// character class is found, the opening `[` is treated as a literal `[`.
     /// When this isn't enabled, an opening `[` without a corresponding `]` is
     /// treated as an error.
+    /// By default, this is false.
     allow_unclosed_class: bool,
+    /// The separator character to use for path matching.
+    /// By default, this is `/`.
+    separator: char,
 }
 
 impl GlobOptions {
@@ -244,6 +248,7 @@ impl GlobOptions {
             backslash_escape: !is_separator('\\'),
             empty_alternates: false,
             allow_unclosed_class: false,
+            separator: '/',
         }
     }
 }
@@ -442,7 +447,7 @@ impl Glob {
             lit.push(c);
         }
         if need_sep {
-            lit.push('/');
+            lit.push(self.opts.separator);
         }
         if lit.is_empty() { None } else { Some(lit) }
     }
@@ -469,7 +474,7 @@ impl Glob {
                 // We only care if this follows a path component if the next
                 // token is a literal.
                 if let Some(&Token::Literal(_)) = self.tokens.get(1) {
-                    lit.push('/');
+                    lit.push(self.opts.separator);
                     (1, true)
                 } else {
                     (1, false)
@@ -493,7 +498,11 @@ impl Glob {
             let Token::Literal(c) = *t else { return None };
             lit.push(c);
         }
-        if lit.is_empty() || lit == "/" { None } else { Some((lit, entire)) }
+        if lit.is_empty() || lit == self.opts.separator.to_string() {
+            None
+        } else {
+            Some((lit, entire))
+        }
     }
 
     /// If this pattern only needs to inspect the basename of a file path,
@@ -525,7 +534,7 @@ impl Glob {
         }
         for t in self.tokens[start..].iter() {
             match *t {
-                Token::Literal('/') => return None,
+                Token::Literal(c) if c == self.opts.separator => return None,
                 Token::Literal(_) => {} // OK
                 Token::Any | Token::ZeroOrMore => {
                     if !self.opts.literal_separator {
@@ -664,6 +673,19 @@ impl<'a> GlobBuilder<'a> {
         self.opts.allow_unclosed_class = yes;
         self
     }
+
+    /// Set the separator character to use for this pattern.
+    ///
+    /// By default, the separator character is `/`.
+    ///
+    /// Note that when a separator is set, it is used instead of the platform's
+    /// default path separator(s). For example, if you set the separator to
+    /// `.`, then `*` will not match `.` if `literal_separator` is enabled,
+    /// but it *will* match `/`.
+    pub fn separator(&mut self, c: char) -> &mut GlobBuilder<'a> {
+        self.opts.separator = c;
+        self
+    }
 }
 
 impl Tokens {
@@ -695,6 +717,7 @@ impl Tokens {
         tokens: &[Token],
         re: &mut String,
     ) {
+        let sep = char_to_escaped_literal(options.separator);
         for tok in tokens.iter() {
             match *tok {
                 Token::Literal(c) => {
@@ -702,26 +725,41 @@ impl Tokens {
                 }
                 Token::Any => {
                     if options.literal_separator {
-                        re.push_str("[^/]");
+                        re.push_str("[^");
+                        re.push_str(&sep);
+                        re.push(']');
                     } else {
                         re.push_str(".");
                     }
                 }
                 Token::ZeroOrMore => {
                     if options.literal_separator {
-                        re.push_str("[^/]*");
+                        re.push_str("[^");
+                        re.push_str(&sep);
+                        re.push_str("]*");
                     } else {
                         re.push_str(".*");
                     }
                 }
                 Token::RecursivePrefix => {
-                    re.push_str("(?:/?|.*/)");
+                    re.push_str("(?:");
+                    re.push_str(&sep);
+                    re.push_str("?|.*");
+                    re.push_str(&sep);
+                    re.push(')');
                 }
                 Token::RecursiveSuffix => {
-                    re.push_str("/.*");
+                    re.push_str(&sep);
+                    re.push_str(".*");
                 }
                 Token::RecursiveZeroOrMore => {
-                    re.push_str("(?:/|/.*/)");
+                    re.push_str("(?:");
+                    re.push_str(&sep);
+                    re.push_str("|");
+                    re.push_str(&sep);
+                    re.push_str(".*");
+                    re.push_str(&sep);
+                    re.push(')');
                 }
                 Token::Class { negated, ref ranges } => {
                     re.push('[');
@@ -906,17 +944,17 @@ impl<'a> Parser<'a> {
         }
         assert!(self.bump() == Some('*'));
         if !self.have_tokens()? {
-            if !self.peek().map_or(true, is_separator) {
+            if !self.peek().map_or(true, |c| self.is_sep(c)) {
                 self.push_token(Token::ZeroOrMore)?;
                 self.push_token(Token::ZeroOrMore)?;
             } else {
                 self.push_token(Token::RecursivePrefix)?;
-                assert!(self.bump().map_or(true, is_separator));
+                assert!(self.bump().map_or(true, |c| self.is_sep(c)));
             }
             return Ok(());
         }
 
-        if !prev.map(is_separator).unwrap_or(false) {
+        if !prev.map(|c| self.is_sep(c)).unwrap_or(false) {
             if self.branches.len() <= 1
                 || (prev != Some(',') && prev != Some('{'))
             {
@@ -931,8 +969,8 @@ impl<'a> Parser<'a> {
                 true
             }
             Some(',') | Some('}') if self.branches.len() >= 2 => true,
-            Some(c) if is_separator(c) => {
-                assert!(self.bump().map(is_separator).unwrap_or(false));
+            Some(c) if self.is_sep(c) => {
+                assert!(self.bump().map(|c| self.is_sep(c)).unwrap_or(false));
                 false
             }
             _ => {
@@ -1059,6 +1097,14 @@ impl<'a> Parser<'a> {
 
     fn peek(&mut self) -> Option<char> {
         self.chars.peek().copied()
+    }
+
+    fn is_sep(&self, c: char) -> bool {
+        if self.opts.separator == '/' {
+            is_separator(c)
+        } else {
+            c == self.opts.separator
+        }
     }
 }
 
