@@ -589,7 +589,7 @@ impl<'a> GlobBuilder<'a> {
         };
         p.parse()?;
         if p.branches.is_empty() {
-            // OK because of how the the branches/alternate_stack are managed.
+            // OK because of how the branches/alternate_stack are managed.
             // If we end up here, then there *must* be a bug in the parser
             // somewhere.
             unreachable!()
