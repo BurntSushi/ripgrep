@@ -1,4 +1,5 @@
 use {
+    bstr::ByteSlice,
     grep_matcher::{
         ByteSet, Captures, LineMatchKind, LineTerminator, Match, Matcher,
         NoError,
@@ -9,7 +10,10 @@ use {
     },
 };
 
-use crate::{config::Config, error::Error, literal::InnerLiterals};
+use crate::{
+    bridge_literals::LiteralSequence, config::Config, error::Error,
+    literal::InnerLiterals,
+};
 
 /// A builder for constructing a `Matcher` using regular expressions.
 ///
@@ -77,11 +81,26 @@ impl RegexMatcherBuilder {
         // simple, but the idea applies.)
         let fast_line_regex = InnerLiterals::new(&chir, &regex).one_regex()?;
 
+        // Extract ordered literals for fast pre-filtering.
+        // This is only useful when we have a line terminator set, similar to
+        // the fast_line_regex optimization.
+        let literal_seq = if chir.config().line_terminator.is_some() {
+            LiteralSequence::new(chir.hir())
+        } else {
+            None
+        };
+
         // We override the line terminator in case the configured HIR doesn't
         // support it.
         let mut config = self.config.clone();
         config.line_terminator = chir.line_terminator();
-        Ok(RegexMatcher { config, regex, fast_line_regex, non_matching_bytes })
+        Ok(RegexMatcher {
+            config,
+            regex,
+            fast_line_regex,
+            literal_seq,
+            non_matching_bytes,
+        })
     }
 
     /// Build a new matcher from a plain alternation of literals.
@@ -375,6 +394,11 @@ pub struct RegexMatcher {
     /// than `regex`. Typically, this is a single literal or an alternation
     /// of literals.
     fast_line_regex: Option<Regex>,
+    /// Literal sequence extracted from the HIR. These literals must appear in
+    /// order within the haystack for a match to be possible. This allows for
+    /// fast rejection of lines where literals don't appear in the correct
+    /// order.
+    literal_seq: Option<LiteralSequence>,
     /// A set of bytes that will never appear in a match.
     non_matching_bytes: ByteSet,
 }
@@ -490,18 +514,48 @@ impl Matcher for RegexMatcher {
     #[inline]
     fn find_candidate_line(
         &self,
-        haystack: &[u8],
+        mut haystack: &[u8],
     ) -> Result<Option<LineMatchKind>, NoError> {
+        let mut haystack_offset = 0;
+        if let Some(literal_seq) = &self.literal_seq {
+            match literal_seq.exists_in(haystack) {
+                // All literals appear in the required order.
+                // Because the other literal-extraction approaches are likely to have more literals
+                // (since they don't care about their order or their property of being individually
+                // necessary for matches), we resume searching with those approaches from the line
+                // which contains the last required literal in the `LiteralSequence`.
+                // This is an attempt to get the best of both worlds: search for the required
+                // literals that have a known order in an *order-aware* manner, and then search for
+                // the other literals which don't have a known order and are not individually
+                // necessary in an *order-unaware* manner.
+                Some(offset) => {
+                    let line_start = haystack[..offset]
+                        .rfind_byte(
+                            self.config.line_terminator.unwrap().as_byte(),
+                        )
+                        .map_or(0, |i| i + 1);
+
+                    haystack = &haystack[line_start..];
+                    haystack_offset = line_start;
+                }
+                // Not all necessary literals appear in the required order, so this haystack
+                // contains no matches.
+                None => {
+                    return Ok(None);
+                }
+            };
+        }
+
         Ok(match self.fast_line_regex {
             Some(ref regex) => {
                 let input = Input::new(haystack);
-                regex
-                    .search_half(&input)
-                    .map(|hm| LineMatchKind::Candidate(hm.offset()))
+                regex.search_half(&input).map(|hm| {
+                    LineMatchKind::Candidate(haystack_offset + hm.offset())
+                })
             }
-            None => {
-                self.shortest_match(haystack)?.map(LineMatchKind::Confirmed)
-            }
+            None => self.shortest_match(haystack)?.map(|offset| {
+                LineMatchKind::Confirmed(haystack_offset + offset)
+            }),
         })
     }
 }

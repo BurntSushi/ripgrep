@@ -10,9 +10,12 @@ pub use crate::{
 
 mod ast;
 mod ban;
+mod bridge_literals;
 mod config;
 mod error;
 mod literal;
 mod matcher;
 mod non_matching;
 mod strip;
+
+pub use crate::bridge_literals::LiteralSequence;
