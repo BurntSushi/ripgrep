@@ -91,6 +91,11 @@ pub struct ColorSpecs {
     column: ColorSpec,
     matched: ColorSpec,
     highlight: ColorSpec,
+    path_blink: bool,
+    line_blink: bool,
+    column_blink: bool,
+    matched_blink: bool,
+    highlight_blink: bool,
 }
 
 /// A single color specification provided by the user.
@@ -205,6 +210,8 @@ enum Style {
     NoUnderline,
     Italic,
     NoItalic,
+    Blink,
+    NoBlink,
 }
 
 impl ColorSpecs {
@@ -212,13 +219,100 @@ impl ColorSpecs {
     /// specifications.
     pub fn new(specs: &[UserColorSpec]) -> ColorSpecs {
         let mut merged = ColorSpecs::default();
+        // Ensure blink flags are initialized to false on creation
+        merged.path_blink = false;
+        merged.line_blink = false;
+        merged.column_blink = false;
+        merged.matched_blink = false;
+        merged.highlight_blink = false;
+
         for spec in specs {
             match spec.ty {
-                OutType::Path => spec.merge_into(&mut merged.path),
-                OutType::Line => spec.merge_into(&mut merged.line),
-                OutType::Column => spec.merge_into(&mut merged.column),
-                OutType::Match => spec.merge_into(&mut merged.matched),
-                OutType::Highlight => spec.merge_into(&mut merged.highlight),
+                OutType::Path => match spec.value {
+                    SpecValue::Fg(ref c) => { merged.path.set_fg(Some(c.clone())); },
+                    SpecValue::Bg(ref c) => { merged.path.set_bg(Some(c.clone())); },
+                    SpecValue::None => { merged.path.clear(); },
+                    SpecValue::Style(ref style) => match *style {
+                        Style::Blink => { merged.path_blink = true; },
+                        Style::NoBold => { merged.path.set_bold(false); },
+                        Style::Bold => { merged.path.set_bold(true); },
+                        Style::Intense => { merged.path.set_intense(true); },
+                        Style::NoIntense => { merged.path.set_intense(false); },
+                        Style::Underline => { merged.path.set_underline(true); },
+                        Style::NoUnderline => { merged.path.set_underline(false); },
+                        Style::Italic => { merged.path.set_italic(true); },
+                        Style::NoItalic => { merged.path.set_italic(false); },
+                        Style::NoBlink => { merged.path_blink = false; },
+                    },
+                },
+                OutType::Line => match spec.value {
+                    SpecValue::Fg(ref c) => { merged.line.set_fg(Some(c.clone())); },
+                    SpecValue::Bg(ref c) => { merged.line.set_bg(Some(c.clone())); },
+                    SpecValue::None => { merged.line.clear(); },
+                    SpecValue::Style(ref style) => match *style {
+                        Style::Blink => { merged.line_blink = true; },
+                        Style::NoBold => { merged.line.set_bold(false); },
+                        Style::Bold => { merged.line.set_bold(true); },
+                        Style::Intense => { merged.line.set_intense(true); },
+                        Style::NoIntense => { merged.line.set_intense(false); },
+                        Style::Underline => { merged.line.set_underline(true); },
+                        Style::NoUnderline => { merged.line.set_underline(false); },
+                        Style::Italic => { merged.line.set_italic(true); },
+                        Style::NoItalic => { merged.line.set_italic(false); },
+                        Style::NoBlink => { merged.line_blink = false; },
+                    },
+                },
+                OutType::Column => match spec.value {
+                    SpecValue::Fg(ref c) => { merged.column.set_fg(Some(c.clone())); },
+                    SpecValue::Bg(ref c) => { merged.column.set_bg(Some(c.clone())); },
+                    SpecValue::None => { merged.column.clear(); },
+                    SpecValue::Style(ref style) => match *style {
+                        Style::Blink => { merged.column_blink = true; },
+                        Style::NoBold => { merged.column.set_bold(false); },
+                        Style::Bold => { merged.column.set_bold(true); },
+                        Style::Intense => { merged.column.set_intense(true); },
+                        Style::NoIntense => { merged.column.set_intense(false); },
+                        Style::Underline => { merged.column.set_underline(true); },
+                        Style::NoUnderline => { merged.column.set_underline(false); },
+                        Style::Italic => { merged.column.set_italic(true); },
+                        Style::NoItalic => { merged.column.set_italic(false); },
+                        Style::NoBlink => { merged.column_blink = false; },
+                    },
+                },
+                OutType::Match => match spec.value {
+                    SpecValue::Fg(ref c) => { merged.matched.set_fg(Some(c.clone())); },
+                    SpecValue::Bg(ref c) => { merged.matched.set_bg(Some(c.clone())); },
+                    SpecValue::None => { merged.matched.clear(); },
+                    SpecValue::Style(ref style) => match *style {
+                        Style::Blink => { merged.matched_blink = true; },
+                        Style::NoBold => { merged.matched.set_bold(false); },
+                        Style::Bold => { merged.matched.set_bold(true); },
+                        Style::Intense => { merged.matched.set_intense(true); },
+                        Style::NoIntense => { merged.matched.set_intense(false); },
+                        Style::Underline => { merged.matched.set_underline(true); },
+                        Style::NoUnderline => { merged.matched.set_underline(false); },
+                        Style::Italic => { merged.matched.set_italic(true); },
+                        Style::NoItalic => { merged.matched.set_italic(false); },
+                        Style::NoBlink => { merged.matched_blink = false; },
+                    },
+                },
+                OutType::Highlight => match spec.value {
+                    SpecValue::Fg(ref c) => { merged.highlight.set_fg(Some(c.clone())); },
+                    SpecValue::Bg(ref c) => { merged.highlight.set_bg(Some(c.clone())); },
+                    SpecValue::None => { merged.highlight.clear(); },
+                    SpecValue::Style(ref style) => match *style {
+                        Style::Blink => { merged.highlight_blink = true; },
+                        Style::NoBold => { merged.highlight.set_bold(false); },
+                        Style::Bold => { merged.highlight.set_bold(true); },
+                        Style::Intense => { merged.highlight.set_intense(true); },
+                        Style::NoIntense => { merged.highlight.set_intense(false); },
+                        Style::Underline => { merged.highlight.set_underline(true); },
+                        Style::NoUnderline => { merged.highlight.set_underline(false); },
+                        Style::Italic => { merged.highlight.set_italic(true); },
+                        Style::NoItalic => { merged.highlight.set_italic(false); },
+                        Style::NoBlink => { merged.highlight_blink = false; },
+                    },
+                },
             }
         }
         merged
@@ -258,6 +352,17 @@ impl ColorSpecs {
     pub fn highlight(&self) -> &ColorSpec {
         &self.highlight
     }
+
+    /// Return whether `path` styling should enable blink.
+    pub fn path_blink(&self) -> bool { self.path_blink }
+    /// Return whether `line` styling should enable blink.
+    pub fn line_blink(&self) -> bool { self.line_blink }
+    /// Return whether `column` styling should enable blink.
+    pub fn column_blink(&self) -> bool { self.column_blink }
+    /// Return whether `match` styling should enable blink.
+    pub fn matched_blink(&self) -> bool { self.matched_blink }
+    /// Return whether `highlight` styling should enable blink.
+    pub fn highlight_blink(&self) -> bool { self.highlight_blink }
 }
 
 impl UserColorSpec {
@@ -302,6 +407,12 @@ impl SpecValue {
                 }
                 Style::NoItalic => {
                     cspec.set_italic(false);
+                }
+                Style::Blink => {
+                    // Blink is not representable in ColorSpec; handled separately.
+                }
+                Style::NoBlink => {
+                    // No-op here; handled during ColorSpecs parsing.
                 }
             },
         }
@@ -390,6 +501,8 @@ impl std::str::FromStr for Style {
             "nounderline" => Ok(Style::NoUnderline),
             "italic" => Ok(Style::Italic),
             "noitalic" => Ok(Style::NoItalic),
+            "blink" => Ok(Style::Blink),
+            "noblink" => Ok(Style::NoBlink),
             _ => Err(ColorError::UnrecognizedStyle(s.to_string())),
         }
     }
