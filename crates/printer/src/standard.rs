@@ -731,6 +731,17 @@ impl<'p, 's, M: Matcher, W: WriteColor> StandardSink<'p, 's, M, W> {
         {
             matches.pop().unwrap();
         }
+        // When the re-search fails to find any match, it is typically
+        // because the regex uses lookahead that requires content beyond
+        // the match boundary. find_iter_at_in_context extends the search
+        // buffer by only MAX_LOOK_AHEAD bytes in multi-line mode, which
+        // may not be enough when the lookahead spans many lines. Insert
+        // a synthetic match spanning the entire match range so that
+        // column reporting (and other match-granularity output) still
+        // works instead of silently dropping the column.
+        if matches.is_empty() && searcher.multi_line_with_matcher(&self.matcher) {
+            matches.push(Match::new(0, range.len()));
+        }
         Ok(())
     }
 
