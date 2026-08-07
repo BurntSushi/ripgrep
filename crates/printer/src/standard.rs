@@ -739,7 +739,9 @@ impl<'p, 's, M: Matcher, W: WriteColor> StandardSink<'p, 's, M, W> {
         // a synthetic match spanning the entire match range so that
         // column reporting (and other match-granularity output) still
         // works instead of silently dropping the column.
-        if matches.is_empty() && searcher.multi_line_with_matcher(&self.matcher) {
+        if matches.is_empty()
+            && searcher.multi_line_with_matcher(&self.matcher)
+        {
             matches.push(Match::new(0, range.len()));
         }
         Ok(())
