@@ -269,23 +269,23 @@ patterns while the next section covers file type filtering.
 
 In our ripgrep source code (see [Basics](#basics) for instructions on how to
 get a source archive to search), let's say we wanted to see which things depend
-on `lexopt`, our argument parser.
+on `clap`, our argument parser.
 
 We could do this:
 
 ```
-$ rg lexopt
+$ rg clap
 [lots of results]
 ```
 
 But this shows us many things, and we're only interested in where we wrote
-`lexopt` as a dependency. Instead, we could limit ourselves to TOML files,
+`clap` as a dependency. Instead, we could limit ourselves to TOML files,
 which is how dependencies are communicated to Rust's build tool, Cargo:
 
 ```
-$ rg lexopt -g '*.toml'
+$ rg clap -g '*.toml'
 Cargo.toml
-57:lexopt = "0.3.0"
+35:clap = "2.26"
 ```
 
 The `-g '*.toml'` syntax says, "make sure every file searched matches this
@@ -295,7 +295,7 @@ shell from expanding the `*`.
 If we wanted, we could tell ripgrep to search anything *but* `*.toml` files:
 
 ```
-$ rg lexopt -g '!*.toml'
+$ rg clap -g '!*.toml'
 [lots of results]
 ```
 
@@ -311,7 +311,7 @@ is, later globs will override earlier globs. For example, the following command
 will search only `*.toml` files:
 
 ```
-$ rg lexopt -g '!*.toml' -g '*.toml'
+$ rg clap -g '!*.toml' -g '*.toml'
 ```
 
 Interestingly, reversing the order of the globs in this case will match
@@ -363,13 +363,13 @@ $ rg 'int main' -tc
 Just as you can write blacklist globs, you can blacklist file types too:
 
 ```
-$ rg lexopt --type-not rust
+$ rg clap --type-not rust
 ```
 
 or, more succinctly,
 
 ```
-$ rg lexopt -Trust
+$ rg clap -Trust
 ```
 
 That is, `-t` means "include files of this type" where as `-T` means "exclude
