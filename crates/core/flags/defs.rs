@@ -2436,6 +2436,9 @@ Generates a completion script for the \fBfish\fP shell.
 .TP 15
 \fBcomplete\-powershell\fP
 Generates a completion script for PowerShell.
+.TP 15
+\fBcomplete\-nushell\fP
+Generates a completion script for the \fBnushell\fP shell.
 .PP
 The output is written to \fBstdout\fP. The list above may expand over time.
 "
@@ -2447,6 +2450,7 @@ The output is written to \fBstdout\fP. The list above may expand over time.
             "complete-zsh",
             "complete-fish",
             "complete-powershell",
+            "complete-nushell",
         ]
     }
 
@@ -2457,6 +2461,7 @@ The output is written to \fBstdout\fP. The list above may expand over time.
             "complete-zsh" => GenerateMode::CompleteZsh,
             "complete-fish" => GenerateMode::CompleteFish,
             "complete-powershell" => GenerateMode::CompletePowerShell,
+            "complete-nushell" => GenerateMode::CompleteNushell,
             unk => anyhow::bail!("choice '{unk}' is unrecognized"),
         };
         args.mode.update(Mode::Generate(genmode));
@@ -2484,6 +2489,9 @@ fn test_generate() {
 
     let args = parse_low_raw(["--generate", "complete-powershell"]).unwrap();
     assert_eq!(Mode::Generate(GenerateMode::CompletePowerShell), args.mode);
+
+    let args = parse_low_raw(["--generate", "complete-nushell"]).unwrap();
+    assert_eq!(Mode::Generate(GenerateMode::CompleteNushell), args.mode);
 
     let args =
         parse_low_raw(["--generate", "complete-bash", "--generate=man"])
