@@ -1,12 +1,35 @@
 use std::{
     ffi::{OsStr, OsString},
     path::{Path, PathBuf},
+    time::Duration,
 };
 
 use anyhow::Context;
 use redb::{Database, ReadOnlyDatabase};
 
 const INDEX_FILE_NAME: &str = "index.db";
+
+const LOCK_RETRY_LIMIT: u32 = 20;
+const LOCK_RETRY_DELAY: Duration = Duration::from_millis(50);
+
+fn open_or_retry<F, T>(mut f: F) -> Result<T, redb::DatabaseError>
+where
+    F: FnMut() -> Result<T, redb::DatabaseError>,
+{
+    let mut attempts = 0;
+    loop {
+        match f() {
+            Ok(value) => return Ok(value),
+            Err(redb::DatabaseError::DatabaseAlreadyOpen)
+                if attempts < LOCK_RETRY_LIMIT =>
+            {
+                attempts += 1;
+                std::thread::sleep(LOCK_RETRY_DELAY);
+            }
+            Err(err) => return Err(err),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct Index {
@@ -58,24 +81,26 @@ impl IndexBuilder {
             });
         }
         let path = path.join(INDEX_FILE_NAME);
-        // TODO: Retry here if the database is already open.
-        let db = Database::create(&path).with_context(|| {
-            format!("{}: failed to create database", path.display())
-        })?;
+        let db =
+            open_or_retry(|| Database::create(&path)).with_context(|| {
+                format!("{}: failed to create database", path.display())
+            })?;
         let index = Index { path, db: Handle::ReadWrite(db) };
         Ok(index)
     }
 
     fn build_open(&self, path: &Path) -> anyhow::Result<Index> {
         let path = path.join(INDEX_FILE_NAME);
-        // TODO: Retry here if the database is already open.
         let db = if self.write {
-            Handle::ReadWrite(Database::open(&path).with_context(|| {
-                format!(
-                    "{}: failed to open read-write database",
-                    path.display()
-                )
-            })?)
+            let db = open_or_retry(|| Database::open(&path)).with_context(
+                || {
+                    format!(
+                        "{}: failed to open read-write database",
+                        path.display()
+                    )
+                },
+            )?;
+            Handle::ReadWrite(db)
         } else {
             Handle::ReadOnly(ReadOnlyDatabase::open(&path).with_context(
                 || {
