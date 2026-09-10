@@ -121,6 +121,7 @@ _rg() {
 
     + glob
     '*'{-g+,--glob=}'[include/exclude files matching specified glob]:glob pattern:_files'
+    '*'{-G+,--glob-not=}'[exclude files matching specified glob]:glob pattern:_files'
     '*--iglob=[include/exclude files matching specified case-insensitive glob]:glob pattern:_files'
 
     + '(glob-case-insensitive)'

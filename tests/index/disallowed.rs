@@ -61,6 +61,13 @@ rgtest!(glob, |dir: Dir, _cmd: TestCommand| {
     dir.command().arg("-X").arg("--glob=test").arg("foobar").assert_err();
 });
 
+rgtest!(glob_not, |dir: Dir, _cmd: TestCommand| {
+    dir.create("test", "foobar");
+    dir.command().arg("--x-crud").assert_exit_code(0);
+
+    dir.command().arg("-X").arg("--glob-not=test").arg("foobar").assert_err();
+});
+
 rgtest!(hidden, |dir: Dir, _cmd: TestCommand| {
     dir.create(".test", "foobar");
     dir.command().arg("--x-crud").assert_exit_code(0);

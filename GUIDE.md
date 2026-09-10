@@ -306,6 +306,19 @@ is a bit non-standard, but it was chosen to be consistent with how globs in
 `.gitignore` files, a `!` prefix means whitelist, and on the command line, a
 `!` means blacklist.)
 
+Since `!` is special to most shells, negated globs given to `-g` typically
+need to be quoted. As a convenience, ripgrep also provides `-G`/`--glob-not`,
+which is exactly the same as `-g` except that it always negates the given
+glob. That is, `-G tests` is equivalent to `-g '!tests'`, but doesn't
+require quoting to protect the `!` from your shell:
+
+```
+$ rg lexopt -G '*.toml'
+[Results from files except for `*.toml`]
+```
+
+This is analogous to how `-T`/`--type-not` relates to `-t`/`--type`.
+
 Globs are interpreted in exactly the same way as `.gitignore` patterns. That
 is, later globs will override earlier globs. For example, the following command
 will search only `*.toml` files:

@@ -2,6 +2,12 @@ TBD
 ===
 Unreleased changes. Release notes have not yet been written.
 
+Feature enhancements:
+
+* [FEATURE #3522](https://github.com/BurntSushi/ripgrep/issues/3522):
+  Add a `-G/--glob-not` flag that is equivalent to `-g` except that the glob
+  is always negated.
+
 
 15.2.0 (2026-07-15)
 ===================
