@@ -40,6 +40,12 @@ pub struct Glob {
     is_whitelist: bool,
     /// Whether this glob should only match directories or not.
     is_only_dir: bool,
+    /// Whether this glob was absolute (started with `/`).
+    ///
+    /// Absolute globs should be matched against the path relative to the
+    /// filesystem root, not relative to the gitignore root. This ensures
+    /// consistent behavior regardless of the current working directory.
+    is_absolute: bool,
 }
 
 impl Glob {
@@ -85,6 +91,8 @@ pub struct Gitignore {
     num_ignores: u64,
     num_whitelists: u64,
     matches: Option<Arc<Pool<Vec<usize>>>>,
+    /// Whether any glob in this set is absolute (starts with `/`).
+    has_absolute_globs: bool,
 }
 
 impl Gitignore {
@@ -156,6 +164,7 @@ impl Gitignore {
             num_ignores: 0,
             num_whitelists: 0,
             matches: None,
+            has_absolute_globs: false,
         }
     }
 
@@ -208,6 +217,45 @@ impl Gitignore {
             return Match::None;
         }
         self.matched_stripped(self.strip(path.as_ref()), is_dir)
+    }
+
+    /// Matches the given path like [`Gitignore::matched`], but treats absolute
+    /// globs (those that start with `/`) as if they were anchored to the
+    /// filesystem root instead of this gitignore's root.
+    ///
+    /// This is used by override matchers (e.g., ripgrep's `--glob` flag),
+    /// where an absolute glob should behave consistently regardless of the
+    /// current working directory.
+    pub(crate) fn matched_override<P: AsRef<Path>>(
+        &self,
+        path: P,
+        is_dir: bool,
+    ) -> Match<&Glob> {
+        if self.is_empty() {
+            return Match::None;
+        }
+        let path = path.as_ref();
+        let root_stripped = self.strip(path);
+        if self.has_absolute_globs {
+            // Absolute globs are matched against the path relative to the
+            // filesystem root. If the given path is relative, then it is
+            // relative to this matcher's root, so reconstruct the absolute
+            // path before stripping the leading separator.
+            let abs = if path.is_absolute() {
+                path.to_path_buf()
+            } else {
+                self.root.join(path)
+            };
+            let fs_stripped = strip_leading_sep(&abs);
+            if fs_stripped != root_stripped {
+                return self.matched_stripped_split(
+                    root_stripped,
+                    fs_stripped,
+                    is_dir,
+                );
+            }
+        }
+        self.matched_stripped(root_stripped, is_dir)
     }
 
     /// Returns whether the given path (file or directory, and expected to be
@@ -281,6 +329,54 @@ impl Gitignore {
         Match::None
     }
 
+    /// Like matched_stripped, but matches non-absolute globs against
+    /// `root_stripped` and absolute globs against `fs_stripped`.
+    ///
+    /// Globs are considered in priority order (later globs override earlier
+    /// ones), and only the path relevant to each glob is used for matching.
+    fn matched_stripped_split<P: AsRef<Path>>(
+        &self,
+        root_stripped: P,
+        fs_stripped: P,
+        is_dir: bool,
+    ) -> Match<&Glob> {
+        if self.is_empty() {
+            return Match::None;
+        }
+        let root_stripped = root_stripped.as_ref();
+        let fs_stripped = fs_stripped.as_ref();
+        let mut matches = self.matches.as_ref().unwrap().get();
+        let candidate = Candidate::new(root_stripped);
+        self.set.matches_candidate_into(&candidate, &mut *matches);
+        let root_matches: Vec<usize> = matches.iter().copied().collect();
+        matches.clear();
+        let candidate = Candidate::new(fs_stripped);
+        self.set.matches_candidate_into(&candidate, &mut *matches);
+        let fs_matches: Vec<usize> = matches.iter().copied().collect();
+        for i in (0..self.globs.len()).rev() {
+            let glob = &self.globs[i];
+            // A non-absolute glob is matched relative to this matcher's root.
+            // An absolute glob is additionally matched relative to the
+            // filesystem root, so that it behaves consistently regardless of
+            // the root the override matcher was built relative to. (Gitignore
+            // anchored semantics, e.g. `/foo` matching `foo`, are preserved by
+            // also considering the root-relative path.)
+            let matched = if glob.is_absolute {
+                root_matches.contains(&i) || fs_matches.contains(&i)
+            } else {
+                root_matches.contains(&i)
+            };
+            if matched && (!glob.is_only_dir() || is_dir) {
+                return if glob.is_whitelist() {
+                    Match::Whitelist(glob)
+                } else {
+                    Match::Ignore(glob)
+                };
+            }
+        }
+        Match::None
+    }
+
     /// Strips the given path such that it's suitable for matching with this
     /// gitignore matcher.
     fn strip<'a, P: 'a + AsRef<Path> + ?Sized>(
@@ -313,6 +409,23 @@ impl Gitignore {
         }
         path
     }
+}
+
+/// Strips a leading path separator from the given path.
+///
+/// This corresponds to how an absolute glob (one that starts with `/`) is
+/// normalized when it is added to a matcher: the leading separator is
+/// dropped, but any drive prefix (e.g., `C:\` on Windows) is retained.
+/// For example, `/foo/bar` becomes `foo/bar`. Relative paths are returned
+/// unchanged.
+fn strip_leading_sep(path: &Path) -> &Path {
+    if let Some(p) = strip_prefix("/", path) {
+        return p;
+    }
+    if let Some(p) = strip_prefix("\\", path) {
+        return p;
+    }
+    path
 }
 
 /// Builds a matcher for a single set of globs from a .gitignore file.
@@ -362,6 +475,7 @@ impl GitignoreBuilder {
             matches: Some(Arc::new(
                 Pool::with_available_parallelism_capacity(|| vec![]),
             )),
+            has_absolute_globs: self.globs.iter().any(|g| g.is_absolute),
         })
     }
 
@@ -479,6 +593,7 @@ impl GitignoreBuilder {
             actual: String::new(),
             is_whitelist: false,
             is_only_dir: false,
+            is_absolute: false,
         };
         let mut is_absolute = false;
         if line.starts_with("\\!") || line.starts_with("\\#") {
@@ -496,6 +611,7 @@ impl GitignoreBuilder {
                 // simply banning wildcards from matching /.
                 line = &line[1..];
                 is_absolute = true;
+                glob.is_absolute = true;
             }
         }
         // If it ends with a slash, then this should only match directories,
