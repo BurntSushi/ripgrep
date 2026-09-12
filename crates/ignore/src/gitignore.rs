@@ -486,8 +486,15 @@ impl GitignoreBuilder {
             is_absolute = line.chars().nth(0) == Some('/');
         } else {
             if line.starts_with("!") {
-                glob.is_whitelist = true;
                 line = &line[1..];
+                if line.is_empty() {
+                    // A bare "!" strips to no pattern at all. Git treats this as a
+                    // no-op line rather than a whitelist matching everything, so
+                    // an ancestor's exclusion of this path keeps applying.
+                    // See: https://github.com/BurntSushi/ripgrep/issues/3527
+                    return Ok(self);
+                }
+                glob.is_whitelist = true;
             }
             if line.starts_with("/") {
                 // `man gitignore` says that if a glob starts with a slash,
@@ -787,6 +794,10 @@ mod tests {
     ignored!(ig42, ROOT, "s*.rs", "sfoo.rs");
     ignored!(ig43, ROOT, "**", "foo.rs");
     ignored!(ig44, ROOT, "**/**/*", "a/foo.rs");
+    // A bare "!" strips to no pattern, so it's a no-op: an earlier exclusion
+    // still applies. It must not become a "**/" whitelist matching everything.
+    // See: https://github.com/BurntSushi/ripgrep/issues/3527
+    ignored!(ig45, ROOT, ".venv\n!", ".venv");
 
     not_ignored!(ignot1, ROOT, "amonths", "months");
     not_ignored!(ignot2, ROOT, "monthsa", "months");
