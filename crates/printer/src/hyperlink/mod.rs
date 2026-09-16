@@ -892,38 +892,94 @@ impl HyperlinkPath {
     ///
     /// Section 4 of RFC 8089 (The "file" URI Scheme) does not mandate precise
     /// encoding requirements for non-ASCII characters, and this implementation
-    /// leaves them unencoded. On Windows, the UrlCreateFromPathW function does
-    /// not encode non-ASCII characters. Doing so with UTF-8 encoded paths
-    /// creates invalid file:// URLs on that platform.
+    /// leaves valid UTF-8 sequences unencoded. On Windows, the
+    /// UrlCreateFromPathW function does not encode non-ASCII characters.
+    /// Doing so with UTF-8 encoded paths creates invalid file:// URLs on that
+    /// platform.
+    ///
+    /// Bytes that cannot be part of a valid UTF-8 sequence are percent-encoded
+    /// instead of being copied raw, since they are neither valid in a URI (RFC
+    /// 3986 is ASCII-only) nor decodable as an IRI (RFC 3987), and raw bytes
+    /// outside 32-126 in an OSC 8 sequence are undefined behaviour.
     fn encode(input: &[u8]) -> HyperlinkPath {
+        const HEX: &[u8] = b"0123456789ABCDEF";
+        let percent_encode = |byte: u8, result: &mut Vec<u8>| {
+            result.push(b'%');
+            result.push(HEX[(byte >> 4) as usize]);
+            result.push(HEX[(byte & 0xF) as usize]);
+        };
         let mut result = Vec::with_capacity(input.len());
-        for &byte in input.iter() {
-            match byte {
-                b'0'..=b'9'
-                | b'A'..=b'Z'
-                | b'a'..=b'z'
-                | b'/'
-                | b':'
-                | b'-'
-                | b'.'
-                | b'_'
-                | b'~'
-                | 128.. => {
-                    result.push(byte);
+        let mut i = 0;
+        while i < input.len() {
+            let byte = input[i];
+            // ASCII fast path. Behavior here is unchanged.
+            if byte < 128 {
+                match byte {
+                    b'0'..=b'9'
+                    | b'A'..=b'Z'
+                    | b'a'..=b'z'
+                    | b'/'
+                    | b':'
+                    | b'-'
+                    | b'.'
+                    | b'_'
+                    | b'~' => {
+                        result.push(byte);
+                    }
+                    #[cfg(windows)]
+                    b'\\' => {
+                        result.push(b'/');
+                    }
+                    _ => {
+                        percent_encode(byte, &mut result);
+                    }
                 }
-                #[cfg(windows)]
-                b'\\' => {
-                    result.push(b'/');
+                i += 1;
+                continue;
+            }
+            // Non-ASCII: keep bytes that form a valid UTF-8 sequence as-is
+            // (preserves the existing IRI behaviour), and percent-encode
+            // bytes that cannot start or complete one (lone continuations,
+            // truncated sequences, overlongs, surrogates, 0xF5-0xFF).
+            match HyperlinkPath::valid_utf8_sequence_len(&input[i..]) {
+                Some(len) => {
+                    result.extend_from_slice(&input[i..i + len]);
+                    i += len;
                 }
-                _ => {
-                    const HEX: &[u8] = b"0123456789ABCDEF";
-                    result.push(b'%');
-                    result.push(HEX[(byte >> 4) as usize]);
-                    result.push(HEX[(byte & 0xF) as usize]);
+                None => {
+                    percent_encode(byte, &mut result);
+                    i += 1;
                 }
             }
         }
         HyperlinkPath(result)
+    }
+
+    /// Returns the length of the valid UTF-8 sequence starting at the
+    /// beginning of `s`, or `None` if the first byte cannot start (or the
+    /// following bytes cannot complete) a valid UTF-8 sequence.
+    fn valid_utf8_sequence_len(s: &[u8]) -> Option<usize> {
+        let b0 = s[0];
+        let len = if (0xC2..=0xDF).contains(&b0) {
+            2
+        } else if (0xE0..=0xEF).contains(&b0) {
+            3
+        } else if (0xF0..=0xF4).contains(&b0) {
+            4
+        } else {
+            return None;
+        };
+        if s.len() < len {
+            return None;
+        }
+        if !s[1..len].iter().all(|b| (0x80..=0xBF).contains(b)) {
+            return None;
+        }
+        // Rejects overlongs, surrogates and codepoints beyond U+10FFFF.
+        if std::str::from_utf8(&s[..len]).is_err() {
+            return None;
+        }
+        Some(len)
     }
 }
 
@@ -1119,6 +1175,33 @@ mod tests {
             convert(r"\\?\UNC\server\dir\file.txt"),
             "//server/dir/file.txt"
         );
+    }
+
+    #[test]
+    fn encode_percent_encodes_invalid_utf8() {
+        let encode = |input: &[u8]| HyperlinkPath::encode(input).0;
+
+        // Raw 0xFF from issue #3526.
+        assert_eq!(encode(b"/tmp/bad\xFF.txt"), b"/tmp/bad%FF.txt");
+        // Lone continuation byte.
+        assert_eq!(encode(b"\x80"), b"%80");
+        // Truncated multi-byte sequences.
+        assert_eq!(encode(b"\xC3"), b"%C3");
+        assert_eq!(encode(b"/a\xC3/b"), b"/a%C3/b");
+        assert_eq!(encode(b"\xE2\x82"), b"%E2%82");
+        // Valid UTF-8 stays raw (existing IRI behaviour).
+        assert_eq!(encode("/café".as_bytes()), "/café".as_bytes(),);
+        assert_eq!(encode("/привет".as_bytes()), "/привет".as_bytes(),);
+        // Overlong, surrogate and out-of-range leads are invalid.
+        assert_eq!(encode(b"\xC0\xAF"), b"%C0%AF");
+        assert_eq!(encode(b"\xED\xA0\x80"), b"%ED%A0%80");
+        assert_eq!(encode(b"\xF5"), b"%F5");
+        // Mixed valid and invalid.
+        assert_eq!(encode(b"bad\xFF/caf\xC3\xA9"), b"bad%FF/caf\xC3\xA9",);
+        // ASCII behaviour is unchanged.
+        assert_eq!(encode(b"/a b"), b"/a%20b");
+        assert_eq!(encode(b"/a%b"), b"/a%25b");
+        assert_eq!(encode(b"AZaz09/-._~/:"), b"AZaz09/-._~/:",);
     }
 
     #[test]
