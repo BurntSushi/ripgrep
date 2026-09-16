@@ -3025,8 +3025,10 @@ The following variables are available in the format string:
 .TP 12
 \fB{path}\fP
 Required. This is replaced with a path to a matching file. The path is
-guaranteed to be absolute and percent encoded such that it is valid to put into
-a URI. Note that a path is guaranteed to start with a /.
+guaranteed to be absolute and to start with a /. ASCII bytes that are not
+valid in a URI are percent encoded. Non-ASCII bytes that form valid UTF-8
+are left as-is (an IRI, see RFC 8089), while bytes that cannot be part of
+valid UTF-8 are percent encoded.
 .TP 12
 \fB{host}\fP
 Optional. This is replaced with your system's hostname. On Unix, this
