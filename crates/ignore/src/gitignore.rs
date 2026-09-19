@@ -498,6 +498,9 @@ impl GitignoreBuilder {
                 is_absolute = true;
             }
         }
+        if line.is_empty() {
+            return Ok(self);
+        }
         // If it ends with a slash, then this should only match directories,
         // but the slash should otherwise not be used while globbing.
         if line.as_bytes().last() == Some(&b'/') {
@@ -861,6 +864,26 @@ mod tests {
     #[test]
     fn regression_106() {
         gi_from_str("/", " ");
+    }
+
+    // See: https://github.com/BurntSushi/ripgrep/issues/3527
+    #[test]
+    fn regression_3527() {
+        let gi = gi_from_str(ROOT, "!");
+        assert!(gi.matched("foo", false).is_none());
+        assert!(gi.matched("foo/bar", false).is_none());
+
+        let gi = gi_from_str(ROOT, "!/");
+        assert!(gi.matched("foo", false).is_none());
+
+        let gi = gi_from_str(ROOT, "*.tmp\n!");
+        assert!(gi.matched("test.tmp", false).is_ignore());
+
+        let gi = gi_from_str(ROOT, "*.tmp\n!foo.tmp");
+        assert!(gi.matched("foo.tmp", false).is_whitelist());
+
+        let gi = gi_from_str(ROOT, r"\!");
+        assert!(gi.matched("!", false).is_ignore());
     }
 
     #[test]
