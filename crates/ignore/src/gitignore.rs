@@ -244,7 +244,22 @@ impl Gitignore {
 
         match self.matched_stripped(path, is_dir) {
             Match::None => (), // walk up
-            a_match => return a_match,
+            Match::Ignore(glob) => return Match::Ignore(glob),
+            Match::Whitelist(glob) => {
+                // Git never re-includes a path under an excluded
+                // ancestor, so a whitelist on the path itself only
+                // stands when no parent is ignored.
+                let mut parent_path = path;
+                while let Some(parent) = parent_path.parent() {
+                    if let Match::Ignore(iglob) =
+                        self.matched_stripped(parent, /* is_dir */ true)
+                    {
+                        return Match::Ignore(iglob);
+                    }
+                    parent_path = parent;
+                }
+                return Match::Whitelist(glob);
+            }
         }
         while let Some(parent) = path.parent() {
             match self.matched_stripped(parent, /* is_dir */ true) {
@@ -861,6 +876,39 @@ mod tests {
     #[test]
     fn regression_106() {
         gi_from_str("/", " ");
+    }
+
+    #[test]
+    fn matched_path_or_any_parents_excluded_ancestor_whitelist_stays_ignored()
+    {
+        // Issue rows: whitelist on the path must not rescue it from an
+        // excluded ancestor.
+        let gi = gi_from_str(ROOT, "dist/\n!*.pub");
+        assert!(
+            gi.matched_path_or_any_parents("dist/keep.pub", false).is_ignore()
+        );
+        let gi = gi_from_str(ROOT, ".idea/\n!.idea/eclipseCodeFormatter.xml");
+        assert!(
+            gi.matched_path_or_any_parents(
+                ".idea/eclipseCodeFormatter.xml",
+                false
+            )
+            .is_ignore()
+        );
+        let gi = gi_from_str(ROOT, "__tmp/\n!__tmp/keep");
+        assert!(
+            gi.matched_path_or_any_parents("__tmp/keep", false).is_ignore()
+        );
+        // Guards: behavior without an excluded ancestor is unchanged.
+        let gi = gi_from_str(ROOT, "*.log\n!important.log");
+        assert!(
+            gi.matched_path_or_any_parents("important.log", false)
+                .is_whitelist()
+        );
+        let gi = gi_from_str(ROOT, "*.log");
+        assert!(gi.matched_path_or_any_parents("foo.log", false).is_ignore());
+        let gi = gi_from_str(ROOT, "*.log");
+        assert!(gi.matched_path_or_any_parents("foo.txt", false).is_none());
     }
 
     #[test]
