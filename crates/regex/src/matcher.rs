@@ -278,6 +278,10 @@ impl RegexMatcherBuilder {
     ///
     /// If the given line terminator isn't an ASCII byte (`<=127`), then the
     /// builder will return an error when constructing the matcher.
+    ///
+    /// The terminator is also passed to the regex engine so that line anchors
+    /// such as `(?m:^)` and `(?m:$)` (and `--line-regexp`) match at that
+    /// boundary. This includes using `NUL` with `--null-data`.
     pub fn line_terminator(
         &mut self,
         line_term: Option<u8>,
@@ -619,6 +623,28 @@ mod tests {
             .build(r"abc$")
             .unwrap();
         assert!(matcher.is_match(b"abc\r\n").unwrap());
+    }
+
+    // Test that a NUL line terminator is honored by line anchors. This is
+    // what `--null-data` needs so the searcher can keep the fast path.
+    #[test]
+    fn line_terminator_nul() {
+        let matcher = RegexMatcherBuilder::new()
+            .multi_line(true)
+            .line_terminator(Some(b'\x00'))
+            .build(r"^abc$")
+            .unwrap();
+        assert!(matcher.is_match(b"abc\x00").unwrap());
+        assert!(matcher.is_match(b"\x00abc\x00").unwrap());
+        assert!(!matcher.is_match(b"abc\n").unwrap());
+
+        let matcher = RegexMatcherBuilder::new()
+            .line_terminator(Some(b'\x00'))
+            .whole_line(true)
+            .build(r"bar")
+            .unwrap();
+        assert!(matcher.is_match(b"foo\x00bar\x00quux\x00").unwrap());
+        assert!(!matcher.is_match(b"foobar\x00").unwrap());
     }
 
     // Test that smart case works.

@@ -1546,4 +1546,102 @@ and exhibited clearly, with a label attached.\
             .unwrap();
         assert!(matched);
     }
+
+    // See: https://github.com/BurntSushi/ripgrep/issues/2832
+    //
+    // `--null-data` used to force the slow line-by-line searcher, which walks
+    // every NUL as its own empty record. A haystack of NULs with a needle in
+    // the middle should instead use the fast path, so the matcher is not
+    // invoked once per byte.
+    #[test]
+    fn null_line_terminator_uses_fast_path() {
+        use std::cell::Cell;
+
+        use grep_matcher::{
+            ByteSet, LineMatchKind, LineTerminator, Match, Matcher, NoError,
+        };
+        use grep_regex::{RegexCaptures, RegexMatcherBuilder};
+
+        struct CountingMatcher {
+            inner: grep_regex::RegexMatcher,
+            calls: Cell<usize>,
+        }
+
+        impl Matcher for CountingMatcher {
+            type Captures = RegexCaptures;
+            type Error = NoError;
+
+            fn find_at(
+                &self,
+                haystack: &[u8],
+                at: usize,
+            ) -> Result<Option<Match>, NoError> {
+                self.calls.set(self.calls.get() + 1);
+                self.inner.find_at(haystack, at)
+            }
+
+            fn new_captures(&self) -> Result<RegexCaptures, NoError> {
+                self.inner.new_captures()
+            }
+
+            fn shortest_match_at(
+                &self,
+                haystack: &[u8],
+                at: usize,
+            ) -> Result<Option<usize>, NoError> {
+                self.calls.set(self.calls.get() + 1);
+                self.inner.shortest_match_at(haystack, at)
+            }
+
+            fn line_terminator(&self) -> Option<LineTerminator> {
+                self.inner.line_terminator()
+            }
+
+            fn non_matching_bytes(&self) -> Option<&ByteSet> {
+                self.inner.non_matching_bytes()
+            }
+
+            fn find_candidate_line(
+                &self,
+                haystack: &[u8],
+            ) -> Result<Option<LineMatchKind>, NoError> {
+                self.calls.set(self.calls.get() + 1);
+                self.inner.find_candidate_line(haystack)
+            }
+        }
+
+        let needle = b"ZQZQZQZQZQ";
+        let mut haystack =
+            vec![0u8; 2 * DEFAULT_BUFFER_CAPACITY + needle.len()];
+        let mid = DEFAULT_BUFFER_CAPACITY;
+        haystack[mid..mid + needle.len()].copy_from_slice(needle);
+
+        let inner = RegexMatcherBuilder::new()
+            .line_terminator(Some(b'\x00'))
+            .build("ZQZQZQZQZQ")
+            .unwrap();
+        let matcher = CountingMatcher { inner, calls: Cell::new(0) };
+        let mut matched = false;
+        let mut searcher = SearcherBuilder::new()
+            .line_terminator(LineTerminator::byte(b'\x00'))
+            .build();
+        searcher
+            .search_reader(
+                &matcher,
+                &*haystack,
+                crate::sinks::UTF8(|_, _| {
+                    matched = true;
+                    Ok(true)
+                }),
+            )
+            .unwrap();
+        assert!(matched);
+        // The slow path would call the matcher once per NUL. Two 64KB
+        // buffers of NULs would be well over 100,000 calls.
+        assert!(
+            matcher.calls.get() < 64,
+            "expected fast path, but matcher was called {} times",
+            matcher.calls.get()
+        );
+    }
 }
