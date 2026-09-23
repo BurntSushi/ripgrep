@@ -80,6 +80,19 @@ pub fn pattern_from_bytes(
 /// pattern, then the error message will include the line number and the file
 /// path.
 pub fn patterns_from_path<P: AsRef<Path>>(path: P) -> io::Result<Vec<String>> {
+    let patterns = patterns_from_path_indexed(path)?;
+    Ok(patterns.into_iter().map(|(_, p)| p).collect())
+}
+
+/// Read patterns and their 1-based line numbers from a file path, one per line.
+///
+/// If there was a problem reading or if any of the patterns contain invalid
+/// UTF-8, then an error is returned. If there was a problem with a specific
+/// pattern, then the error message will include the line number and the file
+/// path.
+pub fn patterns_from_path_indexed<P: AsRef<Path>>(
+    path: P,
+) -> io::Result<Vec<(usize, String)>> {
     let path = path.as_ref();
     let file = std::fs::File::open(path).map_err(|err| {
         io::Error::new(
@@ -87,7 +100,7 @@ pub fn patterns_from_path<P: AsRef<Path>>(path: P) -> io::Result<Vec<String>> {
             format!("{}: {}", path.display(), err),
         )
     })?;
-    patterns_from_reader(file).map_err(|err| {
+    patterns_from_reader_indexed(file).map_err(|err| {
         io::Error::new(
             io::ErrorKind::Other,
             format!("{}:{}", path.display(), err),
@@ -102,9 +115,20 @@ pub fn patterns_from_path<P: AsRef<Path>>(path: P) -> io::Result<Vec<String>> {
 /// pattern, then the error message will include the line number and the fact
 /// that it came from stdin.
 pub fn patterns_from_stdin() -> io::Result<Vec<String>> {
+    let patterns = patterns_from_stdin_indexed()?;
+    Ok(patterns.into_iter().map(|(_, p)| p).collect())
+}
+
+/// Read patterns and their 1-based line numbers from stdin, one per line.
+///
+/// If there was a problem reading or if any of the patterns contain invalid
+/// UTF-8, then an error is returned. If there was a problem with a specific
+/// pattern, then the error message will include the line number and the fact
+/// that it came from stdin.
+pub fn patterns_from_stdin_indexed() -> io::Result<Vec<(usize, String)>> {
     let stdin = io::stdin();
     let locked = stdin.lock();
-    patterns_from_reader(locked).map_err(|err| {
+    patterns_from_reader_indexed(locked).map_err(|err| {
         io::Error::new(io::ErrorKind::Other, format!("<stdin>:{}", err))
     })
 }
@@ -139,13 +163,49 @@ pub fn patterns_from_stdin() -> io::Result<Vec<String>> {
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn patterns_from_reader<R: io::Read>(rdr: R) -> io::Result<Vec<String>> {
+    let patterns = patterns_from_reader_indexed(rdr)?;
+    Ok(patterns.into_iter().map(|(_, p)| p).collect())
+}
+
+/// Read patterns and their 1-based line numbers from any reader, one per line.
+///
+/// If there was a problem reading or if any of the patterns contain invalid
+/// UTF-8, then an error is returned. If there was a problem with a specific
+/// pattern, then the error message will include the line number.
+///
+/// Note that this routine uses its own internal buffer, so the caller should
+/// not provide their own buffered reader if possible.
+///
+/// # Example
+///
+/// This shows how to parse patterns with line numbers, one per line.
+///
+/// ```
+/// use grep_cli::patterns_from_reader_indexed;
+///
+/// let patterns = "\
+/// foo
+/// bar\\s+foo
+/// [a-z]{3}
+/// ";
+///
+/// assert_eq!(patterns_from_reader_indexed(patterns.as_bytes())?, vec![
+///     (1, r"foo".to_string()),
+///     (2, r"bar\s+foo".to_string()),
+///     (3, r"[a-z]{3}".to_string()),
+/// ]);
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+pub fn patterns_from_reader_indexed<R: io::Read>(
+    rdr: R,
+) -> io::Result<Vec<(usize, String)>> {
     let mut patterns = vec![];
     let mut line_number = 0;
     io::BufReader::new(rdr).for_byte_line(|line| {
         line_number += 1;
         match pattern_from_bytes(line) {
             Ok(pattern) => {
-                patterns.push(pattern.to_string());
+                patterns.push((line_number, pattern.to_string()));
                 Ok(true)
             }
             Err(err) => Err(io::Error::new(
@@ -177,5 +237,19 @@ mod tests {
         let pat = OsStr::from_bytes(b"abc\xFFxyz");
         let err = pattern_from_os(pat).unwrap_err();
         assert_eq!(3, err.valid_up_to());
+    }
+
+    #[test]
+    fn reader_indexed() {
+        let input = "foo\nbar\nbaz\n";
+        let patterns = patterns_from_reader_indexed(input.as_bytes()).unwrap();
+        assert_eq!(
+            patterns,
+            vec![
+                (1, "foo".to_string()),
+                (2, "bar".to_string()),
+                (3, "baz".to_string()),
+            ]
+        );
     }
 }

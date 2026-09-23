@@ -454,7 +454,41 @@ impl HiArgs {
             if self.crlf {
                 builder.crlf(true);
             }
-            let m = builder.build_many(&self.patterns.patterns)?;
+            let m = match builder.build_many(&self.patterns.patterns) {
+                Ok(m) => m,
+                Err(err) => {
+                    for (pat, origin) in self
+                        .patterns
+                        .patterns
+                        .iter()
+                        .zip(&self.patterns.origins)
+                    {
+                        if let Err(pat_err) = builder.build(pat) {
+                            match origin {
+                                PatternOrigin::File { path, line } => {
+                                    anyhow::bail!(
+                                        "{}:{}: {}",
+                                        path.display(),
+                                        line,
+                                        pat_err
+                                    );
+                                }
+                                PatternOrigin::Stdin { line } => {
+                                    anyhow::bail!(
+                                        "<stdin>:{}: {}",
+                                        line,
+                                        pat_err
+                                    );
+                                }
+                                _ => {
+                                    anyhow::bail!("{}", pat_err);
+                                }
+                            }
+                        }
+                    }
+                    return Err(err.into());
+                }
+            };
             Ok(PatternMatcher::PCRE2(m))
         }
         #[cfg(not(feature = "pcre2"))]
@@ -518,6 +552,31 @@ impl HiArgs {
         let m = match builder.build_many(&self.patterns.patterns) {
             Ok(m) => m,
             Err(err) => {
+                for (pat, origin) in
+                    self.patterns.patterns.iter().zip(&self.patterns.origins)
+                {
+                    if let Err(pat_err) = builder.build(pat) {
+                        let msg = suggest_text(suggest_multiline(
+                            pat_err.to_string(),
+                        ));
+                        match origin {
+                            PatternOrigin::File { path, line } => {
+                                anyhow::bail!(
+                                    "{}:{}: {}",
+                                    path.display(),
+                                    line,
+                                    msg
+                                );
+                            }
+                            PatternOrigin::Stdin { line } => {
+                                anyhow::bail!("<stdin>:{}: {}", line, msg);
+                            }
+                            _ => {
+                                anyhow::bail!("{}", msg);
+                            }
+                        }
+                    }
+                }
                 anyhow::bail!(suggest_text(suggest_multiline(err.to_string())))
             }
         };
@@ -996,6 +1055,19 @@ impl State {
     }
 }
 
+/// The origin of a pattern specified by the user.
+#[derive(Clone, Debug)]
+enum PatternOrigin {
+    /// A pattern passed via positional command-line argument.
+    Positional,
+    /// A pattern passed via `-e/--regexp`.
+    RegexpFlag,
+    /// A pattern loaded from a file via `-f/--file`.
+    File { path: PathBuf, line: usize },
+    /// A pattern loaded from stdin via `-f -`.
+    Stdin { line: usize },
+}
+
 /// The disjunction of patterns to search for.
 ///
 /// The number of patterns can be empty, e.g., via `-f /dev/null`.
@@ -1003,6 +1075,9 @@ impl State {
 struct Patterns {
     /// The actual patterns to match.
     patterns: Vec<String>,
+    /// The origin of each pattern, used to provide precise file and line
+    /// context if regular expression compilation fails.
+    origins: Vec<PatternOrigin>,
 }
 
 impl Patterns {
@@ -1025,7 +1100,7 @@ impl Patterns {
         // No search means no patterns. Even if -e/--regexp or -f/--file is
         // given, we know we won't use them so don't bother collecting them.
         if !matches!(low.mode, Mode::Search(_)) {
-            return Ok(Patterns { patterns: vec![] });
+            return Ok(Patterns { patterns: vec![], origins: vec![] });
         }
         // If we got nothing from -e/--regexp and -f/--file, then the first
         // positional is a pattern.
@@ -1038,7 +1113,10 @@ impl Patterns {
             let Ok(pat) = ospat.into_string() else {
                 anyhow::bail!("pattern given is not valid UTF-8")
             };
-            return Ok(Patterns { patterns: vec![pat] });
+            return Ok(Patterns {
+                patterns: vec![pat],
+                origins: vec![PatternOrigin::Positional],
+            });
         }
         // Otherwise, we need to slurp up our patterns from -e/--regexp and
         // -f/--file. We de-duplicate as we go. If we don't de-duplicate,
@@ -1052,15 +1130,19 @@ impl Patterns {
         // big impact on real world data.
         let mut seen = HashSet::new();
         let mut patterns = Vec::with_capacity(low.patterns.len());
-        let mut add = |pat: String| {
+        let mut origins = Vec::with_capacity(low.patterns.len());
+        let mut add = |pat: String, origin: PatternOrigin| {
             if !seen.contains(&pat) {
                 seen.insert(pat.clone());
                 patterns.push(pat);
+                origins.push(origin);
             }
         };
         for source in low.patterns.drain(..) {
             match source {
-                PatternSource::Regexp(pat) => add(pat),
+                PatternSource::Regexp(pat) => {
+                    add(pat, PatternOrigin::RegexpFlag);
+                }
                 PatternSource::File(path) => {
                     if path == Path::new("-") {
                         anyhow::ensure!(
@@ -1068,19 +1150,29 @@ impl Patterns {
                             "error reading -f/--file from stdin: stdin \
                              has already been consumed"
                         );
-                        for pat in grep::cli::patterns_from_stdin()? {
-                            add(pat);
+                        for (line, pat) in
+                            grep::cli::patterns_from_stdin_indexed()?
+                        {
+                            add(pat, PatternOrigin::Stdin { line });
                         }
                         state.stdin_consumed = true;
                     } else {
-                        for pat in grep::cli::patterns_from_path(&path)? {
-                            add(pat);
+                        for (line, pat) in
+                            grep::cli::patterns_from_path_indexed(&path)?
+                        {
+                            add(
+                                pat,
+                                PatternOrigin::File {
+                                    path: path.clone(),
+                                    line,
+                                },
+                            );
                         }
                     }
                 }
             }
         }
-        Ok(Patterns { patterns })
+        Ok(Patterns { patterns, origins })
     }
 }
 

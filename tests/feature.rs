@@ -1172,3 +1172,52 @@ rgtest!(stop_on_nonmatch, |dir: Dir, mut cmd: TestCommand| {
     cmd.args(&["--stop-on-nonmatch", "[235]"]);
     eqnice!("test:line2\ntest:line3\n", cmd.stdout());
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/478
+rgtest!(
+    f478_pattern_file_error_line_number,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create("file", "hello world\n");
+        dir.create(
+            "patterns.txt",
+            "valid_one\nvalid_two\ninvalid(unclosed\nvalid_three\n",
+        );
+
+        cmd.args(&["-f", "patterns.txt", "file"]);
+        let output = cmd.raw_output();
+        assert!(!output.status.success());
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("patterns.txt:3:"),
+            "expected stderr to contain file path and line number, got: {}",
+            stderr
+        );
+        assert!(
+            stderr.contains("unclosed group"),
+            "expected stderr to contain regex error, got: {}",
+            stderr
+        );
+    }
+);
+
+rgtest!(
+    f478_multiple_pattern_files_error_line_number,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create("file", "hello world\n");
+        dir.create("pat1.txt", "alpha\nbeta\n");
+        dir.create("pat2.txt", "gamma\n[unclosed_bracket\ndelta\n");
+        dir.create("pat3.txt", "epsilon\n");
+
+        cmd.args(&[
+            "-f", "pat1.txt", "-f", "pat2.txt", "-f", "pat3.txt", "file",
+        ]);
+        let output = cmd.raw_output();
+        assert!(!output.status.success());
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("pat2.txt:2:"),
+            "expected stderr to identify failing file pat2.txt and line 2, got: {}",
+            stderr
+        );
+    }
+);

@@ -141,7 +141,9 @@ pub use crate::{
     human::{ParseSizeError, parse_human_readable_size},
     pattern::{
         InvalidPatternError, pattern_from_bytes, pattern_from_os,
-        patterns_from_path, patterns_from_reader, patterns_from_stdin,
+        patterns_from_path, patterns_from_path_indexed, patterns_from_reader,
+        patterns_from_reader_indexed, patterns_from_stdin,
+        patterns_from_stdin_indexed,
     },
     process::{CommandError, CommandReader, CommandReaderBuilder},
     wtr::{
