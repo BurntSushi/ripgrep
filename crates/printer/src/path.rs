@@ -154,9 +154,14 @@ impl<W: WriteColor> PathPrinter<W> {
             self.wtr.write_all(ppath.as_bytes())?;
         } else {
             let status = self.start_hyperlink(&ppath)?;
-            self.wtr.set_color(self.config.colors.path())?;
-            self.wtr.write_all(ppath.as_bytes())?;
-            self.wtr.reset()?;
+            let spec = self.config.colors.path();
+            if spec.is_none() {
+                self.wtr.write_all(ppath.as_bytes())?;
+            } else {
+                self.wtr.set_color(spec)?;
+                self.wtr.write_all(ppath.as_bytes())?;
+                self.wtr.reset()?;
+            }
             self.interpolator.finish(status, &mut self.wtr)?;
         }
         self.wtr.write_all(&[self.config.terminator])
@@ -172,5 +177,25 @@ impl<W: WriteColor> PathPrinter<W> {
         };
         let values = hyperlink::Values::new(hyperpath);
         self.interpolator.begin(&values, &mut self.wtr)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use termcolor::Ansi;
+
+    use super::{ColorSpecs, PathPrinterBuilder};
+
+    #[test]
+    fn regression_color_none_no_escapes() {
+        let mut printer = PathPrinterBuilder::new()
+            .color_specs(ColorSpecs::new(&["path:none".parse().unwrap()]))
+            .build(Ansi::new(vec![]));
+        printer.write(Path::new("sherlock")).unwrap();
+
+        let got = String::from_utf8(printer.wtr.get_ref().to_owned()).unwrap();
+        assert_eq!("sherlock\n", got);
     }
 }
