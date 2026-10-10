@@ -542,8 +542,8 @@ rgtest!(r599, |dir: Dir, mut cmd: TestCommand| {
     ]);
 
     let expected = "\
-[0m1[0m:
-[0m2[0m:
+1:
+2:
 ";
     eqnice_repr!(expected, cmd.stdout());
 });

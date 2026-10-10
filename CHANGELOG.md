@@ -2,6 +2,11 @@ TBD
 ===
 Unreleased changes. Release notes have not yet been written.
 
+Bug fixes:
+
+* [BUG #3289](https://github.com/BurntSushi/ripgrep/issues/3289):
+  Don't emit reset escape sequences for output whose color is set to `none`.
+
 
 15.2.0 (2026-07-15)
 ===================

@@ -1432,6 +1432,9 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
 
     fn write_spec(&self, spec: &ColorSpec, buf: &[u8]) -> io::Result<()> {
         let mut wtr = self.wtr().borrow_mut();
+        if spec.is_none() {
+            return wtr.write_all(buf);
+        }
         wtr.set_color(spec)?;
         wtr.write_all(buf)?;
         wtr.reset()?;
@@ -1439,10 +1442,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     }
 
     fn write_path(&self, path: &PrinterPath) -> io::Result<()> {
-        let mut wtr = self.wtr().borrow_mut();
-        wtr.set_color(self.config().colors.path())?;
-        wtr.write_all(path.as_bytes())?;
-        wtr.reset()
+        self.write_spec(self.config().colors.path(), path.as_bytes())
     }
 
     fn write_path_hyperlink(&self, path: &PrinterPath) -> io::Result<()> {
@@ -1473,10 +1473,11 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     }
 
     fn start_color_match(&self) -> io::Result<()> {
-        if self.in_color_match.get() {
+        let spec = self.config().colors.matched();
+        if self.in_color_match.get() || spec.is_none() {
             return Ok(());
         }
-        self.wtr().borrow_mut().set_color(self.config().colors.matched())?;
+        self.wtr().borrow_mut().set_color(spec)?;
         self.in_color_match.set(true);
         Ok(())
     }
@@ -3983,5 +3984,70 @@ e
         let got = printer_contents(&mut printer);
         let expected = "hello\nworld\r\n";
         assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn regression_color_none_no_escapes() {
+        let specs = ColorSpecs::new(&[
+            "path:none".parse().unwrap(),
+            "line:none".parse().unwrap(),
+            "column:none".parse().unwrap(),
+            "match:fg:red".parse().unwrap(),
+        ]);
+        let matcher = RegexMatcher::new("Sherlock").unwrap();
+        let mut printer = StandardBuilder::new()
+            .color_specs(specs)
+            .column(true)
+            .build(Ansi::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(true)
+            .build()
+            .search_reader(
+                &matcher,
+                SHERLOCK.as_bytes(),
+                printer.sink_with_path(&matcher, "sherlock"),
+            )
+            .unwrap();
+
+        let got = printer_contents_ansi(&mut printer);
+        let expected = "\
+sherlock:1:57:For the Doctor Watsons of this world, as opposed to the \x1b[0m\x1b[31mSherlock\x1b[0m
+sherlock:3:49:be, to a very large extent, the result of luck. \x1b[0m\x1b[31mSherlock\x1b[0m Holmes
+";
+        assert_eq!(expected, got);
+    }
+
+    #[test]
+    fn regression_color_none_no_escapes_multi_line() {
+        let specs = ColorSpecs::new(&[
+            "path:none".parse().unwrap(),
+            "line:none".parse().unwrap(),
+            "column:none".parse().unwrap(),
+            "match:none".parse().unwrap(),
+        ]);
+        let matcher = RegexMatcher::new(r"Sherlock\nHolmeses").unwrap();
+        let mut printer = StandardBuilder::new()
+            .color_specs(specs)
+            .column(true)
+            .heading(true)
+            .build(Ansi::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(true)
+            .multi_line(true)
+            .build()
+            .search_reader(
+                &matcher,
+                SHERLOCK.as_bytes(),
+                printer.sink_with_path(&matcher, "sherlock"),
+            )
+            .unwrap();
+
+        let got = printer_contents_ansi(&mut printer);
+        let expected = "\
+sherlock
+1:57:For the Doctor Watsons of this world, as opposed to the Sherlock
+2:57:Holmeses, success in the province of detective work must always
+";
+        assert_eq!(expected, got);
     }
 }

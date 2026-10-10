@@ -615,6 +615,9 @@ impl<'p, 's, M: Matcher, W: WriteColor> SummarySink<'p, 's, M, W> {
 
     /// Write the given bytes using the give style.
     fn write_spec(&self, spec: &ColorSpec, buf: &[u8]) -> io::Result<()> {
+        if spec.is_none() {
+            return self.write(buf);
+        }
         self.summary.wtr.borrow_mut().set_color(spec)?;
         self.write(buf)?;
         self.summary.wtr.borrow_mut().reset()?;
@@ -792,9 +795,9 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for SummarySink<'p, 's, M, W> {
 mod tests {
     use grep_regex::RegexMatcher;
     use grep_searcher::SearcherBuilder;
-    use termcolor::NoColor;
+    use termcolor::{Ansi, NoColor};
 
-    use super::{Summary, SummaryBuilder, SummaryKind};
+    use super::{ColorSpecs, Summary, SummaryBuilder, SummaryKind};
 
     const SHERLOCK: &'static [u8] = b"\
 For the Doctor Watsons of this world, as opposed to the Sherlock
@@ -1146,5 +1149,26 @@ and exhibited clearly, with a label attached.
         // after finding the first one, but since we request stats, it will
         // mush on to find all matches.
         assert_eq!(3, match_count);
+    }
+
+    #[test]
+    fn regression_color_none_no_escapes() {
+        let matcher = RegexMatcher::new(r"Watson").unwrap();
+        let mut printer = SummaryBuilder::new()
+            .kind(SummaryKind::Count)
+            .color_specs(ColorSpecs::new(&["path:none".parse().unwrap()]))
+            .build(Ansi::new(vec![]));
+        SearcherBuilder::new()
+            .build()
+            .search_reader(
+                &matcher,
+                SHERLOCK,
+                printer.sink_with_path(&matcher, "sherlock"),
+            )
+            .unwrap();
+
+        let got =
+            String::from_utf8(printer.get_mut().get_ref().to_owned()).unwrap();
+        assert_eq!("sherlock:2\n", got);
     }
 }
