@@ -5404,7 +5404,7 @@ impl Flag for NullData {
     fn doc_long(&self) -> &'static str {
         r"
 Enabling this flag causes ripgrep to use \fBNUL\fP as a line terminator instead
-of the default of \fP\\n\fP.
+of the default of \fB\\n\fP.
 .sp
 This is useful when searching large binary files that would otherwise have
 very long lines if \fB\\n\fP were used as the line terminator. In particular,
