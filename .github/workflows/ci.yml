@@ -252,6 +252,19 @@ jobs:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc --no-deps --document-private-items --workspace
 
+  benches:
+    name: Test benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+      - name: Test ignore benchmarks
+        run: cargo +nightly test -p ignore --benches
+
   fuzz_testing:
     name: Compile Fuzz Test Targets
     runs-on: ubuntu-latest
