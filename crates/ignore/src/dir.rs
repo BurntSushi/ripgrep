@@ -238,12 +238,8 @@ impl Ignore {
             let (mut igtmp, err) = ig.add_child_path(parent);
             errs.maybe_push(err);
             igtmp.is_absolute_parent = true;
-            igtmp.has_git =
-                if self.inner.opts.require_git && self.inner.opts.git_ignore {
-                    parent.join(".git").exists() || parent.join(".jj").exists()
-                } else {
-                    false
-                };
+            // `add_child_path` already checked repository markers when needed.
+            igtmp.has_git &= self.inner.opts.git_ignore;
             let ig_arc = Arc::new(igtmp);
             ig = Ignore {
                 inner: ig_arc.clone(),
