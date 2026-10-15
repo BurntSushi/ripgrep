@@ -279,6 +279,31 @@ impl Ignore {
         )
     }
 
+    /// Like `add_child`, but reuse this matcher when the child adds no rules
+    /// or repository boundary. Incremental matching tracks directory paths
+    /// separately, so it doesn't need empty nodes in the matcher chain.
+    pub(crate) fn add_child_with_possible_reuse(
+        &self,
+        dir: &Path,
+    ) -> (Ignore, Option<Error>) {
+        let (ig, err) = self.add_child_path(dir);
+        if !ig.has_git
+            && ig.custom_ignore_matcher.is_empty()
+            && ig.ignore_matcher.is_empty()
+            && ig.git_ignore_matcher.is_empty()
+            && ig.git_exclude_matcher.is_empty()
+        {
+            return (self.clone(), err);
+        }
+        (
+            Ignore {
+                inner: Arc::new(ig),
+                absolute_base: self.absolute_base.clone(),
+            },
+            err,
+        )
+    }
+
     /// Like add_child, but uses successful read_dir entries to reduce
     /// probing when discovering ignore files.
     pub(crate) fn add_child_with_entries<P: AsRef<Path>>(
