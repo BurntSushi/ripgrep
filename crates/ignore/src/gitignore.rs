@@ -347,6 +347,9 @@ impl GitignoreBuilder {
     ///
     /// Once a matcher is built, no new globs can be added to it.
     pub fn build(&self) -> Result<Gitignore, Error> {
+        if self.globs.is_empty() {
+            return Ok(Gitignore::empty());
+        }
         let nignore = self.globs.iter().filter(|g| !g.is_whitelist()).count();
         let nwhite = self.globs.iter().filter(|g| g.is_whitelist()).count();
         let set = self
