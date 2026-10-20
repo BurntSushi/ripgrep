@@ -124,6 +124,16 @@ jobs:
       run: |
         ci/ubuntu-install-packages
 
+    # Docker 29.4.2 on Ubuntu 26.04 blocks socketcall, which cross's
+    # 32-bit glibc needs for process spawning. Fixed in Docker 29.4.3.
+    # https://github.com/actions/runner-images/issues/14790
+    - name: Update Docker (32-bit Linux)
+      if: matrix.target == 'i686-unknown-linux-gnu'
+      uses: docker/setup-docker-action@v5
+      with:
+        version: latest
+        set-host: true
+
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
       with:

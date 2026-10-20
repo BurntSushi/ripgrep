@@ -11,4 +11,4 @@ if ! command -V sudo; then
 fi
 sudo apt-get update
 sudo apt-get install -y --no-install-recommends \
-  zsh xz-utils liblz4-tool musl-tools brotli zstd g++
+  zsh xz-utils lz4 musl-tools brotli zstd g++
