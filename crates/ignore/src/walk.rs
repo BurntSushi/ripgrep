@@ -2397,6 +2397,41 @@ mod tests {
         );
     }
 
+    // Names that start with a `.` are hidden, even when they also end in a
+    // `.`. A trailing `.` must not be confused with a `.` or `..` component.
+    //
+    // Windows doesn't allow file names that end in a `.`.
+    #[cfg(unix)]
+    #[test]
+    fn hidden_with_trailing_dot() {
+        let td = tmpdir();
+        wfile(td.path().join("visible."), "");
+        wfile(td.path().join(".hidden"), "");
+        wfile(td.path().join(".hidden."), "");
+        wfile(td.path().join(".hidden.."), "");
+        wfile(td.path().join("..."), "");
+        mkdirp(td.path().join(".dir."));
+        wfile(td.path().join(".dir./inner"), "");
+
+        assert_paths(td.path(), &WalkBuilder::new(td.path()), &["visible."]);
+
+        let mut builder = WalkBuilder::new(td.path());
+        builder.hidden(false);
+        assert_paths(
+            td.path(),
+            &builder,
+            &[
+                ".dir.",
+                ".dir./inner",
+                ".hidden",
+                ".hidden.",
+                ".hidden..",
+                "...",
+                "visible.",
+            ],
+        );
+    }
+
     #[test]
     fn gitignore_parent() {
         let td = tmpdir();
