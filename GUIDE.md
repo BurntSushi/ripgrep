@@ -7,21 +7,19 @@ and that readers have passing familiarity with using command line tools. This
 also assumes a Unix-like system, although most commands are probably easily
 translatable to any command line shell environment.
 
-
 ### Table of Contents
 
-* [Basics](#basics)
-* [Recursive search](#recursive-search)
-* [Automatic filtering](#automatic-filtering)
-* [Manual filtering: globs](#manual-filtering-globs)
-* [Manual filtering: file types](#manual-filtering-file-types)
-* [Replacements](#replacements)
-* [Configuration file](#configuration-file)
-* [File encoding](#file-encoding)
-* [Binary data](#binary-data)
-* [Preprocessor](#preprocessor)
-* [Common options](#common-options)
-
+- [Basics](#basics)
+- [Recursive search](#recursive-search)
+- [Automatic filtering](#automatic-filtering)
+- [Manual filtering: globs](#manual-filtering-globs)
+- [Manual filtering: file types](#manual-filtering-file-types)
+- [Replacements](#replacements)
+- [Configuration file](#configuration-file)
+- [File encoding](#file-encoding)
+- [Binary data](#binary-data)
+- [Preprocessor](#preprocessor)
+- [Common options](#common-options)
 
 ### Basics
 
@@ -85,7 +83,7 @@ $ rg 'fast\w+' README.md
 ```
 
 In this example, we used the pattern `fast\w+`. This pattern tells ripgrep to
-look for any lines containing the letters `fast` followed by *one or more*
+look for any lines containing the letters `fast` followed by _one or more_
 word-like characters. Namely, `\w` matches characters that compose words (like
 `a` and `L` but unlike `.` and ` `). The `+` after the `\w` means, "match the
 previous pattern one or more times." This means that the word `fast` won't
@@ -104,7 +102,7 @@ $ rg 'fast\w*' README.md
 ```
 
 In this case, we used `fast\w*` for our pattern instead of `fast\w+`. The `*`
-means that it should match *zero* or more times. In this case, ripgrep will
+means that it should match _zero_ or more times. In this case, ripgrep will
 print the same lines as the pattern `fast`, but if your terminal supports
 colors, you'll notice that `faster` will be highlighted instead of just the
 `fast` prefix.
@@ -113,12 +111,11 @@ It is beyond the scope of this guide to provide a full tutorial on regular
 expressions, but ripgrep's specific syntax is documented here:
 https://docs.rs/regex/*/regex/#syntax
 
-
 ### Recursive search
 
 In the previous section, we showed how to use ripgrep to search a single file.
 In this section, we'll show how to use ripgrep to search an entire directory
-of files. In fact, *recursively* searching your current working directory is
+of files. In fact, _recursively_ searching your current working directory is
 the default mode of operation for ripgrep, which means doing this is very
 simple.
 
@@ -170,23 +167,22 @@ Here, ripgrep limited its search to the `src` directory. Another way of doing
 this search would be to `cd` into the `src` directory and simply use `rg 'fn
 write\('` again.
 
-
 ### Automatic filtering
 
-After recursive search, ripgrep's most important feature is what it *doesn't*
+After recursive search, ripgrep's most important feature is what it _doesn't_
 search. By default, when you search a directory, ripgrep will ignore all of
 the following:
 
 1. Files and directories that match glob patterns in these three categories:
-      1. `.gitignore` globs (including global and repo-specific globs). This
-         includes `.gitignore` files in parent directories that are part of the
-         same `git` repository. (Unless the `--no-require-git` flag is given.)
-      2. `.ignore` globs, which take precedence over all gitignore globs
-         when there's a conflict. This includes `.ignore` files in parent
-         directories.
-      3. `.rgignore` globs, which take precedence over all `.ignore` globs
-         when there's a conflict. This includes `.rgignore` files in parent
-         directories.
+   1. `.gitignore` globs (including global and repo-specific globs). This
+      includes `.gitignore` files in parent directories that are part of the
+      same `git` repository. (Unless the `--no-require-git` flag is given.)
+   2. `.ignore` globs, which take precedence over all gitignore globs
+      when there's a conflict. This includes `.ignore` files in parent
+      directories.
+   3. `.rgignore` globs, which take precedence over all `.ignore` globs
+      when there's a conflict. This includes `.rgignore` files in parent
+      directories.
 2. Hidden files and directories.
 3. Binary files. (ripgrep considers any file with a `NUL` byte to be binary.)
 4. Symbolic links aren't followed.
@@ -195,7 +191,7 @@ All of these things can be toggled using various flags provided by ripgrep:
 
 1. You can disable all ignore-related filtering with the `--no-ignore` flag.
 2. Hidden files and directories can be searched with the `--hidden` (`-.` for
-short) flag.
+   short) flag.
 3. Binary files can be searched via the `--text` (`-a` for short) flag.
    Be careful with this flag! Binary files may emit control characters to your
    terminal, which might cause strange behavior.
@@ -254,7 +250,6 @@ with a significant performance penalty, and is therefore disabled by default.
 For a more in depth description of how glob patterns in a `.gitignore` file
 are interpreted, please see `man gitignore`.
 
-
 ### Manual filtering: globs
 
 In the previous section, we talked about ripgrep's filtering that it does by
@@ -292,7 +287,7 @@ The `-g '*.toml'` syntax says, "make sure every file searched matches this
 glob pattern." Note that we put `'*.toml'` in single quotes to prevent our
 shell from expanding the `*`.
 
-If we wanted, we could tell ripgrep to search anything *but* `*.toml` files:
+If we wanted, we could tell ripgrep to search anything _but_ `*.toml` files:
 
 ```
 $ rg lexopt -g '!*.toml'
@@ -319,7 +314,6 @@ nothing, since the presence of at least one non-blacklist glob will institute a
 requirement that every file searched must match at least one glob. In this
 case, the blacklist glob takes precedence over the previous glob and prevents
 any file from being searched at all!
-
 
 ### Manual filtering: file types
 
@@ -451,7 +445,7 @@ $ rg fast README.md
 129:  optimizations to make searching very fast.
 ```
 
-What if we wanted to *replace* all occurrences of `fast` with `FAST`? That's
+What if we wanted to _replace_ all occurrences of `fast` with `FAST`? That's
 easy with ripgrep's `--replace` flag:
 
 ```
@@ -470,7 +464,7 @@ $ rg fast README.md -r FAST
 [snip]
 ```
 
-In essence, the `--replace` flag applies *only* to the matching portion of text
+In essence, the `--replace` flag applies _only_ to the matching portion of text
 in the output. If you instead wanted to replace an entire line of text, then
 you need to include the entire line in your match. For example:
 
@@ -536,7 +530,6 @@ It is important to note that ripgrep **will never modify your files**. The
 `--replace` flag only controls ripgrep's output. (And there is no flag to let
 you do a replacement in a file.)
 
-
 ### Configuration file
 
 It is possible that ripgrep's default options aren't suitable in every case.
@@ -552,7 +545,7 @@ describing the format of the config file:
 
 1. Every line is a shell argument, after trimming whitespace.
 2. Lines starting with `#` (optionally preceded by any amount of whitespace)
-are ignored.
+   are ignored.
 
 In particular, there is no escaping. Each line is given to ripgrep as a single
 command line argument verbatim.
@@ -606,7 +599,7 @@ So let's say you're using the above configuration file, but while you're at a
 terminal, you really want to be able to see lines longer than 150 columns. What
 do you do? Thankfully, all you need to do is pass `--max-columns 0` (or `-M0`
 for short) on the command line, which will override your configuration file's
-setting. This works because ripgrep's configuration file is *prepended* to the
+setting. This works because ripgrep's configuration file is _prepended_ to the
 explicit arguments you give it on the command line. Since flags given later
 override flags given earlier, everything works as expected. This works for most
 other flags as well, and each flag's documentation states which other flags
@@ -617,40 +610,39 @@ from, then running ripgrep with the `--debug` flag should help clarify things.
 The debug output should note what config file is being loaded and the arguments
 that have been read from the configuration.
 
-Finally, if you want to make absolutely sure that ripgrep *isn't* reading a
+Finally, if you want to make absolutely sure that ripgrep _isn't_ reading a
 configuration file, then you can pass the `--no-config` flag, which will always
 prevent ripgrep from reading extraneous configuration from the environment,
 regardless of what other methods of configuration are added to ripgrep in the
 future.
-
 
 ### File encoding
 
 [Text encoding](https://en.wikipedia.org/wiki/Character_encoding) is a complex
 topic, but we can try to summarize its relevancy to ripgrep:
 
-* Files are generally just a bundle of bytes. There is no reliable way to know
+- Files are generally just a bundle of bytes. There is no reliable way to know
   their encoding.
-* Either the encoding of the pattern must match the encoding of the files being
+- Either the encoding of the pattern must match the encoding of the files being
   searched, or a form of transcoding must be performed that converts either the
   pattern or the file to the same encoding as the other.
-* ripgrep tends to work best on plain text files, and among plain text files,
+- ripgrep tends to work best on plain text files, and among plain text files,
   the most popular encodings likely consist of ASCII, latin1 or UTF-8. As
   a special exception, UTF-16 is prevalent in Windows environments
 
 In light of the above, here is how ripgrep behaves when `--encoding auto` is
 given, which is the default:
 
-* All input is assumed to be ASCII compatible (which means every byte that
+- All input is assumed to be ASCII compatible (which means every byte that
   corresponds to an ASCII codepoint actually is an ASCII codepoint). This
   includes ASCII itself, latin1 and UTF-8.
-* ripgrep works best with UTF-8. For example, ripgrep's regular expression
+- ripgrep works best with UTF-8. For example, ripgrep's regular expression
   engine supports Unicode features. Namely, character classes like `\w` will
   match all word characters by Unicode's definition and `.` will match any
   Unicode codepoint instead of any byte. These constructions assume UTF-8,
   so they simply won't match when they come across bytes in a file that aren't
   UTF-8.
-* To handle the UTF-16 case, ripgrep will do something called "BOM sniffing"
+- To handle the UTF-16 case, ripgrep will do something called "BOM sniffing"
   by default. That is, the first three bytes of a file will be read, and if
   they correspond to a UTF-16 BOM, then ripgrep will transcode the contents of
   the file from UTF-16 to UTF-8, and then execute the search on the transcoded
@@ -658,10 +650,10 @@ given, which is the default:
   is needed in addition to regex searching.) If the file contains invalid
   UTF-16, then the Unicode replacement codepoint is substituted in place of
   invalid code units.
-* To handle other cases, ripgrep provides a `-E/--encoding` flag, which permits
+- To handle other cases, ripgrep provides a `-E/--encoding` flag, which permits
   you to specify an encoding from the
   [Encoding Standard](https://encoding.spec.whatwg.org/#concept-encoding-get).
-  ripgrep will assume *all* files searched are the encoding specified (unless
+  ripgrep will assume _all_ files searched are the encoding specified (unless
   the file has a BOM) and will perform a transcoding step just like in the
   UTF-16 case described above.
 
@@ -670,7 +662,7 @@ can and will search arbitrary bytes. The key here is that if you're searching
 content that isn't UTF-8, then the usefulness of your pattern will degrade. If
 you're searching bytes that aren't ASCII compatible, then it's likely the
 pattern won't find anything. With all that said, this mode of operation is
-important, because it lets you find ASCII or UTF-8 *within* files that are
+important, because it lets you find ASCII or UTF-8 _within_ files that are
 otherwise arbitrary bytes.
 
 As a special case, the `-E/--encoding` flag supports the value `none`, which
@@ -707,7 +699,6 @@ another Unicode word character:
 ```
 $ rg '\w(?-u:\w)\w'
 ```
-
 
 ### Binary data
 
@@ -767,9 +758,9 @@ Unfortunately, there is one additional complexity in ripgrep that can make it
 difficult to reason about binary files. That is, the way binary detection works
 depends on the way that ripgrep searches your files. Specifically:
 
-* When ripgrep uses memory maps, then binary detection is only performed on the
+- When ripgrep uses memory maps, then binary detection is only performed on the
   first few kilobytes of the file in addition to every matching line.
-* When ripgrep doesn't use memory maps, then binary detection is performed on
+- When ripgrep doesn't use memory maps, then binary detection is performed on
   all bytes searched.
 
 This means that whether a file is detected as binary or not can change based
@@ -777,7 +768,6 @@ on the internal search strategy used by ripgrep. If you prefer to keep
 ripgrep's binary file detection consistent, then you can disable memory maps
 via the `--no-mmap` flag. (The cost will be a small performance regression when
 searching very large files on some platforms.)
-
 
 ### Preprocessor
 
@@ -984,42 +974,66 @@ maxmem  7 MB
 faults  0
 ```
 
-
 ### Common options
 
 ripgrep has a lot of flags. Too many to keep in your head at once. This section
 is intended to give you a sampling of some of the most important and frequently
 used options that will likely impact how you use ripgrep on a regular basis.
 
-* `-h`: Show ripgrep's condensed help output.
-* `--help`: Show ripgrep's longer form help output. (Nearly what you'd find in
+- `-h`: Show ripgrep's condensed help output.
+- `--help`: Show ripgrep's longer form help output. (Nearly what you'd find in
   ripgrep's man page, so pipe it into a pager!)
-* `-i/--ignore-case`: When searching for a pattern, ignore case differences.
+- `-i/--ignore-case`: When searching for a pattern, ignore case differences.
   That is `rg -i fast` matches `fast`, `fASt`, `FAST`, etc.
-* `-S/--smart-case`: This is similar to `--ignore-case`, but disables itself
+- `-S/--smart-case`: This is similar to `--ignore-case`, but disables itself
   if the pattern contains any uppercase letters. Usually this flag is put into
   alias or a config file.
-* `-F/--fixed-strings`: Disable regular expression matching and treat the pattern
-   as a literal string.
-* `-w/--word-regexp`: Require that all matches of the pattern be surrounded
+- `-F/--fixed-strings`: Disable regular expression matching and treat the pattern
+  as a literal string.
+- `-w/--word-regexp`: Require that all matches of the pattern be surrounded
   by word boundaries. That is, given `pattern`, the `--word-regexp` flag will
   cause ripgrep to behave as if `pattern` were actually
   `\b{start-half}(?:pattern)\b{end-half}`.
   (Unlike `\b`, these half-boundaries don't require a word character on one
   side. For example, `rg -w -e -2` will match `-2` in `(-2)` but `rg '\b-2\b'`
   will not.)
-* `-c/--count`: Report a count of total matched lines.
-* `--files`: Print the files that ripgrep *would* search, but don't actually
+- `-c/--count`: Report a count of total matched lines.
+- `--files`: Print the files that ripgrep _would_ search, but don't actually
   search them.
-* `-a/--text`: Search binary files as if they were plain text.
-* `-U/--multiline`: Permit matches to span multiple lines.
-* `-z/--search-zip`: Search compressed files (gzip, bzip2, lzma, xz, lz4,
+- `-a/--text`: Search binary files as if they were plain text.
+- `-U/--multiline`: Permit matches to span multiple lines.
+- `-z/--search-zip`: Search compressed files (gzip, bzip2, lzma, xz, lz4,
   brotli, zstd). This is disabled by default.
-* `-C/--context`: Show the lines surrounding a match.
-* `--sort path`: Force ripgrep to sort its output by file name. (This disables
+- `-C/--context`: Show the lines surrounding a match.
+- `--sort path`: Force ripgrep to sort its output by file name. (This disables
   parallelism, so it might be slower.)
-* `-L/--follow`: Follow symbolic links while recursively searching.
-* `-M/--max-columns`: Limit the length of lines printed by ripgrep.
-* `--debug`: Shows ripgrep's debug output. This is useful for understanding
+- `-L/--follow`: Follow symbolic links while recursively searching.
+- `-M/--max-columns`: Limit the length of lines printed by ripgrep.
+- `--debug`: Shows ripgrep's debug output. This is useful for understanding
   why a particular file might be ignored from search, or what kinds of
   configuration ripgrep is loading from the environment.
+
+## Windows Shell Quirks and Traps
+
+Because `ripgrep` is compiled as a native Windows application, it follows Windows conventions for file paths and interacts directly with the host environment. When using `ripgrep` inside POSIX emulation shells (like **Git Bash**, **MSYS2**, or **Cygwin**), you may encounter unexpected terminal formatting or layout behaviors.
+
+### Path Separators in POSIX Emulators (Forward Slash vs. Backslash)
+
+By default, `ripgrep` outputs file paths using native Windows backslashes (`\`). POSIX emulation shells like Git Bash use forward slashes (`/`) and heavily rely on backslashes to process string escapes. As a result, native path outputs can occasionally break scripting pipelines or cause navigation issues in the shell terminal.
+
+- **The Fix:** Use the `--path-separator` flag to manually force a POSIX-compliant output.
+  ```bash
+  rg "pattern" --path-separator /
+  ```
+- **Permanent Solution:** To avoid typing this flag every time, you can add it directly to your configuration file (pointed to by your `RIPGREP_CONFIG_PATH` environment variable):
+  ```text
+  --path-separator=/
+  ```
+
+### Encoding and Garbled Text (Umlauts & Accents)
+
+Standard Windows Command Prompt (`cmd.exe`) and Git Bash handle active text encodings quite differently by default. If your files contain non-English characters like German umlauts (`ä`, `ö`, `ü`), they might display perfectly in `cmd.exe` but look like garbled blocks or broken strings when executing `rg` inside Git Bash.
+
+This happens because the emulation terminal struggles to interpret the native console stream encoding, rather than an internal flaw with `ripgrep`.
+
+- **The Fix:** Ensure your shell locale configuration matches your system environment. In Git Bash, right-click the terminal window, navigate to **Options -> Text**, and confirm that your **Locale** is set to a globally supported encoding profile (such as `zh_CN` or `de_DE`) and that the **Character set** is actively set to `UTF-8`.
