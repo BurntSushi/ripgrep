@@ -35,6 +35,7 @@ Please see the [CHANGELOG](CHANGELOG.md) for a release history.
 
 [![A screenshot of a sample search with ripgrep](https://burntsushi.net/stuff/ripgrep1.png)](https://burntsushi.net/stuff/ripgrep1.png)
 
+[![Live demo by Demoshell](https://build.demoshell.com/v1/embed/badge.svg)](https://build.demoshell.com/launch?snapshot=demoshell%2Ftui%3Aripgrep)
 
 ### Quick examples comparing tools
 
