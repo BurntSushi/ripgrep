@@ -38,17 +38,8 @@ pub(crate) fn generate_short() -> String {
         TEMPLATE_SHORT.replace("!!VERSION!!", &version::generate_digits());
     for (cat, (col1, col2)) in cats.iter() {
         let var = format!("!!{name}!!", name = cat.as_str());
-        if !cfg!(feature = "unstable-index")
-            && matches!(cat, crate::flags::Category::Indexing)
-        {
-            out = out.replace(
-                &var,
-                &format!("  {}", crate::flags::INDEXING_NOT_SUPPORTED),
-            );
-        } else {
-            let val = format_short_columns(col1, col2, maxcol1, maxcol2);
-            out = out.replace(&var, &val);
-        }
+        let val = format_short_columns(col1, col2, maxcol1, maxcol2);
+        out = out.replace(&var, &val);
     }
     out
 }
@@ -131,16 +122,7 @@ pub(crate) fn generate_long() -> String {
         TEMPLATE_LONG.replace("!!VERSION!!", &version::generate_digits());
     for (cat, value) in cats.iter() {
         let var = format!("!!{name}!!", name = cat.as_str());
-        if !cfg!(feature = "unstable-index")
-            && matches!(cat, crate::flags::Category::Indexing)
-        {
-            out = out.replace(
-                &var,
-                &format!("    {}", crate::flags::INDEXING_NOT_SUPPORTED),
-            );
-        } else {
-            out = out.replace(&var, value);
-        }
+        out = out.replace(&var, value);
     }
     out
 }

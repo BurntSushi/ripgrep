@@ -61,7 +61,6 @@ pub(crate) struct HiArgs {
     ignore_file_case_insensitive: bool,
     ignore_file: Vec<PathBuf>,
     include_zero: bool,
-    index: usize,
     invert_match: bool,
     is_terminal_stdout: bool,
     line_number: bool,
@@ -121,15 +120,6 @@ impl HiArgs {
         // `low.sort = None` if `supported()` returns an error.
         if let Some(ref sort) = low.sort {
             sort.supported()?;
-        }
-        // We aggressively ban things from indexing at present.
-        if (low.index > 0 || matches!(low.mode, Mode::Index(_)))
-            && let Some(flag) = low.indexing_unsupported_flag()
-        {
-            anyhow::bail!(
-                "flag --{} does not support indexing",
-                flag.name_long()
-            );
         }
 
         // We modify the mode in-place on `low` so that subsequent conversions
@@ -288,7 +278,6 @@ impl HiArgs {
             ignore_file: low.ignore_file,
             ignore_file_case_insensitive: low.ignore_file_case_insensitive,
             include_zero: low.include_zero,
-            index: low.index,
             invert_match: low.invert_match,
             is_terminal_stdout: state.is_terminal_stdout,
             line_number,
@@ -926,31 +915,6 @@ impl HiArgs {
             }
         }
         Ok(builder)
-    }
-
-    pub(crate) fn index(&self) -> usize {
-        self.index
-    }
-
-    #[cfg(feature = "unstable-index")]
-    pub(crate) fn index_write(&self) -> anyhow::Result<grep_index::Index> {
-        let index = grep_index::IndexDiscovery::new()
-            .create(true)
-            .discover()?
-            .ok_or_else(|| {
-                anyhow::anyhow!(
-                    "failed to find a place to create/update an index"
-                )
-            })?;
-        Ok(index)
-    }
-
-    #[cfg(feature = "unstable-index")]
-    pub(crate) fn index_read(&self) -> anyhow::Result<grep_index::Index> {
-        let index = grep_index::IndexDiscovery::new().discover()?.ok_or_else(
-            || anyhow::anyhow!("failed to find an index to read"),
-        )?;
-        Ok(index)
     }
 }
 

@@ -37,13 +37,7 @@ pub(crate) fn generate() -> String {
     let mut out = TEMPLATE.replace("!!VERSION!!", &version::generate_digits());
     for (cat, value) in cats.iter() {
         let var = format!("!!{name}!!", name = cat.as_str());
-        if !cfg!(feature = "unstable-index")
-            && matches!(cat, crate::flags::Category::Indexing)
-        {
-            out = out.replace(&var, crate::flags::INDEXING_NOT_SUPPORTED);
-        } else {
-            out = out.replace(&var, value);
-        }
+        out = out.replace(&var, value);
     }
     out
 }

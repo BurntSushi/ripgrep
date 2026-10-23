@@ -65,9 +65,6 @@ pub(crate) struct LowArgs {
     pub(crate) ignore_file: Vec<PathBuf>,
     pub(crate) ignore_file_case_insensitive: bool,
     pub(crate) include_zero: bool,
-    pub(crate) index: usize,
-    pub(crate) index_force: bool,
-    pub(crate) index_path: Option<PathBuf>,
     pub(crate) invert_match: bool,
     pub(crate) line_number: Option<bool>,
     pub(crate) logging: Option<LoggingMode>,
@@ -156,8 +153,6 @@ pub(crate) enum SpecialMode {
 pub(crate) enum Mode {
     /// ripgrep will execute a search of some kind.
     Search(SearchMode),
-    /// Create or update a search index.
-    Index(IndexMode),
     /// Show the files that *would* be searched, but don't actually search
     /// them.
     Files,
@@ -192,13 +187,6 @@ impl Mode {
             }
         }
     }
-}
-
-/// The kind of index operation that ripgrep should perform.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum IndexMode {
-    /// Add, update or remove files in an index.
-    Crud,
 }
 
 /// The kind of search that ripgrep is going to perform.
