@@ -812,6 +812,22 @@ mod tests {
     not_ignored!(ignot17, ROOT, "src/*.rs", "src/grep/src/main.rs");
     not_ignored!(ignot18, ROOT, "path1/*", "path2/path1/foo");
     not_ignored!(ignot19, ROOT, "s*.rs", "src/foo.rs");
+    #[test]
+    fn test_issue_2745() {
+        let gi = GitignoreBuilder::new(ROOT)
+            .add_str(None, r#"*[\<\>\:\"\/\\\|\?\*]*"#)
+            .unwrap()
+            .build()
+            .unwrap();
+        assert!(
+            !gi.matched("folder/bar.txt", false).is_ignore(),
+            "folder/bar.txt should not be ignored"
+        );
+        assert!(
+            !gi.matched("foo.txt", false).is_ignore(),
+            "foo.txt should not be ignored"
+        );
+    }
 
     fn bytes(s: &str) -> Vec<u8> {
         s.to_string().into_bytes()
