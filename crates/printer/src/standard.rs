@@ -46,6 +46,7 @@ struct Config {
     max_columns: Option<u64>,
     max_columns_preview: bool,
     column: bool,
+    end_column: bool,
     byte_offset: bool,
     trim_ascii: bool,
     separator_search: Arc<Option<Vec<u8>>>,
@@ -71,6 +72,7 @@ impl Default for Config {
             max_columns: None,
             max_columns_preview: false,
             column: false,
+            end_column: false,
             byte_offset: false,
             trim_ascii: false,
             separator_search: Arc::new(None),
@@ -334,6 +336,16 @@ impl StandardBuilder {
     /// This is disabled by default.
     pub fn column(&mut self, yes: bool) -> &mut StandardBuilder {
         self.config.column = yes;
+        self
+    }
+
+    /// Print the end column number of each match.
+    ///
+    /// This is disabled by default. When enabled alongside `column`, the
+    /// output format changes from `file:line:col:text` to
+    /// `file:line:col:endcol:text`.
+    pub fn end_column(&mut self, yes: bool) -> &mut StandardBuilder {
+        self.config.end_column = yes;
         self
     }
 
@@ -956,6 +968,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
             self.sunk.absolute_byte_offset(),
             self.sunk.line_number(),
             None,
+            None,
         )?;
         self.write_line(self.sunk.bytes())
     }
@@ -981,6 +994,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                 absolute_byte_offset,
                 self.sunk.line_number().map(|n| n + i as u64),
                 None,
+                None,
             )?;
             absolute_byte_offset += line.len() as u64;
 
@@ -1001,6 +1015,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                     self.sunk.absolute_byte_offset() + m.start() as u64,
                     self.sunk.line_number(),
                     Some(m.start() as u64 + 1),
+                    Some(m.end() as u64 + 1),
                 )?;
 
                 let buf = &self.sunk.bytes()[m];
@@ -1012,6 +1027,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                     self.sunk.absolute_byte_offset() + m.start() as u64,
                     self.sunk.line_number(),
                     Some(m.start() as u64 + 1),
+                    Some(m.end() as u64 + 1),
                 )?;
                 self.write_colored_line(&[m], self.sunk.bytes())?;
             }
@@ -1020,6 +1036,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                 self.sunk.absolute_byte_offset(),
                 self.sunk.line_number(),
                 Some(self.sunk.matches()[0].start() as u64 + 1),
+                Some(self.sunk.matches()[0].end() as u64 + 1),
             )?;
             self.write_colored_line(self.sunk.matches(), self.sunk.bytes())?;
         }
@@ -1048,6 +1065,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                 self.sunk.absolute_byte_offset() + line.start() as u64,
                 self.sunk.line_number().map(|n| n + count),
                 Some(matches[0].start() as u64 + 1),
+                Some(matches[0].end() as u64 + 1),
             )?;
             count += 1;
             self.trim_ascii_prefix(bytes, &mut line);
@@ -1093,6 +1111,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                         self.sunk.absolute_byte_offset() + m.start() as u64,
                         self.sunk.line_number().map(|n| n + count),
                         Some(m.start() as u64 + 1),
+                        Some(m.end() as u64 + 1),
                     )?;
 
                     let this_line = line.with_end(upto);
@@ -1131,6 +1150,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                     self.sunk.absolute_byte_offset() + line.start() as u64,
                     self.sunk.line_number().map(|n| n + count),
                     Some(m.start().saturating_sub(line.start()) as u64 + 1),
+                    Some(m.end().saturating_sub(line.start()) as u64 + 1),
                 )?;
                 count += 1;
                 self.trim_line_terminator(bytes, &mut line);
@@ -1178,12 +1198,14 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         absolute_byte_offset: u64,
         line_number: Option<u64>,
         column: Option<u64>,
+        end_column: Option<u64>,
     ) -> io::Result<()> {
         let mut prelude = PreludeWriter::new(self);
         prelude.start(line_number, column)?;
         prelude.write_path()?;
         prelude.write_line_number(line_number)?;
         prelude.write_column_number(column)?;
+        prelude.write_end_column_number(end_column)?;
         prelude.write_byte_offset(absolute_byte_offset)?;
         prelude.end()
     }
@@ -1691,6 +1713,23 @@ impl<'a, M: Matcher, W: WriteColor> PreludeWriter<'a, M, W> {
     #[inline(always)]
     fn write_column_number(&mut self, column: Option<u64>) -> io::Result<()> {
         if !self.config().column {
+            return Ok(());
+        }
+        let Some(column_number) = column else { return Ok(()) };
+        self.write_separator()?;
+        let n = DecimalFormatter::new(column_number);
+        self.std.write_spec(self.config().colors.column(), n.as_bytes())?;
+        self.next_separator = PreludeSeparator::FieldSeparator;
+        Ok(())
+    }
+
+    /// Writes the end column number field if present and configured to do so.
+    #[inline(always)]
+    fn write_end_column_number(
+        &mut self,
+        column: Option<u64>,
+    ) -> io::Result<()> {
+        if !self.config().end_column {
             return Ok(());
         }
         let Some(column_number) = column else { return Ok(()) };
@@ -2384,6 +2423,60 @@ Watson
         let expected = "\
 16:For the Doctor Watsons of this world, as opposed to the Sherlock
 12:but Doctor Watson has to have it taken out for him and dusted,
+";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn end_column_number() {
+        let matcher = RegexMatcher::new("Watson").unwrap();
+        let mut printer = StandardBuilder::new()
+            .column(true)
+            .end_column(true)
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(false)
+            .build()
+            .search_reader(
+                &matcher,
+                SHERLOCK.as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "\
+16:22:For the Doctor Watsons of this world, as opposed to the Sherlock
+12:18:but Doctor Watson has to have it taken out for him and dusted,
+";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn end_column_per_match() {
+        let matcher = RegexMatcher::new("Sherlock|Watson").unwrap();
+        let mut printer = StandardBuilder::new()
+            .column(true)
+            .end_column(true)
+            .per_match(true)
+            .per_match_one_line(true)
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(true)
+            .build()
+            .search_reader(
+                &matcher,
+                SHERLOCK.as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "\
+1:16:22:For the Doctor Watsons of this world, as opposed to the Sherlock
+1:57:65:For the Doctor Watsons of this world, as opposed to the Sherlock
+3:49:57:be, to a very large extent, the result of luck. Sherlock Holmes
+5:12:18:but Doctor Watson has to have it taken out for him and dusted,
 ";
         assert_eq_printed!(expected, got);
     }

@@ -2,6 +2,15 @@ TBD
 ===
 Unreleased changes. Release notes have not yet been written.
 
+Breaking changes:
+
+* The `--vimgrep` flag now includes an end column in its output, changing the
+  format from `file:line:col:text` to `file:line:col:endcol:text`. The end
+  column is the byte position (1-based) immediately after the last byte of
+  each match. This is compatible with Vim's
+  `:set grepformat=%f:%l:%c:%k:%m`. Use `--no-column` to suppress both
+  column and end column fields.
+
 
 15.2.0 (2026-07-15)
 ===================

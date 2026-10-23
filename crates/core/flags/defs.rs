@@ -7365,7 +7365,14 @@ impl Flag for Vimgrep {
     fn doc_long(&self) -> &'static str {
         r"
 This flag instructs ripgrep to print results with every match on its own line,
-including line numbers and column numbers.
+including line numbers, column numbers and end column numbers.
+.sp
+The output format is \fBfile:line:col:endcol:text\fR, where \fBendcol\fR is the
+byte position (1-based) immediately after the last byte of the match. This
+format is compatible with Vim's \fBgrepformat=%f:%l:%c:%k:%m\fR.
+.sp
+The \flag{no-column} flag can be used to suppress both the column and end column
+fields, reducing the output to \fBfile:text\fR.
 .sp
 With this option, a line with more than one match will be printed in its
 entirety more than once. For that reason, the total amount of output as a
