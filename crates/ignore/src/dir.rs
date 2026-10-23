@@ -87,6 +87,15 @@ struct IgnoreOptions {
     /// Whether a git repository must be present in order to apply any
     /// git-related ignore rules.
     require_git: bool,
+    /// Whether symbolic links are followed.
+    ///
+    /// This has no bearing on matching. It is here because safely following
+    /// symlinks requires knowing the directories above the root of the
+    /// traversal, so that a symlink resolving to one of them can be reported
+    /// as a loop. Those are the same directories `add_parents` builds matchers
+    /// for, so enabling this keeps that chain complete even when every
+    /// ignore-related option is disabled.
+    follow_links: bool,
 }
 
 /// Ignore is a matcher useful for recursively walking one or more directories.
@@ -197,9 +206,12 @@ impl Ignore {
             && !self.inner.opts.git_ignore
             && !self.inner.opts.git_exclude
             && !self.inner.opts.git_global
+            && !self.inner.opts.follow_links
         {
             // If we never need info from parent directories, then don't do
-            // anything.
+            // anything. Note that safely following symlinks needs this chain
+            // for loop detection even though it needs nothing from ignore
+            // files.
             return (self.clone(), None);
         }
         if !self.is_root() {
@@ -722,8 +734,13 @@ impl IgnoreRef<'_> {
         &self.inner.dir
     }
 
-    pub(crate) fn is_absolute_parent(&self) -> bool {
-        self.inner.is_absolute_parent
+    /// Returns true if this is the base matcher, which has no parent.
+    ///
+    /// The base matcher is not a directory in the traversal. It carries
+    /// global configuration and its path may be empty, so callers walking the
+    /// chain for real directories must stop before it.
+    pub(crate) fn is_root(&self) -> bool {
+        self.inner.parent.is_none()
     }
 }
 
@@ -798,6 +815,7 @@ impl IgnoreBuilder {
                 git_exclude: true,
                 ignore_case_insensitive: false,
                 require_git: true,
+                follow_links: false,
             },
         }
     }
@@ -945,6 +963,14 @@ impl IgnoreBuilder {
     /// This is enabled by default.
     pub(crate) fn parents(&mut self, yes: bool) -> &mut IgnoreBuilder {
         self.opts.parents = yes;
+        self
+    }
+
+    /// Tell the matcher whether symbolic links are followed.
+    ///
+    /// This does not affect matching. See `IgnoreOptions::follow_links`.
+    pub(crate) fn follow_links(&mut self, yes: bool) -> &mut IgnoreBuilder {
+        self.opts.follow_links = yes;
         self
     }
 
