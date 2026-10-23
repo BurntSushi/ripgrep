@@ -856,7 +856,7 @@ then reboot. This is a system-wide change and may affect other programs.
 
 See also
 [Why does using a leading `/` on Windows fail?](#because-cygwin) and
-[How do I pipe non-ASCII content to ripgrep on Windows?](#pipe-non-ascii-windows).
+[How do I pipe non-ASCII content to ripgrep on Windows?](#pipe-non-ascii-windows)
 
 
 <h3 name="pipe-non-ascii-windows">
