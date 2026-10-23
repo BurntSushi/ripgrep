@@ -9,7 +9,7 @@ the `git` command line tool.
 
 use std::{
     fs::File,
-    io::{BufRead, BufReader, Read},
+    io::{self, BufRead, BufReader, Read},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -408,6 +408,21 @@ impl GitignoreBuilder {
             Err(err) => return Some(Error::Io(err).with_path(path)),
             Ok(file) => file,
         };
+        // A gitignore file can be a symlink or an unusual entry in a
+        // checkout. Reading a device like /dev/zero or a FIFO either grows
+        // the buffer without bound or blocks forever, so only regular
+        // files are read.
+        match file.metadata() {
+            Err(err) => return Some(Error::Io(err).with_path(path)),
+            Ok(md) if !md.is_file() => {
+                let err = io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "gitignore file is not a regular file",
+                );
+                return Some(Error::Io(err).with_path(path));
+            }
+            Ok(_) => {}
+        }
         log::debug!("opened gitignore file: {}", path.display());
         let rdr = BufReader::new(file);
         let mut errs = PartialErrorBuilder::default();
