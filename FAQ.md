@@ -849,10 +849,8 @@ alias rg='rg --path-separator //'
 The double slash avoids Git Bash rewriting a single `/`.
 
 If non-ASCII characters (for example umlauts in file contents) look wrong in
-a Windows console, try enabling the system UTF-8 locale: Settings → Time &
-Language → Language → Administrative language settings → Change system
-locale… → check "Beta: Use Unicode UTF-8 for worldwide language support",
-then reboot. This is a system-wide change and may affect other programs.
+a Windows console, try enabling the system UTF-8 locale. Note that this is
+a system-wide change and may affect other programs.
 
 See also
 [Why does using a leading `/` on Windows fail?](#because-cygwin) and
