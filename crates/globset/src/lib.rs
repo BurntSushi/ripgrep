@@ -475,6 +475,7 @@ impl GlobSet {
         let mut prefixes = MultiStrategyBuilder::new();
         let mut suffixes = MultiStrategyBuilder::new();
         let mut required_exts = RequiredExtensionStrategyBuilder::new();
+        let mut base_regexes = MultiStrategyBuilder::new();
         let mut regexes = MultiStrategyBuilder::new();
         for (i, p) in it.enumerate() {
             len += 1;
@@ -502,6 +503,9 @@ impl GlobSet {
                 MatchStrategy::RequiredExtension(ext) => {
                     required_exts.add(i, ext, p.regex().to_owned());
                 }
+                MatchStrategy::BasenameRegex(re) => {
+                    base_regexes.add(i, re);
+                }
                 MatchStrategy::Regex => {
                     debug!(
                         "glob `{:?}` converted to regex: `{:?}`",
@@ -514,16 +518,18 @@ impl GlobSet {
         }
         debug!(
             "built glob set; {} literals, {} basenames, {} extensions, \
-                {} prefixes, {} suffixes, {} required extensions, {} regexes",
+                {} prefixes, {} suffixes, {} required extensions, \
+                {} basename regexes, {} regexes",
             lits.0.len(),
             base_lits.0.len(),
             exts.0.len(),
             prefixes.literals.len(),
             suffixes.literals.len(),
             required_exts.0.len(),
+            base_regexes.literals.len(),
             regexes.literals.len()
         );
-        let mut strats = Vec::with_capacity(7);
+        let mut strats = Vec::with_capacity(8);
         // Only add strategies that are populated
         if !exts.0.is_empty() {
             strats.push(GlobSetMatchStrategy::Extension(exts));
@@ -544,6 +550,11 @@ impl GlobSet {
             strats.push(GlobSetMatchStrategy::RequiredExtension(
                 required_exts.build()?,
             ));
+        }
+        if !base_regexes.is_empty() {
+            let mut set = base_regexes.regex_set()?;
+            set.basename = true;
+            strats.push(GlobSetMatchStrategy::Regex(set));
         }
         if !regexes.is_empty() {
             strats.push(GlobSetMatchStrategy::Regex(regexes.regex_set()?));
@@ -639,6 +650,16 @@ impl<'a> Candidate<'a> {
 
     fn path_prefix(&self, max: usize) -> &[u8] {
         if self.path.len() <= max { &*self.path } else { &self.path[..max] }
+    }
+
+    /// Returns the final component, including `..` for regex matching.
+    fn basename_for_regex(&self) -> &[u8] {
+        // Literal basename strategies skip `..`, but a regex can match it.
+        if self.basename.is_empty() && self.path.ends_with(b"..") {
+            b".."
+        } else {
+            &self.basename
+        }
     }
 
     fn path_suffix(&self, max: usize) -> &[u8] {
@@ -964,6 +985,7 @@ impl RequiredExtensionStrategy {
 struct RegexSetStrategy {
     matcher: Regex,
     map: Vec<usize>,
+    basename: bool,
     // We use a pool of PatternSets to hopefully allocating a fresh one on each
     // call.
     //
@@ -979,15 +1001,24 @@ type PatternSetPoolFn =
     Box<dyn Fn() -> PatternSet + Send + Sync + UnwindSafe + RefUnwindSafe>;
 
 impl RegexSetStrategy {
+    /// Returns the part of the path matched by these regexes.
+    fn haystack<'a>(&self, candidate: &'a Candidate<'_>) -> &'a [u8] {
+        if self.basename {
+            candidate.basename_for_regex()
+        } else {
+            &candidate.path
+        }
+    }
+
     fn is_match(&self, candidate: &Candidate<'_>) -> bool {
-        self.matcher.is_match(candidate.path.as_bytes())
+        self.matcher.is_match(self.haystack(candidate))
     }
 
     fn find_matches(
         &self,
         candidate: &Candidate<'_>,
     ) -> PoolGuard<'_, PatternSet, PatternSetPoolFn> {
-        let input = regex_automata::Input::new(candidate.path.as_bytes());
+        let input = regex_automata::Input::new(self.haystack(candidate));
         let mut patset = self.patset.get();
         patset.clear();
         self.matcher.which_overlapping_matches(&input, &mut patset);
@@ -1056,6 +1087,7 @@ impl MultiStrategyBuilder {
         Ok(RegexSetStrategy {
             matcher,
             map: self.map,
+            basename: false,
             patset: Arc::new(Pool::new(create)),
         })
     }
@@ -1252,6 +1284,40 @@ mod tests {
 
         assert!(!set.matches_all("Ca"));
         assert!(!set.matches_all("foo.c"));
+    }
+
+    #[test]
+    fn basename_regex_with_path_rules() {
+        let globs: Vec<_> = ["**/.venv*", "**/*.py[cod]", "src/*"]
+            .iter()
+            .map(|pattern| {
+                GlobBuilder::new(pattern)
+                    .literal_separator(true)
+                    .build()
+                    .unwrap()
+            })
+            .collect();
+        let set = GlobSet::new(globs).unwrap();
+        assert_eq!(set.matches("src/module.pyc"), vec![1, 2]);
+        assert_eq!(set.matches("src/nested/module.pyc"), vec![1]);
+        assert_eq!(set.matches("src/.venv-new"), vec![0, 2]);
+        assert!(set.matches_all("src/.venv.pyc"));
+        assert!(!set.matches_all("src/nested/.venv.pyc"));
+    }
+
+    #[test]
+    fn basename_regex_parent_component() {
+        let set = GlobSet::new([
+            GlobBuilder::new("**/.*").literal_separator(true).build().unwrap(),
+            Glob::new("**/[.][.]").unwrap(),
+        ])
+        .unwrap();
+        for path in ["..", "foo/..", "foo/bar/.."] {
+            assert!(set.is_match(path), "{path}");
+            assert!(set.matches_all(path), "{path}");
+            assert_eq!(set.matches(path), vec![0, 1], "{path}");
+        }
+        assert!(!set.matches_all("foo/."));
     }
 
     #[test]
