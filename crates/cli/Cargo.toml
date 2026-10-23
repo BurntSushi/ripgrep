@@ -6,7 +6,6 @@ description = """
 Utilities for search oriented command line applications.
 """
 documentation = "https://docs.rs/grep-cli"
-homepage = "https://github.com/BurntSushi/ripgrep/tree/master/crates/cli"
 repository = "https://github.com/BurntSushi/ripgrep/tree/master/crates/cli"
 readme = "README.md"
 keywords = ["regex", "grep", "cli", "utility", "util"]
