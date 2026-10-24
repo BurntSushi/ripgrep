@@ -240,7 +240,7 @@ impl ConfiguredHIR {
 
     /// Convert this HIR to a regex that can be used for matching.
     pub(crate) fn to_regex(&self) -> Result<Regex, Error> {
-        let meta = Regex::config()
+        let mut meta = Regex::config()
             .utf8_empty(false)
             .nfa_size_limit(Some(self.config.size_limit))
             // We don't expose a knob for this because the one-pass DFA is
@@ -253,6 +253,16 @@ impl ConfiguredHIR {
             .dfa_size_limit(Some(1 * (1 << 20)))
             .dfa_state_limit(Some(1_000))
             .hybrid_cache_capacity(self.config.dfa_size_limit);
+        // The searcher's fast line-by-line path searches a whole buffer at
+        // once. For that to be correct with `(?m:^)` / `(?m:$)` and
+        // `--line-regexp`, the regex engine has to treat the configured
+        // terminator as a line boundary. This includes `--null-data`, where
+        // the terminator is NUL. CRLF anchors are hard-coded and ignore this.
+        if let Some(line_term) = self.config.line_terminator {
+            if !line_term.is_crlf() {
+                meta = meta.line_terminator(line_term.as_byte());
+            }
+        }
         Regex::builder()
             .configure(meta)
             .build_from_hir(&self.hir)
