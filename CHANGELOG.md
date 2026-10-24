@@ -2,6 +2,11 @@ TBD
 ===
 Unreleased changes. Release notes have not yet been written.
 
+Bug fixes:
+
+* [BUG #3526](https://github.com/BurntSushi/ripgrep/issues/3526):
+  Percent-encode bytes that are not valid UTF-8 in hyperlink paths.
+
 
 15.2.0 (2026-07-15)
 ===================
