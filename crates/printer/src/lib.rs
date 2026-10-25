@@ -70,6 +70,7 @@ pub use crate::{
     standard::{Standard, StandardBuilder, StandardSink},
     stats::Stats,
     summary::{Summary, SummaryBuilder, SummaryKind, SummarySink},
+    util::sanitize_control,
 };
 
 #[cfg(feature = "serde")]

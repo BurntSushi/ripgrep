@@ -15,6 +15,8 @@ struct Config {
     hyperlink: HyperlinkConfig,
     separator: Option<u8>,
     terminator: u8,
+    /// True if output is going to an interactive terminal.
+    is_terminal: bool,
 }
 
 impl Default for Config {
@@ -24,6 +26,7 @@ impl Default for Config {
             hyperlink: HyperlinkConfig::default(),
             separator: None,
             terminator: b'\n',
+            is_terminal: false,
         }
     }
 }
@@ -120,6 +123,13 @@ impl PathPrinterBuilder {
         self.config.terminator = terminator;
         self
     }
+
+    /// Configure for output to an interactive terminal. When `true`,
+    /// printed paths are escaped to defang terminal control sequences.
+    pub fn is_terminal(&mut self, yes: bool) -> &mut PathPrinterBuilder {
+        self.config.is_terminal = yes;
+        self
+    }
 }
 
 /// A printer file paths, with optional color and hyperlink support.
@@ -150,12 +160,18 @@ impl<W: WriteColor> PathPrinter<W> {
     pub fn write(&mut self, path: &Path) -> io::Result<()> {
         let ppath = PrinterPath::new(path.as_ref())
             .with_separator(self.config.separator);
+        // Sanitize for tty; pipe output stays byte-exact.
+        let bytes_cow = if self.config.is_terminal {
+            crate::util::sanitize_control(ppath.as_bytes())
+        } else {
+            std::borrow::Cow::Borrowed(ppath.as_bytes())
+        };
         if !self.wtr.supports_color() {
-            self.wtr.write_all(ppath.as_bytes())?;
+            self.wtr.write_all(&bytes_cow)?;
         } else {
             let status = self.start_hyperlink(&ppath)?;
             self.wtr.set_color(self.config.colors.path())?;
-            self.wtr.write_all(ppath.as_bytes())?;
+            self.wtr.write_all(&bytes_cow)?;
             self.wtr.reset()?;
             self.interpolator.finish(status, &mut self.wtr)?;
         }

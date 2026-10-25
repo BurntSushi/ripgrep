@@ -588,6 +588,118 @@ where
     Ok(())
 }
 
+// Maps each byte to a sanitize action: 0 = pass, 1 = escape,
+// 2 = 0xC2 (lookahead for UTF-8 C1), 3 = CR (CRLF passthrough).
+const SANITIZE_TABLE: [u8; 256] = {
+    let mut t = [0u8; 256];
+    let mut i = 0;
+    while i < 256 {
+        let b = i as u8;
+        if b < 0x20 && b != b'\t' && b != b'\n' && b != b'\r' {
+            t[i] = 1;
+        } else if b == 0x7F {
+            t[i] = 1;
+        } else if b >= 0x80 && b <= 0x9F {
+            t[i] = 1;
+        } else if b == 0xC2 {
+            t[i] = 2;
+        } else if b == b'\r' {
+            t[i] = 3;
+        }
+        i += 1;
+    }
+    t
+};
+
+// Rewrite C0 (except HT/LF/CR), DEL, and C1 (raw and UTF-8) to \xNN.
+// Returns Cow::Borrowed and skips allocation when the input is clean.
+#[allow(missing_docs)]
+pub fn sanitize_control<'b>(bytes: &'b [u8]) -> std::borrow::Cow<'b, [u8]> {
+    let mut i = 0;
+    let mut need = false;
+    while i < bytes.len() {
+        let b = bytes[i];
+        match SANITIZE_TABLE[b as usize] {
+            0 => {
+                i += 1;
+            }
+            1 => {
+                need = true;
+                break;
+            }
+            2 => {
+                if i + 1 < bytes.len()
+                    && bytes[i + 1] >= 0x80
+                    && bytes[i + 1] <= 0x9F
+                {
+                    need = true;
+                    break;
+                }
+                i += 1;
+            }
+            _ => {
+                if i + 1 >= bytes.len() || bytes[i + 1] != b'\n' {
+                    need = true;
+                    break;
+                }
+                i += 2;
+            }
+        }
+    }
+    if !need {
+        return std::borrow::Cow::Borrowed(bytes);
+    }
+    let mut out = Vec::with_capacity(bytes.len() + 8);
+    const HEX: &[u8] = b"0123456789ABCDEF";
+    let mut i = 0;
+    while i < bytes.len() {
+        let b = bytes[i];
+        match SANITIZE_TABLE[b as usize] {
+            0 => {
+                out.push(b);
+                i += 1;
+            }
+            1 => {
+                out.push(b'\\');
+                out.push(b'x');
+                out.push(HEX[(b >> 4) as usize]);
+                out.push(HEX[(b & 0xF) as usize]);
+                i += 1;
+            }
+            2 => {
+                if i + 1 < bytes.len()
+                    && bytes[i + 1] >= 0x80
+                    && bytes[i + 1] <= 0x9F
+                {
+                    let c1 = bytes[i + 1];
+                    out.push(b'\\');
+                    out.push(b'x');
+                    out.push(HEX[(c1 >> 4) as usize]);
+                    out.push(HEX[(c1 & 0xF) as usize]);
+                    i += 2;
+                } else {
+                    out.push(b);
+                    i += 1;
+                }
+            }
+            _ => {
+                if i + 1 < bytes.len() && bytes[i + 1] == b'\n' {
+                    out.push(b'\r');
+                    out.push(b'\n');
+                    i += 2;
+                } else {
+                    out.push(b'\\');
+                    out.push(b'x');
+                    out.push(HEX[(b >> 4) as usize]);
+                    out.push(HEX[(b & 0xF) as usize]);
+                    i += 1;
+                }
+            }
+        }
+    }
+    std::borrow::Cow::Owned(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -604,5 +716,85 @@ mod tests {
         for n in ints {
             assert_eq!(std(n), fmt(n));
         }
+    }
+
+    #[test]
+    fn sanitize_passthrough() {
+        let input: &[u8] = b"hello\tworld\nline\r\ndone\r\n";
+        let out = sanitize_control(input);
+        assert_eq!(&*out, input);
+        assert!(matches!(out, std::borrow::Cow::Borrowed(_)));
+    }
+
+    #[test]
+    fn sanitize_escapes_esc_bel_del() {
+        let input: &[u8] = b"a\x1bb\x07c\x7fd";
+        let out = sanitize_control(input);
+        assert_eq!(&*out, &b"a\\x1Bb\\x07c\\x7Fd"[..]);
+    }
+
+    #[test]
+    fn sanitize_escapes_midline_cr() {
+        let input: &[u8] = b"SAFE=0\rEVIL=1\n";
+        let out = sanitize_control(input);
+        assert_eq!(&*out, &b"SAFE=0\\x0DEVIL=1\n"[..]);
+    }
+
+    #[test]
+    fn sanitize_escapes_trailing_cr() {
+        let input: &[u8] = b"hello\r";
+        let out = sanitize_control(input);
+        assert_eq!(&*out, &b"hello\\x0D"[..]);
+    }
+
+    #[test]
+    fn sanitize_preserves_utf8() {
+        let input: &[u8] = "héllo\x1bworld".as_bytes();
+        let out = sanitize_control(input);
+        assert_eq!(&*out, &b"h\xC3\xA9llo\\x1Bworld"[..]);
+    }
+
+    #[test]
+    fn sanitize_escapes_raw_c1() {
+        // raw 0x9B (CSI) and 0x9D (OSC) — used as 8-bit introducers.
+        let input: &[u8] = b"a\x9b31mb\x9d52;c;evil\x9c";
+        let out = sanitize_control(input);
+        assert_eq!(&*out, &b"a\\x9B31mb\\x9D52;c;evil\\x9C"[..]);
+    }
+
+    #[test]
+    fn sanitize_escapes_utf8_c1() {
+        // UTF-8 form of the same. 0xC2 0x9D = U+009D (OSC). VTE-family
+        // terminals act on this even when raw 0x9D and ESC are blocked.
+        let input: &[u8] = b"safe\xC2\x9D52;c;evil\xC2\x9C.txt";
+        let out = sanitize_control(input);
+        assert_eq!(&*out, &b"safe\\x9D52;c;evil\\x9C.txt"[..]);
+    }
+
+    #[test]
+    fn sanitize_keeps_latin1_above_c1() {
+        // 0xC2 0xA0 onwards is non-breaking space and other Latin-1
+        // letters, which must pass through unchanged.
+        let input: &[u8] = "café résumé\u{00A0}word".as_bytes();
+        let out = sanitize_control(input);
+        assert_eq!(&*out, input);
+        assert!(matches!(out, std::borrow::Cow::Borrowed(_)));
+    }
+
+    #[test]
+    fn sanitize_lone_c2_at_end() {
+        // a stray 0xC2 with nothing after must not panic and must pass
+        // through unchanged (it is not a complete UTF-8 C1 sequence).
+        let input: &[u8] = b"name\xC2";
+        let out = sanitize_control(input);
+        assert_eq!(&*out, input);
+    }
+
+    #[test]
+    fn sanitize_lone_c2_middle() {
+        // a stray 0xC2 not followed by a C1 byte must pass through.
+        let input: &[u8] = b"name\xC2hello";
+        let out = sanitize_control(input);
+        assert_eq!(&*out, input);
     }
 }
