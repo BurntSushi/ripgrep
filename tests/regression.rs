@@ -1,5 +1,5 @@
 use crate::hay::SHERLOCK;
-use crate::util::{Dir, TestCommand, sort_lines};
+use crate::util::{Dir, TestCommand, cmd_exists, sort_lines};
 
 // See: https://github.com/BurntSushi/ripgrep/issues/16
 rgtest!(r16, |dir: Dir, mut cmd: TestCommand| {
@@ -1763,44 +1763,6 @@ rgtest!(r3275_git_global_config_env, |dir: Dir, mut cmd: TestCommand| {
     eqnice!("foo/foo1\n", cmd.arg("--files").arg("foo").stdout());
 });
 
-// See: https://github.com/BurntSushi/ripgrep/issues/3591
-rgtest!(r3591_excludes_file_inner_tilde, |dir: Dir, mut cmd: TestCommand| {
-    dir.create_dir("foo");
-    dir.create(".git", "");
-    dir.create("foo/foo1", "");
-    dir.create("foo/foo2", "");
-    dir.create_dir("bar~1");
-    dir.create("bar~1/excludes", "foo2");
-    dir.create(
-        "config",
-        &format!(
-            "[core]\n\texcludesFile = {path}",
-            path = dir.path().join("bar~1").join("excludes").display()
-        ),
-    );
-
-    cmd.env("GIT_CONFIG_GLOBAL", dir.path().join("config"));
-    eqnice!("foo/foo1\n", cmd.arg("--files").arg("foo").stdout());
-});
-
-// See: https://github.com/BurntSushi/ripgrep/issues/3593
-rgtest!(r3593, |dir: Dir, mut cmd: TestCommand| {
-    dir.create("h.log", "a\nb\nfoo\nc\nfoo\nd\n");
-
-    eqnice!(
-        "1:a\n2:b\n3-foo\n",
-        cmd.arg("-n")
-            .arg("-v")
-            .arg("-m")
-            .arg("2")
-            .arg("-A")
-            .arg("1")
-            .arg(r"\Afoo")
-            .arg("h.log")
-            .stdout()
-    );
-});
-
 // See: https://github.com/BurntSushi/ripgrep/issues/2552
 #[cfg(unix)] // because symlinks on windows are weird
 rgtest!(
@@ -1837,4 +1799,60 @@ rgtest!(r2552_broken_symlink_root_follow, |dir: Dir, mut cmd: TestCommand| {
     let mut cmd = dir.command();
     cmd.arg("-L").arg("--files");
     cmd.assert_exit_code(2);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3382
+rgtest!(r3382_truncated_zstd, |dir: Dir, mut cmd: TestCommand| {
+    if !cmd_exists("zstd") {
+        return;
+    }
+    let data = include_bytes!("./data/sherlock.zst");
+    dir.create_bytes("sherlock.zst", &data[..data.len() - 1]);
+    cmd.args(&["-z", "-j2", "-o", "Sherlock", "sherlock.zst", "sherlock.zst"]);
+
+    let output = cmd.raw_output();
+    assert_eq!(Some(2), output.status.code());
+    assert!(!output.stderr.is_empty());
+    eqnice!(
+        "sherlock.zst:Sherlock\n".repeat(4),
+        String::from_utf8_lossy(&output.stdout)
+    );
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3591
+rgtest!(r3591_excludes_file_inner_tilde, |dir: Dir, mut cmd: TestCommand| {
+    dir.create_dir("foo");
+    dir.create(".git", "");
+    dir.create("foo/foo1", "");
+    dir.create("foo/foo2", "");
+    dir.create_dir("bar~1");
+    dir.create("bar~1/excludes", "foo2");
+    dir.create(
+        "config",
+        &format!(
+            "[core]\n\texcludesFile = {path}",
+            path = dir.path().join("bar~1").join("excludes").display()
+        ),
+    );
+
+    cmd.env("GIT_CONFIG_GLOBAL", dir.path().join("config"));
+    eqnice!("foo/foo1\n", cmd.arg("--files").arg("foo").stdout());
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3593
+rgtest!(r3593, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("h.log", "a\nb\nfoo\nc\nfoo\nd\n");
+
+    eqnice!(
+        "1:a\n2:b\n3-foo\n",
+        cmd.arg("-n")
+            .arg("-v")
+            .arg("-m")
+            .arg("2")
+            .arg("-A")
+            .arg("1")
+            .arg(r"\Afoo")
+            .arg("h.log")
+            .stdout()
+    );
 });
