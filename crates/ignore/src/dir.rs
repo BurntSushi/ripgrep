@@ -344,7 +344,7 @@ impl Ignore {
     ) -> (IgnoreInner, Option<Error>) {
         let check_vcs_dir = self.inner.opts.require_git
             && (self.inner.opts.git_ignore || self.inner.opts.git_exclude);
-        let git_type = if check_vcs_dir
+        let git_type = if (check_vcs_dir || self.inner.opts.git_exclude)
             && ignore_files_list.is_none_or(|i| i.has_git_dir)
         {
             dir.join(".git").metadata().ok().map(|md| md.file_type())
@@ -1586,6 +1586,13 @@ mod tests {
         wfile(commondir_path(), "../..");
         let ib = IgnoreBuilder::new().build();
         let (ignore, err) = ib.add_child(td.path().join("linked-worktree"));
+        assert!(err.is_none());
+        assert!(ignore.matched("ignore_me", false).is_ignore());
+
+        let without_required_git =
+            IgnoreBuilder::new().require_git(false).build();
+        let (ignore, err) =
+            without_required_git.add_child(td.path().join("linked-worktree"));
         assert!(err.is_none());
         assert!(ignore.matched("ignore_me", false).is_ignore());
 
