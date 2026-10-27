@@ -727,12 +727,30 @@ impl Searcher {
     pub fn search_reader<M, R, S>(
         &mut self,
         matcher: M,
-        read_from: R,
+        mut read_from: R,
         write_to: S,
     ) -> Result<(), S::Error>
     where
         M: Matcher,
         R: io::Read,
+        S: Sink,
+    {
+        self.search_reader_impl(matcher, &mut read_from, write_to)
+    }
+
+    /// The non-generic core of `search_reader`. The source reader is erased to
+    /// a trait object so that the decoder, line-buffer reader and the entire
+    /// per-line search loop are compiled once per `M`/`S` combination instead
+    /// of once per concrete reader type `R`. Reads happen once per buffer fill
+    /// (~8KB), so the single virtual `read` call is amortized.
+    fn search_reader_impl<M, S>(
+        &mut self,
+        matcher: M,
+        read_from: &mut dyn io::Read,
+        write_to: S,
+    ) -> Result<(), S::Error>
+    where
+        M: Matcher,
         S: Sink,
     {
         self.check_config(&matcher).map_err(S::Error::error_config)?;
