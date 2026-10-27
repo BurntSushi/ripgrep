@@ -315,6 +315,34 @@ impl Gitignore {
     }
 }
 
+fn trim_trailing_unescaped_spaces(line: &str) -> &str {
+    let bytes = line.as_bytes();
+    let mut last_space = None;
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'\\' => {
+                if i + 1 >= bytes.len() {
+                    return line;
+                }
+                i += 2;
+                last_space = None;
+            }
+            b' ' => {
+                if last_space.is_none() {
+                    last_space = Some(i);
+                }
+                i += 1;
+            }
+            _ => {
+                last_space = None;
+                i += 1;
+            }
+        }
+    }
+    &line[..last_space.unwrap_or(line.len())]
+}
+
 /// Builds a matcher for a single set of globs from a .gitignore file.
 #[derive(Clone, Debug)]
 pub struct GitignoreBuilder {
@@ -465,14 +493,10 @@ impl GitignoreBuilder {
         from: Option<PathBuf>,
         mut line: &str,
     ) -> Result<&mut GitignoreBuilder, Error> {
-        #![allow(deprecated)]
-
         if line.starts_with("#") {
             return Ok(self);
         }
-        if !line.ends_with("\\ ") {
-            line = line.trim_right();
-        }
+        line = trim_trailing_unescaped_spaces(line);
         if line.is_empty() {
             return Ok(self);
         }
@@ -815,6 +839,28 @@ mod tests {
     not_ignored!(ignot17, ROOT, "src/*.rs", "src/grep/src/main.rs");
     not_ignored!(ignot18, ROOT, "path1/*", "path2/path1/foo");
     not_ignored!(ignot19, ROOT, "s*.rs", "src/foo.rs");
+
+    #[test]
+    fn trailing_spaces_after_escaped_space() {
+        let gi = gi_from_str(ROOT, "foo\\   ");
+        assert!(gi.matched("foo ", false).is_ignore());
+        assert!(!gi.matched("foo", false).is_ignore());
+        assert!(!gi.matched("foo  ", false).is_ignore());
+    }
+
+    #[test]
+    fn trailing_unescaped_spaces() {
+        let gi = gi_from_str(ROOT, "foo  ");
+        assert!(gi.matched("foo", false).is_ignore());
+        assert!(!gi.matched("foo ", false).is_ignore());
+    }
+
+    #[test]
+    fn trailing_escaped_space() {
+        let gi = gi_from_str(ROOT, "foo\\ ");
+        assert!(gi.matched("foo ", false).is_ignore());
+        assert!(!gi.matched("foo", false).is_ignore());
+    }
 
     fn bytes(s: &str) -> Vec<u8> {
         s.to_string().into_bytes()
