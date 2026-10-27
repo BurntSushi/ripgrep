@@ -360,6 +360,7 @@ fn generate(mode: crate::flags::GenerateMode) -> anyhow::Result<ExitCode> {
         GenerateMode::CompleteBash => flags::generate_complete_bash(),
         GenerateMode::CompleteZsh => flags::generate_complete_zsh(),
         GenerateMode::CompleteFish => flags::generate_complete_fish(),
+        GenerateMode::CompleteNushell => flags::generate_complete_nushell(),
         GenerateMode::CompletePowerShell => {
             flags::generate_complete_powershell()
         }
