@@ -1,5 +1,5 @@
 use crate::hay::SHERLOCK;
-use crate::util::{Dir, TestCommand, sort_lines};
+use crate::util::{Dir, TestCommand, cmd_exists, sort_lines};
 
 // See: https://github.com/BurntSushi/ripgrep/issues/16
 rgtest!(r16, |dir: Dir, mut cmd: TestCommand| {
@@ -1741,4 +1741,22 @@ rgtest!(r3275_git_global_config_env, |dir: Dir, mut cmd: TestCommand| {
     let config_path = dir.path().join("global-config-nonstandard");
     cmd.env("GIT_CONFIG_GLOBAL", config_path);
     eqnice!("foo/foo1\n", cmd.arg("--files").arg("foo").stdout());
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3382
+rgtest!(r3382_truncated_zstd, |dir: Dir, mut cmd: TestCommand| {
+    if !cmd_exists("zstd") {
+        return;
+    }
+    let data = include_bytes!("./data/sherlock.zst");
+    dir.create_bytes("sherlock.zst", &data[..data.len() - 1]);
+    cmd.args(&["-z", "-j2", "-o", "Sherlock", "sherlock.zst", "sherlock.zst"]);
+
+    let output = cmd.raw_output();
+    assert_eq!(Some(2), output.status.code());
+    assert!(!output.stderr.is_empty());
+    eqnice!(
+        "sherlock.zst:Sherlock\n".repeat(4),
+        String::from_utf8_lossy(&output.stdout)
+    );
 });
