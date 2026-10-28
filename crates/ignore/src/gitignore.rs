@@ -501,6 +501,13 @@ impl GitignoreBuilder {
                 is_absolute = true;
             }
         }
+        // A negation marker (or slash) with nothing after it leaves no pattern
+        // behind. Git treats such a line as a no-op (gitignore(5)); if we keep
+        // it, it compiles to a glob matching everything (e.g., "**/" for a
+        // bare "!"), which re-includes the entire subtree.
+        if line.is_empty() {
+            return Ok(self);
+        }
         // If it ends with a slash, then this should only match directories,
         // but the slash should otherwise not be used while globbing.
         if line.as_bytes().last() == Some(&b'/') {
@@ -815,6 +822,16 @@ mod tests {
     not_ignored!(ignot17, ROOT, "src/*.rs", "src/grep/src/main.rs");
     not_ignored!(ignot18, ROOT, "path1/*", "path2/path1/foo");
     not_ignored!(ignot19, ROOT, "s*.rs", "src/foo.rs");
+
+    // A bare "!" leaves no pattern behind, the way git treats it. Git allows
+    // a negation marker with nothing after it, but that means the line is a
+    // no-op (gitignore(5)): it neither ignores nor re-includes anything.
+    // Previously, ripgrep compiled a bare "!" into a "**/" whitelist that
+    // matched everything, re-including the whole subtree.
+    ignored!(ig_bare_negation_after_ignore, ROOT, ".venv\n!", "a/.venv");
+    ignored!(ig_bare_negation_cancels_ignore, ROOT, "*.tmp\n!", "a/x.tmp");
+    ignored!(ig_ignore_after_bare_negation, ROOT, "!\n*.tmp", "a/x.tmp");
+    not_ignored!(ig_bare_negation_only, ROOT, "!", "a/x.tmp");
 
     fn bytes(s: &str) -> Vec<u8> {
         s.to_string().into_bytes()
