@@ -755,6 +755,10 @@ impl WalkBuilder {
     /// Whether to follow symbolic links or not.
     pub fn follow_links(&mut self, yes: bool) -> &mut WalkBuilder {
         self.follow_links = yes;
+        // Loop detection needs the ancestors of the root, which is the same
+        // chain `add_parents` builds. Keep it alive even with ignore files
+        // disabled.
+        self.ig_builder.follow_links(yes);
         self
     }
 
@@ -2043,7 +2047,15 @@ fn check_symlink_loop(
     let hchild = Handle::from_path(child_path).map_err(|err| {
         Error::from(err).with_path(child_path).with_depth(child_depth)
     })?;
-    for ig in ig_parent.parents().take_while(|ig| !ig.is_absolute_parent()) {
+    // Note that this deliberately does not stop at the root of the
+    // traversal. A symlink resolving to a directory *above* the root is also
+    // a loop, since the target contains the root, so descending into it leads
+    // back to the root. Stopping early means such a symlink looks like an
+    // ordinary directory on the first crossing and is only caught on the
+    // second, after everything above the root has already been walked once.
+    // The base matcher is excluded: it is not a directory in the traversal
+    // and its path may be empty.
+    for ig in ig_parent.parents().take_while(|ig| !ig.is_root()) {
         let h = Handle::from_path(ig.path()).map_err(|err| {
             Error::from(err).with_path(child_path).with_depth(child_depth)
         })?;
@@ -2617,6 +2629,77 @@ mod tests {
         let mut builder = WalkBuilder::new(td.path());
         assert_paths(td.path(), &builder, &["a", "a/b", "a/b/c"]);
         assert_paths(td.path(), &builder.follow_links(true), &["a", "a/b"]);
+    }
+
+    // A symlink resolving to a directory above the root of the walk is also a
+    // loop, since the target contains the root and descending into it leads
+    // back to the root.
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn symlink_loop_above_root() {
+        let td = tmpdir();
+        mkdirp(td.path().join("outside"));
+        wfile(td.path().join("outside/stray"), "");
+        mkdirp(td.path().join("root/deep"));
+        wfile(td.path().join("root/file"), "");
+        symlink(td.path(), td.path().join("root/deep/up"));
+
+        let root = td.path().join("root");
+        let mut builder = WalkBuilder::new(&root);
+        assert_paths(&root, &builder, &["deep", "deep/up", "file"]);
+        // Only asserted for the parallel walker. `Walk` delegates loop
+        // detection to walkdir, which is responsible for its own check.
+        //
+        // Without the check, this also yields everything reachable from `td`,
+        // including `deep/up/outside/stray`.
+        let got = walk_collect_parallel(&root, builder.follow_links(true));
+        assert_eq!(got, mkpaths(&["deep", "file"]));
+    }
+
+    // The ancestors of the root are needed for loop detection even when no
+    // ignore files are being read at all.
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn symlink_loop_above_root_no_ignores() {
+        let td = tmpdir();
+        mkdirp(td.path().join("outside"));
+        wfile(td.path().join("outside/stray"), "");
+        mkdirp(td.path().join("root/deep"));
+        wfile(td.path().join("root/file"), "");
+        symlink(td.path(), td.path().join("root/deep/up"));
+
+        let root = td.path().join("root");
+        let mut builder = WalkBuilder::new(&root);
+        builder
+            .follow_links(true)
+            .parents(false)
+            .ignore(false)
+            .git_ignore(false)
+            .git_global(false)
+            .git_exclude(false)
+            .require_git(false);
+        let got = walk_collect_parallel(&root, &builder);
+        assert_eq!(got, mkpaths(&["deep", "file"]));
+    }
+
+    // Only ancestors are loops. A symlink to a directory outside the root
+    // that does not contain the root is still followed.
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn symlink_outside_root_is_followed() {
+        let td = tmpdir();
+        mkdirp(td.path().join("outside"));
+        wfile(td.path().join("outside/stray"), "");
+        mkdirp(td.path().join("root"));
+        symlink(td.path().join("outside"), td.path().join("root/link"));
+
+        let root = td.path().join("root");
+        let mut builder = WalkBuilder::new(&root);
+        assert_paths(
+            &root,
+            &builder.follow_links(true),
+            &["link", "link/stray"],
+        );
     }
 
     // It's a little tricky to test the 'same_file_system' option since
