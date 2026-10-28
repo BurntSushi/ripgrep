@@ -115,6 +115,9 @@ jobs:
         - build: winaarch64-msvc
           os: windows-11-arm
           rust: nightly
+        - build: winaarch64-gnullvm
+          os: windows-11-arm
+          rust: nightly-aarch64-pc-windows-gnullvm
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -133,6 +136,27 @@ jobs:
       with:
         version: latest
         set-host: true
+
+    - name: Install Windows ARM64 GNU-family toolchain
+      if: matrix.build == 'winaarch64-gnullvm'
+      id: msys2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: CLANGARM64
+        update: true
+        install: mingw-w64-clang-aarch64-clang
+
+    - name: Use Windows ARM64 GNU-family toolchain
+      if: matrix.build == 'winaarch64-gnullvm'
+      shell: pwsh
+      env:
+        MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
+      run: |
+        $bin = "$env:MSYS2_LOCATION\clangarm64\bin"
+        echo $bin >> $env:GITHUB_PATH
+        echo "CARGO_TARGET_AARCH64_PC_WINDOWS_GNULLVM_LINKER=$bin\clang.exe" >> $env:GITHUB_ENV
+        echo "CC_aarch64_pc_windows_gnullvm=$bin\clang.exe" >> $env:GITHUB_ENV
+        echo "AR_aarch64_pc_windows_gnullvm=$bin\llvm-ar.exe" >> $env:GITHUB_ENV
 
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master

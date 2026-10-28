@@ -132,6 +132,10 @@ jobs:
           os: windows-11-arm
           rust: nightly
           target: aarch64-pc-windows-msvc
+        - build: winaarch64-gnullvm
+          os: windows-11-arm
+          rust: nightly
+          target: aarch64-pc-windows-gnullvm
         - build: win32-msvc
           os: windows-latest
           rust: nightly
@@ -140,6 +144,30 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+
+    - name: Install Windows ARM64 GNU-family toolchain
+      if: matrix.target == 'aarch64-pc-windows-gnullvm'
+      id: msys2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: CLANGARM64
+        update: true
+        install: mingw-w64-clang-aarch64-clang
+
+    - name: Use Windows ARM64 GNU-family toolchain
+      if: matrix.target == 'aarch64-pc-windows-gnullvm'
+      shell: pwsh
+      env:
+        MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
+      run: |
+        $bin = "$env:MSYS2_LOCATION\clangarm64\bin"
+        echo $bin >> $env:GITHUB_PATH
+        echo "CARGO_TARGET_AARCH64_PC_WINDOWS_GNULLVM_LINKER=$bin\clang.exe" >> $env:GITHUB_ENV
+        # PCRE2 is C, so cc-rs needs the same clang.
+        echo "CC_aarch64_pc_windows_gnullvm=$bin\clang.exe" >> $env:GITHUB_ENV
+        echo "AR_aarch64_pc_windows_gnullvm=$bin\llvm-ar.exe" >> $env:GITHUB_ENV
+        # Link libunwind statically so the release does not need MSYS2's libunwind.dll.
+        echo "CARGO_TARGET_AARCH64_PC_WINDOWS_GNULLVM_RUSTFLAGS=-C target-feature=+crt-static" >> $env:GITHUB_ENV
 
     - name: Install packages (Ubuntu)
       if: matrix.os == 'ubuntu-latest'
