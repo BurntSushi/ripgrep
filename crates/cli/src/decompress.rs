@@ -530,3 +530,97 @@ fn default_decompression_commands() -> Vec<DecompressionCommand> {
     add("*.Z", ARGS_UNCOMPRESS, &mut cmds);
     cmds
 }
+
+#[cfg(test)]
+mod tests {
+    use super::DecompressionMatcherBuilder;
+
+    // A binary that is virtually guaranteed to resolve on PATH for the
+    // platforms these tests run on. The built-in default rules cannot be used
+    // for asserting positive matches, because a rule is silently dropped when
+    // its decompression binary (e.g. `lz4`) is not installed on the test host.
+    #[cfg(unix)]
+    const PRESENT_BIN: &str = "cat";
+    #[cfg(windows)]
+    const PRESENT_BIN: &str = "cmd";
+
+    #[test]
+    fn matches_associated_extensions() {
+        // Build a matcher (without defaults) whose globs all point at a binary
+        // that resolves on PATH, so matching behavior is deterministic and
+        // independent of which decompression tools happen to be installed.
+        let matcher = DecompressionMatcherBuilder::new()
+            .defaults(false)
+            .associate("*.gz", PRESENT_BIN, &[] as &[&str])
+            .associate("*.tar.gz", PRESENT_BIN, &[] as &[&str])
+            .associate("*.Z", PRESENT_BIN, &[] as &[&str])
+            .build()
+            .unwrap();
+
+        for path in ["archive.gz", "archive.tar.gz", "archive.Z"] {
+            assert!(
+                matcher.has_command(path),
+                "expected a decompression command for {path}",
+            );
+            assert!(
+                matcher.command(path).is_some(),
+                "expected command() to return a command for {path}",
+            );
+        }
+    }
+
+    #[test]
+    fn ignores_unassociated_extensions() {
+        let matcher = DecompressionMatcherBuilder::new()
+            .defaults(false)
+            .associate("*.gz", PRESENT_BIN, &[] as &[&str])
+            .build()
+            .unwrap();
+        for path in ["file.txt", "file", "archive.rar", "notes.md"] {
+            assert!(
+                !matcher.has_command(path),
+                "did not expect a decompression command for {path}",
+            );
+            assert!(matcher.command(path).is_none());
+        }
+    }
+
+    #[test]
+    fn matching_uses_full_extension_not_substring() {
+        let matcher = DecompressionMatcherBuilder::new()
+            .defaults(false)
+            .associate("*.gz", PRESENT_BIN, &[] as &[&str])
+            .build()
+            .unwrap();
+        // ".gz" must be an actual extension, not merely appear in the name.
+        assert!(!matcher.has_command("gzip-notes.txt"));
+        assert!(!matcher.has_command("my.gz.backup"));
+    }
+
+    #[test]
+    fn empty_matcher_without_defaults_matches_nothing() {
+        let matcher = DecompressionMatcherBuilder::new()
+            .defaults(false)
+            .build()
+            .unwrap();
+        assert!(!matcher.has_command("archive.gz"));
+        assert!(matcher.command("archive.gz").is_none());
+    }
+
+    #[test]
+    fn last_matching_command_takes_precedence() {
+        // When two globs match the same path, command() uses the one added
+        // last. Both rules resolve to a present binary; the later, more
+        // specific rule must win.
+        let matcher = DecompressionMatcherBuilder::new()
+            .defaults(false)
+            .associate("*.gz", PRESENT_BIN, ["first"])
+            .associate("*.gz", PRESENT_BIN, ["second"])
+            .build()
+            .unwrap();
+        let cmd = matcher.command("archive.gz").expect("expected a command");
+        let args: Vec<_> =
+            cmd.get_args().map(|a| a.to_string_lossy().into_owned()).collect();
+        assert_eq!(args, ["second"]);
+    }
+}
