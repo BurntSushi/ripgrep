@@ -75,6 +75,28 @@ impl LineStep {
         self.next_impl(bytes)
     }
 
+    /// Set the position of this iterator to `pos`.
+    ///
+    /// `pos` is an offset into the bytes given to `next`, just like the
+    /// ranges that `next` returns. This is like replacing this iterator with
+    /// `LineStep::new(line_term, pos, end)`, where `line_term` and `end` are
+    /// the values this iterator was created with.
+    ///
+    /// If `pos` is in the middle of a line, then the next line reported is
+    /// incomplete. Namely, it starts at `pos` and is missing the part of the
+    /// line before `pos`.
+    ///
+    /// `pos` may be before the end of the last line reported. In that case,
+    /// lines are reported again starting at `pos`.
+    ///
+    /// This panics if `pos` is greater than `end`. Note that `end` is the end
+    /// of the range given to `LineStep::new`, which may be less than the
+    /// length of the bytes given to `next`.
+    pub fn advance_to(&mut self, pos: usize) {
+        assert!(pos <= self.end, "{} is not <= {}", pos, self.end);
+        self.pos = pos;
+    }
+
     /// Like next, but returns a `Match` instead of a tuple.
     #[inline(always)]
     pub(crate) fn next_match(&mut self, bytes: &[u8]) -> Option<Match> {
@@ -231,6 +253,14 @@ and exhibited clearly, with a label attached.\
         results
     }
 
+    fn rest<'t>(it: &mut LineStep, text: &'t str) -> Vec<&'t str> {
+        let mut results = vec![];
+        while let Some((s, e)) = it.next(text.as_bytes()) {
+            results.push(&text[s..e]);
+        }
+        results
+    }
+
     fn prev(text: &str, pos: usize, count: usize) -> usize {
         preceding_by_pos(text.as_bytes(), pos, b'\n', count)
     }
@@ -330,6 +360,52 @@ and exhibited clearly, with a label attached.\
     fn line_iter_empty() {
         let mut it = LineStep::new(b'\n', 0, 0);
         assert_eq!(it.next(b"abc"), None);
+    }
+
+    #[test]
+    fn line_step_advance_to() {
+        let t = "abc\nxyz\nfoo\n";
+        let mut it = LineStep::new(b'\n', 0, t.len());
+        assert_eq!(it.next(t.as_bytes()), Some((0, 4)));
+        it.advance_to(5);
+        assert_eq!(it.next(t.as_bytes()), Some((5, 8)));
+        it.advance_to(1);
+        assert_eq!(rest(&mut it, t), vec!["bc\n", "xyz\n", "foo\n"]);
+    }
+
+    #[test]
+    fn line_step_advance_to_matches_new() {
+        let t = "a\n\nbc\nd";
+        for start in 0..=t.len() {
+            for end in start..=t.len() {
+                for consumed in 0..=5 {
+                    for pos in 0..=end {
+                        let mut moved = LineStep::new(b'\n', start, end);
+                        for _ in 0..consumed {
+                            moved.next(t.as_bytes());
+                        }
+                        moved.advance_to(pos);
+                        let mut fresh = LineStep::new(b'\n', pos, end);
+                        assert_eq!(
+                            rest(&mut moved, t),
+                            rest(&mut fresh, t),
+                            "start: {}, end: {}, consumed: {}, pos: {}",
+                            start,
+                            end,
+                            consumed,
+                            pos,
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn line_step_advance_to_past_end() {
+        let mut it = LineStep::new(b'\n', 4, 8);
+        it.advance_to(9);
     }
 
     #[test]
