@@ -872,10 +872,10 @@ rgtest!(vimgrep, |dir: Dir, mut cmd: TestCommand| {
     cmd.arg("--vimgrep").arg("Sherlock|Watson");
 
     let expected = "\
-sherlock:1:16:For the Doctor Watsons of this world, as opposed to the Sherlock
-sherlock:1:57:For the Doctor Watsons of this world, as opposed to the Sherlock
-sherlock:3:49:be, to a very large extent, the result of luck. Sherlock Holmes
-sherlock:5:12:but Doctor Watson has to have it taken out for him and dusted,
+sherlock:1:16:22:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:1:57:65:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:3:49:57:be, to a very large extent, the result of luck. Sherlock Holmes
+sherlock:5:12:18:but Doctor Watson has to have it taken out for him and dusted,
 ";
     eqnice!(expected, cmd.stdout());
 });
@@ -885,10 +885,10 @@ rgtest!(vimgrep_no_line, |dir: Dir, mut cmd: TestCommand| {
     cmd.arg("--vimgrep").arg("-N").arg("Sherlock|Watson");
 
     let expected = "\
-sherlock:16:For the Doctor Watsons of this world, as opposed to the Sherlock
-sherlock:57:For the Doctor Watsons of this world, as opposed to the Sherlock
-sherlock:49:be, to a very large extent, the result of luck. Sherlock Holmes
-sherlock:12:but Doctor Watson has to have it taken out for him and dusted,
+sherlock:16:22:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:57:65:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:49:57:be, to a very large extent, the result of luck. Sherlock Holmes
+sherlock:12:18:but Doctor Watson has to have it taken out for him and dusted,
 ";
     eqnice!(expected, cmd.stdout());
 });
@@ -902,6 +902,21 @@ sherlock:For the Doctor Watsons of this world, as opposed to the Sherlock
 sherlock:For the Doctor Watsons of this world, as opposed to the Sherlock
 sherlock:be, to a very large extent, the result of luck. Sherlock Holmes
 sherlock:but Doctor Watson has to have it taken out for him and dusted,
+";
+    eqnice!(expected, cmd.stdout());
+});
+
+// Regression test: --vimgrep --no-column suppresses both column and end column
+// (without -N, so line numbers are still present).
+rgtest!(vimgrep_no_column_with_lineno, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("sherlock", SHERLOCK);
+    cmd.arg("--vimgrep").arg("--no-column").arg("Sherlock|Watson");
+
+    let expected = "\
+sherlock:1:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:1:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:3:be, to a very large extent, the result of luck. Sherlock Holmes
+sherlock:5:but Doctor Watson has to have it taken out for him and dusted,
 ";
     eqnice!(expected, cmd.stdout());
 });
