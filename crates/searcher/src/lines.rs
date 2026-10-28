@@ -75,23 +75,19 @@ impl LineStep {
         self.next_impl(bytes)
     }
 
-    /// Set the position of this iterator to `pos`.
+    /// Set the position of this iterator to the byte offset `pos`.
     ///
-    /// `pos` is an offset into the bytes given to `next`, just like the
-    /// ranges that `next` returns. This is like replacing this iterator with
-    /// `LineStep::new(line_term, pos, end)`, where `line_term` and `end` are
-    /// the values this iterator was created with.
+    /// This is equivalent to `LineStep::new(line_term, pos, end)`, using
+    /// the original `line_term` and `end`.
     ///
-    /// If `pos` is in the middle of a line, then the next line reported is
-    /// incomplete. Namely, it starts at `pos` and is missing the part of the
-    /// line before `pos`.
+    /// If `pos` is inside a line, the next line reported starts at `pos`
+    /// and omits the preceding bytes.
     ///
-    /// `pos` may be before the end of the last line reported. In that case,
-    /// lines are reported again starting at `pos`.
+    /// Moving backward causes lines to be reported again.
+    /// Setting `pos` to `end` stops iteration.
     ///
-    /// This panics if `pos` is greater than `end`. Note that `end` is the end
-    /// of the range given to `LineStep::new`, which may be less than the
-    /// length of the bytes given to `next`.
+    /// This panics if `pos` exceeds the `end` given to `LineStep::new`,
+    /// even if the bytes given to `next` extend beyond `end`.
     pub fn advance_to(&mut self, pos: usize) {
         assert!(pos <= self.end, "{} is not <= {}", pos, self.end);
         self.pos = pos;
