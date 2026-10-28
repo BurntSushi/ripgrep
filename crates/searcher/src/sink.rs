@@ -104,7 +104,7 @@ pub trait Sink {
     ///
     /// Errors of this type are not only returned by the methods on this
     /// trait, but the constructors defined in `SinkError` are also used in
-    /// the searcher implementation itself. e.g., When a I/O error occurs when
+    /// the searcher implementation itself. e.g., When an I/O error occurs when
     /// reading data from a file.
     type Error: SinkError;
 
