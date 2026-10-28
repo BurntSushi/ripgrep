@@ -194,6 +194,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
         "*.sln", "*.slnf"
     ]),
     (&["nim"], &["*.nim", "*.nimf", "*.nimble", "*.nims"]),
+    (&["ninja"], &["*.ninja"]),
     (&["nix"], &["*.nix"]),
     (&["objc"], &["*.h", "*.m"]),
     (&["objcpp"], &["*.h", "*.mm"]),
