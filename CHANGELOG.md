@@ -2,6 +2,12 @@ TBD
 ===
 Unreleased changes. Release notes have not yet been written.
 
+Bug fixes:
+
+* [BUG #1764](https://github.com/BurntSushi/ripgrep/issues/1764):
+  Fix `-g`/`--glob` overrides not matching a directory when the current
+  working directory is that same directory.
+
 
 15.2.0 (2026-07-15)
 ===================
