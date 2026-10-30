@@ -1,0 +1,21 @@
+# Plumber overlay: inherits every control from the CLI's built-in
+# baseline, only the differences for this repo are written here.
+# Run 'plumber config resolve' to see the full effective config.
+extends: plumber:default
+version: '2.0'
+
+github:
+  controls:
+    githubActionMustComeFromAuthorizedSources:
+      # Keep the curated default list and trust the rust-toolchain
+      # action this repo already uses on top of it.
+      includePlumberDefaults: true
+      trustedGithubActions:
+        - dtolnay/rust-toolchain
+
+    # Off for now: the finding is rustup's own install script inside
+    # rust-toolchain, the standard way every Rust CI bootstraps a
+    # toolchain. Nothing repo-side to fix until upstream ships a
+    # checksummed install path.
+    actionsMustNotExecuteMutableRemoteCode:
+      enabled: false
