@@ -2199,7 +2199,7 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use super::{DirEntry, WalkBuilder, WalkState};
-    use crate::tests::TempDir;
+    use crate::{overrides::OverrideBuilder, tests::TempDir};
 
     fn wfile<P: AsRef<Path>>(path: P, contents: &str) {
         let mut file = File::create(path).unwrap();
@@ -2304,6 +2304,72 @@ mod tests {
             &WalkBuilder::new(td.path()),
             &["x", "x/y", "x/y/foo", "a", "a/b", "a/b/foo", "a/b/c"],
         );
+    }
+
+    #[test]
+    fn override_literal_prefix_prunes_after_case_insensitive_toggle() {
+        let td = tmpdir();
+        mkdirp(td.path().join("target"));
+        mkdirp(td.path().join("second"));
+        mkdirp(td.path().join("outside"));
+        wfile(td.path().join("target/keep.rs"), "");
+        wfile(td.path().join("target/generated.rs"), "");
+        wfile(td.path().join("second/keep.rs"), "");
+        wfile(td.path().join("outside/skip.rs"), "");
+
+        let overrides = OverrideBuilder::new(td.path())
+            .add("target/**/*.rs")
+            .unwrap()
+            .add("second/**/*.rs")
+            .unwrap()
+            .case_insensitive(true)
+            .unwrap()
+            .add("!TARGET/**/GENERATED.RS")
+            .unwrap()
+            .build()
+            .unwrap();
+        let mut builder = WalkBuilder::new(td.path());
+        builder.overrides(overrides);
+
+        assert_paths(
+            td.path(),
+            &builder,
+            &["target", "target/keep.rs", "second", "second/keep.rs"],
+        );
+    }
+
+    #[test]
+    fn override_unrooted_globs_disable_literal_prefix_pruning() {
+        let td = tmpdir();
+        mkdirp(td.path().join("target"));
+        mkdirp(td.path().join("nested/src"));
+        mkdirp(td.path().join("nested/GOOD"));
+        wfile(td.path().join("target/keep.rs"), "");
+        wfile(td.path().join("nested/GOOD/keep.log"), "");
+
+        for glob in ["src/", "src/   ", r"src\/", "*.rs", "*/GOOD/*.log"] {
+            let overrides = OverrideBuilder::new(td.path())
+                .add("target/**/*.rs")
+                .unwrap()
+                .add(glob)
+                .unwrap()
+                .build()
+                .unwrap();
+            let mut builder = WalkBuilder::new(td.path());
+            builder.overrides(overrides);
+
+            let mut expected = vec![
+                "target",
+                "target/keep.rs",
+                "nested",
+                "nested/src",
+                "nested/GOOD",
+            ];
+            if glob == "*/GOOD/*.log" {
+                expected.push("nested/GOOD/keep.log");
+            }
+            assert_paths(td.path(), &builder, &expected);
+        }
     }
 
     #[test]
