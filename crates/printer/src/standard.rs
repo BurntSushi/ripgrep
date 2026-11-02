@@ -531,6 +531,7 @@ impl<W: WriteColor> Standard<W> {
             binary_byte_offset: None,
             stats,
             needs_match_granularity,
+            pending_join: Cell::new(false),
         }
     }
 
@@ -567,6 +568,7 @@ impl<W: WriteColor> Standard<W> {
             binary_byte_offset: None,
             stats,
             needs_match_granularity,
+            pending_join: Cell::new(false),
         }
     }
 
@@ -647,6 +649,15 @@ pub struct StandardSink<'p, 's, M: Matcher, W> {
     binary_byte_offset: Option<u64>,
     stats: Option<Stats>,
     needs_match_granularity: bool,
+    /// Set when the last line printed by a multi-line match had its line
+    /// terminator removed by a replacement. The next contextual line (e.g.,
+    /// from `--passthru`) should then be appended to that line instead of
+    /// starting a new line, so that a replacement that removes a line
+    /// terminator actually joins the two lines. If no contextual line
+    /// follows, the terminator is written back when the search finishes
+    /// (or before the next match), preserving the usual line-terminated
+    /// output for non-passthru searches.
+    pending_join: Cell<bool>,
 }
 
 impl<'p, 's, M: Matcher, W: WriteColor> StandardSink<'p, 's, M, W> {
@@ -816,6 +827,10 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for StandardSink<'p, 's, M, W> {
         &mut self,
         searcher: &Searcher,
     ) -> Result<bool, io::Error> {
+        if self.pending_join.get() {
+            self.pending_join.set(false);
+            StandardImpl::new(searcher, self).write_line_term()?;
+        }
         StandardImpl::new(searcher, self).write_context_separator()?;
         Ok(true)
     }
@@ -843,6 +858,7 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for StandardSink<'p, 's, M, W> {
         self.start_time = Instant::now();
         self.match_count = 0;
         self.binary_byte_offset = None;
+        self.pending_join.set(false);
         Ok(true)
     }
 
@@ -851,6 +867,10 @@ impl<'p, 's, M: Matcher, W: WriteColor> Sink for StandardSink<'p, 's, M, W> {
         searcher: &Searcher,
         finish: &SinkFinish,
     ) -> Result<(), io::Error> {
+        if self.pending_join.get() {
+            self.pending_join.set(false);
+            StandardImpl::new(searcher, self).write_line_term()?;
+        }
         if let Some(offset) = self.binary_byte_offset {
             StandardImpl::new(searcher, self).write_binary_message(offset)?;
         }
@@ -926,6 +946,18 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
     }
 
     fn sink(&self) -> io::Result<()> {
+        // If the previous multi-line match ended with its line terminator
+        // removed by a replacement, then a following contextual line is a
+        // continuation of that line, not a new line: append it without a
+        // prelude. Any other following sink closes the previous line first,
+        // so non-passthru output keeps its usual line termination.
+        if self.sink.pending_join.get() {
+            self.sink.pending_join.set(false);
+            if self.is_context() {
+                return self.write_line(self.sunk.bytes());
+            }
+            self.write_line_term()?;
+        }
         self.write_search_prelude()?;
         if self.sunk.matches().is_empty() {
             if self.multi_line() && !self.is_context() {
@@ -1054,8 +1086,19 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
             if self.exceeds_max_columns(&bytes[line]) {
                 self.write_exceeded_line(bytes, line, matches, &mut midx)?;
             } else {
+                let is_last = end == bytes.len();
+                let has_term = self.has_line_terminator(&bytes[line]);
                 self.write_colored_matches(bytes, line, matches, &mut midx)?;
-                self.write_line_term()?;
+                if is_last && !has_term {
+                    // The replacement removed this line's terminator.
+                    // Don't re-add it here: a following contextual line
+                    // should join this line, and if none follows, the
+                    // terminator is restored when the search finishes
+                    // (or before the next match).
+                    self.sink.pending_join.set(true);
+                } else {
+                    self.write_line_term()?;
+                }
             }
         }
         Ok(())
@@ -3586,6 +3629,35 @@ line 3 x
 
         let got = printer_contents(&mut printer);
         let expected = "1:hello?world?\n";
+        assert_eq_printed!(expected, got);
+    }
+
+    // See: https://github.com/BurntSushi/ripgrep/issues/3508
+    //
+    // When a replacement removes the line terminator of a matched line,
+    // the following passthru line must join it instead of starting a new
+    // line. Previously the printer unconditionally re-added the terminator
+    // after the replaced line, so the join was lost.
+    #[test]
+    fn replacement_multi_line_passthru_joins_terminator() {
+        let matcher = RegexMatcher::new(r"hello\n").unwrap();
+        let mut printer = StandardBuilder::new()
+            .replacement(Some(b"?".to_vec()))
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(true)
+            .multi_line(true)
+            .passthru(true)
+            .build()
+            .search_reader(
+                &matcher,
+                "hello\nworld\n".as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "1:?world\n";
         assert_eq_printed!(expected, got);
     }
 
