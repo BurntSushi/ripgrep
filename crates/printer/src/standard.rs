@@ -1457,6 +1457,9 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         line_number: Option<u64>,
         column: Option<u64>,
     ) -> io::Result<hyperlink::InterpolatorStatus> {
+        if self.config().hyperlink.format().is_empty() {
+            return Ok(hyperlink::InterpolatorStatus::inactive());
+        }
         let Some(hyperpath) = path.as_hyperlink() else {
             return Ok(hyperlink::InterpolatorStatus::inactive());
         };
@@ -1775,6 +1778,57 @@ and exhibited clearly, with a label attached.\
 
     fn printer_contents_ansi(printer: &mut Standard<Ansi<Vec<u8>>>) -> String {
         String::from_utf8(printer.get_mut().get_ref().to_owned()).unwrap()
+    }
+
+    #[test]
+    fn disabled_hyperlink_does_not_resolve_path() {
+        let matcher = RegexMatcher::new("match").unwrap();
+        for heading in [false, true] {
+            let mut printer = StandardBuilder::new()
+                .heading(heading)
+                .build(Ansi::new(vec![]));
+            let mut sink = printer.sink_with_path(&matcher, "archive:member");
+            SearcherBuilder::new()
+                .line_number(false)
+                .build()
+                .search_slice(&matcher, b"match\nmatch\n", &mut sink)
+                .unwrap();
+            assert!(!sink.path.as_ref().unwrap().is_hyperlink_initialized());
+            let expected = if heading {
+                "\x1b[0marchive:member\x1b[0m\nmatch\nmatch\n"
+            } else {
+                "\x1b[0marchive:member\x1b[0m:match\n\
+                 \x1b[0marchive:member\x1b[0m:match\n"
+            };
+            assert_eq!(expected, printer_contents_ansi(&mut printer));
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn enabled_hyperlink_resolves_path() {
+        use crate::{HyperlinkEnvironment, HyperlinkFormat};
+
+        let matcher = RegexMatcher::new("match").unwrap();
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml");
+        for heading in [false, true] {
+            let format: HyperlinkFormat = "file://{path}".parse().unwrap();
+            let mut printer = StandardBuilder::new()
+                .heading(heading)
+                .hyperlink(format.into_config(HyperlinkEnvironment::new()))
+                .build(Ansi::new(vec![]));
+            let mut sink = printer.sink_with_path(&matcher, path);
+            SearcherBuilder::new()
+                .build()
+                .search_slice(&matcher, b"match\n", &mut sink)
+                .unwrap();
+            assert!(sink.path.as_ref().unwrap().is_hyperlink_initialized());
+            let output = printer_contents_ansi(&mut printer);
+            assert!(output.contains("\x1b]8;;file://"));
+            assert!(output.contains("\x1b]8;;\x1b\\"));
+            assert!(output.contains(path));
+            assert!(output.ends_with("match\n"));
+        }
     }
 
     #[test]
