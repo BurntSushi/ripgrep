@@ -349,6 +349,11 @@ impl<'a> PrinterPath<'a> {
             .as_ref()
     }
 
+    #[cfg(test)]
+    pub(crate) fn hyperlink_is_initialized(&self) -> bool {
+        self.hyperlink.get().is_some()
+    }
+
     /// Return this path as an actual `Path` type.
     pub(crate) fn as_path(&self) -> &Path {
         #[cfg(unix)]
