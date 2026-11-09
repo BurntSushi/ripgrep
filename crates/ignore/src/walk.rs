@@ -1168,11 +1168,13 @@ impl Walk {
             }
         }
         if self.max_filesize.is_some() && !ent.is_dir() {
-            return Ok(skip_filesize(
+            if skip_filesize(
                 self.max_filesize.unwrap(),
                 ent.path(),
                 &ent.metadata().ok(),
-            ));
+            ) {
+                return Ok(true);
+            }
         }
         if let Some(Filter(filter)) = &self.filter {
             if !filter(ent) {
@@ -2566,6 +2568,39 @@ mod tests {
             td.path(),
             builder.max_filesize(Some(50000)),
             &["a", "a/b", "foo", "bar", "baz", "a/foo", "a/bar", "a/baz"],
+        );
+    }
+
+    #[test]
+    fn max_filesize_respects_filter_entry() {
+        let td = tmpdir();
+        mkdirp(td.path().join("a/skipdir"));
+        wfile_size(td.path().join("keep"), 400);
+        wfile_size(td.path().join("skip"), 0);
+        wfile_size(td.path().join("large"), 600);
+        wfile_size(td.path().join("a/keep"), 0);
+        wfile_size(td.path().join("a/skip"), 200);
+        wfile_size(td.path().join("a/boundary"), 500);
+        wfile_size(td.path().join("a/skipdir/keep"), 0);
+
+        let mut builder = WalkBuilder::new(td.path());
+        builder.filter_entry(|entry| {
+            entry.file_name() != "skip" && entry.file_name() != "skipdir"
+        });
+        assert_paths(
+            td.path(),
+            &builder,
+            &["a", "keep", "large", "a/keep", "a/boundary"],
+        );
+        assert_paths(
+            td.path(),
+            builder.max_filesize(Some(0)),
+            &["a", "a/keep"],
+        );
+        assert_paths(
+            td.path(),
+            builder.max_filesize(Some(500)),
+            &["a", "keep", "a/keep", "a/boundary"],
         );
     }
 
