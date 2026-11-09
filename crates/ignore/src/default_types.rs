@@ -233,6 +233,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["readme"], &["README*", "*README"]),
     (&["reasonml"], &["*.re", "*.rei"]),
     (&["red"], &["*.r", "*.red", "*.reds"]),
+    (&["rego"], &["*.rego"]),
     (&["rescript"], &["*.res", "*.resi"]),
     (&["robot"], &["*.robot"]),
     (&["rocq"], &["*.v"]),
