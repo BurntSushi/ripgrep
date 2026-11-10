@@ -80,11 +80,21 @@ rgtest!(vimgrep, |dir: Dir, mut cmd: TestCommand| {
     ]);
 
     let expected = "\
-sherlock:1:16:For the Doctor Watsons of this world, as opposed to the Sherlock
-sherlock:1:57:For the Doctor Watsons of this world, as opposed to the Sherlock
-sherlock:3:49:be, to a very large extent, the result of luck. Sherlock Holmes
-sherlock:5:12:but Doctor Watson has to have it taken out for him and dusted,
+sherlock:1:16:22:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:1:57:72:For the Doctor Watsons of this world, as opposed to the Sherlock
+sherlock:3:49:64:be, to a very large extent, the result of luck. Sherlock Holmes
+sherlock:5:12:18:but Doctor Watson has to have it taken out for him and dusted,
 ";
+    eqnice!(expected, cmd.stdout());
+});
+
+// Regression test: multiline vimgrep end-column reflects the match end byte
+// relative to the line start for the first line of the match.
+rgtest!(vimgrep_endcol_multiline, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("data", "abc\ndef\nghi");
+    cmd.args(&["-n", "-U", "--vimgrep", r"abc\ndef", "data"]);
+
+    let expected = "data:1:1:8:abc\n";
     eqnice!(expected, cmd.stdout());
 });
 

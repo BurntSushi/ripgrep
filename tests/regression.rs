@@ -130,7 +130,7 @@ rgtest!(r99, |dir: Dir, mut cmd: TestCommand| {
 rgtest!(r105_part1, |dir: Dir, mut cmd: TestCommand| {
     dir.create("foo", "zztest");
 
-    eqnice!("foo:1:3:zztest\n", cmd.arg("--vimgrep").arg("test").stdout());
+    eqnice!("foo:1:3:7:zztest\n", cmd.arg("--vimgrep").arg("test").stdout());
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/105
@@ -1242,9 +1242,19 @@ rgtest!(r1866, |dir: Dir, mut cmd: TestCommand| {
     //
     // See: https://github.com/BurntSushi/ripgrep/issues/1866
     let expected = "\
-test:1:1:foobar
-test:3:5:foo quux
+test:1:1:18:foobar
+test:3:5:9:foo quux
 ";
+    eqnice!(expected, cmd.stdout());
+});
+
+// Regression test: --vimgrep end columns with multi-byte UTF-8.
+// Bytes are counted, not characters, so "ré" (2 bytes) shifts end columns.
+rgtest!(r_vimgrep_endcol_multibyte, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("data", "café résumé");
+    cmd.arg("--vimgrep").arg("sumé");
+
+    let expected = "data:1:10:15:café résumé\n";
     eqnice!(expected, cmd.stdout());
 });
 

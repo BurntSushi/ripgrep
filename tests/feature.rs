@@ -766,7 +766,7 @@ rgtest!(
             r".*a\n?bc.*",
         ]);
 
-        let expected = "1:1:01234567 [... 0 more matches]\n";
+        let expected = "1:1:42:01234567 [... 0 more matches]\n";
         eqnice!(expected, cmd.stdout());
     }
 );
