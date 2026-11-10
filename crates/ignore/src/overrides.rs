@@ -102,7 +102,7 @@ impl Override {
         if self.is_empty() {
             return Match::None;
         }
-        let mat = self.0.matched(path, is_dir).invert();
+        let mat = self.0.matched_override(path, is_dir).invert();
         if mat.is_none() && self.num_whitelists() > 0 && !is_dir {
             return Match::Ignore(Glob::unmatched());
         }
@@ -264,6 +264,60 @@ mod tests {
     fn absolute_path() {
         let ov = ov(&["!/bar"]);
         assert!(ov.matched("./foo/bar", false).is_none());
+    }
+
+    // An override glob that begins with `/` is anchored to the filesystem root
+    // and must match the same path regardless of the directory that the override
+    // matcher was built relative to.
+    // See: https://github.com/BurntSushi/ripgrep/issues/3070
+    #[test]
+    fn absolute_glob_is_cwd_independent() {
+        let base = std::env::temp_dir().join("rg-overrides-issue-3070");
+        let target = base.join("two.txt");
+        // Normalize separators so the glob parses consistently on all platforms
+        // (with `backslash_escape` enabled, Windows-style separators in a glob
+        // would otherwise be treated as escapes).
+        let mut glob =
+            base.join("two.txt").to_str().unwrap().replace('\\', "/");
+        if !glob.starts_with('/') {
+            // On Unix the temp dir starts with `/`, so the glob is already
+            // absolute. On Windows, prepend a `/` to mark it as absolute, which
+            // is the equivalent of slash-normalizing an absolute path.
+            glob.insert(0, '/');
+        }
+        let glob = format!("!{}", glob);
+
+        // The matcher is built relative to the directory *containing* the target.
+        let mut ov = OverrideBuilder::new(&base);
+        ov.add(&glob).unwrap();
+        let ov = ov.build().unwrap();
+        assert!(ov.matched(&target, false).is_ignore());
+
+        // The matcher is built relative to a directory *outside* the target.
+        let mut ov = OverrideBuilder::new(std::env::temp_dir());
+        ov.add(&glob).unwrap();
+        let ov = ov.build().unwrap();
+        assert!(ov.matched(&target, false).is_ignore());
+
+        // A relative glob should still be relative to the matcher's root and
+        // unaffected by the presence of absolute globs.
+        let mut ov = OverrideBuilder::new(&base);
+        ov.add("*.rs").unwrap();
+        ov.add(&glob).unwrap();
+        let ov = ov.build().unwrap();
+        assert!(ov.matched(base.join("lib.rs"), false).is_whitelist());
+        assert!(ov.matched(&target, false).is_ignore());
+
+        // The matcher is also exercised with paths relative to its root, which
+        // is what ripgrep produces when walking a relative search root (e.g.,
+        // `rg .`). The absolute glob must still match such paths.
+        let mut ov = OverrideBuilder::new(&base);
+        ov.add(&glob).unwrap();
+        let ov = ov.build().unwrap();
+        assert!(ov.matched("two.txt", false).is_ignore());
+        assert!(ov.matched("one.txt", false).is_none());
+        assert!(ov.matched("sub/one.txt", false).is_none());
+        assert!(ov.matched("sub/two.txt", false).is_none());
     }
 
     #[test]
