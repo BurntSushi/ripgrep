@@ -187,19 +187,19 @@ fn search_parallel(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
             };
             searched.store(true, Ordering::SeqCst);
             searcher.printer().get_mut().clear();
-            let search_result = match searcher.search(&haystack) {
-                Ok(search_result) => search_result,
+            match searcher.search(&haystack) {
+                Ok(search_result) => {
+                    if search_result.has_match() {
+                        matched.store(true, Ordering::SeqCst);
+                    }
+                    if let Some(ref locked_stats) = *stats {
+                        let mut stats = locked_stats.lock().unwrap();
+                        *stats += search_result.stats().unwrap();
+                    }
+                }
                 Err(err) => {
                     err_message!("{}: {}", haystack.path().display(), err);
-                    return WalkState::Continue;
                 }
-            };
-            if search_result.has_match() {
-                matched.store(true, Ordering::SeqCst);
-            }
-            if let Some(ref locked_stats) = *stats {
-                let mut stats = locked_stats.lock().unwrap();
-                *stats += search_result.stats().unwrap();
             }
             if let Err(err) = bufwtr.print(searcher.printer().get_mut()) {
                 // A broken pipe means graceful termination.
