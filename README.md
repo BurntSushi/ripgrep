@@ -11,6 +11,7 @@ other popular search tools like The Silver Searcher, ack and grep.
 [![Build status](https://github.com/BurntSushi/ripgrep/workflows/ci/badge.svg)](https://github.com/BurntSushi/ripgrep/actions)
 [![Crates.io](https://img.shields.io/crates/v/ripgrep.svg)](https://crates.io/crates/ripgrep)
 [![Packaging status](https://repology.org/badge/tiny-repos/ripgrep.svg)](https://repology.org/project/ripgrep/badges)
+[![Plumber Score](https://score.getplumber.io/github.com/BurntSushi/ripgrep.svg)](https://score.getplumber.io/github.com/BurntSushi/ripgrep)
 
 Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org).
 
