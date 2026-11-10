@@ -2,6 +2,11 @@ TBD
 ===
 Unreleased changes. Release notes have not yet been written.
 
+Bug fixes:
+
+* [BUG #3591](https://github.com/BurntSushi/ripgrep/issues/3591):
+  Only expand a leading `~` in the path set by `core.excludesFile`.
+
 
 15.2.0 (2026-07-15)
 ===================

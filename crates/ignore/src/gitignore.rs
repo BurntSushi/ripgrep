@@ -689,13 +689,22 @@ fn parse_excludes_file(data: &[u8]) -> Option<PathBuf> {
     std::str::from_utf8(candidate).ok().map(|s| PathBuf::from(expand_tilde(s)))
 }
 
-/// Expands ~ in file paths to the value of $HOME.
+/// Expands a leading ~ in file paths to the value of $HOME.
+///
+/// Like git, only a ~ at the start of the path is expanded, so paths like
+/// `C:/PROGRA~1/foo` are kept as is. The `~user` form is not supported.
 fn expand_tilde(path: &str) -> String {
+    let Some(rest) = path.strip_prefix('~') else {
+        return path.to_string();
+    };
+    if !rest.is_empty() && !rest.starts_with(std::path::is_separator) {
+        return path.to_string();
+    }
     let home = match home_dir() {
         None => return path.to_string(),
         Some(home) => home.to_string_lossy().into_owned(),
     };
-    path.replace("~", &home)
+    format!("{home}{rest}")
 }
 
 /// Returns the location of the user's home directory.
@@ -858,6 +867,42 @@ mod tests {
     fn parse_excludes_file5() {
         let data = bytes("[core]\nexcludesFile = \" \"~/foo/bar \" \"");
         assert!(super::parse_excludes_file(&data).is_none());
+    }
+
+    #[test]
+    fn parse_excludes_file6() {
+        let data = bytes("[core]\nexcludesFile = C:/Users/RUNNER~1/foo/bar");
+        let got = super::parse_excludes_file(&data).unwrap();
+        assert_eq!(path_string(got), "C:/Users/RUNNER~1/foo/bar");
+    }
+
+    #[test]
+    fn expand_tilde_leading() {
+        let Some(home) = super::home_dir() else { return };
+        let home = home.to_str().unwrap();
+        assert_eq!(super::expand_tilde("~"), home);
+        assert_eq!(
+            super::expand_tilde("~/foo/bar"),
+            format!("{home}/foo/bar")
+        );
+        #[cfg(windows)]
+        assert_eq!(super::expand_tilde(r"~\foo"), format!(r"{home}\foo"));
+        #[cfg(not(windows))]
+        assert_eq!(super::expand_tilde(r"~\foo"), r"~\foo");
+    }
+
+    #[test]
+    fn expand_tilde_not_leading() {
+        for path in [
+            "/foo/bar",
+            "/foo~/bar",
+            "/foo/~/bar",
+            "C:/PROGRA~1/foo",
+            // %TEMP% on GitHub Actions Windows runners, as an 8.3 short name:
+            "C:/Users/RUNNER~1/AppData/Local/Temp/foo",
+        ] {
+            assert_eq!(super::expand_tilde(path), path);
+        }
     }
 
     // See: https://github.com/BurntSushi/ripgrep/issues/106
