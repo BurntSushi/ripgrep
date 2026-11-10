@@ -1479,6 +1479,25 @@ rgtest!(r2658_null_data_line_regexp, |dir: Dir, mut cmd: TestCommand| {
     eqnice!("haystack:bar\0", got);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/2832
+//
+// `--null-data --no-mmap` used to search NUL-terminated records one at a
+// time. A file that is mostly NULs with a needle in the middle should still
+// find that needle, and should not need a multi-gigabyte haystack to prove
+// the fast path is in use. The grep-searcher unit test counts matcher calls
+// to show we are not walking one byte at a time.
+rgtest!(r2832_null_data_fast_path, |dir: Dir, mut cmd: TestCommand| {
+    let needle = b"ZQZQZQZQZQ";
+    let mut hay = vec![0u8; 256 * 1024];
+    let mid = hay.len() / 2;
+    hay[mid..mid + needle.len()].copy_from_slice(needle);
+    dir.create_bytes("binary-test.bin", &hay);
+    let got = cmd
+        .args(&["--null-data", "--no-mmap", "ZQZQZQZQZQ", "binary-test.bin"])
+        .stdout();
+    eqnice!("ZQZQZQZQZQ\0", got);
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/2770
 rgtest!(r2770_gitignore_error, |dir: Dir, _cmd: TestCommand| {
     dir.create(".git", "");
