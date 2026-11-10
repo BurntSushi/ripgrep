@@ -261,6 +261,8 @@ impl<W: WriteColor> SearchWorker<W> {
             self.search_preprocessor(path)
         } else if self.should_decompress(path) {
             self.search_decompress(path)
+        } else if self.decomp_builder.is_some() {
+            self.search_decompress_by_magic(path)
         } else {
             self.search_path(path)
         }
@@ -331,6 +333,38 @@ impl<W: WriteColor> SearchWorker<W> {
             return self.search_path(path);
         };
         let mut rdr = decomp_builder.build(path)?;
+        let result = self.search_reader(path, &mut rdr);
+        let close_result = rdr.close();
+        let search_result = result?;
+        close_result?;
+        Ok(search_result)
+    }
+
+    /// Inspect a file whose extension did not match a decompression rule,
+    /// then search either decompressed data or the original data. This makes
+    /// `-z` pay for one small header read in this bucket, but it never causes
+    /// a second `File::open`. Unmatched files use the same buffered
+    /// `Read`-based path as compressed and preprocessed input instead of the
+    /// mmap fast path. Files with recognized extensions remain unaffected.
+    fn search_decompress_by_magic(
+        &mut self,
+        path: &Path,
+    ) -> io::Result<SearchResult> {
+        let Some(ref decomp_builder) = self.decomp_builder else {
+            return self.search_path(path);
+        };
+        let Some(mut rdr) = decomp_builder.build_by_magic(path).map_err(|err| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!(
+                    "decompression reader could not be built for '{}': {err}",
+                    path.display(),
+                ),
+            )
+        })?
+        else {
+            return self.search_path(path);
+        };
         let result = self.search_reader(path, &mut rdr);
         let close_result = rdr.close();
         let search_result = result?;
