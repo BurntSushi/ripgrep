@@ -1457,6 +1457,9 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         line_number: Option<u64>,
         column: Option<u64>,
     ) -> io::Result<hyperlink::InterpolatorStatus> {
+        if self.config().hyperlink.format().is_empty() {
+            return Ok(hyperlink::InterpolatorStatus::inactive());
+        }
         let Some(hyperpath) = path.as_hyperlink() else {
             return Ok(hyperlink::InterpolatorStatus::inactive());
         };
@@ -1775,6 +1778,41 @@ and exhibited clearly, with a label attached.\
 
     fn printer_contents_ansi(printer: &mut Standard<Ansi<Vec<u8>>>) -> String {
         String::from_utf8(printer.get_mut().get_ref().to_owned()).unwrap()
+    }
+
+    #[test]
+    fn hyperlink_path_resolution() {
+        let matcher = RegexMatcher::new("Sherlock").unwrap();
+        let path = std::env::current_dir().unwrap();
+        for enabled in [false, true] {
+            for heading in [false, true] {
+                let mut builder = StandardBuilder::new();
+                builder.heading(heading);
+                if enabled {
+                    let format = "file://{path}".parse().unwrap();
+                    builder.hyperlink(crate::HyperlinkConfig::new(
+                        crate::HyperlinkEnvironment::default(),
+                        format,
+                    ));
+                }
+                let mut printer = builder.build(Ansi::new(vec![]));
+                let mut sink = printer.sink_with_path(&matcher, &path);
+                SearcherBuilder::new()
+                    .build()
+                    .search_reader(&matcher, SHERLOCK.as_bytes(), &mut sink)
+                    .unwrap();
+                assert!(sink.has_match());
+                assert_eq!(
+                    sink.path.as_ref().unwrap().hyperlink_is_initialized(),
+                    enabled,
+                    "enabled={enabled}, heading={heading}",
+                );
+                assert_eq!(
+                    printer_contents_ansi(&mut printer).contains("\x1b]8;;"),
+                    enabled,
+                );
+            }
+        }
     }
 
     #[test]
