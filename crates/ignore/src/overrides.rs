@@ -102,7 +102,24 @@ impl Override {
         if self.is_empty() {
             return Match::None;
         }
-        let mat = self.0.matched(path, is_dir).invert();
+        let path = path.as_ref();
+        let mut mat = self.0.matched(path, is_dir).invert();
+        // If `path` is exactly the directory this override set is rooted
+        // at, then stripping the root prefix (done internally by the
+        // wrapped `Gitignore`) leaves an empty candidate, which can never
+        // match any glob. This happens whenever the override's root
+        // directory is itself visited while walking one of its ancestors,
+        // e.g. running `rg -g '!dir1/' /some/root` from inside
+        // `/some/root/dir1`. In that case, fall back to matching the
+        // root's own base name so that a glob naming that directory still
+        // applies to it.
+        //
+        // See: https://github.com/BurntSushi/ripgrep/issues/1764
+        if mat.is_none() && is_dir && path == self.0.path() {
+            if let Some(name) = self.0.path().file_name() {
+                mat = self.0.matched(name, is_dir).invert();
+            }
+        }
         if mat.is_none() && self.num_whitelists() > 0 && !is_dir {
             return Match::Ignore(Glob::unmatched());
         }
@@ -258,6 +275,25 @@ mod tests {
         assert!(ov.matched("src/foo.c", false).is_ignore());
         assert!(ov.matched("src/foo", false).is_ignore());
         assert!(ov.matched("src/foo", true).is_none());
+    }
+
+    #[test]
+    fn root_dir_name_matches_itself() {
+        // https://github.com/BurntSushi/ripgrep/issues/1764
+        //
+        // When the override's root directory is itself visited while
+        // walking a parent directory (e.g. `cd foo && rg -g '!foo/' ..`),
+        // a glob naming that directory must still match it, even though
+        // root-relative stripping of the root path yields an empty
+        // candidate.
+        let ov = ov(&["!foo/"]);
+        assert!(ov.matched(ROOT, true).is_ignore());
+    }
+
+    #[test]
+    fn root_dir_name_does_not_match_unrelated_pattern() {
+        let ov = ov(&["!bar/"]);
+        assert!(ov.matched(ROOT, true).is_none());
     }
 
     #[test]
