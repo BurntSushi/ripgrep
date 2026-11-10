@@ -218,6 +218,12 @@ impl Gitignore {
     /// top-to-bottom and matching the entries. But, is easier to use in cases
     /// when a list of paths are available without a hierarchy.
     ///
+    /// NOTE: Unlike `git check-ignore`, a whitelist (negation) match on the
+    /// path itself is returned immediately, even when an ancestor directory is
+    /// ignored by the same matcher. Git never re-includes a path under an
+    /// excluded directory that way, so callers that need git's directory-skip
+    /// semantics should walk top-to-bottom instead of relying on this method.
+    ///
     /// `is_dir` should be true if the path refers to a directory and false
     /// otherwise.
     ///
