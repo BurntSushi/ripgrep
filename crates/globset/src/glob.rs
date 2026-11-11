@@ -51,6 +51,9 @@ pub(crate) enum MatchStrategy {
 impl MatchStrategy {
     /// Returns a matching strategy for the given pattern.
     pub(crate) fn new(pat: &Glob) -> MatchStrategy {
+        if !pat.can_use_fast_paths() {
+            return MatchStrategy::Regex;
+        }
         if let Some(lit) = pat.basename_literal() {
             MatchStrategy::BasenameLiteral(lit)
         } else if let Some(lit) = pat.literal() {
@@ -241,6 +244,15 @@ struct GlobOptions {
     /// When this isn't enabled, an opening `[` without a corresponding `]` is
     /// treated as an error.
     allow_unclosed_class: bool,
+    /// Whether a leading `.` in a path component must be matched literally.
+    /// e.g., when enabled, `*.foo` will match `bar.foo` but not `.bar.foo`.
+    /// This mirrors how `*`, `?` and `**` behave in `.gitignore` patterns.
+    /// Only applies when `literal_separator` is enabled.
+    require_literal_leading_dot: bool,
+    /// Whether `**` is allowed to match path components that begin with a `.`.
+    /// e.g., when disabled, `**/foo` will not match `.bar/foo`.
+    /// Only applies when `literal_separator` is enabled.
+    recursive_match_hidden_dir: bool,
 }
 
 impl GlobOptions {
@@ -251,6 +263,8 @@ impl GlobOptions {
             backslash_escape: !is_separator('\\'),
             empty_alternates: false,
             allow_unclosed_class: false,
+            require_literal_leading_dot: false,
+            recursive_match_hidden_dir: true,
         }
     }
 }
@@ -568,6 +582,22 @@ impl Glob {
     ///
     /// The basic format of these patterns is `**/{literal}`, where `{literal}`
     /// does not contain a path separator.
+    /// Returns true when the literal-based match strategies are sound.
+    ///
+    /// They are not when `**` is not allowed to match hidden directories,
+    /// because those strategies match on the basename, an extension or a
+    /// suffix and would therefore also match a path nested inside a hidden
+    /// directory.
+    fn can_use_fast_paths(&self) -> bool {
+        self.opts.recursive_match_hidden_dir
+            || !self.tokens.iter().any(|t| {
+                matches!(
+                    t,
+                    Token::RecursivePrefix | Token::RecursiveZeroOrMore
+                )
+            })
+    }
+
     fn basename_literal(&self) -> Option<String> {
         if self.opts.case_insensitive {
             return None;
@@ -685,6 +715,46 @@ impl<'a> GlobBuilder<'a> {
         self.opts.allow_unclosed_class = yes;
         self
     }
+
+    /// Toggle whether a leading `.` in a path component must be matched
+    /// literally instead of by a wildcard.
+    ///
+    /// When enabled, `*`, `?` and `**` will not match a path component that
+    /// begins with a `.`, unless the pattern itself begins that component with
+    /// a literal `.`. For example, `*.foo` will match `bar.foo` but not
+    /// `.bar.foo`, while `.bar.foo` will match itself.
+    ///
+    /// This matches how these wildcards behave in `.gitignore` patterns and is
+    /// only taken into account when [`GlobBuilder::literal_separator`] is also
+    /// enabled, since that is what makes a path component well defined.
+    ///
+    /// By default this is false.
+    pub fn require_literal_leading_dot(
+        &mut self,
+        yes: bool,
+    ) -> &mut GlobBuilder<'a> {
+        self.opts.require_literal_leading_dot = yes;
+        self
+    }
+
+    /// Toggle whether `**` may match path components that begin with a `.`.
+    ///
+    /// When disabled, `**/foo` will not match `.bar/foo`. This roughly matches
+    /// the default behavior of `.gitignore`, where `**` does not descend into
+    /// hidden directories.
+    ///
+    /// This is only taken into account when [`GlobBuilder::literal_separator`]
+    /// is also enabled.
+    ///
+    /// By default this is true, since `**` has historically matched hidden
+    /// directories in this crate.
+    pub fn recursive_match_hidden_dir(
+        &mut self,
+        yes: bool,
+    ) -> &mut GlobBuilder<'a> {
+        self.opts.recursive_match_hidden_dir = yes;
+        self
+    }
 }
 
 impl Tokens {
@@ -715,6 +785,28 @@ impl Tokens {
         tokens: &[Token],
         re: &mut String,
     ) {
+        Self::tokens_to_regex_at(options, tokens, re, true);
+    }
+
+    /// Like [`Tokens::tokens_to_regex`], but tracks whether the current
+    /// position is at the start of a path component.
+    ///
+    /// This is necessary for [`GlobOptions::require_literal_leading_dot`]:
+    /// requiring a literal leading `.` can't be expressed with look-around
+    /// since the regex engine used here doesn't support it. Instead, a wildcard
+    /// that appears at the start of a component is translated into a form that
+    /// refuses to match a `.` there.
+    fn tokens_to_regex_at(
+        options: &GlobOptions,
+        tokens: &[Token],
+        re: &mut String,
+        at_component_start: bool,
+    ) {
+        let require_leading_dot =
+            options.literal_separator && options.require_literal_leading_dot;
+        let skip_hidden_dirs =
+            options.literal_separator && !options.recursive_match_hidden_dir;
+        let mut at_component_start = at_component_start;
         for tok in tokens.iter() {
             match *tok {
                 Token::Literal(c) => {
@@ -722,26 +814,44 @@ impl Tokens {
                 }
                 Token::Any => {
                     if options.literal_separator {
-                        re.push_str("[^/]");
+                        if require_leading_dot && at_component_start {
+                            re.push_str("[^/.]");
+                        } else {
+                            re.push_str("[^/]");
+                        }
                     } else {
-                        re.push_str(".");
+                        re.push('.');
                     }
                 }
                 Token::ZeroOrMore => {
                     if options.literal_separator {
-                        re.push_str("[^/]*");
+                        if require_leading_dot && at_component_start {
+                            // At least one character is required, otherwise the
+                            // component could begin with a `.`.
+                            re.push_str("[^/.][^/]*");
+                        } else {
+                            re.push_str("[^/]*");
+                        }
                     } else {
                         re.push_str(".*");
                     }
                 }
                 Token::RecursivePrefix => {
-                    re.push_str("(?:/?|.*/)");
+                    if skip_hidden_dirs {
+                        re.push_str("(?:/?|(?:[^/.][^/]*/)+)");
+                    } else {
+                        re.push_str("(?:/?|.*/)");
+                    }
                 }
                 Token::RecursiveSuffix => {
                     re.push_str("/.*");
                 }
                 Token::RecursiveZeroOrMore => {
-                    re.push_str("(?:/|/.*/)");
+                    if skip_hidden_dirs {
+                        re.push_str("(?:/|/(?:[^/.][^/]*/)+)");
+                    } else {
+                        re.push_str("(?:/|/.*/)");
+                    }
                 }
                 Token::Class { negated, ref ranges } => {
                     re.push('[');
@@ -764,7 +874,12 @@ impl Tokens {
                     let mut parts = vec![];
                     for pat in patterns {
                         let mut altre = String::new();
-                        Self::tokens_to_regex(options, &pat, &mut altre);
+                        Self::tokens_to_regex_at(
+                            options,
+                            pat,
+                            &mut altre,
+                            at_component_start,
+                        );
                         if !altre.is_empty() || options.empty_alternates {
                             parts.push(altre);
                         }
@@ -779,6 +894,11 @@ impl Tokens {
                     }
                 }
             }
+            at_component_start = match *tok {
+                Token::Literal(c) => is_separator(c),
+                Token::RecursivePrefix | Token::RecursiveZeroOrMore => true,
+                _ => false,
+            };
         }
     }
 }
@@ -1108,6 +1228,8 @@ mod tests {
         bsesc: Option<bool>,
         ealtre: Option<bool>,
         unccls: Option<bool>,
+        reqlitdot: Option<bool>,
+        rechiddir: Option<bool>,
     }
 
     macro_rules! syntax {
@@ -1153,6 +1275,12 @@ mod tests {
                 if let Some(unccls) = $options.unccls {
                     builder.allow_unclosed_class(unccls);
                 }
+                if let Some(reqlitdot) = $options.reqlitdot {
+                    builder.require_literal_leading_dot(reqlitdot);
+                }
+                if let Some(rechiddir) = $options.rechiddir {
+                    builder.recursive_match_hidden_dir(rechiddir);
+                }
 
                 let pat = builder.build().unwrap();
                 assert_eq!(format!("(?-u){}", $re), pat.regex());
@@ -1179,6 +1307,12 @@ mod tests {
                 }
                 if let Some(ealtre) = $options.ealtre {
                     builder.empty_alternates(ealtre);
+                }
+                if let Some(reqlitdot) = $options.reqlitdot {
+                    builder.require_literal_leading_dot(reqlitdot);
+                }
+                if let Some(rechiddir) = $options.rechiddir {
+                    builder.recursive_match_hidden_dir(rechiddir);
                 }
                 let pat = builder.build().unwrap();
                 let matcher = pat.compile_matcher();
@@ -1210,6 +1344,12 @@ mod tests {
                 }
                 if let Some(ealtre) = $options.ealtre {
                     builder.empty_alternates(ealtre);
+                }
+                if let Some(reqlitdot) = $options.reqlitdot {
+                    builder.require_literal_leading_dot(reqlitdot);
+                }
+                if let Some(rechiddir) = $options.rechiddir {
+                    builder.recursive_match_hidden_dir(rechiddir);
                 }
                 let pat = builder.build().unwrap();
                 let matcher = pat.compile_matcher();
@@ -1305,6 +1445,8 @@ mod tests {
         bsesc: None,
         ealtre: None,
         unccls: None,
+        reqlitdot: None,
+        rechiddir: None,
     };
     const SLASHLIT: Options = Options {
         casei: None,
@@ -1312,6 +1454,8 @@ mod tests {
         bsesc: None,
         ealtre: None,
         unccls: None,
+        reqlitdot: None,
+        rechiddir: None,
     };
     const NOBSESC: Options = Options {
         casei: None,
@@ -1319,6 +1463,8 @@ mod tests {
         bsesc: Some(false),
         ealtre: None,
         unccls: None,
+        reqlitdot: None,
+        rechiddir: None,
     };
     const BSESC: Options = Options {
         casei: None,
@@ -1326,6 +1472,8 @@ mod tests {
         bsesc: Some(true),
         ealtre: None,
         unccls: None,
+        reqlitdot: None,
+        rechiddir: None,
     };
     const EALTRE: Options = Options {
         casei: None,
@@ -1333,6 +1481,8 @@ mod tests {
         bsesc: Some(true),
         ealtre: Some(true),
         unccls: None,
+        reqlitdot: None,
+        rechiddir: None,
     };
     const UNCCLS: Options = Options {
         casei: None,
@@ -1340,6 +1490,26 @@ mod tests {
         bsesc: None,
         ealtre: None,
         unccls: Some(true),
+        reqlitdot: None,
+        rechiddir: None,
+    };
+    const REQLITDOT: Options = Options {
+        casei: None,
+        litsep: Some(true),
+        bsesc: None,
+        ealtre: None,
+        unccls: None,
+        reqlitdot: Some(true),
+        rechiddir: None,
+    };
+    const NOHIDDENDIR: Options = Options {
+        casei: None,
+        litsep: Some(true),
+        bsesc: None,
+        ealtre: None,
+        unccls: None,
+        reqlitdot: None,
+        rechiddir: Some(false),
     };
 
     toregex!(allow_unclosed_class_single, r"[", r"^\[$", &UNCCLS);
@@ -1592,6 +1762,53 @@ mod tests {
     nmatches!(matchrec33, ".*/**", ".abc");
     nmatches!(matchrec34, "foo/**", "foo");
 
+    // Requiring a literal leading dot makes the wildcards behave like they do
+    // in `.gitignore` patterns: they don't match a path component that begins
+    // with a `.` unless the pattern spells that `.` out.
+
+    toregex!(reqlitdot_any, "?foo", r"^[^/.]foo$", REQLITDOT);
+    toregex!(reqlitdot_star, "*.foo", r"^[^/.][^/]*\.foo$", REQLITDOT);
+    toregex!(
+        reqlitdot_star_after_sep,
+        "a/*.foo",
+        r"^a/[^/.][^/]*\.foo$",
+        REQLITDOT
+    );
+    toregex!(reqlitdot_star_not_at_start, "a*", r"^a[^/]*$", REQLITDOT);
+    toregex!(
+        nohiddendir_recursive_prefix,
+        "**/foo",
+        r"^(?:/?|(?:[^/.][^/]*/)+)foo$",
+        NOHIDDENDIR
+    );
+
+    matches!(reqlitdot_star_plain, "*.foo", "bar.foo", REQLITDOT);
+    // `*.foo` does not cross path separators, so a nested basename does not
+    // match in the first place.
+    nmatches!(reqlitdot_star_nested, "*.foo", "src/bar.foo", REQLITDOT);
+    nmatches!(reqlitdot_star_hidden, "*.foo", ".bar.foo", REQLITDOT);
+    nmatches!(
+        reqlitdot_star_hidden_nested,
+        "*.foo",
+        "src/.bar.foo",
+        REQLITDOT
+    );
+    matches!(reqlitdot_explicit_dot, ".bar.foo", ".bar.foo", REQLITDOT);
+    matches!(reqlitdot_any_plain, "?foo", "afoo", REQLITDOT);
+    nmatches!(reqlitdot_any_hidden, "?foo", ".foo", REQLITDOT);
+
+    // Without the option, a wildcard still matches a leading dot.
+    matches!(reqlitdot_disabled_star, "*.foo", ".bar.foo", SLASHLIT);
+    matches!(reqlitdot_disabled_any, "?foo", ".foo", SLASHLIT);
+
+    matches!(nohiddendir_plain, "**/foo", "bar/foo", NOHIDDENDIR);
+    matches!(nohiddendir_nested, "**/foo", "a/bar/foo", NOHIDDENDIR);
+    nmatches!(nohiddendir_hidden, "**/foo", ".bar/foo", NOHIDDENDIR);
+    nmatches!(nohiddendir_hidden_nested, "**/foo", "a/.bar/foo", NOHIDDENDIR);
+
+    // Without the option, `**` still matches hidden directories.
+    matches!(nohiddendir_default, "**/foo", ".bar/foo", SLASHLIT);
+
     macro_rules! extract {
         ($which:ident, $name:ident, $pat:expr, $expect:expr) => {
             extract!($which, $name, $pat, $expect, Options::default());
@@ -1611,6 +1828,12 @@ mod tests {
                 }
                 if let Some(ealtre) = $options.ealtre {
                     builder.empty_alternates(ealtre);
+                }
+                if let Some(reqlitdot) = $options.reqlitdot {
+                    builder.require_literal_leading_dot(reqlitdot);
+                }
+                if let Some(rechiddir) = $options.rechiddir {
+                    builder.recursive_match_hidden_dir(rechiddir);
                 }
                 let pat = builder.build().unwrap();
                 assert_eq!($expect, pat.$which());
