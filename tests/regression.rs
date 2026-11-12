@@ -1742,3 +1742,21 @@ rgtest!(r3275_git_global_config_env, |dir: Dir, mut cmd: TestCommand| {
     cmd.env("GIT_CONFIG_GLOBAL", config_path);
     eqnice!("foo/foo1\n", cmd.arg("--files").arg("foo").stdout());
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3593
+rgtest!(r3593, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("h.log", "a\nb\nfoo\nc\nfoo\nd\n");
+
+    eqnice!(
+        "1:a\n2:b\n3-foo\n",
+        cmd.arg("-n")
+            .arg("-v")
+            .arg("-m")
+            .arg("2")
+            .arg("-A")
+            .arg("1")
+            .arg(r"\Afoo")
+            .arg("h.log")
+            .stdout()
+    );
+});
