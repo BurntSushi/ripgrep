@@ -352,19 +352,50 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
                     &buf[line],
                     self.config.line_term,
                 );
-                self.shortest_match(slice)?.is_some()
+                if self.has_exceeded_match_limit()
+                    && self.after_context_left >= 1
+                {
+                    // Once the match limit is exceeded, `shortest_match`
+                    // returns `None`, which under `invert_match` would
+                    // incorrectly count the line as a match. When there is
+                    // after-context owed, use the real matcher instead, as
+                    // `after_context_by_line` does, so that a line that
+                    // matches the pattern is sunk as after-context and a
+                    // line that doesn't is sunk as a match consuming one
+                    // line of after-context. When no after-context is owed
+                    // (notably with `--passthru`), keep using
+                    // `shortest_match`, so that the line falls through to
+                    // the passthru context branch below.
+                    self.is_match(slice)?
+                } else {
+                    self.shortest_match(slice)?.is_some()
+                }
             };
             self.set_pos(line.end());
 
             let success = matched != self.config.invert_match;
             if success {
                 self.has_matched = true;
-                self.increment_count();
+                // Once the match limit is exceeded, a line that matches
+                // is part of the after-context window: it is still sunk
+                // as a match (as `after_context_by_line` does), but it
+                // must not count toward the limit and must not start a
+                // new run of after-context. Instead it consumes one line
+                // of after-context.
+                let exceeded = self.has_exceeded_match_limit();
+                if !exceeded {
+                    self.increment_count();
+                }
+                let after_context_left = self.after_context_left;
                 if !self.before_context_by_line(buf, line.start())? {
                     return Ok(false);
                 }
                 if !self.sink_matched(buf, &line)? {
                     return Ok(false);
+                }
+                if exceeded {
+                    self.after_context_left =
+                        after_context_left.saturating_sub(1);
                 }
             } else if self.after_context_left >= 1 {
                 if !self.sink_after_context(buf, &line)? {
@@ -395,7 +426,12 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
             }
             if self.config.invert_match {
                 if !self.match_by_line_fast_invert(buf)? {
-                    break;
+                    // `match_by_line_fast_invert` returns `false` only
+                    // when a sink returned `false`. Stop entirely
+                    // instead of going on to the trailing
+                    // `after_context_by_line` below, which would call
+                    // the sink again for the same lines.
+                    return Ok(Stop);
                 }
             } else if let Some(line) = self.find_by_line_fast(buf)? {
                 self.has_matched = true;
@@ -461,12 +497,26 @@ impl<'s, M: Matcher, S: Sink> Core<'s, M, S> {
             invert_match.end(),
         );
         while let Some(line) = stepper.next_match(buf) {
+            if self.has_exceeded_match_limit() {
+                // The match limit was already reached, e.g. at the end
+                // of the previous buffer with after-context still owed.
+                // Don't sink more lines as matches; return `true` so
+                // that the caller falls through to the trailing
+                // `after_context_by_line`, which decides match or
+                // context with the real matcher.
+                return Ok(true);
+            }
             self.increment_count();
             if !self.sink_matched(buf, &line)? {
                 return Ok(false);
             }
             if self.has_exceeded_match_limit() {
-                return Ok(false);
+                // The match limit was just reached. Return `true`, not
+                // `false`: reaching the limit is not a sink asking us
+                // to stop, so the caller must still run the trailing
+                // after-context. Returning `false` here would make the
+                // caller treat it as a sink asking to stop.
+                return Ok(true);
             }
         }
         Ok(true)

@@ -1520,6 +1520,98 @@ and exhibited clearly, with a label attached.\
             .unwrap();
     }
 
+    // See: https://github.com/BurntSushi/ripgrep/issues/3593
+    //
+    // With `-v -m 2 -A 1`, only the first two non-matching lines are
+    // matches; the next line that matches the pattern is after-context,
+    // and the rest of the input must not be printed. This is tested on
+    // both the slow path (no line terminator on the matcher, so `\Afoo`
+    // forces line-by-line search) and the fast path (line terminator
+    // set). The two paths stop at different positions, so their byte
+    // counts differ: the slow path stops at the first line past the
+    // context, while the fast path consumes the whole buffer.
+    #[test]
+    fn regression_3593_invert_max_count_after_context() {
+        let haystack = b"a\nb\nfoo\nc\nfoo\nd\n";
+        let mut searcher = SearcherBuilder::new()
+            .line_number(true)
+            .invert_match(true)
+            .max_matches(Some(2))
+            .after_context(1)
+            .build();
+
+        // Slow path.
+        let matcher = RegexMatcher::new(r"\Afoo");
+        let mut sink = KitchenSink::new();
+        searcher.search_slice(&matcher, haystack, &mut sink).unwrap();
+        let got = String::from_utf8(sink.as_bytes().to_vec()).unwrap();
+        assert_eq!(got, "1:0:a\n2:2:b\n3-4-foo\n\nbyte count:8\n");
+
+        // Fast path.
+        let mut matcher = RegexMatcher::new(r"\Afoo");
+        matcher.set_line_term(Some(grep_matcher::LineTerminator::byte(b'\n')));
+        let mut sink = KitchenSink::new();
+        searcher.search_slice(&matcher, haystack, &mut sink).unwrap();
+        let got = String::from_utf8(sink.as_bytes().to_vec()).unwrap();
+        assert_eq!(got, "1:0:a\n2:2:b\n3-4-foo\n\nbyte count:16\n");
+    }
+
+    // See: https://github.com/BurntSushi/ripgrep/issues/3593
+    //
+    // The second trigger in that issue needs the match limit to fall at
+    // the end of one read buffer with after-context still owed. This
+    // simulates a pipe delivering the input in two reads.
+    #[test]
+    fn regression_3593_invert_max_count_after_context_chunks() {
+        use std::io;
+
+        /// A reader that yields its input in fixed chunks, simulating a
+        /// pipe that delivers data in multiple reads. It keeps the
+        /// remainder of a chunk for the next `read` call when the caller's
+        /// buffer is smaller than the chunk, as a correct `Read`
+        /// implementation must.
+        struct ChunkReader {
+            chunks: Vec<&'static [u8]>,
+            index: usize,
+            pos: usize,
+        }
+
+        impl io::Read for ChunkReader {
+            fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+                if self.index >= self.chunks.len() {
+                    return Ok(0);
+                }
+                let chunk = self.chunks[self.index];
+                let remaining = &chunk[self.pos..];
+                let n = std::cmp::min(buf.len(), remaining.len());
+                buf[..n].copy_from_slice(&remaining[..n]);
+                self.pos += n;
+                if self.pos >= chunk.len() {
+                    self.index += 1;
+                    self.pos = 0;
+                }
+                Ok(n)
+            }
+        }
+
+        let matcher = RegexMatcher::new("NEEDLE");
+        let mut sink = KitchenSink::new();
+        let mut searcher = SearcherBuilder::new()
+            .line_number(true)
+            .invert_match(true)
+            .max_matches(Some(1))
+            .after_context(1)
+            .build();
+        let reader = ChunkReader {
+            chunks: vec![b"a\n", b"NEEDLE\nb\n"],
+            index: 0,
+            pos: 0,
+        };
+        searcher.search_reader(&matcher, reader, &mut sink).unwrap();
+        let got = String::from_utf8(sink.as_bytes().to_vec()).unwrap();
+        assert_eq!(got, "1:0:a\n2-2-NEEDLE\n\nbyte count:9\n");
+    }
+
     // See: https://github.com/BurntSushi/ripgrep/issues/2260
     #[test]
     fn regression_2260() {
