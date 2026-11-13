@@ -17,7 +17,7 @@
 * [How do I get around the regex size limit?](#size-limit)
 * [How do I make the `-f/--file` flag faster?](#dfa-size)
 * [How do I make the output look like The Silver Searcher's output?](#silver-searcher-output)
-* [Why does ripgrep get slower when I enabled PCRE2 regexes?](#pcre2-slow)
+* [Why does ripgrep get slower when I enable PCRE2 regexes?](#pcre2-slow)
 * [When I run `rg`, why does it execute some other command?](#rg-other-cmd)
 * [How do I create an alias for ripgrep on Windows?](#rg-alias-windows)
 * [How do I create a PowerShell profile?](#powershell-profile)
