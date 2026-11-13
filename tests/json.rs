@@ -398,27 +398,39 @@ rgtest!(r1095_missing_crlf, |dir: Dir, mut cmd: TestCommand| {
 // See: https://github.com/BurntSushi/ripgrep/issues/1095
 //
 // This test checks that we don't return empty submatches when matching a `\n`
-// in CRLF mode.
+// in CRLF mode, and that multiline matches produce one message per line
 rgtest!(r1095_crlf_empty_match, |dir: Dir, mut cmd: TestCommand| {
     dir.create("foo", "test\r\n\n");
 
     // Check without --crlf flag.
+    // multiline match spans two lines so we expect two separate Match
+    // messages (one per line) rather than one message with two submatches
     let msgs = json_decode(&cmd.arg("-U").arg("--json").arg("\n").stdout());
-    assert_eq!(msgs.len(), 4);
+    assert_eq!(msgs.len(), 5);
 
     let m = msgs[1].unwrap_match();
-    assert_eq!(m.lines, Data::text("test\r\n\n"));
+    assert_eq!(m.lines, Data::text("test\r\n"));
+    assert_eq!(m.submatches.len(), 1);
     assert_eq!(m.submatches[0].m, Data::text("\n"));
-    assert_eq!(m.submatches[1].m, Data::text("\n"));
 
-    // Now check with --crlf flag.
+    let m = msgs[2].unwrap_match();
+    assert_eq!(m.lines, Data::text("\n"));
+    assert_eq!(m.submatches.len(), 1);
+    assert_eq!(m.submatches[0].m, Data::text("\n"));
+
+    // check with --crlf flag
     let msgs = json_decode(&cmd.arg("--crlf").stdout());
-    assert_eq!(msgs.len(), 4);
+    assert_eq!(msgs.len(), 5);
 
     let m = msgs[1].unwrap_match();
-    assert_eq!(m.lines, Data::text("test\r\n\n"));
+    assert_eq!(m.lines, Data::text("test\r\n"));
+    assert_eq!(m.submatches.len(), 1);
     assert_eq!(m.submatches[0].m, Data::text("\n"));
-    assert_eq!(m.submatches[1].m, Data::text("\n"));
+
+    let m = msgs[2].unwrap_match();
+    assert_eq!(m.lines, Data::text("\n"));
+    assert_eq!(m.submatches.len(), 1);
+    assert_eq!(m.submatches[0].m, Data::text("\n"));
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/1412
