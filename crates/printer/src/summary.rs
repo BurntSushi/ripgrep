@@ -582,6 +582,7 @@ impl<'p, 's, M: Matcher, W: WriteColor> SummarySink<'p, 's, M, W> {
             self.write_spec(
                 self.summary.config.colors.path(),
                 self.path.as_ref().unwrap().as_bytes(),
+                self.summary.config.colors.path_blink(),
             )?;
             self.end_hyperlink(status)?;
         }
@@ -614,10 +615,14 @@ impl<'p, 's, M: Matcher, W: WriteColor> SummarySink<'p, 's, M, W> {
     }
 
     /// Write the given bytes using the give style.
-    fn write_spec(&self, spec: &ColorSpec, buf: &[u8]) -> io::Result<()> {
-        self.summary.wtr.borrow_mut().set_color(spec)?;
-        self.write(buf)?;
-        self.summary.wtr.borrow_mut().reset()?;
+    fn write_spec(&self, spec: &ColorSpec, buf: &[u8], blink: bool) -> io::Result<()> {
+        let mut w = self.summary.wtr.borrow_mut();
+        w.set_color(spec)?;
+        if blink && w.supports_color() {
+            w.write_all(b"\x1b[5m")?;
+        }
+        w.write_all(buf)?;
+        w.reset()?;
         Ok(())
     }
 
