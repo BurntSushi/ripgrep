@@ -220,6 +220,7 @@ dependencies = [
  "bstr",
  "grep-matcher",
  "log",
+ "memchr",
  "regex-automata",
  "regex-syntax",
 ]
