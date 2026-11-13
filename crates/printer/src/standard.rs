@@ -1044,9 +1044,15 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         let mut stepper = LineStep::new(line_term, 0, bytes.len());
         while let Some((start, end)) = stepper.next(bytes) {
             let mut line = Match::new(start, end);
+            let line_number = self.line_number_for_match(
+                line_term,
+                Self::first_match_in_line(matches, midx, line),
+                line.start(),
+                count,
+            );
             self.write_prelude(
                 self.sunk.absolute_byte_offset() + line.start() as u64,
-                self.sunk.line_number().map(|n| n + count),
+                line_number,
                 Some(matches[0].start() as u64 + 1),
             )?;
             count += 1;
@@ -1089,9 +1095,15 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                     line = line.with_start(upto);
                 } else {
                     let upto = cmp::min(line.end(), m.end());
+                    let line_number = self.line_number_for_match(
+                        line_term,
+                        Some(midx),
+                        line.start(),
+                        count,
+                    );
                     self.write_prelude(
                         self.sunk.absolute_byte_offset() + m.start() as u64,
-                        self.sunk.line_number().map(|n| n + count),
+                        line_number,
                         Some(m.start() as u64 + 1),
                     )?;
 
@@ -1116,7 +1128,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         let line_term = self.searcher.line_terminator().as_byte();
         let spec = self.config().colors.matched();
         let bytes = self.sunk.bytes();
-        for &m in self.sunk.matches() {
+        for (match_index, &m) in self.sunk.matches().iter().enumerate() {
             let mut count = 0;
             let mut stepper = LineStep::new(line_term, 0, bytes.len());
             while let Some((start, end)) = stepper.next(bytes) {
@@ -1127,9 +1139,15 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                     count += 1;
                     continue;
                 }
+                let line_number = self.line_number_for_match(
+                    line_term,
+                    Some(match_index),
+                    line.start(),
+                    count,
+                );
                 self.write_prelude(
                     self.sunk.absolute_byte_offset() + line.start() as u64,
-                    self.sunk.line_number().map(|n| n + count),
+                    line_number,
                     Some(m.start().saturating_sub(line.start()) as u64 + 1),
                 )?;
                 count += 1;
@@ -1167,6 +1185,36 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
             }
         }
         Ok(())
+    }
+
+    fn first_match_in_line(
+        matches: &[Match],
+        start_index: usize,
+        line: Match,
+    ) -> Option<usize> {
+        matches.iter().enumerate().skip(start_index).find_map(|(i, m)| {
+            if m.start() >= line.end() {
+                None
+            } else if m.end() > line.start() {
+                Some(i)
+            } else {
+                None
+            }
+        })
+    }
+
+    fn line_number_for_match(
+        &self,
+        line_term: u8,
+        match_index: Option<usize>,
+        line_start: usize,
+        line_count: u64,
+    ) -> Option<u64> {
+        match_index
+            .and_then(|i| {
+                self.sunk.replacement_line_number(line_term, i, line_start)
+            })
+            .or_else(|| self.sunk.line_number().map(|n| n + line_count))
     }
 
     /// Write the beginning part of a matching line. This (may) include things
