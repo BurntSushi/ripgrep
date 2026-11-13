@@ -19,7 +19,6 @@ exclude = [
   "/pkg/brew",
   "/benchsuite/",
   "/scripts/",
-  "/crates/fuzz",
 ]
 build = "build.rs"
 autotests = false
