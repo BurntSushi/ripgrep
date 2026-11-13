@@ -32,6 +32,11 @@ Bug fixes:
   [BUG #3419](https://github.com/BurntSushi/ripgrep/pull/3419):
   Fix gitignore matching bug when searching across multiple directories.
 
+Feature enhancements:
+
+* [FEATURE #3255](https://github.com/BurntSushi/ripgrep/pull/3255):
+  Add hyperlink alias for Zed.
+
 
 15.1.0 (2025-10-22)
 ===================

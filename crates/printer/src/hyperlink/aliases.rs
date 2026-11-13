@@ -65,6 +65,8 @@ pub(super) const HYPERLINK_PATTERN_ALIASES: &[HyperlinkAlias] = &[
         "VSCodium scheme (vscodium://)",
         "vscodium://file{path}:{line}:{column}",
     ),
+    // https://zed.dev/
+    alias("zed", "Zed scheme (zed://)", "zed://file{path}:{line}:{column}"),
 ];
 
 /// Creates a [`HyperlinkAlias`].
