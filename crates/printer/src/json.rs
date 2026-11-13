@@ -300,7 +300,7 @@ impl JSONBuilder {
 ///   their starting offsets. Note that it is possible for this array to be
 ///   non-empty, for example, when searching reports inverted matches such that
 ///   the original matcher could match things in the contextual lines. If the
-///   configuration specifies a replacemement, the resulting replacement text
+///   configuration specifies a replacement, the resulting replacement text
 ///   is also present.
 ///
 /// #### Object: **submatch**
