@@ -103,11 +103,16 @@ pub(crate) fn strip_prefix<'a, P: AsRef<Path> + ?Sized>(
 
         let prefix = prefix.as_os_str().as_bytes();
         let path = path.as_os_str().as_bytes();
-        if prefix.len() > path.len() || prefix != &path[0..prefix.len()] {
-            None
-        } else {
-            Some(&Path::new(OsStr::from_bytes(&path[prefix.len()..])))
+        let rest = path.strip_prefix(prefix)?;
+        // Don't strip a partial component, e.g., "/foo" from "/foobar".
+        let at_boundary = prefix.is_empty()
+            || prefix.ends_with(b"/")
+            || rest.is_empty()
+            || rest.starts_with(b"/");
+        if !at_boundary {
+            return None;
         }
+        Some(Path::new(OsStr::from_bytes(rest)))
     }
 
     #[cfg(not(unix))]
@@ -175,7 +180,26 @@ mod tests {
     use std::ffi::OsStr;
     use std::path::Path;
 
-    use super::{file_name, is_hidden_path};
+    use super::{file_name, is_hidden_path, strip_prefix};
+
+    #[cfg(unix)]
+    #[test]
+    fn strip_prefix_component_boundary() {
+        for (prefix, path, expected) in [
+            ("/home/foo", "/home/foobar", None),
+            ("/home/foo", "/home/foo/bar", Some("/bar")),
+            ("/home/foo", "/home/foo", Some("")),
+            ("/", "/home/foo", Some("home/foo")),
+            ("/home/foo/", "/home/foo/bar", Some("bar")),
+            ("", "foo/bar", Some("foo/bar")),
+        ] {
+            assert_eq!(
+                strip_prefix(prefix, Path::new(path)),
+                expected.map(Path::new),
+                "prefix={prefix:?}, path={path:?}",
+            );
+        }
+    }
 
     #[test]
     fn file_name_basic() {
