@@ -42,6 +42,8 @@ pub(crate) enum MatchStrategy {
     /// Namely, if the extension matches, then a full regex search is still
     /// required.
     RequiredExtension(String),
+    /// A regex that only needs to inspect the final path component.
+    BasenameRegex(String),
     /// A regex needs to be used for matching.
     Regex,
 }
@@ -61,6 +63,8 @@ impl MatchStrategy {
             MatchStrategy::Suffix { suffix, component }
         } else if let Some(ext) = pat.required_ext() {
             MatchStrategy::RequiredExtension(ext)
+        } else if let Some(re) = pat.basename_regex() {
+            MatchStrategy::BasenameRegex(re)
         } else {
             MatchStrategy::Regex
         }
@@ -196,6 +200,9 @@ impl GlobStrategic {
                 let ext = ext.as_bytes();
                 &*candidate.ext == ext && self.re.is_match(byte_path)
             }
+            MatchStrategy::BasenameRegex(_) => {
+                self.re.is_match(candidate.basename_for_regex())
+            }
             MatchStrategy::Regex => self.re.is_match(byte_path),
         }
     }
@@ -299,8 +306,11 @@ impl Glob {
     #[cfg(test)]
     fn compile_strategic_matcher(&self) -> GlobStrategic {
         let strategy = MatchStrategy::new(self);
-        let re =
-            new_regex(&self.re).expect("regex compilation shouldn't fail");
+        let pattern = match &strategy {
+            MatchStrategy::BasenameRegex(re) => re,
+            _ => &self.re,
+        };
+        let re = new_regex(pattern).expect("regex compilation shouldn't fail");
         GlobStrategic { strategy, re }
     }
 
@@ -508,9 +518,6 @@ impl Glob {
     /// doesn't *always* match when a file path has a basename of `foo`. e.g.,
     /// `foo` doesn't match `abc/foo`.
     fn basename_tokens(&self) -> Option<&[Token]> {
-        if self.opts.case_insensitive {
-            return None;
-        }
         let start = match *self.tokens.get(0)? {
             Token::RecursivePrefix => 1,
             _ => {
@@ -540,10 +547,15 @@ impl Glob {
                 | Token::RecursiveZeroOrMore => {
                     return None;
                 }
-                Token::Class { .. } | Token::Alternates(..) => {
-                    // We *could* be a little smarter here, but either one
-                    // of these is going to prevent our literal optimizations
-                    // anyway, so give up.
+                Token::Class { negated, ref ranges } => {
+                    let contains_slash = ranges
+                        .iter()
+                        .any(|&(start, end)| start <= '/' && '/' <= end);
+                    if contains_slash != negated {
+                        return None;
+                    }
+                }
+                Token::Alternates(..) => {
                     return None;
                 }
             }
@@ -557,6 +569,9 @@ impl Glob {
     /// The basic format of these patterns is `**/{literal}`, where `{literal}`
     /// does not contain a path separator.
     fn basename_literal(&self) -> Option<String> {
+        if self.opts.case_insensitive {
+            return None;
+        }
         let tokens = self.basename_tokens()?;
         let mut lit = String::new();
         for t in tokens {
@@ -564,6 +579,12 @@ impl Glob {
             lit.push(c);
         }
         Some(lit)
+    }
+
+    /// Returns a regex for the basename when it determines the whole match.
+    fn basename_regex(&self) -> Option<String> {
+        let tokens = self.basename_tokens()?;
+        Some(Tokens::to_regex_with(&self.opts, tokens))
     }
 }
 
@@ -602,7 +623,7 @@ impl<'a> GlobBuilder<'a> {
             let tokens = p.branches.pop().unwrap();
             Ok(Glob {
                 glob: self.glob.to_string(),
-                re: tokens.to_regex_with(&self.opts),
+                re: Tokens::to_regex_with(&self.opts, &tokens),
                 opts: self.opts,
                 tokens,
             })
@@ -670,7 +691,7 @@ impl Tokens {
     /// Convert this pattern to a string that is guaranteed to be a valid
     /// regular expression and will represent the matching semantics of this
     /// glob pattern and the options given.
-    fn to_regex_with(&self, options: &GlobOptions) -> String {
+    fn to_regex_with(options: &GlobOptions, tokens: &[Token]) -> String {
         let mut re = String::new();
         re.push_str("(?-u)");
         if options.case_insensitive {
@@ -679,18 +700,17 @@ impl Tokens {
         re.push('^');
         // Special case. If the entire glob is just `**`, then it should match
         // everything.
-        if self.len() == 1 && self[0] == Token::RecursivePrefix {
+        if tokens.len() == 1 && tokens[0] == Token::RecursivePrefix {
             re.push_str(".*");
             re.push('$');
             return re;
         }
-        self.tokens_to_regex(options, &self, &mut re);
+        Self::tokens_to_regex(options, tokens, &mut re);
         re.push('$');
         re
     }
 
     fn tokens_to_regex(
-        &self,
         options: &GlobOptions,
         tokens: &[Token],
         re: &mut String,
@@ -744,7 +764,7 @@ impl Tokens {
                     let mut parts = vec![];
                     for pat in patterns {
                         let mut altre = String::new();
-                        self.tokens_to_regex(options, &pat, &mut altre);
+                        Self::tokens_to_regex(options, &pat, &mut altre);
                         if !altre.is_empty() || options.empty_alternates {
                             parts.push(altre);
                         }
@@ -1430,6 +1450,15 @@ mod tests {
     matches!(matchrec25, "test/**", "test/one/two");
     matches!(matchrec26, "some/*/needle.txt", "some/one/needle.txt");
 
+    matches!(basename_empty, "**/*", "", SLASHLIT);
+    matches!(basename_trailing_separator, "**/*", "foo/", SLASHLIT);
+    matches!(basename_parent_component, "**/.*", "foo/..", SLASHLIT);
+    matches!(basename_class, "**/*.py[cod]", "src/module.pyc", SLASHLIT);
+    matches!(basename_negated_class, "**/[!/]", "foo/a", SLASHLIT);
+    matches!(class_includes_separator, "**/[!a]", "/", SLASHLIT);
+    matches!(class_separator_range, "**/[.-0]", "/", SLASHLIT);
+    nmatches!(basename_class_miss, "**/*.py[cod]", "src/module.pyi", SLASHLIT);
+
     matches!(matchrange1, "a[0-9]b", "a0b");
     matches!(matchrange2, "a[0-9]b", "a9b");
     matches!(matchrange3, "a[!0-9]b", "a_b");
@@ -1631,7 +1660,12 @@ mod tests {
         "**/foo",
         Some(&*vec![Literal('f'), Literal('o'), Literal('o'),])
     );
-    basetokens!(extract_basetoks2, "**/foo", None, CASEI);
+    basetokens!(
+        extract_basetoks2,
+        "**/foo",
+        Some(&*vec![Literal('f'), Literal('o'), Literal('o'),]),
+        CASEI
+    );
     basetokens!(
         extract_basetoks3,
         "**/foo",

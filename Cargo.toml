@@ -8,7 +8,6 @@ directory for a regex pattern while respecting gitignore rules. ripgrep has
 first class support on Windows, macOS and Linux.
 """
 documentation = "https://github.com/BurntSushi/ripgrep"
-homepage = "https://github.com/BurntSushi/ripgrep"
 repository = "https://github.com/BurntSushi/ripgrep"
 keywords = ["regex", "grep", "egrep", "search", "pattern"]
 categories = ["command-line-utilities", "text-processing"]
@@ -41,7 +40,6 @@ members = [
   "crates/globset",
   "crates/grep",
   "crates/cli",
-  "crates/index",
   "crates/matcher",
   "crates/pcre2",
   "crates/printer",
@@ -58,7 +56,6 @@ rust-version = "1.96"
 anyhow = "1.0.75"
 bstr = "1.7.0"
 grep = { version = "0.4.1", path = "crates/grep" }
-grep-index = { version = "0.0.1", path = "crates/index", optional = true }
 ignore = { version = "0.4.29", path = "crates/ignore" }
 lexopt = "0.3.0"
 log = "0.4.5"
@@ -76,9 +73,6 @@ walkdir = "2"
 
 [features]
 pcre2 = ["grep/pcre2"]
-# This provides opt-in support for indexing. This is currently in active
-# development and may have very serious bugs. Use at your own risk.
-unstable-index = ["dep:grep-index"]
 
 [profile.release]
 debug = 1

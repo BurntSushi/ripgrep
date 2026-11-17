@@ -133,6 +133,9 @@ struct IgnoreInner {
     parent: Option<Arc<IgnoreInner>>,
     /// Whether this is an absolute parent matcher, as added by add_parent.
     is_absolute_parent: bool,
+    /// Whether any absolute parent has ignore rules. When none do, matching
+    /// can skip rewriting the candidate path for those parents.
+    has_absolute_parent_rules: bool,
     /// The directory that gitignores should be interpreted relative to.
     ///
     /// Usually this is the directory containing the gitignore file. But in
@@ -238,12 +241,13 @@ impl Ignore {
             let (mut igtmp, err) = ig.add_child_path(parent);
             errs.maybe_push(err);
             igtmp.is_absolute_parent = true;
-            igtmp.has_git =
-                if self.inner.opts.require_git && self.inner.opts.git_ignore {
-                    parent.join(".git").exists() || parent.join(".jj").exists()
-                } else {
-                    false
-                };
+            // `add_child_path` already checked repository markers when needed.
+            igtmp.has_git &= self.inner.opts.git_ignore;
+            igtmp.has_absolute_parent_rules |=
+                !igtmp.custom_ignore_matcher.is_empty()
+                    || !igtmp.ignore_matcher.is_empty()
+                    || !igtmp.git_ignore_matcher.is_empty()
+                    || !igtmp.git_exclude_matcher.is_empty();
             let ig_arc = Arc::new(igtmp);
             ig = Ignore {
                 inner: ig_arc.clone(),
@@ -270,6 +274,31 @@ impl Ignore {
         dir: P,
     ) -> (Ignore, Option<Error>) {
         let (ig, err) = self.add_child_path(dir.as_ref());
+        (
+            Ignore {
+                inner: Arc::new(ig),
+                absolute_base: self.absolute_base.clone(),
+            },
+            err,
+        )
+    }
+
+    /// Like `add_child`, but reuse this matcher when the child adds no rules
+    /// or repository boundary. Incremental matching tracks directory paths
+    /// separately, so it doesn't need empty nodes in the matcher chain.
+    pub(crate) fn add_child_with_possible_reuse(
+        &self,
+        dir: &Path,
+    ) -> (Ignore, Option<Error>) {
+        let (ig, err) = self.add_child_path(dir);
+        if !ig.has_git
+            && ig.custom_ignore_matcher.is_empty()
+            && ig.ignore_matcher.is_empty()
+            && ig.git_ignore_matcher.is_empty()
+            && ig.git_exclude_matcher.is_empty()
+        {
+            return (self.clone(), err);
+        }
         (
             Ignore {
                 inner: Arc::new(ig),
@@ -344,7 +373,7 @@ impl Ignore {
     ) -> (IgnoreInner, Option<Error>) {
         let check_vcs_dir = self.inner.opts.require_git
             && (self.inner.opts.git_ignore || self.inner.opts.git_exclude);
-        let git_type = if check_vcs_dir
+        let git_type = if (check_vcs_dir || self.inner.opts.git_exclude)
             && ignore_files_list.is_none_or(|i| i.has_git_dir)
         {
             dir.join(".git").metadata().ok().map(|md| md.file_type())
@@ -446,6 +475,7 @@ impl Ignore {
             types: self.inner.types.clone(),
             parent: Some(self.inner.clone()),
             is_absolute_parent: false,
+            has_absolute_parent_rules: self.inner.has_absolute_parent_rules,
             global_gitignores_relative_to: self
                 .inner
                 .global_gitignores_relative_to
@@ -592,7 +622,7 @@ impl Ignore {
             }
             saw_git = saw_git || ig.inner.has_git;
         }
-        if self.inner.opts.parents {
+        if self.inner.opts.parents && self.inner.has_absolute_parent_rules {
             if let Some(abs_parent_path) = self.absolute_base() {
                 // What we want to do here is take the absolute base path of
                 // this directory and join it with the path we're searching.
@@ -844,6 +874,7 @@ impl IgnoreBuilder {
                 types: self.types.clone(),
                 parent: None,
                 is_absolute_parent: true,
+                has_absolute_parent_rules: false,
                 global_gitignores_relative_to,
                 explicit_ignores: Arc::new(self.explicit_ignores.clone()),
                 custom_ignore_filenames: Arc::new(
@@ -1428,6 +1459,55 @@ mod tests {
     }
 
     #[test]
+    fn absolute_parent_rules_through_empty_directories() {
+        for name in
+            [".ignore", ".gitignore", ".customignore", ".git/info/exclude"]
+        {
+            let td = tmpdir();
+            mkdirp(td.path().join(".git/info"));
+            let root = td.path().join("a/b");
+            let child = root.join("c/d");
+            mkdirp(&child);
+            wfile(td.path().join(name), "blocked\n!allowed");
+
+            let ig = IgnoreBuilder::new()
+                .git_global(false)
+                .add_custom_ignore_filename(".customignore")
+                .build();
+            let (ig, err) = ig.add_parents(&root);
+            assert!(err.is_none());
+            let (ig, err) = ig.add_child(&root);
+            assert!(err.is_none());
+            let (ig, err) = ig.add_child(root.join("c"));
+            assert!(err.is_none());
+            let (ig, err) = ig.add_child(&child);
+            assert!(err.is_none());
+
+            assert!(ig.matched(child.join("blocked"), false).is_ignore());
+            assert!(ig.matched(child.join("allowed"), false).is_whitelist());
+            assert!(ig.matched(child.join("other"), false).is_none());
+        }
+    }
+
+    #[test]
+    fn absolute_parent_repository_without_rules() {
+        let td = tmpdir();
+        mkdirp(td.path().join(".git"));
+        let root = td.path().join("a/b");
+        mkdirp(&root);
+        wfile(root.join(".gitignore"), "blocked");
+
+        let ig = IgnoreBuilder::new().git_global(false).build();
+        let (ig, err) = ig.add_parents(&root);
+        assert!(err.is_none());
+        let (ig, err) = ig.add_child(&root);
+        assert!(err.is_none());
+
+        assert!(ig.matched(root.join("blocked"), false).is_ignore());
+        assert!(ig.matched(root.join("other"), false).is_none());
+    }
+
+    #[test]
     fn absolute_parent_matchers_are_cached_across_roots() {
         let td = tmpdir();
         mkdirp(td.path().join(".git"));
@@ -1586,6 +1666,13 @@ mod tests {
         wfile(commondir_path(), "../..");
         let ib = IgnoreBuilder::new().build();
         let (ignore, err) = ib.add_child(td.path().join("linked-worktree"));
+        assert!(err.is_none());
+        assert!(ignore.matched("ignore_me", false).is_ignore());
+
+        let without_required_git =
+            IgnoreBuilder::new().require_git(false).build();
+        let (ignore, err) =
+            without_required_git.add_child(td.path().join("linked-worktree"));
         assert!(err.is_none());
         assert!(ignore.matched("ignore_me", false).is_ignore());
 
