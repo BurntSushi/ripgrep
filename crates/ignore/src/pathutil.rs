@@ -104,10 +104,19 @@ pub(crate) fn strip_prefix<'a, P: AsRef<Path> + ?Sized>(
         let prefix = prefix.as_os_str().as_bytes();
         let path = path.as_os_str().as_bytes();
         if prefix.len() > path.len() || prefix != &path[0..prefix.len()] {
-            None
-        } else {
-            Some(&Path::new(OsStr::from_bytes(&path[prefix.len()..])))
+            return None;
         }
+        let rest = &path[prefix.len()..];
+        // Only strip whole components, like `Path::strip_prefix`. Otherwise
+        // `/home/foo` would be stripped from `/home/foobar`, leaving `bar`.
+        let at_boundary = prefix.is_empty()
+            || prefix.ends_with(b"/")
+            || rest.is_empty()
+            || rest.starts_with(b"/");
+        if !at_boundary {
+            return None;
+        }
+        Some(&Path::new(OsStr::from_bytes(rest)))
     }
 
     #[cfg(not(unix))]
@@ -175,7 +184,30 @@ mod tests {
     use std::ffi::OsStr;
     use std::path::Path;
 
-    use super::{file_name, is_hidden_path};
+    use super::{file_name, is_hidden_path, strip_prefix};
+
+    // The non-Unix implementation defers to `Path::strip_prefix`, which
+    // never leaves a leading separator, so these only apply to Unix.
+    #[cfg(unix)]
+    #[test]
+    fn strip_prefix_component_boundary() {
+        let p = Path::new;
+        assert_eq!(strip_prefix("/home/foo", p("/home/foobar")), None);
+        assert_eq!(strip_prefix("/home/foo", p("/home/foo.txt")), None);
+        assert_eq!(strip_prefix("foo", p("foobar/baz")), None);
+        assert_eq!(strip_prefix("/home/foo", p("/home/foo")), Some(p("")));
+        assert_eq!(
+            strip_prefix("/home/foo", p("/home/foo/bar")),
+            Some(p("/bar"))
+        );
+        assert_eq!(
+            strip_prefix("/home/foo/", p("/home/foo/bar")),
+            Some(p("bar"))
+        );
+        assert_eq!(strip_prefix("./", p("./foo")), Some(p("foo")));
+        assert_eq!(strip_prefix("/", p("/foo")), Some(p("foo")));
+        assert_eq!(strip_prefix("", p("foo")), Some(p("foo")));
+    }
 
     #[test]
     fn file_name_basic() {

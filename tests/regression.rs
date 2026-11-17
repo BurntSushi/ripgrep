@@ -1742,3 +1742,26 @@ rgtest!(r3275_git_global_config_env, |dir: Dir, mut cmd: TestCommand| {
     cmd.env("GIT_CONFIG_GLOBAL", config_path);
     eqnice!("foo/foo1\n", cmd.arg("--files").arg("foo").stdout());
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3603
+//
+// A glob is matched relative to the CWD. A sibling directory whose name
+// starts with the CWD's name must not have that name stripped as if it were
+// a path component.
+#[cfg(not(windows))]
+rgtest!(r3603_strip_prefix_sibling_dir, |dir: Dir, mut cmd: TestCommand| {
+    dir.create_dir("foo");
+    dir.create_dir("foobar");
+    dir.create("foobar/hit.txt", "NEEDLE\n");
+
+    // See r3179_global_gitignore_cwd for why we canonicalize.
+    let sibling = dir.path().canonicalize().unwrap().join("foobar");
+    cmd.current_dir("foo")
+        .arg("--no-ignore")
+        .arg("-l")
+        .arg("-g")
+        .arg("!bar/**")
+        .arg("NEEDLE")
+        .arg(&sibling);
+    eqnice!(format!("{}\n", sibling.join("hit.txt").display()), cmd.stdout());
+});

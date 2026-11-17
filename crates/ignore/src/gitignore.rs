@@ -815,6 +815,8 @@ mod tests {
     not_ignored!(ignot17, ROOT, "src/*.rs", "src/grep/src/main.rs");
     not_ignored!(ignot18, ROOT, "path1/*", "path2/path1/foo");
     not_ignored!(ignot19, ROOT, "s*.rs", "src/foo.rs");
+    // See: https://github.com/BurntSushi/ripgrep/issues/3603
+    not_ignored!(ignot20, "/home/foo", "bar", "/home/foobar", true);
 
     fn bytes(s: &str) -> Vec<u8> {
         s.to_string().into_bytes()
