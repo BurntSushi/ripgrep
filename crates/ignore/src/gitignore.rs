@@ -420,7 +420,7 @@ impl GitignoreBuilder {
                 Ok(line) => line,
                 Err(err) => {
                     errs.push(Error::Io(err).tagged(path, lineno));
-                    break;
+                    continue;
                 }
             };
 
@@ -885,4 +885,27 @@ mod tests {
     not_ignored!(cs2, ROOT, "*.html", "foo.HTML");
     not_ignored!(cs3, ROOT, "*.html", "foo.htm");
     not_ignored!(cs4, ROOT, "*.html", "foo.HTM");
+
+    // An invalid UTF-8 line must not stop later valid rules from being added.
+    #[test]
+    fn invalid_utf8_line_does_not_stop_reading() {
+        use std::{fs, process};
+
+        let dir = std::env::temp_dir().join(format!(
+            "ignore-invalid-utf8-{}",
+            process::id()
+        ));
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join(".gitignore");
+        fs::write(&path, b"zzgood\n\xff\xfe\npostgood\n").unwrap();
+
+        let mut builder = GitignoreBuilder::new(&dir);
+        // The bad line is still reported as an error.
+        assert!(builder.add(&path).is_some());
+        let gi = builder.build().unwrap();
+        fs::remove_dir_all(&dir).unwrap();
+
+        assert!(gi.matched("zzgood", false).is_ignore());
+        assert!(gi.matched("postgood", false).is_ignore());
+    }
 }
