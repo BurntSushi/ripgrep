@@ -419,8 +419,16 @@ impl GitignoreBuilder {
             let line = match line {
                 Ok(line) => line,
                 Err(err) => {
+                    // Invalid UTF-8 only affects this line, so keep reading.
+                    // Any other I/O error may repeat forever (e.g., reading a
+                    // directory on Linux), so stop there.
+                    let invalid_utf8 =
+                        err.kind() == std::io::ErrorKind::InvalidData;
                     errs.push(Error::Io(err).tagged(path, lineno));
-                    continue;
+                    if invalid_utf8 {
+                        continue;
+                    }
+                    break;
                 }
             };
 
@@ -891,10 +899,8 @@ mod tests {
     fn invalid_utf8_line_does_not_stop_reading() {
         use std::{fs, process};
 
-        let dir = std::env::temp_dir().join(format!(
-            "ignore-invalid-utf8-{}",
-            process::id()
-        ));
+        let dir = std::env::temp_dir()
+            .join(format!("ignore-invalid-utf8-{}", process::id()));
         fs::create_dir_all(&dir).unwrap();
         let path = dir.join(".gitignore");
         fs::write(&path, b"zzgood\n\xff\xfe\npostgood\n").unwrap();
