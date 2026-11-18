@@ -9,7 +9,7 @@ the `git` command line tool.
 
 use std::{
     fs::File,
-    io::{BufRead, BufReader, Read},
+    io::{BufRead, BufReader, ErrorKind, Read},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -419,7 +419,11 @@ impl GitignoreBuilder {
             let line = match line {
                 Ok(line) => line,
                 Err(err) => {
+                    let kind = err.kind();
                     errs.push(Error::Io(err).tagged(path, lineno));
+                    if kind == ErrorKind::InvalidData {
+                        continue;
+                    }
                     break;
                 }
             };
@@ -708,14 +712,35 @@ fn home_dir() -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use std::{io::ErrorKind, path::Path};
 
     use super::{Gitignore, GitignoreBuilder};
+    use crate::tests::TempDir;
 
     fn gi_from_str<P: AsRef<Path>>(root: P, s: &str) -> Gitignore {
         let mut builder = GitignoreBuilder::new(root);
         builder.add_str(None, s).unwrap();
         builder.build().unwrap()
+    }
+
+    #[test]
+    fn invalid_utf8_preserves_later_patterns() {
+        let td = TempDir::new().unwrap();
+        let path = td.path().join(".gitignore");
+        std::fs::write(
+            &path,
+            b"\xef\xbb\xbfbefore\r\n\xff\xfe\r\nafter\r\nspace\\ \r\nlast",
+        )
+        .unwrap();
+        let mut builder = GitignoreBuilder::new(td.path());
+        let err = builder.add(&path).unwrap();
+        assert!(err.to_string().contains("line 2"));
+        assert_eq!(err.io_error().unwrap().kind(), ErrorKind::InvalidData);
+        let gi = builder.build().unwrap();
+        assert!(gi.matched("before", false).is_ignore());
+        assert!(gi.matched("after", false).is_ignore());
+        assert!(gi.matched("space ", false).is_ignore());
+        assert!(gi.matched("last", false).is_ignore());
     }
 
     macro_rules! ignored {
