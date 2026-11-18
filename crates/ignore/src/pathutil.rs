@@ -105,11 +105,9 @@ pub(crate) fn strip_prefix<'a, P: AsRef<Path> + ?Sized>(
         let path = path.as_os_str().as_bytes();
         let rest = path.strip_prefix(prefix)?;
         // Don't strip a partial component, e.g., "/foo" from "/foobar".
-        let at_boundary = prefix.is_empty()
-            || prefix.ends_with(b"/")
-            || rest.is_empty()
-            || rest.starts_with(b"/");
-        if !at_boundary {
+        if prefix.last().is_some_and(|&b| b != b'/')
+            && rest.first().is_some_and(|&b| b != b'/')
+        {
             return None;
         }
         Some(Path::new(OsStr::from_bytes(rest)))
