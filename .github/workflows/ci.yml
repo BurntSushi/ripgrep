@@ -30,6 +30,9 @@ permissions:
 jobs:
   test:
     name: test
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-test
+      cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
     env:
       # For some builds, we use cross to test on 32-bit and big-endian
       # systems.
@@ -254,6 +257,9 @@ jobs:
 
   benches:
     name: Test benchmarks
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-benches
+      cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -267,6 +273,9 @@ jobs:
 
   fuzz_testing:
     name: Compile Fuzz Test Targets
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-fuzz_testing
+      cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
