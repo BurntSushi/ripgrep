@@ -6,6 +6,8 @@
 rustflags = ["-C", "target-feature=+crt-static"]
 [target.i686-pc-windows-msvc]
 rustflags = ["-C", "target-feature=+crt-static"]
+[target.aarch64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
 
 # Do the same for MUSL targets. At the time of writing (2023-10-23), this is
 # the default. But the plan is for the default to change to dynamic linking.
