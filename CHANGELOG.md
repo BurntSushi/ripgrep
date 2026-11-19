@@ -2,6 +2,13 @@ TBD
 ===
 Unreleased changes. Release notes have not yet been written.
 
+Bug fixes:
+
+* [BUG #3527](https://github.com/BurntSushi/ripgrep/issues/3527):
+  A lone `!` line in a `.gitignore` file is now treated as a no-op, as git
+  does, instead of being compiled into a glob matching every path in a
+  subtree.
+
 
 15.2.0 (2026-07-15)
 ===================
