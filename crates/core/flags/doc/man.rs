@@ -44,19 +44,35 @@ pub(crate) fn generate() -> String {
 
 /// Writes `roff` formatted documentation for `flag` to `out`.
 fn generate_flag(flag: &'static dyn Flag, out: &mut String) {
-    if let Some(byte) = flag.name_short() {
-        let name = char::from(byte);
-        write!(out, r"\fB\-{name}\fP");
+    writeln!(out, ".TP 12");
+    let short = flag.name_short().map(char::from);
+    let name = flag.name_long().replace("-", r"\-");
+
+    if short.map(|c| c.is_ascii_alphanumeric()).unwrap_or(false) {
+        let short = short.unwrap();
+        write!(out, r"\fB\-{short}\fP");
         if let Some(var) = flag.doc_variable() {
             write!(out, r" \fI{var}\fP");
         }
         write!(out, r", ");
-    }
 
-    let name = flag.name_long().replace("-", r"\-");
-    write!(out, r"\fB\-\-{name}\fP");
-    if let Some(var) = flag.doc_variable() {
-        write!(out, r"=\fI{var}\fP");
+        write!(out, r"\fB\-\-{name}\fP");
+        if let Some(var) = flag.doc_variable() {
+            write!(out, r"=\fI{var}\fP");
+        }
+    } else {
+        write!(out, r"\fB\-\-{name}\fP");
+        if let Some(var) = flag.doc_variable() {
+            write!(out, r"=\fI{var}\fP");
+        }
+
+        if let Some(short) = short {
+            write!(out, r", ");
+            write!(out, r"\fB\-{short}\fP");
+            if let Some(var) = flag.doc_variable() {
+                write!(out, r" \fI{var}\fP");
+            }
+        }
     }
     write!(out, "\n");
 
