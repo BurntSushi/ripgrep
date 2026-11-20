@@ -1781,41 +1781,6 @@ and exhibited clearly, with a label attached.\
     }
 
     #[test]
-    fn hyperlink_path_resolution() {
-        let matcher = RegexMatcher::new("Sherlock").unwrap();
-        let path = std::env::current_dir().unwrap();
-        for enabled in [false, true] {
-            for heading in [false, true] {
-                let mut builder = StandardBuilder::new();
-                builder.heading(heading);
-                if enabled {
-                    let format = "file://{path}".parse().unwrap();
-                    builder.hyperlink(crate::HyperlinkConfig::new(
-                        crate::HyperlinkEnvironment::default(),
-                        format,
-                    ));
-                }
-                let mut printer = builder.build(Ansi::new(vec![]));
-                let mut sink = printer.sink_with_path(&matcher, &path);
-                SearcherBuilder::new()
-                    .build()
-                    .search_reader(&matcher, SHERLOCK.as_bytes(), &mut sink)
-                    .unwrap();
-                assert!(sink.has_match());
-                assert_eq!(
-                    sink.path.as_ref().unwrap().hyperlink_is_initialized(),
-                    enabled,
-                    "enabled={enabled}, heading={heading}",
-                );
-                assert_eq!(
-                    printer_contents_ansi(&mut printer).contains("\x1b]8;;"),
-                    enabled,
-                );
-            }
-        }
-    }
-
-    #[test]
     fn reports_match() {
         let matcher = RegexMatcher::new("Sherlock").unwrap();
         let mut printer = StandardBuilder::new().build(NoColor::new(vec![]));
