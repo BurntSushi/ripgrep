@@ -5476,8 +5476,8 @@ impl Flag for Pre {
 For each input \fIPATH\fP, this flag causes ripgrep to search the standard
 output of \fICOMMAND\fP \fIPATH\fP instead of the contents of \fIPATH\fP.
 This option expects the \fICOMMAND\fP program to either be a path or to be
-available in your \fBPATH\fP. Either an empty string \fICOMMAND\fP or the
-\fB\-\-no\-pre\fP flag will disable this behavior.
+available in your \fBPATH\fP environment variable. Either an empty string
+\fICOMMAND\fP or the \fB\-\-no\-pre\fP flag will disable this behavior.
 .sp
 .TP 12
 \fBWARNING\fP
@@ -6085,9 +6085,9 @@ impl Flag for SearchZip {
 This flag instructs ripgrep to search in compressed files. Currently gzip,
 bzip2, xz, LZ4, LZMA, Brotli and Zstd files are supported. This option expects
 the decompression binaries (such as \fBgzip\fP) to be available in your
-\fBPATH\fP. If the required binaries are not found, then ripgrep will not
-emit an error messages by default. Use the \flag{debug} flag to see more
-information.
+\fBPATH\fP environment variable. If the required binaries are not found, then
+ripgrep will not emit an error message by default. Use the \flag{debug} flag to
+see more information.
 .sp
 Note that this flag does not make ripgrep search archive formats as directory
 trees. It only makes ripgrep detect compressed files and then decompress them
