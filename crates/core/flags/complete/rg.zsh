@@ -380,7 +380,7 @@ _rg_color_specs() {
 
   elif compset -P '[^:]##:style:'; then
     _describe -t $tag 'style name' '(
-      {,no}bold {,no}intense {,no}underline
+      {,no}bold {,no}intense {,no}underline {,no}italic
     )'
 
   elif compset -P '[^:]##:'; then
