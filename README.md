@@ -5,7 +5,7 @@ directory for a regex pattern. By default, ripgrep will respect gitignore rules
 and automatically skip hidden files/directories and binary files. (To disable
 all automatic filtering by default, use `rg -uuu`.) ripgrep has first class
 support on Windows, macOS and Linux, with binary downloads available for [every
-release](https://github.com/BurntSushi/ripgrep/releases). ripgrep is similar to
+release](https://github.com/BurntSushi/ripgrep/tags). ripgrep is similar to
 other popular search tools like The Silver Searcher, ack and grep.
 
 [![Build status](https://github.com/BurntSushi/ripgrep/workflows/ci/badge.svg)](https://github.com/BurntSushi/ripgrep/actions)
@@ -235,7 +235,7 @@ repo](https://github.com/nalgeon/tryxinyminutes).
 The binary name for ripgrep is `rg`.
 
 **[Archives of precompiled binaries for ripgrep are available for Windows,
-macOS and Linux.](https://github.com/BurntSushi/ripgrep/releases)** Linux and
+macOS and Linux.](https://github.com/BurntSushi/ripgrep/tags)** Linux and
 Windows binaries are static executables. Users of platforms not explicitly
 mentioned below are advised to download one of these archives.
 
@@ -350,7 +350,7 @@ $ guix install ripgrep
 
 If you're a **Debian** user (or a user of a Debian derivative like **Ubuntu**),
 then ripgrep can be installed using a binary `.deb` file provided in each
-[ripgrep release](https://github.com/BurntSushi/ripgrep/releases).
+[ripgrep release](https://github.com/BurntSushi/ripgrep/tags).
 
 ```
 $ curl -LO https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep_14.1.1-1_amd64.deb
