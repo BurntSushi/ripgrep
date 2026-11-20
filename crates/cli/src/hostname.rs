@@ -47,7 +47,7 @@ fn gethostname() -> io::Result<OsString> {
         // could do it ourselves, but it just doesn't seem worth doing?)
         return Err(io::Error::last_os_error());
     }
-    let Ok(maxlen) = usize::try_from(limit) else {
+    let Ok(mut maxlen) = usize::try_from(limit) else {
         let msg = format!("host name max limit ({}) overflowed usize", limit);
         return Err(io::Error::new(io::ErrorKind::Other, msg));
     };
