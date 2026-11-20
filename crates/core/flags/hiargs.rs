@@ -443,7 +443,15 @@ impl HiArgs {
             if self.crlf {
                 builder.crlf(true);
             }
-            let m = builder.build_many(&self.patterns.patterns)?;
+            let m = match builder.build_many(&self.patterns.patterns) {
+                Ok(m) => m,
+                Err(err) => {
+                    anyhow::bail!(format_regex_error(
+                        &self.patterns.patterns,
+                        &err.to_string(),
+                    ))
+                }
+            };
             Ok(PatternMatcher::PCRE2(m))
         }
         #[cfg(not(feature = "pcre2"))]
@@ -507,7 +515,10 @@ impl HiArgs {
         let m = match builder.build_many(&self.patterns.patterns) {
             Ok(m) => m,
             Err(err) => {
-                anyhow::bail!(suggest_text(suggest_multiline(err.to_string())))
+                anyhow::bail!(format_regex_error(
+                    &self.patterns.patterns,
+                    &err.to_string(),
+                ))
             }
         };
         Ok(PatternMatcher::RustRegex(m))
@@ -1447,34 +1458,209 @@ and look-around.",
     }
 }
 
-/// Possibly suggest multiline mode based on the error message given.
+/// Formats user-facing regex errors with additional context.
 ///
-/// Does a bit of a hacky inspection of the given error message, and if it
-/// looks like the user tried to type a literal line terminator then it will
-/// return a new error message suggesting the use of -U/--multiline.
-fn suggest_multiline(msg: String) -> String {
-    if msg.contains("the literal") && msg.contains("not allowed") {
-        format!(
-            "{msg}
+/// This is designed to remain concise while improving usability by identifying
+/// the problematic pattern and providing helpful hints for common mistakes.
+fn format_regex_error(patterns: &[String], err: &str) -> String {
+    let mut msg = String::new();
 
-Consider enabling multiline mode with the --multiline flag (or -U for short).
-When multiline mode is enabled, new line characters can be matched.",
+    // If there's only one pattern, it's the one that failed.
+    if patterns.len() == 1 {
+        msg.push_str(&format!("Invalid regex pattern: \"{}\"", patterns[0]));
+    } else {
+        msg.push_str("Invalid regex pattern (one of multiple patterns)");
+    }
+
+    // A safer way to find the specific reason by searching backwards for the
+    // line containing "error:".
+    let mut reason = err
+        .lines()
+        .rev()
+        .find(|l| l.contains("error:"))
+        .unwrap_or_else(|| err.lines().last().unwrap_or(err))
+        .trim();
+
+    if reason.starts_with("error: ") {
+        reason = &reason[7..];
+    }
+    // For pcre2 errors, they might not start with "error: ".
+    // Let's strip "regex parse error: " if it exists.
+    if reason.starts_with("regex parse error: ") {
+        reason = &reason[19..];
+    }
+    msg.push_str(&format!("\nReason: {}", reason));
+
+    // Provide specific hints based on the error message.
+    if let Some(hint) = get_hint(err) {
+        msg.push_str("\nHint: ");
+        msg.push_str(&hint);
+    }
+    msg
+}
+
+/// Returns a helpful hint based on common regex error messages.
+fn get_hint(msg: &str) -> Option<String> {
+    if msg.contains("pattern contains \"\\0\"") {
+        Some(
+            "consider enabling text mode with the --text flag (or -a for short). \
+             Otherwise, binary detection is enabled and matching a NUL byte is \
+             impossible."
+                .to_string(),
+        )
+    } else if msg.contains("unclosed group") {
+        Some(
+            "consider escaping special characters like '(' or using -F for \
+             literal search"
+                .to_string(),
+        )
+    } else if msg.contains("the literal") && msg.contains("not allowed") {
+        Some(
+            "consider enabling multiline mode with the --multiline flag (or -U \
+             for short). When multiline mode is enabled, new line characters \
+             can be matched."
+                .to_string(),
+        )
+    } else if msg.contains("backreferences are not supported") {
+        Some(
+            "consider enabling PCRE2 with the --pcre2 flag, which can handle \
+             backreferences and look-around."
+                .to_string(),
         )
     } else {
-        msg
+        None
     }
 }
 
-/// Possibly suggest the `-a/--text` flag.
-fn suggest_text(msg: String) -> String {
-    if msg.contains("pattern contains \"\\0\"") {
-        format!(
-            "{msg}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-Consider enabling text mode with the --text flag (or -a for short). Otherwise,
-binary detection is enabled and matching a NUL byte is impossible.",
-        )
-    } else {
-        msg
+    #[test]
+    fn test_format_regex_error_single_pattern() {
+        let patterns = vec!["(hello".to_string()];
+        let err =
+            "regex parse error:\n    (hello\n    ^\nerror: unclosed group"
+                .to_string();
+        let formatted = format_regex_error(&patterns, &err);
+        assert!(formatted.contains("Invalid regex pattern: \"(hello\""));
+        assert!(formatted.contains("Reason: unclosed group"));
+        assert!(
+            formatted.contains("Hint: consider escaping special characters")
+        );
+    }
+
+    #[test]
+    fn test_format_regex_error_multiple_patterns() {
+        let patterns = vec!["a".to_string(), "(b".to_string()];
+        let err =
+            "regex parse error:\n    (?:a|(b)\n    ^\nerror: unclosed group"
+                .to_string();
+        let formatted = format_regex_error(&patterns, &err);
+        assert!(
+            formatted
+                .contains("Invalid regex pattern (one of multiple patterns)")
+        );
+        assert!(formatted.contains("Reason: unclosed group"));
+    }
+
+    #[test]
+    fn test_format_regex_error_nul_byte() {
+        let patterns = vec!["a\\0b".to_string()];
+        let err = "pattern contains \"\\0\" but it is impossible to match"
+            .to_string();
+        let formatted = format_regex_error(&patterns, &err);
+        assert!(formatted.contains("Reason: pattern contains \"\\0\""));
+        assert!(formatted.contains("Hint: consider enabling text mode"));
+    }
+
+    #[test]
+    fn test_format_regex_error_pcre2_style() {
+        let patterns = vec!["(hello".to_string()];
+        let err =
+            "pcre2 error: missing closing parenthesis at offset 6".to_string();
+        let formatted = format_regex_error(&patterns, &err);
+        // Fallback to last line if "error:" is not found
+        assert!(formatted.contains(
+            "Reason: pcre2 error: missing closing parenthesis at offset 6"
+        ));
+    }
+
+    #[test]
+    fn test_invalid_regex_unclosed_group() {
+        let pattern = vec!["(hello".to_string()];
+        let err = format_regex_error(&pattern, "error: unclosed group");
+
+        assert!(err.contains("Invalid regex pattern"));
+        assert!(err.contains("(hello"));
+        assert!(err.contains("unclosed group"));
+        assert!(err.contains("Hint"));
+    }
+
+    #[test]
+    fn test_invalid_regex_unclosed_class() {
+        let pattern = vec!["[abc".to_string()];
+        let err =
+            format_regex_error(&pattern, "error: unclosed character class");
+
+        assert!(err.contains("[abc"));
+        assert!(err.contains("unclosed character class"));
+    }
+
+    #[test]
+    fn test_invalid_regex_repetition() {
+        let pattern = vec!["a**".to_string()];
+        let err = format_regex_error(
+            &pattern,
+            "error: repetition operator missing expression",
+        );
+
+        assert!(err.contains("a**"));
+        assert!(err.contains("repetition"));
+    }
+
+    #[test]
+    fn test_invalid_regex_escape() {
+        let pattern = vec!["\\k".to_string()];
+        let err =
+            format_regex_error(&pattern, "error: invalid escape sequence");
+
+        assert!(err.contains("\\k"));
+        assert!(err.contains("invalid escape"));
+    }
+
+    #[test]
+    fn test_invalid_regex_unclosed_repetition() {
+        let pattern = vec!["a{2".to_string()];
+        let err =
+            format_regex_error(&pattern, "error: unclosed counted repetition");
+
+        assert!(err.contains("a{2"));
+        assert!(err.contains("unclosed"));
+    }
+
+    #[test]
+    fn test_invalid_regex_hint_present() {
+        let pattern = vec!["(hello".to_string()];
+        let err = format_regex_error(&pattern, "error: unclosed group");
+
+        assert!(err.contains("Hint"));
+    }
+
+    #[test]
+    fn test_no_duplicate_reason() {
+        let pattern = vec!["(hello".to_string()];
+        let err = format_regex_error(&pattern, "error: unclosed group");
+
+        let count = err.matches("unclosed group").count();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn test_empty_pattern_safe() {
+        let pattern = vec!["".to_string()];
+        let err = format_regex_error(&pattern, "error: empty regex");
+
+        assert!(err.contains("Invalid regex pattern"));
     }
 }
