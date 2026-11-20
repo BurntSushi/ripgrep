@@ -933,7 +933,7 @@ impl RequiredExtensionStrategy {
     }
 
     fn matches_all(&self, candidate: &Candidate<'_>) -> bool {
-        if candidate.ext.is_empty() {
+        if self.0.len() != 1 || candidate.ext.is_empty() {
             return false;
         }
         if let Some(regexes) = self.0.get(candidate.ext.as_bytes()) {
@@ -1233,6 +1233,14 @@ mod tests {
 
         assert!(!set.matches_all("main.rs"));
         assert!(!set.matches_all("a/lib.rs"));
+
+        let set = build_glob_set(&["x/m*.a", "y/n*.b"]);
+
+        for (path, index) in [("x/mt.a", 0), ("y/nz.b", 1)] {
+            assert_eq!(set.matches(path), vec![index]);
+            assert!(!set.matches_all(path));
+            assert!(!set.matches_all_candidate(&crate::Candidate::new(path)));
+        }
     }
 
     #[test]

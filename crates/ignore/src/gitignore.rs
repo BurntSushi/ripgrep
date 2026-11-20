@@ -9,7 +9,7 @@ the `git` command line tool.
 
 use std::{
     fs::File,
-    io::{BufRead, BufReader, Read},
+    io::{BufRead, BufReader, ErrorKind, Read},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -149,9 +149,15 @@ impl Gitignore {
     ///
     /// Its path is empty.
     pub fn empty() -> Gitignore {
+        Gitignore::empty_with_root(PathBuf::from(""))
+    }
+
+    /// Creates a new empty gitignore matcher with the given root that never
+    /// matches anything.
+    fn empty_with_root(root: PathBuf) -> Gitignore {
         Gitignore {
             set: GlobSet::empty(),
-            root: PathBuf::from(""),
+            root,
             globs: vec![],
             num_ignores: 0,
             num_whitelists: 0,
@@ -348,7 +354,7 @@ impl GitignoreBuilder {
     /// Once a matcher is built, no new globs can be added to it.
     pub fn build(&self) -> Result<Gitignore, Error> {
         if self.globs.is_empty() {
-            return Ok(Gitignore::empty());
+            return Ok(Gitignore::empty_with_root(self.root.clone()));
         }
         let nignore = self.globs.iter().filter(|g| !g.is_whitelist()).count();
         let nwhite = self.globs.iter().filter(|g| g.is_whitelist()).count();
@@ -419,7 +425,11 @@ impl GitignoreBuilder {
             let line = match line {
                 Ok(line) => line,
                 Err(err) => {
+                    let kind = err.kind();
                     errs.push(Error::Io(err).tagged(path, lineno));
+                    if kind == ErrorKind::InvalidData {
+                        continue;
+                    }
                     break;
                 }
             };
@@ -717,14 +727,35 @@ fn home_dir() -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use std::{io::ErrorKind, path::Path};
 
     use super::{Gitignore, GitignoreBuilder};
+    use crate::tests::TempDir;
 
     fn gi_from_str<P: AsRef<Path>>(root: P, s: &str) -> Gitignore {
         let mut builder = GitignoreBuilder::new(root);
         builder.add_str(None, s).unwrap();
         builder.build().unwrap()
+    }
+
+    #[test]
+    fn invalid_utf8_preserves_later_patterns() {
+        let td = TempDir::new().unwrap();
+        let path = td.path().join(".gitignore");
+        std::fs::write(
+            &path,
+            b"\xef\xbb\xbfbefore\r\n\xff\xfe\r\nafter\r\nspace\\ \r\nlast",
+        )
+        .unwrap();
+        let mut builder = GitignoreBuilder::new(td.path());
+        let err = builder.add(&path).unwrap();
+        assert!(err.to_string().contains("line 2"));
+        assert_eq!(err.io_error().unwrap().kind(), ErrorKind::InvalidData);
+        let gi = builder.build().unwrap();
+        assert!(gi.matched("before", false).is_ignore());
+        assert!(gi.matched("after", false).is_ignore());
+        assert!(gi.matched("space ", false).is_ignore());
+        assert!(gi.matched("last", false).is_ignore());
     }
 
     macro_rules! ignored {
@@ -930,4 +961,20 @@ mod tests {
     not_ignored!(cs2, ROOT, "*.html", "foo.HTML");
     not_ignored!(cs3, ROOT, "*.html", "foo.htm");
     not_ignored!(cs4, ROOT, "*.html", "foo.HTM");
+
+    // An empty builder must still retain the root it was created with.
+    // Callers that build a matcher per directory use `path()` to walk
+    // relative to it, so dropping the root breaks them.
+    //
+    // See: https://github.com/BurntSushi/ripgrep/issues/3584
+    #[test]
+    fn empty_builder_preserves_root() {
+        let gi = GitignoreBuilder::new(ROOT).build().unwrap();
+        assert_eq!(gi.path(), Path::new(ROOT));
+        assert!(gi.is_empty());
+        assert_eq!(0, gi.len());
+        assert_eq!(0, gi.num_ignores());
+        assert_eq!(0, gi.num_whitelists());
+        assert!(!gi.matched("anything", false).is_ignore());
+    }
 }
