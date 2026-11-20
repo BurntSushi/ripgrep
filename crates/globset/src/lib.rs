@@ -189,6 +189,8 @@ pub enum ErrorKind {
     /// another alternating group, e.g., `{{a,b},{c,d}}`. However, this is now
     /// supported and as such this error cannot occur.
     NestedAlternates,
+    /// Occurs when alternating groups are nested too deeply.
+    TooManyNestedAlternates,
     /// Occurs when an unescaped '\' is found at the end of a glob.
     DanglingEscape,
     /// An error associated with parsing or compiling a regex.
@@ -234,6 +236,9 @@ impl ErrorKind {
             ErrorKind::NestedAlternates => {
                 "nested alternate groups are not allowed"
             }
+            ErrorKind::TooManyNestedAlternates => {
+                "alternate groups nested too deeply"
+            }
             ErrorKind::DanglingEscape => "dangling '\\'",
             ErrorKind::Regex(ref err) => err,
         }
@@ -259,6 +264,7 @@ impl std::fmt::Display for ErrorKind {
             | ErrorKind::UnopenedAlternates
             | ErrorKind::UnclosedAlternates
             | ErrorKind::NestedAlternates
+            | ErrorKind::TooManyNestedAlternates
             | ErrorKind::DanglingEscape
             | ErrorKind::Regex(_) => write!(f, "{}", self.description()),
             ErrorKind::InvalidRange(s, e) => {

@@ -857,6 +857,13 @@ impl<'a> Parser<'a> {
     }
 
     fn push_alternate(&mut self) -> Result<(), Error> {
+        // Bound alternate nesting so recursive token-to-regex compilation and
+        // token tree drop cannot overflow the stack, while staying well within
+        // regex-syntax's default group nesting limit (250).
+        const MAX_ALTERNATES_DEPTH: usize = 100;
+        if self.alternates_stack.len() >= MAX_ALTERNATES_DEPTH {
+            return Err(self.error(ErrorKind::TooManyNestedAlternates));
+        }
         self.alternates_stack.push(self.branches.len());
         self.branches.push(Tokens::default());
         Ok(())
@@ -1298,6 +1305,22 @@ mod tests {
     syntaxerr!(err_alt2, "{a,{b,c}", ErrorKind::UnclosedAlternates);
     syntaxerr!(err_alt3, "a,b}", ErrorKind::UnopenedAlternates);
     syntaxerr!(err_alt4, "{a,b}}", ErrorKind::UnopenedAlternates);
+
+    #[test]
+    fn nested_alternates_depth_limit() {
+        let ok_pat = "{".repeat(100) + "a" + &"}".repeat(100);
+        let matcher = Glob::new(&ok_pat).unwrap().compile_matcher();
+        assert!(matcher.is_match("a"));
+        assert!(!matcher.is_match("b"));
+
+        let over_pat = "{".repeat(101) + "a" + &"}".repeat(101);
+        let err = Glob::new(&over_pat).unwrap_err();
+        assert_eq!(&ErrorKind::TooManyNestedAlternates, err.kind());
+
+        let deep_pat = "{".repeat(14_000) + "a" + &"}".repeat(14_000);
+        let err = Glob::new(&deep_pat).unwrap_err();
+        assert_eq!(&ErrorKind::TooManyNestedAlternates, err.kind());
+    }
 
     const CASEI: Options = Options {
         casei: Some(true),
