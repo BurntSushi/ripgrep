@@ -946,6 +946,46 @@ rgtest!(r1311_multi_line_term_replace, |dir: Dir, mut cmd: TestCommand| {
     );
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/2779
+rgtest!(
+    r2779_adjacent_multiline_replace_line_numbers,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create(
+            "input",
+            "\
+:properties:
+:id: fnord
+:end:
+:properties:
+:id: boccob
+:end:
+:properties:
+:id: d321fdddffff
+:end:
+:properties:
+:id: clowns
+:end:
+",
+        );
+        eqnice!(
+            "\
+1:fnord
+4:boccob
+7:d321fdddffff
+10:clowns
+",
+            cmd.args(&[
+                "-nU",
+                "^:properties:\\n:id: (.*)\\n:end:",
+                "-r",
+                "$1",
+                "input",
+            ])
+            .stdout()
+        );
+    }
+);
+
 // See: https://github.com/BurntSushi/ripgrep/issues/1319
 rgtest!(r1319, |dir: Dir, mut cmd: TestCommand| {
     dir.create("input", "CCAGCTACTCGGGAGGCTGAGGCTGGAGGATCGCTTGAGTCCAGGAGTTC");
