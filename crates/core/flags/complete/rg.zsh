@@ -316,8 +316,8 @@ _rg() {
     ))'
     '*--colors=[specify color and style settings]: :_rg_color_specs'
     '--debug[show debug messages]'
-    '--field-context-separator[set string to delimit fields in context lines]'
-    '--field-match-separator[set string to delimit fields in matching lines]'
+    '--field-context-separator=[set string to delimit fields in context lines]:separator'
+    '--field-match-separator=[set string to delimit fields in matching lines]:separator'
     '--generate=[generate specified data (e.g. man page or completion script)]:data to generate:((
       man\:"man page"
       complete-bash\:"shell completions for bash"
