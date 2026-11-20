@@ -213,7 +213,13 @@ impl Gitignore {
         if self.is_empty() {
             return Match::None;
         }
-        self.matched_stripped(self.strip(path.as_ref()), is_dir)
+        let path = path.as_ref();
+        let stripped = self.strip(path);
+        // Keep the directory name when stripping would consume the entire
+        // path. Otherwise an unanchored glob cannot match the root itself.
+        let candidate =
+            if stripped.as_os_str().is_empty() { path } else { stripped };
+        self.matched_stripped(candidate, is_dir)
     }
 
     /// Returns whether the given path (file or directory, and expected to be
@@ -785,6 +791,25 @@ mod tests {
     }
 
     const ROOT: &'static str = "/home/foobar/rust/rg";
+
+    // See: https://github.com/BurntSushi/ripgrep/issues/1764
+    #[test]
+    fn root_directory() {
+        for root in ["/home/andrew/foo", "src/foo", "./src/foo"] {
+            let gi = gi_from_str(root, "foo/");
+            assert!(gi.matched(root, true).is_ignore());
+            assert!(gi.matched(root, false).is_none());
+            assert!(gi.matched(format!("{root}/foo"), true).is_ignore());
+
+            // Parent matching only considers paths below the root. The root
+            // itself must still strip to an empty path without panicking.
+            assert!(gi.matched_path_or_any_parents(root, true).is_none());
+
+            let gi = gi_from_str(root, "/foo/");
+            assert!(gi.matched(root, true).is_none());
+            assert!(gi.matched(format!("{root}/foo"), true).is_ignore());
+        }
+    }
 
     ignored!(ig1, ROOT, "months", "months");
     ignored!(ig2, ROOT, "*.lock", "Cargo.lock");

@@ -266,6 +266,23 @@ mod tests {
         assert!(ov.matched("./foo/bar", false).is_none());
     }
 
+    // See: https://github.com/BurntSushi/ripgrep/issues/1764
+    #[test]
+    fn root_directory() {
+        let matcher = ov(&["!foo/"]);
+        assert!(matcher.matched(ROOT, true).is_ignore());
+        assert!(matcher.matched(ROOT, false).is_none());
+        assert!(matcher.matched(format!("{ROOT}/foo"), true).is_ignore());
+        assert!(matcher.matched(format!("{ROOT}/bar"), true).is_none());
+
+        let matcher = ov(&["!/foo/"]);
+        assert!(matcher.matched(ROOT, true).is_none());
+        assert!(matcher.matched(format!("{ROOT}/foo"), true).is_ignore());
+
+        assert!(ov(&["!foo/", "foo/"]).matched(ROOT, true).is_whitelist());
+        assert!(ov(&["foo/", "!foo/"]).matched(ROOT, true).is_ignore());
+    }
+
     #[test]
     fn case_insensitive() {
         let ov = OverrideBuilder::new(ROOT)
