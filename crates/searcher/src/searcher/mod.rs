@@ -237,7 +237,7 @@ impl Config {
 
 /// An error that can occur when building a searcher.
 ///
-/// This error occurs when a non-sensical configuration is present when trying
+/// This error occurs when a nonsensical configuration is present when trying
 /// to construct a `Searcher` from a `SearcherBuilder`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]

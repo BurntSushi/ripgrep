@@ -157,7 +157,7 @@ fn compile_cpu_features() -> Vec<String> {
     }
 }
 
-/// Returns a list of "features" supported (or not) by this build of ripgrpe.
+/// Returns a list of "features" supported (or not) by this build of ripgrep.
 fn features() -> Vec<String> {
     let mut features = vec![];
 
