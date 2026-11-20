@@ -226,7 +226,7 @@ impl DecompressionReaderBuilder {
         let Some(mut cmd) = self.matcher.command(path) else {
             return DecompressionReader::new_passthru(path);
         };
-        cmd.arg(path);
+        cmd.arg("--").arg(path);
 
         match self.command_builder.build(&mut cmd) {
             Ok(cmd_reader) => Ok(DecompressionReader { rdr: Ok(cmd_reader) }),
