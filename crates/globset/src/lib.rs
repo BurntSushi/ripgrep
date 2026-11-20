@@ -305,10 +305,17 @@ fn new_regex_set(pats: Vec<String>) -> Result<Regex, Error> {
 
 /// GlobSet represents a group of globs that can be matched together in a
 /// single pass.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct GlobSet {
     len: usize,
     strats: Vec<GlobSetMatchStrategy>,
+    pats: Vec<Glob>,
+}
+
+impl std::fmt::Debug for GlobSet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("GlobSet").field(&self.pats).finish()
+    }
 }
 
 impl GlobSet {
@@ -323,7 +330,7 @@ impl GlobSet {
     /// Create an empty `GlobSet`. An empty set matches nothing.
     #[inline]
     pub const fn empty() -> GlobSet {
-        GlobSet { len: 0, strats: vec![] }
+        GlobSet { len: 0, strats: vec![], pats: vec![] }
     }
 
     /// Returns true if this set is empty, and therefore matches nothing.
@@ -469,6 +476,7 @@ impl GlobSet {
         }
 
         let mut len = 0;
+        let mut pats = vec![];
         let mut lits = LiteralStrategy::new();
         let mut base_lits = LiteralStrategy::new();
         let mut exts = ExtensionStrategy::new();
@@ -481,6 +489,7 @@ impl GlobSet {
             len += 1;
 
             let p = p.as_ref();
+            pats.push(p.clone());
             match MatchStrategy::new(p) {
                 MatchStrategy::Literal(lit) => {
                     lits.add(i, lit);
@@ -560,7 +569,7 @@ impl GlobSet {
             strats.push(GlobSetMatchStrategy::Regex(regexes.regex_set()?));
         }
 
-        Ok(GlobSet { len, strats })
+        Ok(GlobSet { len, strats, pats })
     }
 }
 
@@ -1161,6 +1170,16 @@ mod tests {
             builder.add(Glob::new(glob).unwrap());
         }
         builder.build().unwrap()
+    }
+
+    #[test]
+    fn debug_impl_is_concise() {
+        let set = build_glob_set(&["src/**/*.rs", "*.c"]);
+        assert_eq!(
+            format!("{:?}", set),
+            r#"GlobSet([Glob("src/**/*.rs"), Glob("*.c")])"#
+        );
+        assert_eq!(format!("{:?}", GlobSet::empty()), "GlobSet([])");
     }
 
     #[test]
