@@ -35,6 +35,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["buildstream"], &["*.bst"]),
     (&["bzip2"], &["*.bz2", "*.tbz2"]),
     (&["c"], &["*.[chH]", "*.[chH].in", "*.cats"]),
+    (&["c3"], &["*.c3", "*.c3i", "*.c3t"]),
     (&["cabal"], &["*.cabal"]),
     (&["candid"], &["*.did"]),
     (&["carp"], &["*.carp"]),
