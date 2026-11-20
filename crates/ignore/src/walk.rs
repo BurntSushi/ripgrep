@@ -2152,14 +2152,26 @@ fn stdout_handle() -> Option<Handle> {
         Err(_) => return None,
         Ok(h) => h,
     };
-    let md = match h.as_file().metadata() {
-        Err(_) => return None,
-        Ok(md) => md,
-    };
-    if !md.is_file() {
+    if !is_regular_file(h.as_file()) {
         return None;
     }
     Some(h)
+}
+
+/// Returns true if and only if the given file is a regular file on disk.
+///
+/// On Windows, std reports pipes as regular files, so we check the handle
+/// type first. Otherwise, when stdout is a pipe (which is the common case
+/// when another program runs ripgrep), every file we search is opened one
+/// extra time in `path_equals` just to compare it with stdout.
+fn is_regular_file(file: &fs::File) -> bool {
+    #[cfg(windows)]
+    {
+        if !winapi_util::file::typ(file).is_ok_and(|typ| typ.is_disk()) {
+            return false;
+        }
+    }
+    file.metadata().is_ok_and(|md| md.is_file())
 }
 
 /// Returns true if and only if the given directory entry is believed to be
@@ -2933,5 +2945,24 @@ mod tests {
         builder.follow_links(true);
         assert_eq!(1, walk_error_count(&builder), "single threaded");
         assert_eq!(1, walk_error_count_parallel(&builder), "parallel");
+    }
+
+    // On Windows, std reports a pipe as a regular file. If stdout is a pipe,
+    // we shouldn't keep its handle for skipping, since then every file in
+    // the walk gets opened a second time to compare it with stdout.
+    #[cfg(any(unix, windows))]
+    #[test]
+    fn regular_file_excludes_pipes() {
+        let td = tmpdir();
+        let path = td.path().join("foo");
+        wfile(&path, "");
+        assert!(super::is_regular_file(&File::open(&path).unwrap()));
+
+        let (_reader, writer) = std::io::pipe().unwrap();
+        #[cfg(unix)]
+        let pipe = File::from(std::os::fd::OwnedFd::from(writer));
+        #[cfg(windows)]
+        let pipe = File::from(std::os::windows::io::OwnedHandle::from(writer));
+        assert!(!super::is_regular_file(&pipe));
     }
 }
