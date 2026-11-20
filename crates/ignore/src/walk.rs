@@ -421,6 +421,28 @@ impl DirEntryRaw {
         })
     }
 
+    /// Builds an entry for `path` without following it if it is a symlink.
+    ///
+    /// Unlike `from_path`, this succeeds for a symlink whose target doesn't
+    /// exist.
+    fn from_symlink(depth: usize, path: &Path) -> Result<DirEntryRaw, Error> {
+        #[cfg(unix)]
+        use std::os::unix::fs::MetadataExt;
+
+        let md = fs::symlink_metadata(path)
+            .map_err(|err| Error::Io(err).with_depth(depth).with_path(path))?;
+        Ok(DirEntryRaw {
+            path: path.to_path_buf(),
+            ty: md.file_type(),
+            follow_link: false,
+            depth,
+            #[cfg(unix)]
+            ino: md.ino(),
+            #[cfg(windows)]
+            metadata: md,
+        })
+    }
+
     // Placeholder implementation to allow compiling on non-standard platforms
     // (e.g. wasm32).
     #[cfg(not(any(windows, unix)))]
@@ -1217,6 +1239,22 @@ impl Iterator for Walk {
             };
             match ev {
                 Err(err) => {
+                    // Like the parallel walker, don't report a symlink that
+                    // can't be followed if the ignore rules skip it. Root
+                    // paths are never skipped.
+                    if err.depth() > 0 && err.loop_ancestor().is_none() {
+                        let link = err.path().and_then(|path| {
+                            DirEntryRaw::from_symlink(err.depth(), path).ok()
+                        });
+                        if let Some(link) = link {
+                            let link = DirEntry::new_raw(link, None);
+                            if link.path_is_symlink()
+                                && should_skip_entry(&self.ig, &link)
+                            {
+                                continue;
+                            }
+                        }
+                    }
                     return Some(Err(Error::from_walkdir(err)));
                 }
                 Ok(WalkEvent::Exit) => {
@@ -1892,6 +1930,11 @@ impl<'s> Worker<'s> {
             dent = match DirEntryRaw::from_path(depth, path, true) {
                 Ok(dent) => DirEntry::new_raw(dent, None),
                 Err(err) => {
+                    // The link can't be followed, but if the ignore rules
+                    // match the link itself, it must not be reported.
+                    if should_skip_entry(ig, &dent) {
+                        return WalkState::Continue;
+                    }
                     return self.visitor.visit(Err(err));
                 }
             };
@@ -2806,5 +2849,89 @@ mod tests {
             }
             Box::new(|_| WalkState::Continue)
         });
+    }
+
+    /// Returns the number of errors yielded by the single threaded walker.
+    fn walk_error_count(builder: &WalkBuilder) -> usize {
+        builder.build().filter(|result| result.is_err()).count()
+    }
+
+    /// Returns the number of errors yielded by the parallel walker.
+    fn walk_error_count_parallel(builder: &WalkBuilder) -> usize {
+        let errors = Arc::new(Mutex::new(0));
+        builder.build_parallel().run(|| {
+            let errors = errors.clone();
+            Box::new(move |result| {
+                if result.is_err() {
+                    *errors.lock().unwrap() += 1;
+                }
+                WalkState::Continue
+            })
+        });
+        *errors.lock().unwrap()
+    }
+
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn ignored_broken_symlink_follow_links_no_error() {
+        let td = tmpdir();
+        wfile(td.path().join(".ignore"), "broken\n");
+        symlink(td.path().join("nowhere"), td.path().join("broken"));
+
+        let mut builder = WalkBuilder::new(td.path());
+        builder.follow_links(true);
+        assert_eq!(0, walk_error_count(&builder), "single threaded");
+        assert_eq!(0, walk_error_count_parallel(&builder), "parallel");
+        assert_paths(td.path(), &builder, &[]);
+    }
+
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn broken_symlink_follow_links_error() {
+        let td = tmpdir();
+        symlink(td.path().join("nowhere"), td.path().join("broken"));
+
+        let mut builder = WalkBuilder::new(td.path());
+        builder.follow_links(true);
+        assert_eq!(1, walk_error_count(&builder), "single threaded");
+        assert_eq!(1, walk_error_count_parallel(&builder), "parallel");
+    }
+
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn hidden_broken_symlink_follow_links_no_error() {
+        let td = tmpdir();
+        symlink(td.path().join("nowhere"), td.path().join(".hbroken"));
+
+        let mut builder = WalkBuilder::new(td.path());
+        builder.follow_links(true).hidden(true);
+        assert_eq!(0, walk_error_count(&builder), "single threaded");
+        assert_eq!(0, walk_error_count_parallel(&builder), "parallel");
+    }
+
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn hidden_broken_symlink_not_hidden_follow_links_error() {
+        let td = tmpdir();
+        symlink(td.path().join("nowhere"), td.path().join(".hbroken"));
+
+        let mut builder = WalkBuilder::new(td.path());
+        builder.follow_links(true).hidden(false);
+        assert_eq!(1, walk_error_count(&builder), "single threaded");
+        assert_eq!(1, walk_error_count_parallel(&builder), "parallel");
+    }
+
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn broken_symlink_root_follow_links_error() {
+        let td = tmpdir();
+        wfile(td.path().join(".ignore"), ".hbroken\n");
+        let root = td.path().join(".hbroken");
+        symlink(td.path().join("nowhere"), &root);
+
+        let mut builder = WalkBuilder::new(&root);
+        builder.follow_links(true);
+        assert_eq!(1, walk_error_count(&builder), "single threaded");
+        assert_eq!(1, walk_error_count_parallel(&builder), "parallel");
     }
 }

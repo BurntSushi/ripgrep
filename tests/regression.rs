@@ -1800,3 +1800,41 @@ rgtest!(r3593, |dir: Dir, mut cmd: TestCommand| {
             .stdout()
     );
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/2552
+#[cfg(unix)] // because symlinks on windows are weird
+rgtest!(
+    r2552_ignored_broken_symlink_follow,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create(".ignore", "broken\n");
+        dir.create("file", "");
+        dir.link_file("nowhere", "broken");
+
+        cmd.arg("-L").arg("--files");
+        cmd.assert_exit_code(0);
+        eqnice!("file\n", cmd.stdout());
+
+        let mut cmd = dir.command();
+        cmd.arg("-L").arg("--files").arg("-j1");
+        cmd.assert_exit_code(0);
+        eqnice!("file\n", cmd.stdout());
+    }
+);
+
+// See: https://github.com/BurntSushi/ripgrep/issues/2552
+#[cfg(unix)] // because symlinks on windows are weird
+rgtest!(r2552_broken_symlink_root_follow, |dir: Dir, mut cmd: TestCommand| {
+    dir.link_file("nowhere", ".hid");
+    dir.link_file("nowhere", "live");
+
+    cmd.arg("-L").arg("--files").arg(".hid");
+    cmd.assert_exit_code(2);
+
+    let mut cmd = dir.command();
+    cmd.arg("-L").arg("--files").arg("-j1").arg(".hid");
+    cmd.assert_exit_code(2);
+
+    let mut cmd = dir.command();
+    cmd.arg("-L").arg("--files");
+    cmd.assert_exit_code(2);
+});
