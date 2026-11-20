@@ -9,6 +9,15 @@ rustflags = ["-C", "target-feature=+crt-static"]
 [target.aarch64-pc-windows-msvc]
 rustflags = ["-C", "target-feature=+crt-static"]
 
+# On Windows MSVC, delay-load userenv.dll so that it, and the rpcrt4.dll and
+# ucrtbase.dll it pulls in, aren't loaded at startup. std only calls into it
+# from `std::env::home_dir` when USERPROFILE isn't set.
+[target.'cfg(all(target_os = "windows", target_env = "msvc"))']
+rustflags = [
+  "-C", "link-arg=/DELAYLOAD:userenv.dll",
+  "-C", "link-arg=delayimp.lib",
+]
+
 # Do the same for MUSL targets. At the time of writing (2023-10-23), this is
 # the default. But the plan is for the default to change to dynamic linking.
 # The whole point of MUSL with respect to ripgrep is to create a fully
