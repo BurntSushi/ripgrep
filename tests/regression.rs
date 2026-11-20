@@ -1204,6 +1204,31 @@ rgtest!(f1757, |dir: Dir, _: TestCommand| {
     eqnice!("./rust1/source.rs\n", dir.command().args(args).stdout());
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/1764
+rgtest!(r1764_glob_matches_cwd, |dir: Dir, _: TestCommand| {
+    dir.create_dir("to-be-ignored");
+    dir.create_dir("dir1");
+    dir.create("to-be-ignored/a", "");
+    dir.create("dir1/d", "");
+
+    let root = dir.path();
+    for cwd in ["to-be-ignored", "dir1", "."] {
+        for (glob, included) in
+            [("!to-be-ignored/", "dir1/d"), ("!dir1/", "to-be-ignored/a")]
+        {
+            let got = dir
+                .command()
+                .current_dir(cwd)
+                .args(&["--files", "-g", glob])
+                .arg(&root)
+                .stdout();
+            let expected = format!("{}/{}\n", root.display(), included)
+                .replace('\\', "/");
+            eqnice!(expected, got);
+        }
+    }
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/1765
 rgtest!(r1765, |dir: Dir, mut cmd: TestCommand| {
     dir.create("test", "\n");
