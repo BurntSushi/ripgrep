@@ -247,8 +247,9 @@ impl JSONBuilder {
 ///
 /// This message indicates that a match has been found. A match generally
 /// corresponds to a single line of text, although it may correspond to
-/// multiple lines if the search can emit matches over multiple lines. It
-/// has these fields:
+/// multiple lines if the search can emit matches over multiple lines.
+/// Adjacent matching lines are emitted separately unless a submatch spans
+/// their boundary. It has these fields:
 ///
 /// * **path** - An
 ///   [arbitrary data object](#object-arbitrary-data)
@@ -544,8 +545,7 @@ impl<W: io::Write> JSON<W> {
         }
     }
 
-    /// Write the given message followed by a new line. The new line is
-    /// determined from the configuration of the given searcher.
+    /// Write the given message followed by a new line.
     fn write_message(
         &mut self,
         message: &jsont::Message<'_>,
@@ -714,6 +714,50 @@ impl<'p, 's, M: Matcher, W: io::Write> JSONSink<'p, 's, M, W> {
         self.begin_printed = true;
         Ok(())
     }
+
+    /// Write one match message per group of lines connected by a submatch.
+    fn write_match_messages(&mut self, mat: &SinkMatch<'_>) -> io::Result<()> {
+        let mut submatches = SubMatches::new(
+            mat.bytes(),
+            &self.json.matches,
+            self.replacer.replacement(),
+        );
+        let mut remaining = submatches.as_mut_slice();
+        let mut submatch_end = 0;
+        let mut start = 0;
+        let mut end = 0;
+        let mut line_number = mat.line_number();
+        for (line_index, line) in mat.lines().enumerate() {
+            end += line.len();
+            while submatch_end < remaining.len()
+                && remaining[submatch_end].start < end
+            {
+                submatch_end += 1;
+            }
+            // Keep collecting lines while a submatch crosses this boundary.
+            if submatch_end > 0 && remaining[submatch_end - 1].end > end {
+                continue;
+            }
+            let (current, rest) = remaining.split_at_mut(submatch_end);
+            for m in current.iter_mut() {
+                m.start -= start;
+                m.end -= start;
+            }
+            let msg = jsont::Message::Match(jsont::Match {
+                path: self.path,
+                lines: &mat.bytes()[start..end],
+                line_number,
+                absolute_offset: mat.absolute_byte_offset() + start as u64,
+                submatches: current,
+            });
+            self.json.write_message(&msg)?;
+            remaining = rest;
+            submatch_end = 0;
+            start = end;
+            line_number = mat.line_number().map(|n| n + line_index as u64 + 1);
+        }
+        Ok(())
+    }
 }
 
 impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
@@ -736,19 +780,7 @@ impl<'p, 's, M: Matcher, W: io::Write> Sink for JSONSink<'p, 's, M, W> {
         self.stats.add_matches(self.json.matches.len() as u64);
         self.stats.add_matched_lines(mat.lines().count() as u64);
 
-        let submatches = SubMatches::new(
-            mat.bytes(),
-            &self.json.matches,
-            self.replacer.replacement(),
-        );
-        let msg = jsont::Message::Match(jsont::Match {
-            path: self.path,
-            lines: mat.bytes(),
-            line_number: mat.line_number(),
-            absolute_offset: mat.absolute_byte_offset(),
-            submatches: submatches.as_slice(),
-        });
-        self.json.write_message(&msg)?;
+        self.write_match_messages(mat)?;
         Ok(true)
     }
 
@@ -893,6 +925,15 @@ impl<'a> SubMatches<'a> {
             SubMatches::Empty => &[],
             SubMatches::Small(ref x) => x,
             SubMatches::Big(ref x) => x,
+        }
+    }
+
+    /// Return this set of match ranges as a mutable slice.
+    fn as_mut_slice(&mut self) -> &mut [jsont::SubMatch<'a>] {
+        match *self {
+            SubMatches::Empty => &mut [],
+            SubMatches::Small(ref mut x) => x,
+            SubMatches::Big(ref mut x) => x,
         }
     }
 }

@@ -152,6 +152,205 @@ fn json_decode(jsonlines: &str) -> Vec<Message> {
         .unwrap()
 }
 
+// See: https://github.com/BurntSushi/ripgrep/issues/1983
+rgtest!(r1983_multiline_adjacent_matches, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("test", ".a1\n.a2");
+    let msgs = json_decode(
+        &cmd.args(&["--json", "--multiline", r"\Wa", "test"]).stdout(),
+    );
+    assert_eq!(msgs.len(), 5);
+    for (index, text) in [".a1\n", ".a2"].into_iter().enumerate() {
+        assert_eq!(
+            msgs[index + 1].unwrap_match(),
+            Match {
+                path: Some(Data::text("test")),
+                lines: Data::text(text),
+                line_number: Some(index as u64 + 1),
+                absolute_offset: index as u64 * 4,
+                submatches: vec![SubMatch {
+                    m: Data::text(".a"),
+                    replacement: None,
+                    start: 0,
+                    end: 2,
+                }],
+            },
+        );
+    }
+    let stats = msgs[3].unwrap_end().stats;
+    assert_eq!(stats.matched_lines, 2);
+    assert_eq!(stats.matches, 2);
+    assert_eq!(stats.bytes_searched, 7);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3364
+rgtest!(r3364_multiline_adjacent_matches, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("test", "test test foobar test\ntest foobar test test\n");
+    let msgs = json_decode(
+        &cmd.args(&["--json", "--multiline", "foobar", "test"]).stdout(),
+    );
+    assert_eq!(msgs.len(), 5);
+    for (index, (text, start)) in
+        [("test test foobar test\n", 10), ("test foobar test test\n", 5)]
+            .into_iter()
+            .enumerate()
+    {
+        assert_eq!(
+            msgs[index + 1].unwrap_match(),
+            Match {
+                path: Some(Data::text("test")),
+                lines: Data::text(text),
+                line_number: Some(index as u64 + 1),
+                absolute_offset: index as u64 * 22,
+                submatches: vec![SubMatch {
+                    m: Data::text("foobar"),
+                    replacement: None,
+                    start,
+                    end: start + 6,
+                }],
+            },
+        );
+    }
+    let stats = msgs[3].unwrap_end().stats;
+    assert_eq!(stats.matched_lines, 2);
+    assert_eq!(stats.matches, 2);
+    assert_eq!(stats.bytes_searched, 44);
+});
+
+rgtest!(multiline_match_groups, |dir: Dir, _: TestCommand| {
+    dir.create("test", "pre\n.a1\n.b2 .a3\n.b4\n.c5\npost\n");
+    for replacement in [false, true] {
+        let mut cmd = dir.command();
+        cmd.args(&[
+            "--json",
+            "--multiline",
+            "-C1",
+            r"\.a[0-9]\n\.b[0-9]|\.c[0-9]",
+            "test",
+        ]);
+        if replacement {
+            cmd.args(&["--replace", "[$0]"]);
+        }
+        let msgs = json_decode(&cmd.stdout());
+        assert_eq!(msgs.len(), 7);
+        assert_eq!(msgs[1].unwrap_context().lines, Data::text("pre\n"));
+        assert_eq!(
+            msgs[2].unwrap_match(),
+            Match {
+                path: Some(Data::text("test")),
+                lines: Data::text(".a1\n.b2 .a3\n.b4\n"),
+                line_number: Some(2),
+                absolute_offset: 4,
+                submatches: vec![
+                    SubMatch {
+                        m: Data::text(".a1\n.b2"),
+                        replacement: replacement
+                            .then(|| Data::text("[.a1\n.b2]")),
+                        start: 0,
+                        end: 7,
+                    },
+                    SubMatch {
+                        m: Data::text(".a3\n.b4"),
+                        replacement: replacement
+                            .then(|| Data::text("[.a3\n.b4]")),
+                        start: 8,
+                        end: 15,
+                    },
+                ],
+            },
+        );
+        assert_eq!(
+            msgs[3].unwrap_match(),
+            Match {
+                path: Some(Data::text("test")),
+                lines: Data::text(".c5\n"),
+                line_number: Some(5),
+                absolute_offset: 20,
+                submatches: vec![SubMatch {
+                    m: Data::text(".c5"),
+                    replacement: replacement.then(|| Data::text("[.c5]")),
+                    start: 0,
+                    end: 3,
+                }],
+            },
+        );
+        assert_eq!(msgs[4].unwrap_context().lines, Data::text("post\n"));
+        let stats = msgs[5].unwrap_end().stats;
+        assert_eq!(stats.matched_lines, 4);
+        assert_eq!(stats.matches, 3);
+    }
+});
+
+rgtest!(multiline_line_terminators, |dir: Dir, _: TestCommand| {
+    for (terminator, flag) in [("\r\n", "--crlf"), ("\0", "--null-data")] {
+        let first = format!("α.a1 .a2{terminator}");
+        dir.create("test", &format!("{first}β.a3"));
+        let msgs = json_decode(
+            &dir.command()
+                .args(&["--json", "--multiline", flag, r"\Wa", "test"])
+                .stdout(),
+        );
+        assert_eq!(msgs.len(), 5);
+        assert_eq!(
+            msgs[1].unwrap_match(),
+            Match {
+                path: Some(Data::text("test")),
+                lines: Data::text(&first),
+                line_number: Some(1),
+                absolute_offset: 0,
+                submatches: [2, 6]
+                    .into_iter()
+                    .map(|start| SubMatch {
+                        m: Data::text(".a"),
+                        replacement: None,
+                        start,
+                        end: start + 2,
+                    })
+                    .collect(),
+            },
+        );
+        assert_eq!(
+            msgs[2].unwrap_match(),
+            Match {
+                path: Some(Data::text("test")),
+                lines: Data::text("β.a3"),
+                line_number: Some(2),
+                absolute_offset: first.len() as u64,
+                submatches: vec![SubMatch {
+                    m: Data::text(".a"),
+                    replacement: None,
+                    start: 2,
+                    end: 4,
+                }],
+            },
+        );
+    }
+});
+
+rgtest!(multiline_empty_matches, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("test", "a\nb");
+    let msgs = json_decode(
+        &cmd.args(&["--json", "--multiline", "^", "test"]).stdout(),
+    );
+    assert_eq!(msgs.len(), 5);
+    for (index, text) in ["a\n", "b"].into_iter().enumerate() {
+        assert_eq!(
+            msgs[index + 1].unwrap_match(),
+            Match {
+                path: Some(Data::text("test")),
+                lines: Data::text(text),
+                line_number: Some(index as u64 + 1),
+                absolute_offset: index as u64 * 2,
+                submatches: vec![SubMatch {
+                    m: Data::text(""),
+                    replacement: None,
+                    start: 0,
+                    end: 0,
+                }],
+            },
+        );
+    }
+});
+
 rgtest!(basic, |dir: Dir, mut cmd: TestCommand| {
     dir.create("sherlock", SHERLOCK);
     cmd.arg("--json").arg("-B1").arg("Sherlock Holmes").arg("sherlock");
@@ -399,26 +598,21 @@ rgtest!(r1095_missing_crlf, |dir: Dir, mut cmd: TestCommand| {
 //
 // This test checks that we don't return empty submatches when matching a `\n`
 // in CRLF mode.
-rgtest!(r1095_crlf_empty_match, |dir: Dir, mut cmd: TestCommand| {
+rgtest!(r1095_crlf_empty_match, |dir: Dir, _: TestCommand| {
     dir.create("foo", "test\r\n\n");
 
-    // Check without --crlf flag.
-    let msgs = json_decode(&cmd.arg("-U").arg("--json").arg("\n").stdout());
-    assert_eq!(msgs.len(), 4);
-
-    let m = msgs[1].unwrap_match();
-    assert_eq!(m.lines, Data::text("test\r\n\n"));
-    assert_eq!(m.submatches[0].m, Data::text("\n"));
-    assert_eq!(m.submatches[1].m, Data::text("\n"));
-
-    // Now check with --crlf flag.
-    let msgs = json_decode(&cmd.arg("--crlf").stdout());
-    assert_eq!(msgs.len(), 4);
-
-    let m = msgs[1].unwrap_match();
-    assert_eq!(m.lines, Data::text("test\r\n\n"));
-    assert_eq!(m.submatches[0].m, Data::text("\n"));
-    assert_eq!(m.submatches[1].m, Data::text("\n"));
+    for flag in ["--no-crlf", "--crlf"] {
+        let msgs = json_decode(
+            &dir.command().args(&["-U", "--json", "\n", flag]).stdout(),
+        );
+        assert_eq!(msgs.len(), 5);
+        for (index, text) in ["test\r\n", "\n"].into_iter().enumerate() {
+            let m = msgs[index + 1].unwrap_match();
+            assert_eq!(m.lines, Data::text(text));
+            assert_eq!(m.submatches.len(), 1);
+            assert_eq!(m.submatches[0].m, Data::text("\n"));
+        }
+    }
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/1412
