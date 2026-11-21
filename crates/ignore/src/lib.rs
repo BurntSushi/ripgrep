@@ -190,7 +190,7 @@ impl Error {
     /// following symbolic links.
     ///
     /// This method returns a borrowed value that is bound to the lifetime of the [`Error`]. To
-    /// obtain an owned value, [`Self::into_io_error`] can be used instead.
+    /// obtain an owned value, [`Error::into_io_error`] can be used instead.
     ///
     /// [`None`]: https://doc.rust-lang.org/stable/std/option/enum.Option.html#variant.None
     /// [`std::io::Error`]: https://doc.rust-lang.org/stable/std/io/struct.Error.html
