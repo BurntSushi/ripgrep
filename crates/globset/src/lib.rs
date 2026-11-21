@@ -81,7 +81,7 @@ Standard Unix-style glob syntax is supported:
   the pattern, then it matches zero or more directories. Using `**` anywhere
   else is illegal (N.B. the glob `**` is allowed and means "match everything").
 * `{a,b}` matches `a` or `b` where `a` and `b` are arbitrary glob patterns.
-  (N.B. Nesting `{...}` is not currently allowed.)
+  (N.B. Nesting `{...}` is allowed.)
 * `[ab]` matches `a` or `b` where `a` and `b` are characters. Use
   `[!ab]` to match any character except for `a` and `b`.
 * Metacharacters such as `*` and `?` can be escaped with character class
