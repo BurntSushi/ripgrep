@@ -895,32 +895,50 @@ impl HyperlinkPath {
     /// leaves them unencoded. On Windows, the UrlCreateFromPathW function does
     /// not encode non-ASCII characters. Doing so with UTF-8 encoded paths
     /// creates invalid file:// URLs on that platform.
+    ///
+    /// Bytes that are not part of valid UTF-8 are always percent-encoded,
+    /// since they can't appear in a URI as is.
     fn encode(input: &[u8]) -> HyperlinkPath {
+        fn percent_encode(byte: u8, result: &mut Vec<u8>) {
+            const HEX: &[u8] = b"0123456789ABCDEF";
+            result.push(b'%');
+            result.push(HEX[(byte >> 4) as usize]);
+            result.push(HEX[(byte & 0xF) as usize]);
+        }
+
         let mut result = Vec::with_capacity(input.len());
-        for &byte in input.iter() {
-            match byte {
-                b'0'..=b'9'
-                | b'A'..=b'Z'
-                | b'a'..=b'z'
-                | b'/'
-                | b':'
-                | b'-'
-                | b'.'
-                | b'_'
-                | b'~'
-                | 128.. => {
-                    result.push(byte);
+        for chunk in input.utf8_chunks() {
+            let valid = chunk.valid().as_bytes();
+            for (i, &byte) in valid.iter().enumerate() {
+                // U+0080..=U+009F are C1 controls that could end the link.
+                let c1 = match byte {
+                    0xC2 => valid.get(i + 1).is_some_and(|&b| b <= 0x9F),
+                    0x80..=0x9F => i > 0 && valid[i - 1] == 0xC2,
+                    _ => false,
+                };
+                match byte {
+                    _ if c1 => percent_encode(byte, &mut result),
+                    b'0'..=b'9'
+                    | b'A'..=b'Z'
+                    | b'a'..=b'z'
+                    | b'/'
+                    | b':'
+                    | b'-'
+                    | b'.'
+                    | b'_'
+                    | b'~'
+                    | 128.. => {
+                        result.push(byte);
+                    }
+                    #[cfg(windows)]
+                    b'\\' => {
+                        result.push(b'/');
+                    }
+                    _ => percent_encode(byte, &mut result),
                 }
-                #[cfg(windows)]
-                b'\\' => {
-                    result.push(b'/');
-                }
-                _ => {
-                    const HEX: &[u8] = b"0123456789ABCDEF";
-                    result.push(b'%');
-                    result.push(HEX[(byte >> 4) as usize]);
-                    result.push(HEX[(byte & 0xF) as usize]);
-                }
+            }
+            for &byte in chunk.invalid().iter() {
+                percent_encode(byte, &mut result);
             }
         }
         HyperlinkPath(result)
@@ -1119,6 +1137,28 @@ mod tests {
             convert(r"\\?\UNC\server\dir\file.txt"),
             "//server/dir/file.txt"
         );
+    }
+
+    #[test]
+    fn encode_invalid_utf8() {
+        let encode = |path: &[u8]| HyperlinkPath::encode(path).0;
+
+        assert_eq!(encode(b"/tmp/bad\xFF.txt"), b"/tmp/bad%FF.txt");
+        assert_eq!(encode(b"/tmp/\x80"), b"/tmp/%80");
+        assert_eq!(encode(b"/tmp/\xE2\x82/a"), b"/tmp/%E2%82/a");
+        assert_eq!(encode(b"/tmp/caf\xC3\xA9 x"), b"/tmp/caf\xC3\xA9%20x");
+        assert_eq!(encode(b"/tmp/\xC3\xA9\xFF"), b"/tmp/\xC3\xA9%FF");
+    }
+
+    #[test]
+    fn encode_c1() {
+        let encode = |path: &[u8]| HyperlinkPath::encode(path).0;
+
+        assert_eq!(
+            encode("/tmp/a\u{9c}\u{9b}2J".as_bytes()),
+            b"/tmp/a%C2%9C%C2%9B2J"
+        );
+        assert_eq!(encode("/tmp/é€".as_bytes()), "/tmp/é€".as_bytes());
     }
 
     #[test]

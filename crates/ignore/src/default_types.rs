@@ -191,9 +191,10 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["motoko"], &["*.mo"]),
     (&["msbuild"], &[
         "*.csproj", "*.fsproj", "*.vcxproj", "*.proj", "*.props", "*.targets",
-        "*.sln", "*.slnf"
+        "*.sln", "*.slnf", "*.slnx"
     ]),
     (&["nim"], &["*.nim", "*.nimf", "*.nimble", "*.nims"]),
+    (&["ninja"], &["*.ninja"]),
     (&["nix"], &["*.nix"]),
     (&["objc"], &["*.h", "*.m"]),
     (&["objcpp"], &["*.h", "*.mm"]),
@@ -233,6 +234,7 @@ pub(crate) const DEFAULT_TYPES: &[(&[&str], &[&str])] = &[
     (&["readme"], &["README*", "*README"]),
     (&["reasonml"], &["*.re", "*.rei"]),
     (&["red"], &["*.r", "*.red", "*.reds"]),
+    (&["rego"], &["*.rego"]),
     (&["rescript"], &["*.res", "*.resi"]),
     (&["robot"], &["*.robot"]),
     (&["rocq"], &["*.v"]),

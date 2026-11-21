@@ -9,7 +9,7 @@ the `git` command line tool.
 
 use std::{
     fs::File,
-    io::{BufRead, BufReader, Read},
+    io::{BufRead, BufReader, ErrorKind, Read},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -149,9 +149,15 @@ impl Gitignore {
     ///
     /// Its path is empty.
     pub fn empty() -> Gitignore {
+        Gitignore::empty_with_root(PathBuf::from(""))
+    }
+
+    /// Creates a new empty gitignore matcher with the given root that never
+    /// matches anything.
+    fn empty_with_root(root: PathBuf) -> Gitignore {
         Gitignore {
             set: GlobSet::empty(),
-            root: PathBuf::from(""),
+            root,
             globs: vec![],
             num_ignores: 0,
             num_whitelists: 0,
@@ -207,7 +213,13 @@ impl Gitignore {
         if self.is_empty() {
             return Match::None;
         }
-        self.matched_stripped(self.strip(path.as_ref()), is_dir)
+        let path = path.as_ref();
+        let stripped = self.strip(path);
+        // Keep the directory name when stripping would consume the entire
+        // path. Otherwise an unanchored glob cannot match the root itself.
+        let candidate =
+            if stripped.as_os_str().is_empty() { path } else { stripped };
+        self.matched_stripped(candidate, is_dir)
     }
 
     /// Returns whether the given path (file or directory, and expected to be
@@ -217,6 +229,12 @@ impl Gitignore {
     /// NOTE: This method is more expensive than walking the directory hierarchy
     /// top-to-bottom and matching the entries. But, is easier to use in cases
     /// when a list of paths are available without a hierarchy.
+    ///
+    /// NOTE: Unlike `git check-ignore`, a whitelist (negation) match on the
+    /// path itself is returned immediately, even when an ancestor directory is
+    /// ignored by the same matcher. Git never re-includes a path under an
+    /// excluded directory that way, so callers that need git's directory-skip
+    /// semantics should walk top-to-bottom instead of relying on this method.
     ///
     /// `is_dir` should be true if the path refers to a directory and false
     /// otherwise.
@@ -347,6 +365,9 @@ impl GitignoreBuilder {
     ///
     /// Once a matcher is built, no new globs can be added to it.
     pub fn build(&self) -> Result<Gitignore, Error> {
+        if self.globs.is_empty() {
+            return Ok(Gitignore::empty_with_root(self.root.clone()));
+        }
         let nignore = self.globs.iter().filter(|g| !g.is_whitelist()).count();
         let nwhite = self.globs.iter().filter(|g| g.is_whitelist()).count();
         let set = self
@@ -416,7 +437,11 @@ impl GitignoreBuilder {
             let line = match line {
                 Ok(line) => line,
                 Err(err) => {
+                    let kind = err.kind();
                     errs.push(Error::Io(err).tagged(path, lineno));
+                    if kind == ErrorKind::InvalidData {
+                        continue;
+                    }
                     break;
                 }
             };
@@ -693,13 +718,22 @@ fn parse_excludes_file(data: &[u8]) -> Option<PathBuf> {
     std::str::from_utf8(candidate).ok().map(|s| PathBuf::from(expand_tilde(s)))
 }
 
-/// Expands ~ in file paths to the value of $HOME.
+/// Expands a leading ~ in file paths to the value of $HOME.
+///
+/// Like git, only a ~ at the start of the path is expanded, so paths like
+/// `C:/PROGRA~1/foo` are kept as is. The `~user` form is not supported.
 fn expand_tilde(path: &str) -> String {
+    let Some(rest) = path.strip_prefix('~') else {
+        return path.to_string();
+    };
+    if !rest.is_empty() && !rest.starts_with(std::path::is_separator) {
+        return path.to_string();
+    }
     let home = match home_dir() {
         None => return path.to_string(),
         Some(home) => home.to_string_lossy().into_owned(),
     };
-    path.replace("~", &home)
+    format!("{home}{rest}")
 }
 
 /// Returns the location of the user's home directory.
@@ -712,14 +746,35 @@ fn home_dir() -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use std::{io::ErrorKind, path::Path};
 
     use super::{Gitignore, GitignoreBuilder};
+    use crate::tests::TempDir;
 
     fn gi_from_str<P: AsRef<Path>>(root: P, s: &str) -> Gitignore {
         let mut builder = GitignoreBuilder::new(root);
         builder.add_str(None, s).unwrap();
         builder.build().unwrap()
+    }
+
+    #[test]
+    fn invalid_utf8_preserves_later_patterns() {
+        let td = TempDir::new().unwrap();
+        let path = td.path().join(".gitignore");
+        std::fs::write(
+            &path,
+            b"\xef\xbb\xbfbefore\r\n\xff\xfe\r\nafter\r\nspace\\ \r\nlast",
+        )
+        .unwrap();
+        let mut builder = GitignoreBuilder::new(td.path());
+        let err = builder.add(&path).unwrap();
+        assert!(err.to_string().contains("line 2"));
+        assert_eq!(err.io_error().unwrap().kind(), ErrorKind::InvalidData);
+        let gi = builder.build().unwrap();
+        assert!(gi.matched("before", false).is_ignore());
+        assert!(gi.matched("after", false).is_ignore());
+        assert!(gi.matched("space ", false).is_ignore());
+        assert!(gi.matched("last", false).is_ignore());
     }
 
     macro_rules! ignored {
@@ -749,6 +804,25 @@ mod tests {
     }
 
     const ROOT: &'static str = "/home/foobar/rust/rg";
+
+    // See: https://github.com/BurntSushi/ripgrep/issues/1764
+    #[test]
+    fn root_directory() {
+        for root in ["/home/andrew/foo", "src/foo", "./src/foo"] {
+            let gi = gi_from_str(root, "foo/");
+            assert!(gi.matched(root, true).is_ignore());
+            assert!(gi.matched(root, false).is_none());
+            assert!(gi.matched(format!("{root}/foo"), true).is_ignore());
+
+            // Parent matching only considers paths below the root. The root
+            // itself must still strip to an empty path without panicking.
+            assert!(gi.matched_path_or_any_parents(root, true).is_none());
+
+            let gi = gi_from_str(root, "/foo/");
+            assert!(gi.matched(root, true).is_none());
+            assert!(gi.matched(format!("{root}/foo"), true).is_ignore());
+        }
+    }
 
     ignored!(ig1, ROOT, "months", "months");
     ignored!(ig2, ROOT, "*.lock", "Cargo.lock");
@@ -829,6 +903,23 @@ mod tests {
     ignored!(ig_bare_negation_cancels_ignore, ROOT, "*.tmp\n!", "a/x.tmp");
     ignored!(ig_ignore_after_bare_negation, ROOT, "!\n*.tmp", "a/x.tmp");
     not_ignored!(ig_bare_negation_only, ROOT, "!", "a/x.tmp");
+  
+    #[test]
+    fn test_issue_2745() {
+        let gi = GitignoreBuilder::new(ROOT)
+            .add_str(None, r#"*[\<\>\:\"\/\\\|\?\*]*"#)
+            .unwrap()
+            .build()
+            .unwrap();
+        assert!(
+            !gi.matched("folder/bar.txt", false).is_ignore(),
+            "folder/bar.txt should not be ignored"
+        );
+        assert!(
+            !gi.matched("foo.txt", false).is_ignore(),
+            "foo.txt should not be ignored"
+        );
+    }
 
     fn bytes(s: &str) -> Vec<u8> {
         s.to_string().into_bytes()
@@ -874,6 +965,42 @@ mod tests {
         assert!(super::parse_excludes_file(&data).is_none());
     }
 
+    #[test]
+    fn parse_excludes_file6() {
+        let data = bytes("[core]\nexcludesFile = C:/Users/RUNNER~1/foo/bar");
+        let got = super::parse_excludes_file(&data).unwrap();
+        assert_eq!(path_string(got), "C:/Users/RUNNER~1/foo/bar");
+    }
+
+    #[test]
+    fn expand_tilde_leading() {
+        let Some(home) = super::home_dir() else { return };
+        let home = home.to_str().unwrap();
+        assert_eq!(super::expand_tilde("~"), home);
+        assert_eq!(
+            super::expand_tilde("~/foo/bar"),
+            format!("{home}/foo/bar")
+        );
+        #[cfg(windows)]
+        assert_eq!(super::expand_tilde(r"~\foo"), format!(r"{home}\foo"));
+        #[cfg(not(windows))]
+        assert_eq!(super::expand_tilde(r"~\foo"), r"~\foo");
+    }
+
+    #[test]
+    fn expand_tilde_not_leading() {
+        for path in [
+            "/foo/bar",
+            "/foo~/bar",
+            "/foo/~/bar",
+            "C:/PROGRA~1/foo",
+            // %TEMP% on GitHub Actions Windows runners, as an 8.3 short name:
+            "C:/Users/RUNNER~1/AppData/Local/Temp/foo",
+        ] {
+            assert_eq!(super::expand_tilde(path), path);
+        }
+    }
+
     // See: https://github.com/BurntSushi/ripgrep/issues/106
     #[test]
     fn regression_106() {
@@ -899,4 +1026,20 @@ mod tests {
     not_ignored!(cs2, ROOT, "*.html", "foo.HTML");
     not_ignored!(cs3, ROOT, "*.html", "foo.htm");
     not_ignored!(cs4, ROOT, "*.html", "foo.HTM");
+
+    // An empty builder must still retain the root it was created with.
+    // Callers that build a matcher per directory use `path()` to walk
+    // relative to it, so dropping the root breaks them.
+    //
+    // See: https://github.com/BurntSushi/ripgrep/issues/3584
+    #[test]
+    fn empty_builder_preserves_root() {
+        let gi = GitignoreBuilder::new(ROOT).build().unwrap();
+        assert_eq!(gi.path(), Path::new(ROOT));
+        assert!(gi.is_empty());
+        assert_eq!(0, gi.len());
+        assert_eq!(0, gi.num_ignores());
+        assert_eq!(0, gi.num_whitelists());
+        assert!(!gi.matched("anything", false).is_ignore());
+    }
 }

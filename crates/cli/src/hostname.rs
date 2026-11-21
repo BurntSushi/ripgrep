@@ -47,11 +47,12 @@ fn gethostname() -> io::Result<OsString> {
         // could do it ourselves, but it just doesn't seem worth doing?)
         return Err(io::Error::last_os_error());
     }
-    let Ok(maxlen) = usize::try_from(limit) else {
+    let Ok(mut maxlen) = usize::try_from(limit) else {
         let msg = format!("host name max limit ({}) overflowed usize", limit);
         return Err(io::Error::new(io::ErrorKind::Other, msg));
     };
-    // maxlen here includes the NUL terminator.
+    // HOST_NAME_MAX does not include the NUL terminator.
+    maxlen += 1;
     let mut buf = vec![0; maxlen];
     // SAFETY: The pointer we give is valid as it is derived directly from a
     // Vec. Similarly, `maxlen` is the length of our Vec, and is thus valid

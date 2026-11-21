@@ -6,7 +6,6 @@ description = """
 A trait for regular expressions, with a focus on line oriented search.
 """
 documentation = "https://docs.rs/grep-matcher"
-homepage = "https://github.com/BurntSushi/ripgrep/tree/master/crates/matcher"
 repository = "https://github.com/BurntSushi/ripgrep/tree/master/crates/matcher"
 readme = "README.md"
 keywords = ["regex", "pattern", "trait"]

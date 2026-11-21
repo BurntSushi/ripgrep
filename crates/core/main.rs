@@ -13,7 +13,6 @@ mod messages;
 
 mod flags;
 mod haystack;
-mod index;
 mod logger;
 mod search;
 
@@ -85,13 +84,8 @@ fn run(result: crate::flags::ParseResult<HiArgs>) -> anyhow::Result<ExitCode> {
     };
     let matched = match args.mode() {
         Mode::Search(_) if !args.matches_possible() => false,
-        Mode::Search(mode) if args.index() > 0 => index::read(&args, mode)?,
         Mode::Search(mode) if args.threads() == 1 => search(&args, mode)?,
         Mode::Search(mode) => search_parallel(&args, mode)?,
-        Mode::Index(_) => {
-            index::write(&args)?;
-            return Ok(ExitCode::from(0));
-        }
         Mode::Files if args.threads() == 1 => files(&args)?,
         Mode::Files => files_parallel(&args)?,
         Mode::Types => return types(&args),
@@ -134,7 +128,11 @@ fn search(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
             // A broken pipe means graceful termination.
             Err(err) if err.kind() == std::io::ErrorKind::BrokenPipe => break,
             Err(err) => {
-                err_message!("{}: {}", haystack.path().display(), err);
+                err_message!(
+                    "{}: {}",
+                    messages::stderr_path(haystack.path()).display(),
+                    err
+                );
                 continue;
             }
         };
@@ -193,19 +191,23 @@ fn search_parallel(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
             };
             searched.store(true, Ordering::SeqCst);
             searcher.printer().get_mut().clear();
-            let search_result = match searcher.search(&haystack) {
-                Ok(search_result) => search_result,
-                Err(err) => {
-                    err_message!("{}: {}", haystack.path().display(), err);
-                    return WalkState::Continue;
+            match searcher.search(&haystack) {
+                Ok(search_result) => {
+                    if search_result.has_match() {
+                        matched.store(true, Ordering::SeqCst);
+                    }
+                    if let Some(ref locked_stats) = *stats {
+                        let mut stats = locked_stats.lock().unwrap();
+                        *stats += search_result.stats().unwrap();
+                    }
                 }
-            };
-            if search_result.has_match() {
-                matched.store(true, Ordering::SeqCst);
-            }
-            if let Some(ref locked_stats) = *stats {
-                let mut stats = locked_stats.lock().unwrap();
-                *stats += search_result.stats().unwrap();
+                Err(err) => {
+                    err_message!(
+                        "{}: {}",
+                        messages::stderr_path(haystack.path()).display(),
+                        err
+                    );
+                }
             }
             if let Err(err) = bufwtr.print(searcher.printer().get_mut()) {
                 // A broken pipe means graceful termination.
@@ -213,7 +215,11 @@ fn search_parallel(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
                     return WalkState::Quit;
                 }
                 // Otherwise, we continue on our merry way.
-                err_message!("{}: {}", haystack.path().display(), err);
+                err_message!(
+                    "{}: {}",
+                    messages::stderr_path(haystack.path()).display(),
+                    err
+                );
             }
             if matched.load(Ordering::SeqCst) && args.quit_after_match() {
                 WalkState::Quit

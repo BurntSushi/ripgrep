@@ -6,7 +6,6 @@ description = """
 Use PCRE2 with the 'grep' crate.
 """
 documentation = "https://docs.rs/grep-pcre2"
-homepage = "https://github.com/BurntSushi/ripgrep/tree/master/crates/pcre2"
 repository = "https://github.com/BurntSushi/ripgrep/tree/master/crates/pcre2"
 readme = "README.md"
 keywords = ["regex", "grep", "pcre", "backreference", "look"]
