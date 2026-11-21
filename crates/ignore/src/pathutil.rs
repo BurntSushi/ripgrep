@@ -103,11 +103,14 @@ pub(crate) fn strip_prefix<'a, P: AsRef<Path> + ?Sized>(
 
         let prefix = prefix.as_os_str().as_bytes();
         let path = path.as_os_str().as_bytes();
-        if prefix.len() > path.len() || prefix != &path[0..prefix.len()] {
-            None
-        } else {
-            Some(&Path::new(OsStr::from_bytes(&path[prefix.len()..])))
+        let rest = path.strip_prefix(prefix)?;
+        // Don't strip a partial component, e.g., "/foo" from "/foobar".
+        if prefix.last().is_some_and(|&b| b != b'/')
+            && rest.first().is_some_and(|&b| b != b'/')
+        {
+            return None;
         }
+        Some(Path::new(OsStr::from_bytes(rest)))
     }
 
     #[cfg(not(unix))]
@@ -151,15 +154,15 @@ pub(crate) fn file_name<'a, P: AsRef<Path> + ?Sized>(
         let path = path.as_os_str().as_bytes();
         if path.is_empty() {
             return None;
-        } else if path.len() == 1 && path[0] == b'.' {
-            return None;
-        } else if path.last() == Some(&b'.') {
-            return None;
-        } else if path.len() >= 2 && &path[path.len() - 2..] == &b".."[..] {
-            return None;
         }
         let last_slash = memrchr(b'/', path).map(|i| i + 1).unwrap_or(0);
-        Some(OsStr::from_bytes(&path[last_slash..]))
+        let name = &path[last_slash..];
+        // Only a final component that is exactly `.` or `..` has no file
+        // name. A real name that merely ends in a `.`, like `.foo.`, does.
+        if name == b"." || name == b".." {
+            return None;
+        }
+        Some(OsStr::from_bytes(name))
     }
 
     #[cfg(not(unix))]
@@ -168,4 +171,70 @@ pub(crate) fn file_name<'a, P: AsRef<Path> + ?Sized>(
     }
 
     imp(path.as_ref())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ffi::OsStr;
+    use std::path::Path;
+
+    use super::{file_name, is_hidden_path, strip_prefix};
+
+    #[cfg(unix)]
+    #[test]
+    fn strip_prefix_component_boundary() {
+        for (prefix, path, expected) in [
+            ("/home/foo", "/home/foobar", None),
+            ("/home/foo", "/home/foo/bar", Some("/bar")),
+            ("/home/foo", "/home/foo", Some("")),
+            ("/", "/home/foo", Some("home/foo")),
+            ("/home/foo/", "/home/foo/bar", Some("bar")),
+            ("", "foo/bar", Some("foo/bar")),
+        ] {
+            assert_eq!(
+                strip_prefix(prefix, Path::new(path)),
+                expected.map(Path::new),
+                "prefix={prefix:?}, path={path:?}",
+            );
+        }
+    }
+
+    #[test]
+    fn file_name_basic() {
+        assert_eq!(file_name("a"), Some(OsStr::new("a")));
+        assert_eq!(file_name("a/b"), Some(OsStr::new("b")));
+        assert_eq!(file_name("/a/b.txt"), Some(OsStr::new("b.txt")));
+    }
+
+    // On Windows, `file_name` defers to `std`, which normalizes a trailing
+    // `.` component away, so these only apply to the Unix implementation.
+    #[cfg(unix)]
+    #[test]
+    fn file_name_dot_components() {
+        assert_eq!(file_name(""), None);
+        assert_eq!(file_name("."), None);
+        assert_eq!(file_name(".."), None);
+        assert_eq!(file_name("a/."), None);
+        assert_eq!(file_name("a/.."), None);
+        assert_eq!(file_name("/a/b/.."), None);
+    }
+
+    #[test]
+    fn file_name_trailing_dot() {
+        assert_eq!(file_name("a."), Some(OsStr::new("a.")));
+        assert_eq!(file_name("a/.b."), Some(OsStr::new(".b.")));
+        assert_eq!(file_name("a/..."), Some(OsStr::new("...")));
+        assert_eq!(file_name("a/..b.."), Some(OsStr::new("..b..")));
+    }
+
+    #[test]
+    fn hidden_trailing_dot() {
+        assert!(is_hidden_path(Path::new(".foo")));
+        assert!(is_hidden_path(Path::new("a/.foo.")));
+        assert!(is_hidden_path(Path::new("a/.foo..")));
+        assert!(is_hidden_path(Path::new("a/...")));
+        assert!(!is_hidden_path(Path::new("a/foo.")));
+        assert!(!is_hidden_path(Path::new("a/.")));
+        assert!(!is_hidden_path(Path::new("a/..")));
+    }
 }

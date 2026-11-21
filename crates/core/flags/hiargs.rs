@@ -61,7 +61,6 @@ pub(crate) struct HiArgs {
     ignore_file_case_insensitive: bool,
     ignore_file: Vec<PathBuf>,
     include_zero: bool,
-    index: usize,
     invert_match: bool,
     is_terminal_stdout: bool,
     line_number: bool,
@@ -121,15 +120,6 @@ impl HiArgs {
         // `low.sort = None` if `supported()` returns an error.
         if let Some(ref sort) = low.sort {
             sort.supported()?;
-        }
-        // We aggressively ban things from indexing at present.
-        if (low.index > 0 || matches!(low.mode, Mode::Index(_)))
-            && let Some(flag) = low.indexing_unsupported_flag()
-        {
-            anyhow::bail!(
-                "flag --{} does not support indexing",
-                flag.name_long()
-            );
         }
 
         // We modify the mode in-place on `low` so that subsequent conversions
@@ -288,7 +278,6 @@ impl HiArgs {
             ignore_file: low.ignore_file,
             ignore_file_case_insensitive: low.ignore_file_case_insensitive,
             include_zero: low.include_zero,
-            index: low.index,
             invert_match: low.invert_match,
             is_terminal_stdout: state.is_terminal_stdout,
             line_number,
@@ -559,6 +548,7 @@ impl HiArgs {
         let mut builder = grep::printer::PathPrinterBuilder::new();
         builder
             .color_specs(self.colors.clone())
+            .escape(self.is_terminal_stdout)
             .hyperlink(self.hyperlink_config.clone())
             .separator(self.path_separator.clone())
             .terminator(self.path_terminator.unwrap_or(b'\n'));
@@ -625,6 +615,7 @@ impl HiArgs {
             .byte_offset(self.byte_offset)
             .color_specs(self.colors.clone())
             .column(self.column)
+            .escape_path(self.is_terminal_stdout)
             .heading(self.heading)
             .hyperlink(self.hyperlink_config.clone())
             .max_columns_preview(self.max_columns_preview)
@@ -665,6 +656,7 @@ impl HiArgs {
     ) -> grep::printer::Summary<W> {
         grep::printer::SummaryBuilder::new()
             .color_specs(self.colors.clone())
+            .escape_path(self.is_terminal_stdout)
             .exclude_zero(!self.include_zero)
             .hyperlink(self.hyperlink_config.clone())
             .kind(kind)
@@ -890,7 +882,7 @@ impl HiArgs {
         if !self.no_ignore_files {
             for path in self.ignore_file.iter() {
                 if let Some(err) = builder.add_ignore(path) {
-                    ignore_message!("{err}");
+                    ignore_message!("{}", crate::messages::stderr_error(err));
                 }
             }
         }
@@ -926,31 +918,6 @@ impl HiArgs {
             }
         }
         Ok(builder)
-    }
-
-    pub(crate) fn index(&self) -> usize {
-        self.index
-    }
-
-    #[cfg(feature = "unstable-index")]
-    pub(crate) fn index_write(&self) -> anyhow::Result<grep_index::Index> {
-        let index = grep_index::IndexDiscovery::new()
-            .create(true)
-            .discover()?
-            .ok_or_else(|| {
-                anyhow::anyhow!(
-                    "failed to find a place to create/update an index"
-                )
-            })?;
-        Ok(index)
-    }
-
-    #[cfg(feature = "unstable-index")]
-    pub(crate) fn index_read(&self) -> anyhow::Result<grep_index::Index> {
-        let index = grep_index::IndexDiscovery::new().discover()?.ok_or_else(
-            || anyhow::anyhow!("failed to find an index to read"),
-        )?;
-        Ok(index)
     }
 }
 

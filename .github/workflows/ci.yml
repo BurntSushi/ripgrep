@@ -117,12 +117,22 @@ jobs:
           rust: nightly
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Install packages (Ubuntu)
       if: matrix.os == 'ubuntu-latest'
       run: |
         ci/ubuntu-install-packages
+
+    # Docker 29.4.2 on Ubuntu 26.04 blocks socketcall, which cross's
+    # 32-bit glibc needs for process spawning. Fixed in Docker 29.4.3.
+    # https://github.com/actions/runner-images/issues/14790
+    - name: Update Docker (32-bit Linux)
+      if: matrix.target == 'i686-unknown-linux-gnu'
+      uses: docker/setup-docker-action@v5
+      with:
+        version: latest
+        set-host: true
 
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
@@ -171,9 +181,6 @@ jobs:
         fi
         set -x
 
-    - name: Run tests with indexing enabled
-      run: ${{ env.CARGO }} test --verbose --workspace --features unstable-index ${{ env.TARGET_FLAGS }}
-
     - name: Run tests with PCRE2 (sans cross)
       if: matrix.target == ''
       run: ${{ env.CARGO }} test --verbose --workspace --features pcre2 ${{ env.TARGET_FLAGS }}
@@ -208,7 +215,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
       with:
@@ -222,7 +229,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
       with:
@@ -235,7 +242,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
@@ -245,12 +252,25 @@ jobs:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc --no-deps --document-private-items --workspace
 
+  benches:
+    name: Test benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+      - name: Test ignore benchmarks
+        run: cargo +nightly test -p ignore --benches
+
   fuzz_testing:
     name: Compile Fuzz Test Targets
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install required packages (Ubuntu)
         run: |

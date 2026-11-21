@@ -295,23 +295,21 @@ shell from expanding the `*`.
 If we wanted, we could tell ripgrep to search anything *but* `*.toml` files:
 
 ```
-$ rg lexopt -g '!*.toml'
-[lots of results]
+$ rg lexopt -G '*.toml'
+[Results from files except for `*.toml`]
 ```
 
 This will give you a lot of results again as above, but they won't include
-files ending with `.toml`. Note that the use of a `!` here to mean "negation"
-is a bit non-standard, but it was chosen to be consistent with how globs in
-`.gitignore` files are written. (Although, the meaning is reversed. In
-`.gitignore` files, a `!` prefix means whitelist, and on the command line, a
-`!` means blacklist.)
+files ending with `.toml`. (Note that `-g '!*.toml'` accomplishes the same
+task, but is typically more annoying to use in a shell because it requires
+quoting.)
 
 Globs are interpreted in exactly the same way as `.gitignore` patterns. That
 is, later globs will override earlier globs. For example, the following command
 will search only `*.toml` files:
 
 ```
-$ rg lexopt -g '!*.toml' -g '*.toml'
+$ rg lexopt -G '*.toml' -g '*.toml'
 ```
 
 Interestingly, reversing the order of the globs in this case will match

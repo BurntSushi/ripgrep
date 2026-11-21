@@ -121,6 +121,7 @@ _rg() {
 
     + glob
     '*'{-g+,--glob=}'[include/exclude files matching specified glob]:glob pattern:_files'
+    '*'{-G+,--glob-not=}'[exclude files matching specified glob]:glob pattern:_files'
     '*--iglob=[include/exclude files matching specified case-insensitive glob]:glob pattern:_files'
 
     + '(glob-case-insensitive)'
@@ -316,8 +317,8 @@ _rg() {
     ))'
     '*--colors=[specify color and style settings]: :_rg_color_specs'
     '--debug[show debug messages]'
-    '--field-context-separator[set string to delimit fields in context lines]'
-    '--field-match-separator[set string to delimit fields in matching lines]'
+    '--field-context-separator=[set string to delimit fields in context lines]:separator'
+    '--field-match-separator=[set string to delimit fields in matching lines]:separator'
     '--generate=[generate specified data (e.g. man page or completion script)]:data to generate:((
       man\:"man page"
       complete-bash\:"shell completions for bash"
@@ -380,7 +381,7 @@ _rg_color_specs() {
 
   elif compset -P '[^:]##:style:'; then
     _describe -t $tag 'style name' '(
-      {,no}bold {,no}intense {,no}underline
+      {,no}bold {,no}intense {,no}underline {,no}italic
     )'
 
   elif compset -P '[^:]##:'; then

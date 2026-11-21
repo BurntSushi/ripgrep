@@ -421,6 +421,28 @@ impl DirEntryRaw {
         })
     }
 
+    /// Builds an entry for `path` without following it if it is a symlink.
+    ///
+    /// Unlike `from_path`, this succeeds for a symlink whose target doesn't
+    /// exist.
+    fn from_symlink(depth: usize, path: &Path) -> Result<DirEntryRaw, Error> {
+        #[cfg(unix)]
+        use std::os::unix::fs::MetadataExt;
+
+        let md = fs::symlink_metadata(path)
+            .map_err(|err| Error::Io(err).with_depth(depth).with_path(path))?;
+        Ok(DirEntryRaw {
+            path: path.to_path_buf(),
+            ty: md.file_type(),
+            follow_link: false,
+            depth,
+            #[cfg(unix)]
+            ino: md.ino(),
+            #[cfg(windows)]
+            metadata: md,
+        })
+    }
+
     // Placeholder implementation to allow compiling on non-standard platforms
     // (e.g. wasm32).
     #[cfg(not(any(windows, unix)))]
@@ -755,6 +777,10 @@ impl WalkBuilder {
     /// Whether to follow symbolic links or not.
     pub fn follow_links(&mut self, yes: bool) -> &mut WalkBuilder {
         self.follow_links = yes;
+        // Loop detection needs the ancestors of the root, which is the same
+        // chain `add_parents` builds. Keep it alive even with ignore files
+        // disabled.
+        self.ig_builder.follow_links(yes);
         self
     }
 
@@ -1168,11 +1194,13 @@ impl Walk {
             }
         }
         if self.max_filesize.is_some() && !ent.is_dir() {
-            return Ok(skip_filesize(
+            if skip_filesize(
                 self.max_filesize.unwrap(),
                 ent.path(),
                 &ent.metadata().ok(),
-            ));
+            ) {
+                return Ok(true);
+            }
         }
         if let Some(Filter(filter)) = &self.filter {
             if !filter(ent) {
@@ -1215,6 +1243,22 @@ impl Iterator for Walk {
             };
             match ev {
                 Err(err) => {
+                    // Like the parallel walker, don't report a symlink that
+                    // can't be followed if the ignore rules skip it. Root
+                    // paths are never skipped.
+                    if err.depth() > 0 && err.loop_ancestor().is_none() {
+                        let link = err.path().and_then(|path| {
+                            DirEntryRaw::from_symlink(err.depth(), path).ok()
+                        });
+                        if let Some(link) = link {
+                            let link = DirEntry::new_raw(link, None);
+                            if link.path_is_symlink()
+                                && should_skip_entry(&self.ig, &link)
+                            {
+                                continue;
+                            }
+                        }
+                    }
                     return Some(Err(Error::from_walkdir(err)));
                 }
                 Ok(WalkEvent::Exit) => {
@@ -1890,6 +1934,11 @@ impl<'s> Worker<'s> {
             dent = match DirEntryRaw::from_path(depth, path, true) {
                 Ok(dent) => DirEntry::new_raw(dent, None),
                 Err(err) => {
+                    // The link can't be followed, but if the ignore rules
+                    // match the link itself, it must not be reported.
+                    if should_skip_entry(ig, &dent) {
+                        return WalkState::Continue;
+                    }
                     return self.visitor.visit(Err(err));
                 }
             };
@@ -2043,7 +2092,15 @@ fn check_symlink_loop(
     let hchild = Handle::from_path(child_path).map_err(|err| {
         Error::from(err).with_path(child_path).with_depth(child_depth)
     })?;
-    for ig in ig_parent.parents().take_while(|ig| !ig.is_absolute_parent()) {
+    // Note that this deliberately does not stop at the root of the
+    // traversal. A symlink resolving to a directory *above* the root is also
+    // a loop, since the target contains the root, so descending into it leads
+    // back to the root. Stopping early means such a symlink looks like an
+    // ordinary directory on the first crossing and is only caught on the
+    // second, after everything above the root has already been walked once.
+    // The base matcher is excluded: it is not a directory in the traversal
+    // and its path may be empty.
+    for ig in ig_parent.parents().take_while(|ig| !ig.is_root()) {
         let h = Handle::from_path(ig.path()).map_err(|err| {
             Error::from(err).with_path(child_path).with_depth(child_depth)
         })?;
@@ -2107,14 +2164,26 @@ fn stdout_handle() -> Option<Handle> {
         Err(_) => return None,
         Ok(h) => h,
     };
-    let md = match h.as_file().metadata() {
-        Err(_) => return None,
-        Ok(md) => md,
-    };
-    if !md.is_file() {
+    if !is_regular_file(h.as_file()) {
         return None;
     }
     Some(h)
+}
+
+/// Returns true if and only if the given file is a regular file on disk.
+///
+/// On Windows, std reports pipes as regular files, so we check the handle
+/// type first. Otherwise, when stdout is a pipe (which is the common case
+/// when another program runs ripgrep), every file we search is opened one
+/// extra time in `path_equals` just to compare it with stdout.
+fn is_regular_file(file: &fs::File) -> bool {
+    #[cfg(windows)]
+    {
+        if !winapi_util::file::typ(file).is_ok_and(|typ| typ.is_disk()) {
+            return false;
+        }
+    }
+    file.metadata().is_ok_and(|md| md.is_file())
 }
 
 /// Returns true if and only if the given directory entry is believed to be
@@ -2397,6 +2466,41 @@ mod tests {
         );
     }
 
+    // Names that start with a `.` are hidden, even when they also end in a
+    // `.`. A trailing `.` must not be confused with a `.` or `..` component.
+    //
+    // Windows doesn't allow file names that end in a `.`.
+    #[cfg(unix)]
+    #[test]
+    fn hidden_with_trailing_dot() {
+        let td = tmpdir();
+        wfile(td.path().join("visible."), "");
+        wfile(td.path().join(".hidden"), "");
+        wfile(td.path().join(".hidden."), "");
+        wfile(td.path().join(".hidden.."), "");
+        wfile(td.path().join("..."), "");
+        mkdirp(td.path().join(".dir."));
+        wfile(td.path().join(".dir./inner"), "");
+
+        assert_paths(td.path(), &WalkBuilder::new(td.path()), &["visible."]);
+
+        let mut builder = WalkBuilder::new(td.path());
+        builder.hidden(false);
+        assert_paths(
+            td.path(),
+            &builder,
+            &[
+                ".dir.",
+                ".dir./inner",
+                ".hidden",
+                ".hidden.",
+                ".hidden..",
+                "...",
+                "visible.",
+            ],
+        );
+    }
+
     #[test]
     fn gitignore_parent() {
         let td = tmpdir();
@@ -2534,6 +2638,39 @@ mod tests {
         );
     }
 
+    #[test]
+    fn max_filesize_respects_filter_entry() {
+        let td = tmpdir();
+        mkdirp(td.path().join("a/skipdir"));
+        wfile_size(td.path().join("keep"), 400);
+        wfile_size(td.path().join("skip"), 0);
+        wfile_size(td.path().join("large"), 600);
+        wfile_size(td.path().join("a/keep"), 0);
+        wfile_size(td.path().join("a/skip"), 200);
+        wfile_size(td.path().join("a/boundary"), 500);
+        wfile_size(td.path().join("a/skipdir/keep"), 0);
+
+        let mut builder = WalkBuilder::new(td.path());
+        builder.filter_entry(|entry| {
+            entry.file_name() != "skip" && entry.file_name() != "skipdir"
+        });
+        assert_paths(
+            td.path(),
+            &builder,
+            &["a", "keep", "large", "a/keep", "a/boundary"],
+        );
+        assert_paths(
+            td.path(),
+            builder.max_filesize(Some(0)),
+            &["a", "a/keep"],
+        );
+        assert_paths(
+            td.path(),
+            builder.max_filesize(Some(500)),
+            &["a", "keep", "a/keep", "a/boundary"],
+        );
+    }
+
     #[cfg(unix)] // because symlinks on windows are weird
     #[test]
     fn symlinks() {
@@ -2582,6 +2719,77 @@ mod tests {
         let mut builder = WalkBuilder::new(td.path());
         assert_paths(td.path(), &builder, &["a", "a/b", "a/b/c"]);
         assert_paths(td.path(), &builder.follow_links(true), &["a", "a/b"]);
+    }
+
+    // A symlink resolving to a directory above the root of the walk is also a
+    // loop, since the target contains the root and descending into it leads
+    // back to the root.
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn symlink_loop_above_root() {
+        let td = tmpdir();
+        mkdirp(td.path().join("outside"));
+        wfile(td.path().join("outside/stray"), "");
+        mkdirp(td.path().join("root/deep"));
+        wfile(td.path().join("root/file"), "");
+        symlink(td.path(), td.path().join("root/deep/up"));
+
+        let root = td.path().join("root");
+        let mut builder = WalkBuilder::new(&root);
+        assert_paths(&root, &builder, &["deep", "deep/up", "file"]);
+        // Only asserted for the parallel walker. `Walk` delegates loop
+        // detection to walkdir, which is responsible for its own check.
+        //
+        // Without the check, this also yields everything reachable from `td`,
+        // including `deep/up/outside/stray`.
+        let got = walk_collect_parallel(&root, builder.follow_links(true));
+        assert_eq!(got, mkpaths(&["deep", "file"]));
+    }
+
+    // The ancestors of the root are needed for loop detection even when no
+    // ignore files are being read at all.
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn symlink_loop_above_root_no_ignores() {
+        let td = tmpdir();
+        mkdirp(td.path().join("outside"));
+        wfile(td.path().join("outside/stray"), "");
+        mkdirp(td.path().join("root/deep"));
+        wfile(td.path().join("root/file"), "");
+        symlink(td.path(), td.path().join("root/deep/up"));
+
+        let root = td.path().join("root");
+        let mut builder = WalkBuilder::new(&root);
+        builder
+            .follow_links(true)
+            .parents(false)
+            .ignore(false)
+            .git_ignore(false)
+            .git_global(false)
+            .git_exclude(false)
+            .require_git(false);
+        let got = walk_collect_parallel(&root, &builder);
+        assert_eq!(got, mkpaths(&["deep", "file"]));
+    }
+
+    // Only ancestors are loops. A symlink to a directory outside the root
+    // that does not contain the root is still followed.
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn symlink_outside_root_is_followed() {
+        let td = tmpdir();
+        mkdirp(td.path().join("outside"));
+        wfile(td.path().join("outside/stray"), "");
+        mkdirp(td.path().join("root"));
+        symlink(td.path().join("outside"), td.path().join("root/link"));
+
+        let root = td.path().join("root");
+        let mut builder = WalkBuilder::new(&root);
+        assert_paths(
+            &root,
+            &builder.follow_links(true),
+            &["link", "link/stray"],
+        );
     }
 
     // It's a little tricky to test the 'same_file_system' option since
@@ -2736,5 +2944,108 @@ mod tests {
             }
             Box::new(|_| WalkState::Continue)
         });
+    }
+
+    /// Returns the number of errors yielded by the single threaded walker.
+    fn walk_error_count(builder: &WalkBuilder) -> usize {
+        builder.build().filter(|result| result.is_err()).count()
+    }
+
+    /// Returns the number of errors yielded by the parallel walker.
+    fn walk_error_count_parallel(builder: &WalkBuilder) -> usize {
+        let errors = Arc::new(Mutex::new(0));
+        builder.build_parallel().run(|| {
+            let errors = errors.clone();
+            Box::new(move |result| {
+                if result.is_err() {
+                    *errors.lock().unwrap() += 1;
+                }
+                WalkState::Continue
+            })
+        });
+        *errors.lock().unwrap()
+    }
+
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn ignored_broken_symlink_follow_links_no_error() {
+        let td = tmpdir();
+        wfile(td.path().join(".ignore"), "broken\n");
+        symlink(td.path().join("nowhere"), td.path().join("broken"));
+
+        let mut builder = WalkBuilder::new(td.path());
+        builder.follow_links(true);
+        assert_eq!(0, walk_error_count(&builder), "single threaded");
+        assert_eq!(0, walk_error_count_parallel(&builder), "parallel");
+        assert_paths(td.path(), &builder, &[]);
+    }
+
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn broken_symlink_follow_links_error() {
+        let td = tmpdir();
+        symlink(td.path().join("nowhere"), td.path().join("broken"));
+
+        let mut builder = WalkBuilder::new(td.path());
+        builder.follow_links(true);
+        assert_eq!(1, walk_error_count(&builder), "single threaded");
+        assert_eq!(1, walk_error_count_parallel(&builder), "parallel");
+    }
+
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn hidden_broken_symlink_follow_links_no_error() {
+        let td = tmpdir();
+        symlink(td.path().join("nowhere"), td.path().join(".hbroken"));
+
+        let mut builder = WalkBuilder::new(td.path());
+        builder.follow_links(true).hidden(true);
+        assert_eq!(0, walk_error_count(&builder), "single threaded");
+        assert_eq!(0, walk_error_count_parallel(&builder), "parallel");
+    }
+
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn hidden_broken_symlink_not_hidden_follow_links_error() {
+        let td = tmpdir();
+        symlink(td.path().join("nowhere"), td.path().join(".hbroken"));
+
+        let mut builder = WalkBuilder::new(td.path());
+        builder.follow_links(true).hidden(false);
+        assert_eq!(1, walk_error_count(&builder), "single threaded");
+        assert_eq!(1, walk_error_count_parallel(&builder), "parallel");
+    }
+
+    #[cfg(unix)] // because symlinks on windows are weird
+    #[test]
+    fn broken_symlink_root_follow_links_error() {
+        let td = tmpdir();
+        wfile(td.path().join(".ignore"), ".hbroken\n");
+        let root = td.path().join(".hbroken");
+        symlink(td.path().join("nowhere"), &root);
+
+        let mut builder = WalkBuilder::new(&root);
+        builder.follow_links(true);
+        assert_eq!(1, walk_error_count(&builder), "single threaded");
+        assert_eq!(1, walk_error_count_parallel(&builder), "parallel");
+    }
+
+    // On Windows, std reports a pipe as a regular file. If stdout is a pipe,
+    // we shouldn't keep its handle for skipping, since then every file in
+    // the walk gets opened a second time to compare it with stdout.
+    #[cfg(any(unix, windows))]
+    #[test]
+    fn regular_file_excludes_pipes() {
+        let td = tmpdir();
+        let path = td.path().join("foo");
+        wfile(&path, "");
+        assert!(super::is_regular_file(&File::open(&path).unwrap()));
+
+        let (_reader, writer) = std::io::pipe().unwrap();
+        #[cfg(unix)]
+        let pipe = File::from(std::os::fd::OwnedFd::from(writer));
+        #[cfg(windows)]
+        let pipe = File::from(std::os::windows::io::OwnedHandle::from(writer));
+        assert!(!super::is_regular_file(&pipe));
     }
 }

@@ -6,7 +6,6 @@ description = """
 Fast line oriented regex searching as a library.
 """
 documentation = "https://docs.rs/grep"
-homepage = "https://github.com/BurntSushi/ripgrep/tree/master/crates/grep"
 repository = "https://github.com/BurntSushi/ripgrep/tree/master/crates/grep"
 readme = "README.md"
 keywords = ["regex", "grep", "egrep", "search", "pattern"]

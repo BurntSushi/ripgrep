@@ -1,5 +1,5 @@
 use crate::hay::SHERLOCK;
-use crate::util::{Dir, TestCommand, sort_lines};
+use crate::util::{Dir, TestCommand, cmd_exists, sort_lines};
 
 // See: https://github.com/BurntSushi/ripgrep/issues/16
 rgtest!(r16, |dir: Dir, mut cmd: TestCommand| {
@@ -1204,6 +1204,31 @@ rgtest!(f1757, |dir: Dir, _: TestCommand| {
     eqnice!("./rust1/source.rs\n", dir.command().args(args).stdout());
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/1764
+rgtest!(r1764_glob_matches_cwd, |dir: Dir, _: TestCommand| {
+    dir.create_dir("to-be-ignored");
+    dir.create_dir("dir1");
+    dir.create("to-be-ignored/a", "");
+    dir.create("dir1/d", "");
+
+    let root = dir.path();
+    for cwd in ["to-be-ignored", "dir1", "."] {
+        for (glob, included) in
+            [("!to-be-ignored/", "dir1/d"), ("!dir1/", "to-be-ignored/a")]
+        {
+            let got = dir
+                .command()
+                .current_dir(cwd)
+                .args(&["--files", "-g", glob])
+                .arg(&root)
+                .stdout();
+            let expected = format!("{}/{}\n", root.display(), included)
+                .replace('\\', "/");
+            eqnice!(expected, got);
+        }
+    }
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/1765
 rgtest!(r1765, |dir: Dir, mut cmd: TestCommand| {
     dir.create("test", "\n");
@@ -1479,6 +1504,23 @@ rgtest!(r2658_null_data_line_regexp, |dir: Dir, mut cmd: TestCommand| {
     eqnice!("haystack:bar\0", got);
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/2832
+//
+// `--null-data --no-mmap` used to search NUL-terminated records one at a
+// time. A file that is mostly NULs with a needle in the middle should still
+// find that needle.
+rgtest!(r2832_null_data_fast_path, |dir: Dir, mut cmd: TestCommand| {
+    let needle = b"ZQZQZQZQZQ";
+    let mut hay = vec![0u8; 256 * 1024];
+    let mid = hay.len() / 2;
+    hay[mid..mid + needle.len()].copy_from_slice(needle);
+    dir.create_bytes("binary-test.bin", &hay);
+    let got = cmd
+        .args(&["--null-data", "--no-mmap", "ZQZQZQZQZQ", "binary-test.bin"])
+        .stdout();
+    eqnice!("ZQZQZQZQZQ\0", got);
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/2770
 rgtest!(r2770_gitignore_error, |dir: Dir, _cmd: TestCommand| {
     dir.create(".git", "");
@@ -1719,11 +1761,6 @@ rgtest!(r3180_look_around_panic, |dir: Dir, mut cmd: TestCommand| {
 });
 
 // See: https://github.com/BurntSushi/ripgrep/issues/3275
-//
-// This test doesn't seem to work on Windows for whatever reason. I haven't
-// investigated it yet, but I'm pretty sure it's just the test. I'm guessing
-// it's related to path separators. ---AG
-#[cfg(not(windows))]
 rgtest!(r3275_git_global_config_env, |dir: Dir, mut cmd: TestCommand| {
     dir.create_dir("foo");
     dir.create(".git", "");
@@ -1741,4 +1778,115 @@ rgtest!(r3275_git_global_config_env, |dir: Dir, mut cmd: TestCommand| {
     let config_path = dir.path().join("global-config-nonstandard");
     cmd.env("GIT_CONFIG_GLOBAL", config_path);
     eqnice!("foo/foo1\n", cmd.arg("--files").arg("foo").stdout());
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/2552
+#[cfg(unix)] // because symlinks on windows are weird
+rgtest!(
+    r2552_ignored_broken_symlink_follow,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create(".ignore", "broken\n");
+        dir.create("file", "");
+        dir.link_file("nowhere", "broken");
+
+        cmd.arg("-L").arg("--files");
+        cmd.assert_exit_code(0);
+        eqnice!("file\n", cmd.stdout());
+
+        let mut cmd = dir.command();
+        cmd.arg("-L").arg("--files").arg("-j1");
+        cmd.assert_exit_code(0);
+        eqnice!("file\n", cmd.stdout());
+    }
+);
+
+// See: https://github.com/BurntSushi/ripgrep/issues/2552
+#[cfg(unix)] // because symlinks on windows are weird
+rgtest!(r2552_broken_symlink_root_follow, |dir: Dir, mut cmd: TestCommand| {
+    dir.link_file("nowhere", ".hid");
+    dir.link_file("nowhere", "live");
+
+    cmd.arg("-L").arg("--files").arg(".hid");
+    cmd.assert_exit_code(2);
+
+    let mut cmd = dir.command();
+    cmd.arg("-L").arg("--files").arg("-j1").arg(".hid");
+    cmd.assert_exit_code(2);
+
+    let mut cmd = dir.command();
+    cmd.arg("-L").arg("--files");
+    cmd.assert_exit_code(2);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3382
+rgtest!(r3382_truncated_zstd, |dir: Dir, mut cmd: TestCommand| {
+    if !cmd_exists("zstd") {
+        return;
+    }
+    let data = include_bytes!("./data/sherlock.zst");
+    dir.create_bytes("sherlock.zst", &data[..data.len() - 1]);
+    cmd.args(&["-z", "-j2", "-o", "Sherlock", "sherlock.zst", "sherlock.zst"]);
+
+    let output = cmd.raw_output();
+    assert_eq!(Some(2), output.status.code());
+    assert!(!output.stderr.is_empty());
+    eqnice!(
+        "sherlock.zst:Sherlock\n".repeat(4),
+        String::from_utf8_lossy(&output.stdout)
+    );
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3527
+rgtest!(r3527, |dir: Dir, mut cmd: TestCommand| {
+    // A bare "!" in a nested gitignore leaves no pattern behind, matching
+    // git's behavior. Prior to the fix, it compiled to a whitelist matching
+    // everything, which re-included a/.venv (and the whole subtree), even
+    // though an ancestor .gitignore ignores it.
+    dir.create_dir(".git");
+    dir.create(".gitignore", ".venv");
+    dir.create_dir("a");
+    dir.create("a/.gitignore", "!");
+    dir.create("a/.venv", "test");
+
+    let out = cmd.args(["--files", "--hidden"]).stdout();
+    assert!(out.contains("a/.gitignore\n"), "{}", out);
+    assert!(!out.contains("a/.venv"), "{}", out);
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3591
+rgtest!(r3591_excludes_file_inner_tilde, |dir: Dir, mut cmd: TestCommand| {
+    dir.create_dir("foo");
+    dir.create(".git", "");
+    dir.create("foo/foo1", "");
+    dir.create("foo/foo2", "");
+    dir.create_dir("bar~1");
+    dir.create("bar~1/excludes", "foo2");
+    dir.create(
+        "config",
+        &format!(
+            "[core]\n\texcludesFile = {path}",
+            path = dir.path().join("bar~1").join("excludes").display()
+        ),
+    );
+
+    cmd.env("GIT_CONFIG_GLOBAL", dir.path().join("config"));
+    eqnice!("foo/foo1\n", cmd.arg("--files").arg("foo").stdout());
+});
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3593
+rgtest!(r3593, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("h.log", "a\nb\nfoo\nc\nfoo\nd\n");
+
+    eqnice!(
+        "1:a\n2:b\n3-foo\n",
+        cmd.arg("-n")
+            .arg("-v")
+            .arg("-m")
+            .arg("2")
+            .arg("-A")
+            .arg("1")
+            .arg(r"\Afoo")
+            .arg("h.log")
+            .stdout()
+    );
 });
