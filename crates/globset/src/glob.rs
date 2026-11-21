@@ -744,11 +744,11 @@ impl Tokens {
                     re.push_str("(?:/|/.*/)");
                 }
                 Token::Class { negated, ref ranges } => {
-                    let mut filtered_ranges = Vec::new();
+                    let mut filtered_ranges = vec![];
                     let ranges_to_use =
                         if options.literal_separator && !negated {
                             for &(start, end) in ranges {
-                                if end < '/' || start > '/' {
+                                if start > '/' || end < '/' {
                                     filtered_ranges.push((start, end));
                                 } else if start == '/' && end == '/' {
                                     // Exclude '/'
@@ -766,10 +766,7 @@ impl Tokens {
                             ranges
                         };
 
-                    if options.literal_separator
-                        && !negated
-                        && ranges_to_use.is_empty()
-                    {
+                    if ranges_to_use.is_empty() {
                         // A non-negated class that only contained '/' cannot match anything
                         // when literal_separator is enabled.
                         re.push_str("[^\\s\\S]");

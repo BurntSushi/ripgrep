@@ -880,6 +880,7 @@ mod tests {
     not_ignored!(ignot17, ROOT, "src/*.rs", "src/grep/src/main.rs");
     not_ignored!(ignot18, ROOT, "path1/*", "path2/path1/foo");
     not_ignored!(ignot19, ROOT, "s*.rs", "src/foo.rs");
+
     #[test]
     fn test_issue_2745() {
         let gi = GitignoreBuilder::new(ROOT)
