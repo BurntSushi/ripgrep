@@ -224,6 +224,8 @@ pub(crate) enum GenerateMode {
     CompleteZsh,
     /// Completions for fish.
     CompleteFish,
+    /// Completions for nushell.
+    CompleteNushell,
     /// Completions for PowerShell.
     CompletePowerShell,
 }

@@ -228,6 +228,7 @@ jobs:
         "$BIN" --version
         "$BIN" --generate complete-bash > "$ARCHIVE/complete/rg.bash"
         "$BIN" --generate complete-fish > "$ARCHIVE/complete/rg.fish"
+        "$BIN" --generate complete-nushell > "$ARCHIVE/complete/rg-completions.nu"
         "$BIN" --generate complete-powershell > "$ARCHIVE/complete/_rg.ps1"
         "$BIN" --generate complete-zsh > "$ARCHIVE/complete/_rg"
         "$BIN" --generate man > "$ARCHIVE/doc/rg.1"
@@ -250,6 +251,11 @@ jobs:
           "ghcr.io/cross-rs/${{ matrix.target }}:main" \
           "${{ matrix.qemu }}" "/$BIN" \
             --generate complete-fish > "$ARCHIVE/complete/rg.fish"
+        docker run --rm -v \
+          "$PWD/target:/target:Z" \
+          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
+          "${{ matrix.qemu }}" "/$BIN" \
+            --generate complete-nushell > "$ARCHIVE/complete/rg-completions.nu"
         docker run --rm -v \
           "$PWD/target:/target:Z" \
           "ghcr.io/cross-rs/${{ matrix.target }}:main" \
@@ -358,6 +364,7 @@ jobs:
       run: |
         "$BIN" --generate complete-bash > "$DEPLOY_DIR/rg.bash"
         "$BIN" --generate complete-fish > "$DEPLOY_DIR/rg.fish"
+        "$BIN" --generate complete-nushell > "$DEPLOY_DIR/rg-completions.nu"
         "$BIN" --generate complete-zsh > "$DEPLOY_DIR/_rg"
 
     - name: Build release binary
