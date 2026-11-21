@@ -275,11 +275,6 @@ impl DecompressionReaderBuilder {
     /// format magic number, returns a command-backed decompression reader.
     /// Otherwise it returns a passthrough reader.
     ///
-    /// Either way, the file is opened exactly once: the header bytes already
-    /// read during sniffing are prepended (via a small internal buffer) to
-    /// whatever is read afterward, so no data is lost and no second
-    /// `File::open` of the same path occurs.
-    ///
     /// Returns `Ok(None)` if this matcher has no magic-capable rules at all
     /// (e.g. a fully custom matcher with no built-in defaults), so the caller
     /// can skip this path entirely and avoid pointless I/O.
