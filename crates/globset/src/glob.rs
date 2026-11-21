@@ -1509,8 +1509,10 @@ mod tests {
     matches!(basename_parent_component, "**/.*", "foo/..", SLASHLIT);
     matches!(basename_class, "**/*.py[cod]", "src/module.pyc", SLASHLIT);
     matches!(basename_negated_class, "**/[!/]", "foo/a", SLASHLIT);
-    matches!(class_includes_separator, "**/[!a]", "/", SLASHLIT);
-    matches!(class_separator_range, "**/[.-0]", "/", SLASHLIT);
+    matches!(class_includes_separator, "**/[!a]", "/");
+    matches!(class_separator_range, "**/[.-0]", "/");
+    nmatches!(class_excludes_separator, "**/[!a]", "/", SLASHLIT);
+    nmatches!(class_excludes_separator_range, "**/[.-0]", "/", SLASHLIT);
     nmatches!(basename_class_miss, "**/*.py[cod]", "src/module.pyi", SLASHLIT);
 
     matches!(matchrange1, "a[0-9]b", "a0b");
