@@ -27,11 +27,8 @@ macro_rules! writeln {
 pub(crate) fn generate() -> String {
     let mut cats = BTreeMap::new();
     for flag in FLAGS.iter().copied() {
-        let mut cat = cats.entry(flag.doc_category()).or_insert(String::new());
-        if !cat.is_empty() {
-            writeln!(cat, ".sp");
-        }
-        generate_flag(flag, &mut cat);
+        let cat = cats.entry(flag.doc_category()).or_insert(String::new());
+        generate_flag(flag, cat);
     }
 
     let mut out = TEMPLATE.replace("!!VERSION!!", &version::generate_digits());
@@ -44,6 +41,12 @@ pub(crate) fn generate() -> String {
 
 /// Writes `roff` formatted documentation for `flag` to `out`.
 fn generate_flag(flag: &'static dyn Flag, out: &mut String) {
+    // `.TP` starts a tagged paragraph whose tag is the text on the next
+    // line (the flag names below). Renderers that produce linkable HTML
+    // from man pages (e.g. mandoc(1), and by extension man.archlinux.org)
+    // use `.TP`/`.IP` tags to generate per-entry anchor IDs, so this lets
+    // individual options be linked directly, e.g. `rg.1.html#context`.
+    writeln!(out, ".TP");
     if let Some(byte) = flag.name_short() {
         let name = char::from(byte);
         write!(out, r"\fB\-{name}\fP");
