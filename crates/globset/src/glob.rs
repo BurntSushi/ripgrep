@@ -744,21 +744,52 @@ impl Tokens {
                     re.push_str("(?:/|/.*/)");
                 }
                 Token::Class { negated, ref ranges } => {
-                    re.push('[');
-                    if negated {
-                        re.push('^');
-                    }
-                    for r in ranges {
-                        if r.0 == r.1 {
-                            // Not strictly necessary, but nicer to look at.
-                            re.push_str(&char_to_escaped_literal(r.0));
+                    let mut filtered_ranges = vec![];
+                    let ranges_to_use =
+                        if options.literal_separator && !negated {
+                            for &(start, end) in ranges {
+                                if start > '/' || end < '/' {
+                                    filtered_ranges.push((start, end));
+                                } else if start == '/' && end == '/' {
+                                    // Exclude '/'
+                                } else if start == '/' && end > '/' {
+                                    filtered_ranges.push(('0', end));
+                                } else if start < '/' && end == '/' {
+                                    filtered_ranges.push((start, '.'));
+                                } else if start < '/' && end > '/' {
+                                    filtered_ranges.push((start, '.'));
+                                    filtered_ranges.push(('0', end));
+                                }
+                            }
+                            &filtered_ranges
                         } else {
-                            re.push_str(&char_to_escaped_literal(r.0));
-                            re.push('-');
-                            re.push_str(&char_to_escaped_literal(r.1));
+                            ranges
+                        };
+
+                    if ranges_to_use.is_empty() {
+                        // A non-negated class that only contained '/' cannot match anything
+                        // when literal_separator is enabled.
+                        re.push_str("[^\\s\\S]");
+                    } else {
+                        re.push('[');
+                        if negated {
+                            re.push('^');
+                            if options.literal_separator {
+                                re.push('/');
+                            }
                         }
+                        for r in ranges_to_use {
+                            if r.0 == r.1 {
+                                // Not strictly necessary, but nicer to look at.
+                                re.push_str(&char_to_escaped_literal(r.0));
+                            } else {
+                                re.push_str(&char_to_escaped_literal(r.0));
+                                re.push('-');
+                                re.push_str(&char_to_escaped_literal(r.1));
+                            }
+                        }
+                        re.push(']');
                     }
-                    re.push(']');
                 }
                 Token::Alternates(ref patterns) => {
                     let mut parts = vec![];
@@ -1478,8 +1509,10 @@ mod tests {
     matches!(basename_parent_component, "**/.*", "foo/..", SLASHLIT);
     matches!(basename_class, "**/*.py[cod]", "src/module.pyc", SLASHLIT);
     matches!(basename_negated_class, "**/[!/]", "foo/a", SLASHLIT);
-    matches!(class_includes_separator, "**/[!a]", "/", SLASHLIT);
-    matches!(class_separator_range, "**/[.-0]", "/", SLASHLIT);
+    matches!(class_includes_separator, "**/[!a]", "/");
+    matches!(class_separator_range, "**/[.-0]", "/");
+    nmatches!(class_excludes_separator, "**/[!a]", "/", SLASHLIT);
+    nmatches!(class_excludes_separator_range, "**/[.-0]", "/", SLASHLIT);
     nmatches!(basename_class_miss, "**/*.py[cod]", "src/module.pyi", SLASHLIT);
 
     matches!(matchrange1, "a[0-9]b", "a0b");
@@ -1540,7 +1573,7 @@ mod tests {
     #[cfg(not(unix))]
     nmatches!(matchslash2, "abc?def", "abc\\def", SLASHLIT);
     nmatches!(matchslash3, "abc*def", "abc/def", SLASHLIT);
-    matches!(matchslash4, "abc[/]def", "abc/def", SLASHLIT); // differs
+    nmatches!(matchslash4, "abc[/]def", "abc/def", SLASHLIT);
     #[cfg(unix)]
     nmatches!(matchslash5, "abc\\def", "abc/def", SLASHLIT);
     #[cfg(not(unix))]
@@ -1740,4 +1773,29 @@ mod tests {
     baseliteral!(extract_baselit2, "foo", None);
     baseliteral!(extract_baselit3, "*foo", None);
     baseliteral!(extract_baselit4, "*/foo", None);
+
+    #[test]
+    fn class_literal_separator() {
+        let glob = GlobBuilder::new("*[/]*")
+            .literal_separator(true)
+            .build()
+            .unwrap()
+            .compile_matcher();
+        assert!(!glob.is_match("a/b"));
+
+        let glob_neg = GlobBuilder::new("[^a]*")
+            .literal_separator(true)
+            .build()
+            .unwrap()
+            .compile_matcher();
+        assert!(!glob_neg.is_match("/b"));
+
+        let glob_range = GlobBuilder::new("[ -~]")
+            .literal_separator(true)
+            .build()
+            .unwrap()
+            .compile_matcher();
+        assert!(!glob_range.is_match("/"));
+        assert!(glob_range.is_match("a"));
+    }
 }
