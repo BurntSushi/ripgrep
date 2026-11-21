@@ -903,7 +903,6 @@ mod tests {
     ignored!(ig_bare_negation_cancels_ignore, ROOT, "*.tmp\n!", "a/x.tmp");
     ignored!(ig_ignore_after_bare_negation, ROOT, "!\n*.tmp", "a/x.tmp");
     not_ignored!(ig_bare_negation_only, ROOT, "!", "a/x.tmp");
-  
     #[test]
     fn test_issue_2745() {
         let gi = GitignoreBuilder::new(ROOT)
