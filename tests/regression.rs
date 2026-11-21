@@ -1483,9 +1483,7 @@ rgtest!(r2658_null_data_line_regexp, |dir: Dir, mut cmd: TestCommand| {
 //
 // `--null-data --no-mmap` used to search NUL-terminated records one at a
 // time. A file that is mostly NULs with a needle in the middle should still
-// find that needle, and should not need a multi-gigabyte haystack to prove
-// the fast path is in use. The grep-searcher unit test counts matcher calls
-// to show we are not walking one byte at a time.
+// find that needle.
 rgtest!(r2832_null_data_fast_path, |dir: Dir, mut cmd: TestCommand| {
     let needle = b"ZQZQZQZQZQ";
     let mut hay = vec![0u8; 256 * 1024];

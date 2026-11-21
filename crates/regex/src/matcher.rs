@@ -278,10 +278,6 @@ impl RegexMatcherBuilder {
     ///
     /// If the given line terminator isn't an ASCII byte (`<=127`), then the
     /// builder will return an error when constructing the matcher.
-    ///
-    /// The terminator is also passed to the regex engine so that line anchors
-    /// such as `(?m:^)` and `(?m:$)` (and `--line-regexp`) match at that
-    /// boundary. This includes using `NUL` with `--null-data`.
     pub fn line_terminator(
         &mut self,
         line_term: Option<u8>,
