@@ -14,6 +14,7 @@ struct Config {
     colors: ColorSpecs,
     hyperlink: HyperlinkConfig,
     separator: Option<u8>,
+    escape: bool,
     terminator: u8,
 }
 
@@ -23,6 +24,7 @@ impl Default for Config {
             colors: ColorSpecs::default(),
             hyperlink: HyperlinkConfig::default(),
             separator: None,
+            escape: false,
             terminator: b'\n',
         }
     }
@@ -110,6 +112,12 @@ impl PathPrinterBuilder {
         self
     }
 
+    /// Replace control characters in printed file paths with U+FFFD.
+    pub fn escape(&mut self, yes: bool) -> &mut PathPrinterBuilder {
+        self.config.escape = yes;
+        self
+    }
+
     /// Set the path terminator used.
     ///
     /// The path terminator is a byte that is printed after every file path
@@ -149,13 +157,14 @@ impl<W: WriteColor> PathPrinter<W> {
     /// Write the given path to the underlying writer.
     pub fn write(&mut self, path: &Path) -> io::Result<()> {
         let ppath = PrinterPath::new(path.as_ref())
-            .with_separator(self.config.separator);
+            .with_separator(self.config.separator)
+            .with_escape(self.config.escape);
         if !self.wtr.supports_color() {
-            self.wtr.write_all(ppath.as_bytes())?;
+            self.wtr.write_all(ppath.as_display_bytes())?;
         } else {
             let status = self.start_hyperlink(&ppath)?;
             self.wtr.set_color(self.config.colors.path())?;
-            self.wtr.write_all(ppath.as_bytes())?;
+            self.wtr.write_all(ppath.as_display_bytes())?;
             self.wtr.reset()?;
             self.interpolator.finish(status, &mut self.wtr)?;
         }

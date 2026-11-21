@@ -908,8 +908,16 @@ impl HyperlinkPath {
 
         let mut result = Vec::with_capacity(input.len());
         for chunk in input.utf8_chunks() {
-            for &byte in chunk.valid().as_bytes() {
+            let valid = chunk.valid().as_bytes();
+            for (i, &byte) in valid.iter().enumerate() {
+                // U+0080..=U+009F are C1 controls that could end the link.
+                let c1 = match byte {
+                    0xC2 => valid.get(i + 1).is_some_and(|&b| b <= 0x9F),
+                    0x80..=0x9F => i > 0 && valid[i - 1] == 0xC2,
+                    _ => false,
+                };
                 match byte {
+                    _ if c1 => percent_encode(byte, &mut result),
                     b'0'..=b'9'
                     | b'A'..=b'Z'
                     | b'a'..=b'z'
@@ -1140,6 +1148,17 @@ mod tests {
         assert_eq!(encode(b"/tmp/\xE2\x82/a"), b"/tmp/%E2%82/a");
         assert_eq!(encode(b"/tmp/caf\xC3\xA9 x"), b"/tmp/caf\xC3\xA9%20x");
         assert_eq!(encode(b"/tmp/\xC3\xA9\xFF"), b"/tmp/\xC3\xA9%FF");
+    }
+
+    #[test]
+    fn encode_c1() {
+        let encode = |path: &[u8]| HyperlinkPath::encode(path).0;
+
+        assert_eq!(
+            encode("/tmp/a\u{9c}\u{9b}2J".as_bytes()),
+            b"/tmp/a%C2%9C%C2%9B2J"
+        );
+        assert_eq!(encode("/tmp/é€".as_bytes()), "/tmp/é€".as_bytes());
     }
 
     #[test]

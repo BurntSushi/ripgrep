@@ -128,7 +128,11 @@ fn search(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
             // A broken pipe means graceful termination.
             Err(err) if err.kind() == std::io::ErrorKind::BrokenPipe => break,
             Err(err) => {
-                err_message!("{}: {}", haystack.path().display(), err);
+                err_message!(
+                    "{}: {}",
+                    messages::stderr_path(haystack.path()).display(),
+                    err
+                );
                 continue;
             }
         };
@@ -198,7 +202,11 @@ fn search_parallel(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
                     }
                 }
                 Err(err) => {
-                    err_message!("{}: {}", haystack.path().display(), err);
+                    err_message!(
+                        "{}: {}",
+                        messages::stderr_path(haystack.path()).display(),
+                        err
+                    );
                 }
             }
             if let Err(err) = bufwtr.print(searcher.printer().get_mut()) {
@@ -207,7 +215,11 @@ fn search_parallel(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
                     return WalkState::Quit;
                 }
                 // Otherwise, we continue on our merry way.
-                err_message!("{}: {}", haystack.path().display(), err);
+                err_message!(
+                    "{}: {}",
+                    messages::stderr_path(haystack.path()).display(),
+                    err
+                );
             }
             if matched.load(Ordering::SeqCst) && args.quit_after_match() {
                 WalkState::Quit
