@@ -2,6 +2,12 @@ TBD
 ===
 Unreleased changes. Release notes have not yet been written.
 
+Feature enhancements:
+
+* [FEATURE #3342](https://github.com/BurntSushi/ripgrep/issues/3342):
+  `--search-zip`/`-z` now detects compressed files by content when their file
+  extension does not match a known compression format.
+
 
 15.2.0 (2026-07-15)
 ===================

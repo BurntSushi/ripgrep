@@ -954,6 +954,38 @@ be, to a very large extent, the result of luck. Sherlock Holmes
     eqnice!(expected, cmd.stdout());
 });
 
+rgtest!(compressed_gzip_by_magic, |dir: Dir, mut cmd: TestCommand| {
+    if !cmd_exists("gzip") {
+        return;
+    }
+
+    dir.create_bytes("sherlock", include_bytes!("./data/sherlock.gz"));
+    cmd.arg("-z").arg("Sherlock").arg("sherlock");
+
+    let expected = "\
+For the Doctor Watsons of this world, as opposed to the Sherlock
+be, to a very large extent, the result of luck. Sherlock Holmes
+";
+    eqnice!(expected, cmd.stdout());
+});
+
+rgtest!(compressed_magic_plain_passthru, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("plain", "Sherlock survives content sniffing.\n");
+    cmd.arg("-z").arg("Sherlock").arg("plain");
+
+    eqnice!("Sherlock survives content sniffing.\n", cmd.stdout());
+});
+
+rgtest!(
+    compressed_magic_requires_search_zip,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create_bytes("sherlock", include_bytes!("./data/sherlock.gz"));
+        cmd.arg("Sherlock").arg("sherlock");
+
+        cmd.assert_err();
+    }
+);
+
 rgtest!(compressed_bzip2, |dir: Dir, mut cmd: TestCommand| {
     if !cmd_exists("bzip2") {
         return;

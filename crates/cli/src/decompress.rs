@@ -25,6 +25,8 @@ pub struct DecompressionMatcherBuilder {
 struct DecompressionCommand {
     /// The glob that matches this command.
     glob: String,
+    /// The magic number that identifies this compression format.
+    magic: Option<&'static [u8]>,
     /// The command or binary name.
     bin: PathBuf,
     /// The arguments to invoke with the command.
@@ -137,7 +139,12 @@ impl DecompressionMatcherBuilder {
         let bin = try_resolve_binary(Path::new(program.as_ref()))?;
         let args =
             args.into_iter().map(|a| a.as_ref().to_os_string()).collect();
-        self.commands.push(DecompressionCommand { glob, bin, args });
+        self.commands.push(DecompressionCommand {
+            glob,
+            magic: None,
+            bin,
+            args,
+        });
         Ok(self)
     }
 }
@@ -191,6 +198,24 @@ impl DecompressionMatcher {
     pub fn has_command<P: AsRef<Path>>(&self, path: P) -> bool {
         self.globs.is_match(path)
     }
+
+    /// Returns true if and only if at least one command has a magic number.
+    fn has_magic_rules(&self) -> bool {
+        self.commands.iter().any(|cmd| cmd.magic.is_some())
+    }
+
+    /// Return a pre-built command based on the given file header.
+    fn command_by_magic(&self, header: &[u8]) -> Option<Command> {
+        for decomp_cmd in &self.commands {
+            let Some(magic) = decomp_cmd.magic else { continue };
+            if header.starts_with(magic) {
+                let mut cmd = Command::new(&decomp_cmd.bin);
+                cmd.args(&decomp_cmd.args);
+                return Some(cmd);
+            }
+        }
+        None
+    }
 }
 
 /// Configures and builds a streaming reader for decompressing data.
@@ -239,6 +264,60 @@ impl DecompressionReaderBuilder {
                     err,
                 );
                 DecompressionReader::new_passthru(path)
+            }
+        }
+    }
+
+    /// Like `build`, but only meant to be called after the caller has already
+    /// established that `path` does not match any extension-based rule (i.e.
+    /// `self.get_matcher().has_command(path)` is false). This peeks at most a
+    /// few bytes of the file header and, if they match a known compression
+    /// format magic number, returns a command-backed decompression reader.
+    /// Otherwise it returns a passthrough reader.
+    ///
+    /// Either way, the file is opened exactly once: the header bytes already
+    /// read during sniffing are prepended (via a small internal buffer) to
+    /// whatever is read afterward, so no data is lost and no second
+    /// `File::open` of the same path occurs.
+    ///
+    /// Returns `Ok(None)` if this matcher has no magic-capable rules at all
+    /// (e.g. a fully custom matcher with no built-in defaults), so the caller
+    /// can skip this path entirely and avoid pointless I/O.
+    pub fn build_by_magic<P: AsRef<Path>>(
+        &self,
+        path: P,
+    ) -> Result<Option<DecompressionReader>, CommandError> {
+        if !self.matcher.has_magic_rules() {
+            return Ok(None);
+        }
+        let path = path.as_ref();
+        let mut file = File::open(path)?;
+        let mut header = [0; 8];
+        let header_len = io::Read::read(&mut file, &mut header)?;
+        let Some(mut cmd) =
+            self.matcher.command_by_magic(&header[..header_len])
+        else {
+            return Ok(Some(DecompressionReader::new_passthru_file(
+                file, header, header_len,
+            )));
+        };
+        cmd.arg(path);
+
+        match self.command_builder.build(&mut cmd) {
+            Ok(cmd_reader) => {
+                Ok(Some(DecompressionReader { rdr: Ok(cmd_reader) }))
+            }
+            Err(err) => {
+                log::debug!(
+                    "{}: error spawning command '{:?}': {} \
+                     (falling back to uncompressed reader)",
+                    path.display(),
+                    cmd,
+                    err,
+                );
+                Ok(Some(DecompressionReader::new_passthru_file(
+                    file, header, header_len,
+                )))
             }
         }
     }
@@ -330,7 +409,28 @@ impl DecompressionReaderBuilder {
 /// ```
 #[derive(Debug)]
 pub struct DecompressionReader {
-    rdr: Result<CommandReader, File>,
+    rdr: Result<CommandReader, PassthruReader>,
+}
+
+#[derive(Debug)]
+struct PassthruReader {
+    file: File,
+    header: [u8; 8],
+    header_len: usize,
+    header_pos: usize,
+}
+
+impl io::Read for PassthruReader {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        if self.header_pos < self.header_len {
+            let header = &self.header[self.header_pos..self.header_len];
+            let len = header.len().min(buf.len());
+            buf[..len].copy_from_slice(&header[..len]);
+            self.header_pos += len;
+            return Ok(len);
+        }
+        self.file.read(buf)
+    }
 }
 
 impl DecompressionReader {
@@ -360,7 +460,18 @@ impl DecompressionReader {
     /// executing another process.
     fn new_passthru(path: &Path) -> Result<DecompressionReader, CommandError> {
         let file = File::open(path)?;
-        Ok(DecompressionReader { rdr: Err(file) })
+        Ok(DecompressionReader::new_passthru_file(file, [0; 8], 0))
+    }
+
+    /// Creates a passthru reader from an already opened file and buffered
+    /// header.
+    fn new_passthru_file(
+        file: File,
+        header: [u8; 8],
+        header_len: usize,
+    ) -> DecompressionReader {
+        let rdr = PassthruReader { file, header, header_len, header_pos: 0 };
+        DecompressionReader { rdr: Err(rdr) }
     }
 
     /// Closes this reader, freeing any resources used by its underlying child
@@ -497,7 +608,12 @@ fn default_decompression_commands() -> Vec<DecompressionCommand> {
     const ARGS_ZSTD: &[&str] = &["zstd", "-q", "-d", "-c"];
     const ARGS_UNCOMPRESS: &[&str] = &["uncompress", "-c"];
 
-    fn add(glob: &str, args: &[&str], cmds: &mut Vec<DecompressionCommand>) {
+    fn add(
+        glob: &str,
+        magic: Option<&'static [u8]>,
+        args: &[&str],
+        cmds: &mut Vec<DecompressionCommand>,
+    ) {
         let bin = match resolve_binary(Path::new(args[0])) {
             Ok(bin) => bin,
             Err(err) => {
@@ -507,6 +623,7 @@ fn default_decompression_commands() -> Vec<DecompressionCommand> {
         };
         cmds.push(DecompressionCommand {
             glob: glob.to_string(),
+            magic,
             bin,
             args: args
                 .iter()
@@ -516,17 +633,18 @@ fn default_decompression_commands() -> Vec<DecompressionCommand> {
         });
     }
     let mut cmds = vec![];
-    add("*.gz", ARGS_GZIP, &mut cmds);
-    add("*.tgz", ARGS_GZIP, &mut cmds);
-    add("*.bz2", ARGS_BZIP, &mut cmds);
-    add("*.tbz2", ARGS_BZIP, &mut cmds);
-    add("*.xz", ARGS_XZ, &mut cmds);
-    add("*.txz", ARGS_XZ, &mut cmds);
-    add("*.lz4", ARGS_LZ4, &mut cmds);
-    add("*.lzma", ARGS_LZMA, &mut cmds);
-    add("*.br", ARGS_BROTLI, &mut cmds);
-    add("*.zst", ARGS_ZSTD, &mut cmds);
-    add("*.zstd", ARGS_ZSTD, &mut cmds);
-    add("*.Z", ARGS_UNCOMPRESS, &mut cmds);
+    add("*.gz", Some(b"\x1F\x8B"), ARGS_GZIP, &mut cmds);
+    add("*.tgz", Some(b"\x1F\x8B"), ARGS_GZIP, &mut cmds);
+    add("*.bz2", Some(b"BZh"), ARGS_BZIP, &mut cmds);
+    add("*.tbz2", Some(b"BZh"), ARGS_BZIP, &mut cmds);
+    add("*.xz", Some(b"\xFD7zXZ\x00"), ARGS_XZ, &mut cmds);
+    add("*.txz", Some(b"\xFD7zXZ\x00"), ARGS_XZ, &mut cmds);
+    add("*.lz4", Some(b"\x04\x22\x4D\x18"), ARGS_LZ4, &mut cmds);
+    // Neither LZMA nor Brotli has a reliable magic number.
+    add("*.lzma", None, ARGS_LZMA, &mut cmds);
+    add("*.br", None, ARGS_BROTLI, &mut cmds);
+    add("*.zst", Some(b"\x28\xB5\x2F\xFD"), ARGS_ZSTD, &mut cmds);
+    add("*.zstd", Some(b"\x28\xB5\x2F\xFD"), ARGS_ZSTD, &mut cmds);
+    add("*.Z", Some(b"\x1F\x9D"), ARGS_UNCOMPRESS, &mut cmds);
     cmds
 }
