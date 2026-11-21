@@ -760,6 +760,26 @@ rgtest!(r829_2933, |dir: Dir, mut cmd: TestCommand| {
     cmd.args(args).assert_err();
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/478
+rgtest!(r478, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("patterns1", "foo\n");
+    dir.create("patterns2", "bar\nbar(wat\nquux\n");
+    dir.create("haystack", "foo\n");
+
+    let output = cmd
+        .arg("-f")
+        .arg("patterns1")
+        .arg("-f")
+        .arg("patterns2")
+        .arg("haystack")
+        .raw_output();
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert!(!output.status.success(), "{stderr}");
+    assert!(stderr.contains("patterns2:2:"), "{stderr}");
+    assert!(!stderr.contains("foo|bar|bar(wat|quux"), "{stderr}");
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/900
 rgtest!(r900, |dir: Dir, mut cmd: TestCommand| {
     dir.create("sherlock", SHERLOCK);
