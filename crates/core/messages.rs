@@ -15,7 +15,14 @@ indicating that at least one error occurred. When ripgrep exits, this flag is
 consulted to determine what the exit status ought to be.
 */
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::{
+    borrow::Cow,
+    io::IsTerminal,
+    path::{Path, PathBuf},
+    sync::atomic::{AtomicBool, Ordering},
+};
+
+use bstr::{ByteSlice, ByteVec};
 
 /// When false, "messages" will not be printed.
 static MESSAGES: AtomicBool = AtomicBool::new(false);
@@ -136,4 +143,80 @@ pub(crate) fn errored() -> bool {
 /// via the `err_message` macro.
 pub(crate) fn set_errored() {
     ERRORED.store(true, Ordering::Relaxed);
+}
+
+/// Return `path` with control characters replaced if stderr is a terminal.
+pub(crate) fn stderr_path(path: &Path) -> Cow<'_, Path> {
+    if !std::io::stderr().is_terminal() {
+        return Cow::Borrowed(path);
+    }
+    escape_path(path)
+}
+
+/// Replace control characters in the paths of `err` if stderr is a terminal.
+pub(crate) fn stderr_error(err: ignore::Error) -> ignore::Error {
+    if !std::io::stderr().is_terminal() {
+        return err;
+    }
+    escape_error(err)
+}
+
+/// Replace control characters in `path` with U+FFFD.
+fn escape_path(path: &Path) -> Cow<'_, Path> {
+    let bytes = Vec::from_path_lossy(path);
+    match grep::printer::replace_controls(&bytes) {
+        Cow::Borrowed(_) => Cow::Borrowed(path),
+        Cow::Owned(out) => Cow::Owned(out.to_path_lossy().into_owned()),
+    }
+}
+
+/// Replace control characters in the paths of `err` with U+FFFD.
+fn escape_error(err: ignore::Error) -> ignore::Error {
+    use ignore::Error;
+
+    let fix = |path: PathBuf| escape_path(&path).into_owned();
+    let fix_err = |err: Box<Error>| Box::new(escape_error(*err));
+    match err {
+        Error::Partial(errs) => {
+            Error::Partial(errs.into_iter().map(escape_error).collect())
+        }
+        Error::WithLineNumber { line, err } => {
+            Error::WithLineNumber { line, err: fix_err(err) }
+        }
+        Error::WithPath { path, err } => {
+            Error::WithPath { path: fix(path), err: fix_err(err) }
+        }
+        Error::WithDepth { depth, err } => {
+            Error::WithDepth { depth, err: fix_err(err) }
+        }
+        Error::Loop { ancestor, child } => {
+            Error::Loop { ancestor: fix(ancestor), child: fix(child) }
+        }
+        err => err,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn escape_error_paths() {
+        use ignore::Error;
+
+        let glob = Error::Glob { glob: Some("{\x1b".into()), err: "e".into() };
+        let err = Error::Partial(vec![
+            Error::WithPath { path: "a\x1b[2J".into(), err: Box::new(glob) },
+            Error::Loop { ancestor: "b\nc".into(), child: "d\u{9b}".into() },
+        ]);
+        let r = "\u{FFFD}";
+        assert_eq!(
+            format!(
+                "a{r}[2J: error parsing glob '{{\x1b': e\n\
+                 File system loop found: d{r} points to an ancestor b{r}c"
+            ),
+            escape_error(err).to_string()
+        );
+        assert!(matches!(escape_path(Path::new("a é")), Cow::Borrowed(_)));
+    }
 }

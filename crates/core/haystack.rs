@@ -35,7 +35,7 @@ impl HaystackBuilder {
         match result {
             Ok(dent) => self.build(dent),
             Err(err) => {
-                err_message!("{err}");
+                err_message!("{}", crate::messages::stderr_error(err));
                 None
             }
         }
@@ -49,7 +49,7 @@ impl HaystackBuilder {
     fn build(&self, dent: ignore::DirEntry) -> Option<Haystack> {
         let hay = Haystack { dent, strip_dot_prefix: self.strip_dot_prefix };
         if let Some(err) = hay.dent.error() {
-            ignore_message!("{err}");
+            ignore_message!("{}", crate::messages::stderr_error(err.clone()));
         }
         // If this entry was explicitly provided by an end user, then we always
         // want to search it.

@@ -35,6 +35,7 @@ struct Config {
     exclude_zero: bool,
     separator_field: Arc<Vec<u8>>,
     separator_path: Option<u8>,
+    escape_path: bool,
     path_terminator: Option<u8>,
 }
 
@@ -49,6 +50,7 @@ impl Default for Config {
             exclude_zero: true,
             separator_field: Arc::new(b":".to_vec()),
             separator_path: None,
+            escape_path: false,
             path_terminator: None,
         }
     }
@@ -317,6 +319,12 @@ impl SummaryBuilder {
         self
     }
 
+    /// Replace control characters in printed file paths with U+FFFD.
+    pub fn escape_path(&mut self, yes: bool) -> &mut SummaryBuilder {
+        self.config.escape_path = yes;
+        self
+    }
+
     /// Set the path terminator used.
     ///
     /// The path terminator is a byte that is printed after every file path
@@ -434,7 +442,8 @@ impl<W: WriteColor> Summary<W> {
             None
         };
         let ppath = PrinterPath::new(path.as_ref())
-            .with_separator(self.config.separator_path);
+            .with_separator(self.config.separator_path)
+            .with_escape(self.config.escape_path);
         SummarySink {
             matcher,
             summary: self,
@@ -581,7 +590,7 @@ impl<'p, 's, M: Matcher, W: WriteColor> SummarySink<'p, 's, M, W> {
             let status = self.start_hyperlink()?;
             self.write_spec(
                 self.summary.config.colors.path(),
-                self.path.as_ref().unwrap().as_bytes(),
+                self.path.as_ref().unwrap().as_display_bytes(),
             )?;
             self.end_hyperlink(status)?;
         }
