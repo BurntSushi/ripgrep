@@ -548,6 +548,7 @@ impl HiArgs {
         let mut builder = grep::printer::PathPrinterBuilder::new();
         builder
             .color_specs(self.colors.clone())
+            .escape(self.is_terminal_stdout)
             .hyperlink(self.hyperlink_config.clone())
             .separator(self.path_separator.clone())
             .terminator(self.path_terminator.unwrap_or(b'\n'));
@@ -614,6 +615,7 @@ impl HiArgs {
             .byte_offset(self.byte_offset)
             .color_specs(self.colors.clone())
             .column(self.column)
+            .escape_path(self.is_terminal_stdout)
             .heading(self.heading)
             .hyperlink(self.hyperlink_config.clone())
             .max_columns_preview(self.max_columns_preview)
@@ -654,6 +656,7 @@ impl HiArgs {
     ) -> grep::printer::Summary<W> {
         grep::printer::SummaryBuilder::new()
             .color_specs(self.colors.clone())
+            .escape_path(self.is_terminal_stdout)
             .exclude_zero(!self.include_zero)
             .hyperlink(self.hyperlink_config.clone())
             .kind(kind)
@@ -879,7 +882,7 @@ impl HiArgs {
         if !self.no_ignore_files {
             for path in self.ignore_file.iter() {
                 if let Some(err) = builder.add_ignore(path) {
-                    ignore_message!("{err}");
+                    ignore_message!("{}", crate::messages::stderr_error(err));
                 }
             }
         }
