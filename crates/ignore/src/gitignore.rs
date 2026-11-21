@@ -333,6 +333,34 @@ impl Gitignore {
     }
 }
 
+fn trim_trailing_unescaped_spaces(line: &str) -> &str {
+    let bytes = line.as_bytes();
+    let mut last_space = None;
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'\\' => {
+                if i + 1 >= bytes.len() {
+                    return line;
+                }
+                i += 2;
+                last_space = None;
+            }
+            b' ' => {
+                if last_space.is_none() {
+                    last_space = Some(i);
+                }
+                i += 1;
+            }
+            _ => {
+                last_space = None;
+                i += 1;
+            }
+        }
+    }
+    &line[..last_space.unwrap_or(line.len())]
+}
+
 /// Builds a matcher for a single set of globs from a .gitignore file.
 #[derive(Clone, Debug)]
 pub struct GitignoreBuilder {
@@ -487,14 +515,10 @@ impl GitignoreBuilder {
         from: Option<PathBuf>,
         mut line: &str,
     ) -> Result<&mut GitignoreBuilder, Error> {
-        #![allow(deprecated)]
-
         if line.starts_with("#") {
             return Ok(self);
         }
-        if !line.ends_with("\\ ") {
-            line = line.trim_right();
-        }
+        line = trim_trailing_unescaped_spaces(line);
         if line.is_empty() {
             return Ok(self);
         }
@@ -903,6 +927,7 @@ mod tests {
     ignored!(ig_bare_negation_cancels_ignore, ROOT, "*.tmp\n!", "a/x.tmp");
     ignored!(ig_ignore_after_bare_negation, ROOT, "!\n*.tmp", "a/x.tmp");
     not_ignored!(ig_bare_negation_only, ROOT, "!", "a/x.tmp");
+
     #[test]
     fn test_issue_2745() {
         let gi = GitignoreBuilder::new(ROOT)
@@ -926,6 +951,28 @@ mod tests {
 
     fn path_string<P: AsRef<Path>>(path: P) -> String {
         path.as_ref().to_str().unwrap().to_string()
+    }
+
+    #[test]
+    fn trailing_spaces_after_escaped_space() {
+        let gi = gi_from_str(ROOT, "foo\\   ");
+        assert!(gi.matched("foo ", false).is_ignore());
+        assert!(!gi.matched("foo", false).is_ignore());
+        assert!(!gi.matched("foo  ", false).is_ignore());
+    }
+
+    #[test]
+    fn trailing_unescaped_spaces() {
+        let gi = gi_from_str(ROOT, "foo  ");
+        assert!(gi.matched("foo", false).is_ignore());
+        assert!(!gi.matched("foo ", false).is_ignore());
+    }
+
+    #[test]
+    fn trailing_escaped_space() {
+        let gi = gi_from_str(ROOT, "foo\\ ");
+        assert!(gi.matched("foo ", false).is_ignore());
+        assert!(!gi.matched("foo", false).is_ignore());
     }
 
     #[test]
