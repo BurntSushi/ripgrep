@@ -19,6 +19,7 @@ pub(crate) use crate::flags::{
     complete::{
         bash::generate as generate_complete_bash,
         fish::generate as generate_complete_fish,
+        nushell::generate as generate_complete_nushell,
         powershell::generate as generate_complete_powershell,
         zsh::generate as generate_complete_zsh,
     },
