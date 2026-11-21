@@ -1836,6 +1836,23 @@ rgtest!(r3382_truncated_zstd, |dir: Dir, mut cmd: TestCommand| {
     );
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/3527
+rgtest!(r3527, |dir: Dir, mut cmd: TestCommand| {
+    // A bare "!" in a nested gitignore leaves no pattern behind, matching
+    // git's behavior. Prior to the fix, it compiled to a whitelist matching
+    // everything, which re-included a/.venv (and the whole subtree), even
+    // though an ancestor .gitignore ignores it.
+    dir.create_dir(".git");
+    dir.create(".gitignore", ".venv");
+    dir.create_dir("a");
+    dir.create("a/.gitignore", "!");
+    dir.create("a/.venv", "test");
+
+    let out = cmd.args(["--files", "--hidden"]).stdout();
+    assert!(out.contains("a/.gitignore\n"), "{}", out);
+    assert!(!out.contains("a/.venv"), "{}", out);
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/3591
 rgtest!(r3591_excludes_file_inner_tilde, |dir: Dir, mut cmd: TestCommand| {
     dir.create_dir("foo");
