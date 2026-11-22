@@ -35,6 +35,7 @@ jobs:
           echo "version is: $VERSION"
       - name: Check that tag version and Cargo.toml version are the same
         shell: bash
+        if: inputs.version == ''
         run: |
           if ! grep -q "version = \"$VERSION\"" Cargo.toml; then
             echo "version does not match Cargo.toml" >&2
@@ -43,7 +44,13 @@ jobs:
       - name: Create GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: inputs.version == ''
         run: gh release create $VERSION --draft --verify-tag --title $VERSION
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: inputs.version != ''
+        run: gh release create $VERSION --draft --title $VERSION
     outputs:
       version: ${{ env.VERSION }}
 
@@ -62,7 +69,7 @@ jobs:
       # Bump this as appropriate. We pin to a version to make sure CI
       # continues to work as cross releases in the past have broken things
       # in subtle ways.
-      CROSS_VERSION: v0.2.5
+      CROSS_VERSION: 0.2.5
       # Emit backtraces on panics.
       RUST_BACKTRACE: 1
       # Build static releases with PCRE2.
@@ -75,48 +82,44 @@ jobs:
           os: ubuntu-latest
           rust: nightly
           target: x86_64-unknown-linux-musl
-          strip: x86_64-linux-musl-strip
+        - build: linux
+          os: ubuntu-latest
+          rust: nightly
+          target: x86_64-unknown-linux-gnu
         - build: stable-x86
           os: ubuntu-latest
           rust: stable
           target: i686-unknown-linux-gnu
-          strip: x86_64-linux-gnu-strip
           qemu: i386
         - build: stable-aarch64
           os: ubuntu-latest
           rust: stable
           target: aarch64-unknown-linux-gnu
-          strip: aarch64-linux-gnu-strip
           qemu: qemu-aarch64
         - build: stable-aarch64-musl
           os: ubuntu-latest
           rust: stable
           target: aarch64-unknown-linux-musl
-          strip: aarch64-linux-musl-strip
           qemu: qemu-aarch64
         - build: stable-arm-gnueabihf
           os: ubuntu-latest
           rust: stable
           target: armv7-unknown-linux-gnueabihf
-          strip: arm-linux-gnueabihf-strip
           qemu: qemu-arm
         - build: stable-arm-musleabihf
           os: ubuntu-latest
           rust: stable
           target: armv7-unknown-linux-musleabihf
-          strip: arm-linux-musleabihf-strip
           qemu: qemu-arm
         - build: stable-arm-musleabi
           os: ubuntu-latest
           rust: stable
           target: armv7-unknown-linux-musleabi
-          strip: arm-linux-musleabi-strip
           qemu: qemu-arm
         - build: stable-s390x
           os: ubuntu-latest
           rust: stable
           target: s390x-unknown-linux-gnu
-          strip: s390x-linux-gnu-strip
           qemu: qemu-s390x
         - build: macos
           os: macos-latest
@@ -142,6 +145,11 @@ jobs:
           os: windows-latest
           rust: nightly
           target: i686-pc-windows-msvc
+        - build: stable-riscv64
+          os: ubuntu-latest
+          rust: stable
+          target: riscv64gc-unknown-linux-gnu
+          qemu: qemu-riscv64
 
     steps:
     - name: Checkout repository
@@ -170,7 +178,7 @@ jobs:
         mkdir "$dir"
         echo "$dir" >> $GITHUB_PATH
         cd "$dir"
-        curl -LO "https://github.com/cross-rs/cross/releases/download/$CROSS_VERSION/cross-x86_64-unknown-linux-musl.tar.gz"
+        curl -LO "https://github.com/cross-rs/cross/releases/download/v$CROSS_VERSION/cross-x86_64-unknown-linux-musl.tar.gz"
         tar xf cross-x86_64-unknown-linux-musl.tar.gz
         echo "CARGO=cross" >> $GITHUB_ENV
 
@@ -197,21 +205,6 @@ jobs:
           bin="target/${{ matrix.target }}/release-lto/rg"
         fi
         echo "BIN=$bin" >> $GITHUB_ENV
-
-    - name: Strip release binary (macos)
-      if: matrix.os == 'macos-latest'
-      shell: bash
-      run: strip "$BIN"
-
-    - name: Strip release binary (cross)
-      if: env.CARGO == 'cross'
-      shell: bash
-      run: |
-        docker run --rm -v \
-          "$PWD/target:/target:Z" \
-          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
-          "${{ matrix.strip }}" \
-          "/$BIN"
 
     - name: Determine archive name
       shell: bash
@@ -245,36 +238,36 @@ jobs:
       run: |
         docker run --rm -v \
           "$PWD/target:/target:Z" \
-          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
+          "ghcr.io/cross-rs/${{ matrix.target }}:$CROSS_VERSION" \
           "${{ matrix.qemu }}" "/$BIN" --version
         docker run --rm -v \
           "$PWD/target:/target:Z" \
-          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
+          "ghcr.io/cross-rs/${{ matrix.target }}:$CROSS_VERSION" \
           "${{ matrix.qemu }}" "/$BIN" \
             --generate complete-bash > "$ARCHIVE/complete/rg.bash"
         docker run --rm -v \
           "$PWD/target:/target:Z" \
-          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
+          "ghcr.io/cross-rs/${{ matrix.target }}:$CROSS_VERSION" \
           "${{ matrix.qemu }}" "/$BIN" \
             --generate complete-fish > "$ARCHIVE/complete/rg.fish"
         docker run --rm -v \
           "$PWD/target:/target:Z" \
-          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
+          "ghcr.io/cross-rs/${{ matrix.target }}:$CROSS_VERSION" \
           "${{ matrix.qemu }}" "/$BIN" \
             --generate complete-nushell > "$ARCHIVE/complete/rg-completions.nu"
         docker run --rm -v \
           "$PWD/target:/target:Z" \
-          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
+          "ghcr.io/cross-rs/${{ matrix.target }}:$CROSS_VERSION" \
           "${{ matrix.qemu }}" "/$BIN" \
             --generate complete-powershell > "$ARCHIVE/complete/_rg.ps1"
         docker run --rm -v \
           "$PWD/target:/target:Z" \
-          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
+          "ghcr.io/cross-rs/${{ matrix.target }}:$CROSS_VERSION" \
           "${{ matrix.qemu }}" "/$BIN" \
             --generate complete-zsh > "$ARCHIVE/complete/_rg"
         docker run --rm -v \
           "$PWD/target:/target:Z" \
-          "ghcr.io/cross-rs/${{ matrix.target }}:main" \
+          "ghcr.io/cross-rs/${{ matrix.target }}:$CROSS_VERSION" \
           "${{ matrix.qemu }}" "/$BIN" \
             --generate man > "$ARCHIVE/doc/rg.1"
 
