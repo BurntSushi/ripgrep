@@ -332,7 +332,7 @@ jobs:
     - name: Install cargo-deb
       shell: bash
       run: |
-        cargo install cargo-deb
+        cargo install cargo-deb --version 3.8.0
 
     # 'cargo deb' does not seem to provide a way to specify an asset that is
     # created at build time, such as ripgrep's man page. To work around this,
