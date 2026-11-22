@@ -510,7 +510,7 @@ pub(crate) fn trim_ascii_prefix(
 pub(crate) fn find_iter_at_in_context<M, F>(
     searcher: &Searcher,
     matcher: M,
-    mut bytes: &[u8],
+    bytes: &[u8],
     range: std::ops::Range<usize>,
     mut matched: F,
 ) -> io::Result<()>
@@ -542,9 +542,11 @@ where
     // shouldn't be involved in this business in the first place. Sigh. Live
     // and learn. Abstraction boundaries are hard.
     let is_multi_line = searcher.multi_line_with_matcher(&matcher);
-    if is_multi_line {
+    let capped = if is_multi_line {
         if bytes[range.end..].len() >= MAX_LOOK_AHEAD {
-            bytes = &bytes[..range.end + MAX_LOOK_AHEAD];
+            &bytes[..range.end + MAX_LOOK_AHEAD]
+        } else {
+            bytes
         }
     } else {
         // When searching a single line, we should remove the line terminator.
@@ -554,16 +556,29 @@ where
         // No need to remember the line terminator as we aren't doing a replace
         // here.
         trim_line_terminator(searcher, bytes, &mut m);
-        bytes = &bytes[..m.end()];
-    }
+        &bytes[..m.end()]
+    };
+    let mut found = false;
     matcher
-        .find_iter_at(bytes, range.start, |m| {
+        .find_iter_at(capped, range.start, |m| {
             if m.start() >= range.end {
                 return false;
             }
+            found = true;
             matched(m)
         })
-        .map_err(io::Error::error_message)
+        .map_err(io::Error::error_message)?;
+    if !found && is_multi_line && capped.len() < bytes.len() {
+        matcher
+            .find_iter_at(bytes, range.start, |m| {
+                if m.start() >= range.end {
+                    return false;
+                }
+                matched(m)
+            })
+            .map_err(io::Error::error_message)?;
+    }
+    Ok(())
 }
 
 /// Given a buf and some bounds, if there is a line terminator at the end of

@@ -1873,6 +1873,24 @@ rgtest!(r3591_excludes_file_inner_tilde, |dir: Dir, mut cmd: TestCommand| {
     eqnice!("foo/foo1\n", cmd.arg("--files").arg("foo").stdout());
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/3503
+rgtest!(r3503, |dir: Dir, mut cmd: TestCommand| {
+    if !dir.is_pcre2() {
+        return;
+    }
+    let padding = "x".repeat(200);
+    dir.create("test", &format!("    pub fn foo(\n{padding}\n    self }}\n"));
+
+    eqnice!(
+        "1:1:    pub fn foo(\n",
+        cmd.arg("--multiline")
+            .arg("--column")
+            .arg(r"(?s)^ *pub fn(?=.{0,250} self\s*[}])")
+            .arg("test")
+            .stdout()
+    );
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/3593
 rgtest!(r3593, |dir: Dir, mut cmd: TestCommand| {
     dir.create("h.log", "a\nb\nfoo\nc\nfoo\nd\n");
