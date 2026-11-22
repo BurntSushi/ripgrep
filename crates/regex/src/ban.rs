@@ -12,7 +12,7 @@ pub(crate) fn check(expr: &Hir, byte: u8) -> Result<(), Error> {
     match *expr.kind() {
         HirKind::Empty => {}
         HirKind::Literal(hir::Literal(ref lit)) => {
-            if lit.iter().find(|&&b| b == byte).is_some() {
+            if lit.iter().any(|&b| b == byte) {
                 return invalid();
             }
         }
@@ -20,7 +20,7 @@ pub(crate) fn check(expr: &Hir, byte: u8) -> Result<(), Error> {
             if cls.ranges().iter().map(|r| r.len()).sum::<usize>() == 1 {
                 let contains =
                     |r: &&ClassUnicodeRange| r.start() <= ch && ch <= r.end();
-                if cls.ranges().iter().find(contains).is_some() {
+                if cls.ranges().iter().any(|r| contains(&r)) {
                     return invalid();
                 }
             }
@@ -30,7 +30,7 @@ pub(crate) fn check(expr: &Hir, byte: u8) -> Result<(), Error> {
                 let contains = |r: &&ClassBytesRange| {
                     r.start() <= byte && byte <= r.end()
                 };
-                if cls.ranges().iter().find(contains).is_some() {
+                if cls.ranges().iter().any(|r| contains(&r)) {
                     return invalid();
                 }
             }

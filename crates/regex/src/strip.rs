@@ -61,7 +61,7 @@ fn strip_from_match_ascii(expr: Hir, byte: u8) -> Result<Hir, Error> {
     Ok(match expr.into_kind() {
         HirKind::Empty => Hir::empty(),
         HirKind::Literal(hir::Literal(lit)) => {
-            if lit.iter().find(|&&b| b == byte).is_some() {
+            if lit.iter().any(|&b| b == byte) {
                 return invalid();
             }
             Hir::literal(lit)
