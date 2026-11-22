@@ -1,0 +1,101 @@
+# git-cliff ~ configuration file
+# https://git-cliff.org/docs/configuration
+
+[changelog]
+header = "# CHANGELOG\n"
+format = false
+# Used by `--prepend` to remove the previous header.
+header_marker = "<!-- git-cliff: end of header -->"
+# A Tera template to be rendered for each release in the changelog.
+# See https://keats.github.io/tera/#getting-started
+body = '''
+{%- if version %}
+{{ version | trim_start_matches(pat="v") }} ({{ timestamp | date(format="%Y-%m-%d") }})
+===================
+{%- else %}
+Unreleased
+==========
+{%- endif %}
+{% for entry in commits | commit_groups(groups=commit_parsers_groups) %}
+{{ entry.group | striptags | trim }}:
+{% for commit in entry.commits %}
+* {% if commit.links -%}
+  {% for link in commit.links | unique(attribute="href") -%}
+  [{{ link.text }}]({{ link.href }})
+  {%- if not loop.last %}, {% endif -%}
+  {% endfor -%}
+  {% else -%}
+  [{{ commit.id | truncate(length=7, end="") }}](https://github.com/BurntSushi/ripgrep/commit/{{ commit.id }})
+  {%- endif %}:
+{% if commit.breaking %}**BREAKING**: {% endif -%}
+  {{ commit.message
+      | replace_regex(from=" [(][^)]*#[0-9]+[)]$", to="")
+      | upper_first }}.
+{%- endfor %}
+{% endfor %}
+'''
+# Remove leading and trailing whitespaces from the changelog's body.
+trim = true
+# Render body even when there are no releases to process.
+render_always = true
+# An array of regex based postprocessors to modify the changelog.
+postprocessors = []
+# render body even when there are no releases to process
+# render_always = true
+# output file path
+# output = "test.md"
+
+[git]
+# Parse commits according to the conventional commits specification.
+# See https://www.conventionalcommits.org
+conventional_commits = true
+# Exclude commits that do not match the conventional commits specification.
+filter_unconventional = true
+# Require all commits to be conventional.
+# Takes precedence over filter_unconventional.
+require_conventional = false
+# Split commits on newlines, treating each line as an individual commit.
+split_commits = false
+# An array of regex based parsers to modify commit messages prior to further processing.
+commit_preprocessors = []
+# Prevent commits that are breaking from being excluded by commit parsers.
+protect_breaking_commits = false
+# An array of regex based parsers for extracting data from the commit message.
+# Assigns commits to groups.
+# Optionally sets the commit's scope and can decide to exclude commits from further processing.
+commit_parsers = [
+    { message = "^feat", group = "<!-- 0 --> Enhancements" },
+    { message = "^fix", group = "<!-- 1 --> Bug fixes" },
+    { message = "^doc", group = "<!-- 3 --> Documentation" },
+    { message = "^perf", group = "<!-- 4 --> Performance" },
+    { message = "^refactor", group = "<!-- 2 --> Refactor" },
+    { message = "^style", group = "<!-- 5 --> Styling" },
+    { message = "^test", group = "<!-- 6 --> Testing" },
+    { message = "^chore\\(release\\): prepare for", skip = true },
+    { message = "^chore\\(deps.*\\)", skip = true },
+    { message = "^chore\\(pr\\)", skip = true },
+    { message = "^chore\\(pull\\)", skip = true },
+    { message = "^chore|^ci", skip = true },
+    { body = ".*security", group = "<!-- 8 --> Security" },
+    { message = "^revert", group = "<!-- 9 --> Revert" },
+    # { message = ".*", group = "<!-- 10 -->💼 Other" },
+]
+# Exclude commits that are not matched by any commit parser.
+filter_commits = false
+# Fail on a commit that is not matched by any commit parser.
+fail_on_unmatched_commit = false
+# An array of link parsers for extracting external references, and turning them into URLs, using regex.
+link_parsers = [
+    { pattern = '#([0-9]+)', href = "https://github.com/BurntSushi/ripgrep/issues/$1" },
+]
+# Include only the tags that belong to the current branch.
+use_branch_tags = false
+# Order releases topologically instead of chronologically.
+topo_order = false
+# Order commits topologically instead of chronologically.
+topo_order_commits = true
+# Order of commits in each group/release within the changelog.
+# Allowed values: newest, oldest
+sort_commits = "oldest"
+# Process submodules commits
+recurse_submodules = false
