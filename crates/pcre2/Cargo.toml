@@ -1,6 +1,6 @@
 [package]
 name = "grep-pcre2"
-version = "0.1.10"  #:version
+version = "0.1.11"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 Use PCRE2 with the 'grep' crate.
@@ -14,6 +14,6 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-grep-matcher = { version = "0.1.8", path = "../matcher" }
+grep-matcher = { version = "0.1.10", path = "../matcher" }
 log = "0.4.20"
 pcre2 = "0.2.6"

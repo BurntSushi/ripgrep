@@ -154,7 +154,7 @@ checksum = "e4eba85ea1d0a966a983acd07deee566e67395d2d96b6fb39e62b5a833f1eb0b"
 
 [[package]]
 name = "globset"
-version = "0.4.21"
+version = "0.4.22"
 dependencies = [
  "aho-corasick",
  "arbitrary",
@@ -169,7 +169,7 @@ dependencies = [
 
 [[package]]
 name = "grep"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "grep-cli",
  "grep-matcher",
@@ -183,7 +183,7 @@ dependencies = [
 
 [[package]]
 name = "grep-cli"
-version = "0.1.12"
+version = "0.1.13"
 dependencies = [
  "bstr",
  "globset",
@@ -195,7 +195,7 @@ dependencies = [
 
 [[package]]
 name = "grep-matcher"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "memchr",
  "regex",
@@ -203,7 +203,7 @@ dependencies = [
 
 [[package]]
 name = "grep-pcre2"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "grep-matcher",
  "log",
@@ -212,7 +212,7 @@ dependencies = [
 
 [[package]]
 name = "grep-printer"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "bstr",
  "grep-matcher",
@@ -226,7 +226,7 @@ dependencies = [
 
 [[package]]
 name = "grep-regex"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "bstr",
  "grep-matcher",
@@ -237,7 +237,7 @@ dependencies = [
 
 [[package]]
 name = "grep-searcher"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "bstr",
  "encoding_rs",
@@ -252,7 +252,7 @@ dependencies = [
 
 [[package]]
 name = "ignore"
-version = "0.4.34"
+version = "0.4.35"
 dependencies = [
  "bstr",
  "crossbeam-channel",
@@ -404,7 +404,7 @@ checksum = "d902046e6a28a1e4c3cab97258a0ce11e994903f01c2d97a9447a0b3df85f4f6"
 
 [[package]]
 name = "ripgrep"
-version = "15.2.0"
+version = "16.0.0"
 dependencies = [
  "anyhow",
  "bstr",

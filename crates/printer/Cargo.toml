@@ -1,6 +1,6 @@
 [package]
 name = "grep-printer"
-version = "0.3.1"  #:version
+version = "0.3.2"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 An implementation of the grep crate's Sink trait that provides standard
@@ -20,15 +20,15 @@ serde = ["dep:serde", "dep:serde_json"]
 
 [dependencies]
 bstr = "1.6.2"
-grep-matcher = { version = "0.1.8", path = "../matcher" }
-grep-searcher = { version = "0.1.16", path = "../searcher" }
+grep-matcher = { version = "0.1.10", path = "../matcher" }
+grep-searcher = { version = "0.1.18", path = "../searcher" }
 log = "0.4.5"
 termcolor = "1.3.0"
 serde = { version = "1.0.193", optional = true }
 serde_json = { version = "1.0.107", optional = true }
 
 [dev-dependencies]
-grep-regex = { version = "0.1.14", path = "../regex" }
+grep-regex = { version = "0.1.15", path = "../regex" }
 
 [package.metadata.docs.rs]
 # We want to document all features.
