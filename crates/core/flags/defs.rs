@@ -25,9 +25,9 @@ use crate::flags::{
     Category, Flag, FlagValue,
     lowargs::{
         BinaryMode, BoundaryMode, BufferMode, CaseMode, ColorChoice,
-        ContextMode, EncodingMode, EngineChoice, GenerateMode, LoggingMode,
-        LowArgs, MmapMode, Mode, PatternSource, SearchMode, SortMode,
-        SortModeKind, SpecialMode, TypeChange,
+        ContextMode, EncodingMode, EngineChoice, GenerateMode, InputSource,
+        LoggingMode, LowArgs, MmapMode, Mode, PatternSource, SearchMode,
+        SortMode, SortModeKind, SpecialMode, TypeChange,
     },
 };
 
@@ -84,6 +84,8 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &IgnoreCase,
     &IgnoreFile,
     &IgnoreFileCaseInsensitive,
+    &In,
+    &In0,
     &IncludeZero,
     &InvertMatch,
     &JSON,
@@ -3430,6 +3432,204 @@ fn test_ignore_file_case_insensitive() {
     ])
     .unwrap();
     assert_eq!(true, args.ignore_file_case_insensitive);
+}
+
+/// --in
+#[derive(Debug)]
+struct In;
+
+impl Flag for In {
+    fn is_switch(&self) -> bool {
+        false
+    }
+    fn name_long(&self) -> &'static str {
+        "in"
+    }
+    fn doc_variable(&self) -> Option<&'static str> {
+        Some("INPUTFILE")
+    }
+    fn doc_category(&self) -> Category {
+        Category::Input
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Read paths to search from the given text file."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Includes paths to search from the given file, with one path per line.
+.sp
+When this flag is used, it behaves as if the file paths in the file provided
+were passed as positional arguments in the same order as they are
+in the file and relative to other positional arguments.
+.sp
+Newlines (both LF and CRLF) are not counted as part of the path.
+The rest of the path name is taken as-is on Unix and decoded as UTF-8 on
+Windows. Use the \flag{in0} flag to use \fBNUL\fP as terminator.
+.sp
+When \fIINPUTFILE\fP is \fB-\fP, then the paths will be read from \fBstdin\fP.
+"
+    }
+    fn completion_type(&self) -> CompletionType {
+        CompletionType::Filename
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        let path = PathBuf::from(v.unwrap_value());
+        args.inputs.push(InputSource::LineTerminated(path));
+        Ok(())
+    }
+}
+
+/// --in0
+#[derive(Debug)]
+struct In0;
+
+impl Flag for In0 {
+    fn is_switch(&self) -> bool {
+        false
+    }
+    fn name_long(&self) -> &'static str {
+        "in0"
+    }
+    fn doc_variable(&self) -> Option<&'static str> {
+        Some("INPUTFILE")
+    }
+    fn doc_category(&self) -> Category {
+        Category::Input
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Read paths to search from the given binary file."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Includes paths to search from the given file, terminated by \fBNUL\fP bytes.
+.sp
+When this flag is used, it behaves as if the file paths in the file provided
+were passed as positional arguments in the same order as they are
+in the file and relative to other positional arguments.
+.sp
+The path names are taken as-is on Unix, and decoded as UTF-8 on Windows.
+.sp
+When \fIINPUTFILE\fP is \fB-\fP, then the paths will be read from \fBstdin\fP.
+"
+    }
+    fn completion_type(&self) -> CompletionType {
+        CompletionType::Filename
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        let path = PathBuf::from(v.unwrap_value());
+        args.inputs.push(InputSource::NulTerminated(path));
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_in_in0() {
+    use std::ffi::OsString;
+
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(Vec::<InputSource>::new(), args.inputs);
+
+    let args = parse_low_raw(["--in", "foo"]).unwrap();
+    assert_eq!(
+        vec![InputSource::LineTerminated(PathBuf::from("foo"))],
+        args.inputs
+    );
+
+    let args = parse_low_raw(["--in0", "foo"]).unwrap();
+    assert_eq!(
+        vec![InputSource::NulTerminated(PathBuf::from("foo"))],
+        args.inputs
+    );
+
+    let args = parse_low_raw(["--in=foo"]).unwrap();
+    assert_eq!(
+        vec![InputSource::LineTerminated(PathBuf::from("foo"))],
+        args.inputs
+    );
+
+    let args = parse_low_raw(["--in0=foo"]).unwrap();
+    assert_eq!(
+        vec![InputSource::NulTerminated(PathBuf::from("foo"))],
+        args.inputs
+    );
+
+    let args = parse_low_raw(["--in", "-foo"]).unwrap();
+    assert_eq!(
+        vec![InputSource::LineTerminated(PathBuf::from("-foo"))],
+        args.inputs
+    );
+
+    let args = parse_low_raw(["--in0", "-foo"]).unwrap();
+    assert_eq!(
+        vec![InputSource::NulTerminated(PathBuf::from("-foo"))],
+        args.inputs
+    );
+
+    let args = parse_low_raw(["--in=-foo"]).unwrap();
+    assert_eq!(
+        vec![InputSource::LineTerminated(PathBuf::from("-foo"))],
+        args.inputs
+    );
+
+    let args = parse_low_raw(["--in0=-foo"]).unwrap();
+    assert_eq!(
+        vec![InputSource::NulTerminated(PathBuf::from("-foo"))],
+        args.inputs
+    );
+
+    let args =
+        parse_low_raw(["--in=foo", "--in0", "bar", "--in", "baz"]).unwrap();
+    assert_eq!(
+        vec![
+            InputSource::LineTerminated(PathBuf::from("foo")),
+            InputSource::NulTerminated(PathBuf::from("bar")),
+            InputSource::LineTerminated(PathBuf::from("baz")),
+        ],
+        args.inputs
+    );
+
+    let args = parse_low_raw([
+        "pos1", "--in=foo", "--in0", "bar", "pos2", "--in", "baz", "pos3",
+    ])
+    .unwrap();
+    assert_eq!(
+        vec![
+            InputSource::PositionalArgument(OsString::from("pos1")),
+            InputSource::LineTerminated(PathBuf::from("foo")),
+            InputSource::NulTerminated(PathBuf::from("bar")),
+            InputSource::PositionalArgument(OsString::from("pos2")),
+            InputSource::LineTerminated(PathBuf::from("baz")),
+            InputSource::PositionalArgument(OsString::from("pos3")),
+        ],
+        args.inputs
+    );
+
+    let args = parse_low_raw(["--in=-"]).unwrap();
+    assert_eq!(
+        vec![InputSource::LineTerminated(PathBuf::from("-")),],
+        args.inputs
+    );
+
+    let args = parse_low_raw(["--in", "-"]).unwrap();
+    assert_eq!(
+        vec![InputSource::LineTerminated(PathBuf::from("-")),],
+        args.inputs
+    );
+
+    let args = parse_low_raw(["--in0=-"]).unwrap();
+    assert_eq!(
+        vec![InputSource::NulTerminated(PathBuf::from("-")),],
+        args.inputs
+    );
+
+    let args = parse_low_raw(["--in0", "-"]).unwrap();
+    assert_eq!(
+        vec![InputSource::NulTerminated(PathBuf::from("-")),],
+        args.inputs
+    );
 }
 
 /// --include-zero
