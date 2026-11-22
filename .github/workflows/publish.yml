@@ -1,7 +1,5 @@
 name: Publish to crates.io
 on:
-  push:
-    tags: ['*']
   workflow_dispatch:
 jobs:
   publish:
