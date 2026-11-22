@@ -1,6 +1,107 @@
-TBD
-===
-Unreleased changes. Release notes have not yet been written.
+16.0.0 (2026-11-22)
+===================
+ripgrep 16 is a new major version release of ripgrep that mostly has bug fixes,
+some minor performance improvements and a small number of new features. Here
+are some highlights:
+
+* There is now an `--in` flag for telling which files ripgrep should search
+by pointing to another containing line delimited file paths. (There is also a
+corresponding `--in0` flag for NUL delimited file paths.)
+* ripgrep now has a `-G/--glob-not` flag, which is recommended in lieu of using
+`!` to negate a glob. That is, `-g '!*.toml'` can now be spelled as
+`-G '*.toml'`.
+* ripgrep now respects a new `RIPGREP_THREADS` environment variable for setting
+the default number of threads to use for parallel searches. Whenever
+`-j/--threads` is specified on the command line (or in a configuration file),
+it takes precedence over the environment variable.
+* `riscv64` has been re-added to ripgrep's release pipeline. Binaries can now
+be downloaded for that target.
+
+Enhancements:
+
+* [#3522](https://github.com/BurntSushi/ripgrep/issues/3522):
+Add new `-G/--glob-not` flag for negating `-g/--glob`.
+* [#3425](https://github.com/BurntSushi/ripgrep/issues/3425), [#3622](https://github.com/BurntSushi/ripgrep/issues/3622), [#3511](https://github.com/BurntSushi/ripgrep/issues/3511):
+Add nushell completions via `--generate complete-nushell` (#3425).
+* [#3255](https://github.com/BurntSushi/ripgrep/issues/3255):
+Add Zed hyperlink alias.
+* [#2962](https://github.com/BurntSushi/ripgrep/issues/2962):
+Add POSIX character class support in bracket expressions.
+* [#3035](https://github.com/BurntSushi/ripgrep/issues/3035):
+Add `--max-bytes` flag to limit bytes per file.
+* [#273](https://github.com/BurntSushi/ripgrep/issues/273), [#3459](https://github.com/BurntSushi/ripgrep/issues/3459):
+Add --in/--in0 flags for reading file paths.
+* [#3317](https://github.com/BurntSushi/ripgrep/issues/3317), [#3415](https://github.com/BurntSushi/ripgrep/issues/3415):
+Support RIPGREP_THREADS environment variable.
+* [#3620](https://github.com/BurntSushi/ripgrep/issues/3620), [#3617](https://github.com/BurntSushi/ripgrep/issues/3617):
+Delay-load userenv.dll on Windows MSVC.
+
+Bug fixes:
+
+* [#3609](https://github.com/BurntSushi/ripgrep/issues/3609), [#3603](https://github.com/BurntSushi/ripgrep/issues/3603):
+Reject partial path components when stripping Unix prefixes.
+* [#3605](https://github.com/BurntSushi/ripgrep/issues/3605), [#3604](https://github.com/BurntSushi/ripgrep/issues/3604):
+Continue reading ignore files after invalid UTF-8 lines.
+* [#3607](https://github.com/BurntSushi/ripgrep/issues/3607), [#3614](https://github.com/BurntSushi/ripgrep/issues/3614):
+Statically link binary on Windows ARM64/MSVC (#3607).
+* [#3593](https://github.com/BurntSushi/ripgrep/issues/3593):
+`-v -m N -A k` printing the rest of the input as matches.
+* [#3581](https://github.com/BurntSushi/ripgrep/issues/3581), [#1764](https://github.com/BurntSushi/ripgrep/issues/1764):
+`-g !DIRNAME/` couldn't match when the CWD is `DIRNAME`.
+* [#2552](https://github.com/BurntSushi/ripgrep/issues/2552):
+Don't report ignored broken symlinks when following links.
+* [#3577](https://github.com/BurntSushi/ripgrep/issues/3577):
+Hostname buffer size at HOST_NAME_MAX.
+* [#3382](https://github.com/BurntSushi/ripgrep/issues/3382):
+Preserve buffered matches after parallel search errors.
+* [#3526](https://github.com/BurntSushi/ripgrep/issues/3526):
+Hyperlink paths that are not valid UTF-8.
+* [#2745](https://github.com/BurntSushi/ripgrep/issues/2745):
+Exclude path separator from character classes.
+* [#3534](https://github.com/BurntSushi/ripgrep/issues/3534):
+Detect symlink loops above the search root.
+* [#3617](https://github.com/BurntSushi/ripgrep/issues/3617):
+Don't compare against stdout when it's a pipe on Windows.
+* [#2958](https://github.com/BurntSushi/ripgrep/issues/2958):
+Sanitize paths by removing control codes in output.
+* [#3527](https://github.com/BurntSushi/ripgrep/issues/3527):
+Treat lone `!` gitignore line as a no-op.
+* [#3484](https://github.com/BurntSushi/ripgrep/issues/3484):
+Separate Scheme from Lisp file types.
+* [#3342](https://github.com/BurntSushi/ripgrep/issues/3342):
+Detect compressed files by magic number, not just extension.
+* [#3477](https://github.com/BurntSushi/ripgrep/issues/3477):
+Parse trailing spaces correctly in gitignore patterns.
+* [#1983](https://github.com/BurntSushi/ripgrep/issues/1983), [#3364](https://github.com/BurntSushi/ripgrep/issues/3364):
+`--json` should emit multiple matches in multiline mode.
+* [#3222](https://github.com/BurntSushi/ripgrep/issues/3222):
+Separate flags from paths in decompression commands.
+* [#3503](https://github.com/BurntSushi/ripgrep/issues/3503):
+Fall back past MAX_LOOK_AHEAD in multi-line match discovery.
+
+Documentation:
+
+* [#3598](https://github.com/BurntSushi/ripgrep/issues/3598):
+Clarify PATH environment variable in flag documentation.
+* [#3551](https://github.com/BurntSushi/ripgrep/issues/3551):
+Note that nesting `{...}` alternates is allowed.
+* [#3538](https://github.com/BurntSushi/ripgrep/issues/3538):
+Document git divergence in matched_path_or_any_parents.
+* [#3243](https://github.com/BurntSushi/ripgrep/issues/3243):
+Emit .TP for each flag entry to generate linkable anchors.
+* [#3500](https://github.com/BurntSushi/ripgrep/issues/3500):
+Clarify that the `-r/--replace` flag is not recursive search.
+* [#3323](https://github.com/BurntSushi/ripgrep/issues/3323):
+Remove `$` prompt symbols from README code blocks.
+* [#3448](https://github.com/BurntSushi/ripgrep/issues/3448):
+Update guide examples for a more recent release.
+
+Performance:
+
+* [#3597](https://github.com/BurntSushi/ripgrep/issues/3597), [#3594](https://github.com/BurntSushi/ripgrep/issues/3594):
+Skip path resolution when hyperlinks are disabled.
+* [#2832](https://github.com/BurntSushi/ripgrep/issues/2832):
+Honor custom line terminators in the regex engine.
 
 
 15.2.0 (2026-07-15)

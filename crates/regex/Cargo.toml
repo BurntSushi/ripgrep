@@ -1,6 +1,6 @@
 [package]
 name = "grep-regex"
-version = "0.1.14"  #:version
+version = "0.1.15"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 Use Rust's regex library with the 'grep' crate.
@@ -15,7 +15,7 @@ rust-version.workspace = true
 
 [dependencies]
 bstr = "1.6.2"
-grep-matcher = { version = "0.1.8", path = "../matcher" }
+grep-matcher = { version = "0.1.10", path = "../matcher" }
 log = "0.4.20"
 regex-automata = { version = "0.4.0" }
 regex-syntax = "0.8.0"

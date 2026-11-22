@@ -1,6 +1,6 @@
 [package]
 name = "grep"
-version = "0.4.1"  #:version
+version = "0.4.2"  #:version
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 description = """
 Fast line oriented regex searching as a library.
@@ -14,12 +14,12 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-grep-cli = { version = "0.1.12", path = "../cli" }
-grep-matcher = { version = "0.1.8", path = "../matcher" }
-grep-pcre2 = { version = "0.1.9", path = "../pcre2", optional = true }
-grep-printer = { version = "0.3.1", path = "../printer" }
-grep-regex = { version = "0.1.14", path = "../regex" }
-grep-searcher = { version = "0.1.16", path = "../searcher" }
+grep-cli = { version = "0.1.13", path = "../cli" }
+grep-matcher = { version = "0.1.10", path = "../matcher" }
+grep-pcre2 = { version = "0.1.11", path = "../pcre2", optional = true }
+grep-printer = { version = "0.3.2", path = "../printer" }
+grep-regex = { version = "0.1.15", path = "../regex" }
+grep-searcher = { version = "0.1.18", path = "../searcher" }
 
 [dev-dependencies]
 termcolor = "1.0.4"
