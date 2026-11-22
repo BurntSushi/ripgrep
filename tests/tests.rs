@@ -18,5 +18,7 @@ mod json;
 mod misc;
 // Tests for ripgrep's multiline search support.
 mod multiline;
+// Tests for limiting the number of bytes searched.
+mod max_bytes;
 // Regression tests.
 mod regression;

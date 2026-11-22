@@ -142,12 +142,6 @@ impl Dir {
         file.flush()
     }
 
-    /// Remove a file with the given name from this directory.
-    pub fn remove<P: AsRef<Path>>(&self, name: P) {
-        let path = self.dir.join(name);
-        nice_err(&path, fs::remove_file(&path));
-    }
-
     /// Create a new directory with the given path (and any directories above
     /// it) inside this directory.
     pub fn create_dir<P: AsRef<Path>>(&self, path: P) {

@@ -64,6 +64,7 @@ pub(crate) struct HiArgs {
     invert_match: bool,
     is_terminal_stdout: bool,
     line_number: bool,
+    max_bytes: Option<u64>,
     max_columns: Option<u64>,
     max_columns_preview: bool,
     max_count: Option<u64>,
@@ -281,6 +282,7 @@ impl HiArgs {
             invert_match: low.invert_match,
             is_terminal_stdout: state.is_terminal_stdout,
             line_number,
+            max_bytes: low.max_bytes,
             max_columns: low.max_columns,
             max_columns_preview: low.max_columns_preview,
             max_count: low.max_count,
@@ -727,7 +729,8 @@ impl HiArgs {
             .line_number(self.line_number)
             .multi_line(self.multiline)
             .memory_map(self.mmap_choice.clone())
-            .stop_on_nonmatch(self.stop_on_nonmatch);
+            .stop_on_nonmatch(self.stop_on_nonmatch)
+            .max_bytes(self.max_bytes);
         match self.context {
             ContextMode::Passthru => {
                 builder.passthru(true);

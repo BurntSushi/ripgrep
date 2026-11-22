@@ -91,6 +91,7 @@ pub(super) const FLAGS: &[&dyn Flag] = &[
     &LineNumber,
     &LineNumberNo,
     &LineRegexp,
+    &MaxBytes,
     &MaxColumns,
     &MaxColumnsPreview,
     &MaxCount,
@@ -3860,6 +3861,63 @@ fn test_line_regexp() {
 
     let args = parse_low_raw(["-x"]).unwrap();
     assert_eq!(Some(BoundaryMode::Line), args.boundary);
+}
+
+/// --max-bytes
+#[derive(Debug)]
+struct MaxBytes;
+
+impl Flag for MaxBytes {
+    fn is_switch(&self) -> bool {
+        false
+    }
+    fn name_long(&self) -> &'static str {
+        "max-bytes"
+    }
+    fn doc_variable(&self) -> Option<&'static str> {
+        Some("NUM")
+    }
+    fn doc_category(&self) -> Category {
+        Category::Search
+    }
+    fn doc_short(&self) -> &'static str {
+        r"Limit the number of bytes examined."
+    }
+    fn doc_long(&self) -> &'static str {
+        r"
+Limit the number of bytes per file or stream searched to \fINUM\fP.
+.sp
+This only limits how many bytes are read and searched from each haystack. It
+does not affect which files are discovered or filtered by ripgrep.
+.sp
+When combined with \fB--max-count\fP (for example, \fB--max-count 1\fP), this
+can substantially speed up searches where matches are expected to appear only
+near the beginning of each file, such as HTTP headers in large cache files.
+.sp
+Note that \fB0\fP is a legal value but not likely to be useful. When used,
+ripgrep won't search anything.
+"
+    }
+
+    fn update(&self, v: FlagValue, args: &mut LowArgs) -> anyhow::Result<()> {
+        args.max_bytes = Some(convert::u64(&v.unwrap_value())?);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_max_bytes() {
+    let args = parse_low_raw(None::<&str>).unwrap();
+    assert_eq!(None, args.max_bytes);
+
+    let args = parse_low_raw(["--max-bytes", "5"]).unwrap();
+    assert_eq!(Some(5), args.max_bytes);
+
+    let args = parse_low_raw(["--max-bytes", "5", "--max-bytes=10"]).unwrap();
+    assert_eq!(Some(10), args.max_bytes);
+    let args = parse_low_raw(["--max-bytes=0"]).unwrap();
+    assert_eq!(Some(0), args.max_bytes);
 }
 
 /// -M/--max-columns
