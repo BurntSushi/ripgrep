@@ -11,6 +11,7 @@ use crate::flags::{HiArgs, SearchMode};
 #[macro_use]
 mod messages;
 
+mod color;
 mod flags;
 mod haystack;
 mod logger;
@@ -174,7 +175,10 @@ fn search_parallel(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
     let mut searcher = args.search_worker(
         args.matcher()?,
         args.searcher()?,
-        args.printer(mode, bufwtr.buffer()),
+        args.printer(
+            mode,
+            color::ColorWriter::buffer(bufwtr.buffer(), args.color_width()),
+        ),
     )?;
     args.walk_builder()?.build_parallel().run(|| {
         let bufwtr = &bufwtr;
@@ -209,7 +213,9 @@ fn search_parallel(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
                     );
                 }
             }
-            if let Err(err) = bufwtr.print(searcher.printer().get_mut()) {
+            if let Err(err) =
+                bufwtr.print(searcher.printer().get_mut().get_ref())
+            {
                 // A broken pipe means graceful termination.
                 if err.kind() == std::io::ErrorKind::BrokenPipe {
                     return WalkState::Quit;
@@ -235,7 +241,7 @@ fn search_parallel(args: &HiArgs, mode: SearchMode) -> anyhow::Result<bool> {
         let stats = locked_stats.lock().unwrap();
         let mut wtr = searcher.printer().get_mut();
         let _ = print_stats(mode, &stats, started_at, &mut wtr);
-        let _ = bufwtr.print(&mut wtr);
+        let _ = bufwtr.print(wtr.get_ref());
     }
     Ok(matched.load(Ordering::SeqCst))
 }

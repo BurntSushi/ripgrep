@@ -15,6 +15,7 @@ use {
 };
 
 use crate::{
+    color::ColorWriter,
     flags::lowargs::{
         BinaryMode, BoundaryMode, BufferMode, CaseMode, ColorChoice,
         ContextMode, ContextSeparator, EncodingMode, EngineChoice,
@@ -850,9 +851,9 @@ impl HiArgs {
     /// The writer returned is also configured to do either line or block
     /// buffering, based on either explicit configuration from the user via CLI
     /// flags, or automatically based on whether stdout is connected to a tty.
-    pub(crate) fn stdout(&self) -> grep::cli::StandardStream {
+    pub(crate) fn stdout(&self) -> ColorWriter<grep::cli::StandardStream> {
         let color = self.color.to_termcolor();
-        match self.buffer {
+        let wtr = match self.buffer {
             BufferMode::Auto => {
                 if self.is_terminal_stdout {
                     grep::cli::stdout_buffered_line(color)
@@ -862,7 +863,30 @@ impl HiArgs {
             }
             BufferMode::Line => grep::cli::stdout_buffered_line(color),
             BufferMode::Block => grep::cli::stdout_buffered_block(color),
+        };
+        ColorWriter::stdout(wtr, self.color_width())
+    }
+
+    /// Return the width needed to safely erase unused colored terminal cells.
+    pub(crate) fn color_width(&self) -> Option<usize> {
+        if !self.is_terminal_stdout
+            || self.null_data
+            || self.path_terminator.is_some()
+            || [
+                self.colors.path(),
+                self.colors.line(),
+                self.colors.column(),
+                self.colors.matched(),
+                self.colors.highlight(),
+            ]
+            .iter()
+            .all(|spec| spec.bg().is_none())
+        {
+            return None;
         }
+        terminal_size::terminal_size_of(std::io::stdout())
+            .map(|(width, _)| usize::from(width.0))
+            .filter(|&width| width > 0)
     }
 
     /// Returns the total number of threads ripgrep should use to execute a

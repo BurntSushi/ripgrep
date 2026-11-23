@@ -60,6 +60,7 @@ lexopt = "0.3.0"
 log = "0.4.5"
 serde_json = "1.0.23"
 termcolor = "1.4.0"
+terminal_size = "0.4"
 textwrap = { version = "0.16.0", default-features = false }
 
 [target.'cfg(all(target_env = "musl", target_pointer_width = "64"))'.dependencies.tikv-jemallocator]

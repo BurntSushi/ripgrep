@@ -1203,3 +1203,67 @@ rgtest!(stop_on_nonmatch, |dir: Dir, mut cmd: TestCommand| {
     cmd.args(&["--stop-on-nonmatch", "[235]"]);
     eqnice!("test:line2\ntest:line3\n", cmd.stdout());
 });
+
+// Redirected output has no known terminal width, so do not emit erase commands.
+rgtest!(color_background_redirected, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("haystack", "before me after\n");
+    cmd.args(&[
+        "--color=ansi",
+        "--colors=match:none",
+        "--colors=match:fg:white",
+        "--colors=match:bg:blue",
+        "me",
+        "haystack",
+    ]);
+    eqnice!("before \x1b[0m\x1b[37m\x1b[44mme\x1b[0m after\n", cmd.stdout());
+});
+
+rgtest!(
+    color_background_redirected_parallel,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create("one", "before me after\n");
+        dir.create("two", "before me after\n");
+        cmd.args(&[
+            "--threads=2",
+            "--no-filename",
+            "--no-heading",
+            "--color=ansi",
+            "--colors=match:none",
+            "--colors=match:fg:white",
+            "--colors=match:bg:blue",
+            "me",
+            ".",
+        ]);
+        let line = "before \x1b[0m\x1b[37m\x1b[44mme\x1b[0m after\n";
+        eqnice!(line.repeat(2), cmd.stdout());
+    }
+);
+
+rgtest!(
+    color_foreground_match_does_not_clear_tail,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create("haystack", "before me after\n");
+        cmd.args(&[
+            "--color=ansi",
+            "--colors=match:none",
+            "--colors=match:fg:white",
+            "me",
+            "haystack",
+        ]);
+        eqnice!("before \x1b[0m\x1b[37mme\x1b[0m after\n", cmd.stdout());
+    }
+);
+
+rgtest!(
+    color_disabled_does_not_clear_tail,
+    |dir: Dir, mut cmd: TestCommand| {
+        dir.create("haystack", "before me after\n");
+        cmd.args(&[
+            "--color=never",
+            "--colors=match:bg:blue",
+            "me",
+            "haystack",
+        ]);
+        eqnice!("before me after\n", cmd.stdout());
+    }
+);
