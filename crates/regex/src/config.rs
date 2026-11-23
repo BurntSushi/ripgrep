@@ -8,7 +8,10 @@ use {
 };
 
 use crate::{
-    ast::AstAnalysis, ban, error::Error, non_matching::non_matching_bytes,
+    ast::{AstAnalysis, ends_with_ignore_whitespace},
+    ban,
+    error::Error,
+    non_matching::non_matching_bytes,
     strip::strip_from_match,
 };
 
@@ -181,11 +184,22 @@ impl ConfiguredHIR {
         } else {
             let mut alts = vec![];
             for p in patterns.iter() {
-                alts.push(if config.fixed_strings {
-                    format!("(?:{})", regex_syntax::escape(p.as_ref()))
+                let pat = p.as_ref();
+                let wrapped = if config.fixed_strings {
+                    format!("(?:{})", regex_syntax::escape(pat))
+                } else if !pat.ends_with('\n')
+                    && ends_with_ignore_whitespace(
+                        pat,
+                        config.ignore_whitespace,
+                        config.nest_limit,
+                        config.octal,
+                    )
+                {
+                    format!("(?:{}\n)", pat)
                 } else {
-                    format!("(?:{})", p.as_ref())
-                });
+                    format!("(?:{})", pat)
+                };
+                alts.push(wrapped);
             }
             let pattern = alts.join("|");
             let ast = ast::parse::ParserBuilder::new()
