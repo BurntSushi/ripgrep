@@ -1203,3 +1203,31 @@ rgtest!(stop_on_nonmatch, |dir: Dir, mut cmd: TestCommand| {
     cmd.args(&["--stop-on-nonmatch", "[235]"]);
     eqnice!("test:line2\ntest:line3\n", cmd.stdout());
 });
+
+// See: https://github.com/BurntSushi/ripgrep/pull/3630
+rgtest!(color_background_cleanup, |dir: Dir, _: TestCommand| {
+    dir.create("one", "before me after\n");
+    dir.create("two", "before me after\n");
+    for threads in ["1", "2"] {
+        for (color, spec, should_clear) in [
+            ("ansi", "match:bg:blue", true),
+            ("ansi", "match:fg:white", false),
+            ("never", "match:bg:blue", false),
+        ] {
+            let mut cmd = dir.command();
+            cmd.args(&[
+                "--threads",
+                threads,
+                "--color",
+                color,
+                "--colors=match:none",
+                "--colors",
+                spec,
+                "me",
+                ".",
+            ]);
+            let output = cmd.stdout();
+            assert_eq!(output.contains("\x1b[K"), should_clear);
+        }
+    }
+});
