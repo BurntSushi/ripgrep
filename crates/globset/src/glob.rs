@@ -771,6 +771,13 @@ impl Tokens {
                         // when literal_separator is enabled.
                         re.push_str("[^\\s\\S]");
                     } else {
+                        let has_non_ascii =
+                            ranges_to_use.iter().any(|&(start, end)| {
+                                !start.is_ascii() || !end.is_ascii()
+                            });
+                        if has_non_ascii {
+                            re.push_str("(?u:");
+                        }
                         re.push('[');
                         if negated {
                             re.push('^');
@@ -778,17 +785,30 @@ impl Tokens {
                                 re.push('/');
                             }
                         }
+                        let push_class_char = |buf: &mut String, c: char| {
+                            if has_non_ascii {
+                                regex_syntax::escape_into(
+                                    c.encode_utf8(&mut [0; 4]),
+                                    buf,
+                                );
+                            } else {
+                                buf.push_str(&char_to_escaped_literal(c));
+                            }
+                        };
                         for r in ranges_to_use {
                             if r.0 == r.1 {
                                 // Not strictly necessary, but nicer to look at.
-                                re.push_str(&char_to_escaped_literal(r.0));
+                                push_class_char(re, r.0);
                             } else {
-                                re.push_str(&char_to_escaped_literal(r.0));
+                                push_class_char(re, r.0);
                                 re.push('-');
-                                re.push_str(&char_to_escaped_literal(r.1));
+                                push_class_char(re, r.1);
                             }
                         }
                         re.push(']');
+                        if has_non_ascii {
+                            re.push(')');
+                        }
                     }
                 }
                 Token::Alternates(ref patterns) => {
@@ -1932,5 +1952,26 @@ mod tests {
             .compile_matcher();
         assert!(!glob_range.is_match("/"));
         assert!(glob_range.is_match("a"));
+    }
+
+    #[test]
+    fn class_non_ascii() {
+        let single = Glob::new("[ඞ]").unwrap().compile_matcher();
+        assert!(single.is_match("ඞ"));
+        assert!(!single.is_match("a"));
+
+        let range = Glob::new("[α-ω]").unwrap().compile_matcher();
+        assert!(range.is_match("β"));
+        assert!(!range.is_match("a"));
+
+        let negated = GlobBuilder::new("[!ඞ]")
+            .literal_separator(true)
+            .build()
+            .unwrap()
+            .compile_matcher();
+        assert!(!negated.is_match("ඞ"));
+        assert!(!negated.is_match("/"));
+        assert!(negated.is_match("a"));
+        assert!(negated.is_match("α"));
     }
 }
