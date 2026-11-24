@@ -1504,6 +1504,23 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         } else {
             self.wtr().borrow_mut().reset()?;
         }
+        let bg = self.config().colors.matched().bg().is_some();
+        let mut wtr = self.wtr().borrow_mut();
+        // When a match wraps and scrolls the terminal, newly exposed cells can
+        // inherit its background color. Resetting the color leaves those cells
+        // unchanged, so \x1b[K (erase to end of line) clears them.
+        // See https://bugzilla.gnome.org/show_bug.cgi?id=754596
+        //
+        // Unlike termcolor's set_color/reset methods, this raw escape requires
+        // an ANSI writer. For termcolor's writers, supports_hyperlinks() is
+        // true for ANSI and false for no-color and legacy Windows writers.
+        //
+        // Write directly to the underlying writer so the escape isn't counted
+        // as printed text.
+        if bg && wtr.supports_hyperlinks() {
+            const ERASE_IN_LINE: &[u8] = b"\x1b[K";
+            wtr.get_mut().write_all(ERASE_IN_LINE)?;
+        }
         self.in_color_match.set(false);
         Ok(())
     }
