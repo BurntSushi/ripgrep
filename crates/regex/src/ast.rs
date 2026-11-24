@@ -143,6 +143,89 @@ impl AstAnalysis {
     }
 }
 
+/// Returns true if and only if the `ignore_whitespace` (`x`) flag is active
+/// at the end of the given pattern.
+///
+/// This is used to determine whether a pattern wrapped inside `(?:...)` needs
+/// a trailing newline to prevent an unclosed comment from consuming the
+/// closing parenthesis.
+pub(crate) fn ends_with_ignore_whitespace(
+    pattern: &str,
+    initial: bool,
+    nest_limit: u32,
+    octal: bool,
+) -> bool {
+    // Fast path: if the pattern cannot possibly alter flag state and
+    // ignore_whitespace is not initially enabled, we can skip parsing.
+    if !initial && !pattern.contains("(?") {
+        return false;
+    }
+    let Ok(ast) = ast::parse::ParserBuilder::new()
+        .nest_limit(nest_limit)
+        .octal(octal)
+        .ignore_whitespace(initial)
+        .build()
+        .parse(pattern)
+    else {
+        return false;
+    };
+    let visitor = IgnoreWhitespaceVisitor { stack: vec![], current: initial };
+    ast::visit(&ast, visitor).unwrap_or(false)
+}
+
+struct IgnoreWhitespaceVisitor {
+    stack: Vec<bool>,
+    current: bool,
+}
+
+impl ast::Visitor for IgnoreWhitespaceVisitor {
+    type Output = bool;
+    type Err = core::convert::Infallible;
+
+    fn finish(self) -> Result<bool, core::convert::Infallible> {
+        Ok(self.current)
+    }
+
+    fn visit_pre(
+        &mut self,
+        ast: &Ast,
+    ) -> Result<(), core::convert::Infallible> {
+        if let Ast::Group(ref g) = *ast {
+            self.stack.push(self.current);
+            if let Some(flags) = g.flags() {
+                if let Some(state) =
+                    flags.flag_state(ast::Flag::IgnoreWhitespace)
+                {
+                    self.current = state;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn visit_post(
+        &mut self,
+        ast: &Ast,
+    ) -> Result<(), core::convert::Infallible> {
+        match *ast {
+            Ast::Group(_) => {
+                if let Some(prev) = self.stack.pop() {
+                    self.current = prev;
+                }
+            }
+            Ast::Flags(ref f) => {
+                if let Some(state) =
+                    f.flags.flag_state(ast::Flag::IgnoreWhitespace)
+                {
+                    self.current = state;
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -212,5 +295,56 @@ mod tests {
         let x = analysis(r"a\u0061");
         assert!(!x.any_uppercase);
         assert!(x.any_literal);
+    }
+
+    #[test]
+    fn test_ends_with_ignore_whitespace() {
+        assert!(ends_with_ignore_whitespace(
+            r"(?x)\d+ #comment",
+            false,
+            250,
+            false
+        ));
+        assert!(ends_with_ignore_whitespace(
+            r"(?ix)\d+ #comment",
+            false,
+            250,
+            false
+        ));
+        assert!(ends_with_ignore_whitespace(
+            r"(?xi)\d+ #comment",
+            false,
+            250,
+            false
+        ));
+        assert!(ends_with_ignore_whitespace(
+            r"foo|(?x)bar #comment",
+            false,
+            250,
+            false
+        ));
+        assert!(!ends_with_ignore_whitespace(
+            r"(?x)foo(?-x)bar #not_comment",
+            false,
+            250,
+            false
+        ));
+        assert!(!ends_with_ignore_whitespace(
+            r"(?x:foo #comment\n)bar",
+            false,
+            250,
+            false
+        ));
+        assert!(!ends_with_ignore_whitespace(
+            r"((?x)foo)bar",
+            false,
+            250,
+            false
+        ));
+        assert!(!ends_with_ignore_whitespace(r"\d+", false, 250, false));
+        assert!(ends_with_ignore_whitespace(r"\d+", true, 250, false));
+        assert!(!ends_with_ignore_whitespace(r"(?-x)\d+", true, 250, false));
+        assert!(!ends_with_ignore_whitespace(r"[(?x)]", false, 250, false));
+        assert!(!ends_with_ignore_whitespace(r"\(\?x\)", false, 250, false));
     }
 }

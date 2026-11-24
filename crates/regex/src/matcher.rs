@@ -689,4 +689,32 @@ mod tests {
         let m = matcher.find_candidate_line(b"afoo ").unwrap().unwrap();
         assert!(is_candidate(m));
     }
+
+    // Test that inline (?x) mode with comments does not break when wrapped.
+    // See: https://github.com/BurntSushi/ripgrep/issues/2677
+    #[test]
+    fn ignore_whitespace_comment() {
+        let matcher = RegexMatcherBuilder::new()
+            .build(r"(?x)\d+ #extract digits")
+            .unwrap();
+        assert!(matcher.is_match(b"abc 123 foo").unwrap());
+
+        let matcher = RegexMatcherBuilder::new()
+            .build_many(&[r"(?x)\d+ #extract digits", "fig"])
+            .unwrap();
+        assert!(matcher.is_match(b"abc 123 foo").unwrap());
+        assert!(matcher.is_match(b"fig").unwrap());
+
+        // Combined flags like (?ix)
+        let matcher = RegexMatcherBuilder::new()
+            .build(r"(?ix)[a-f]+ #hex digits")
+            .unwrap();
+        assert!(matcher.is_match(b"ABC").unwrap());
+
+        // Flag negation like (?x)foo(?-x)bar #not_comment
+        let matcher = RegexMatcherBuilder::new()
+            .build(r"(?x)foo (?-x)bar #not_comment")
+            .unwrap();
+        assert!(matcher.is_match(b"foobar #not_comment").unwrap());
+    }
 }

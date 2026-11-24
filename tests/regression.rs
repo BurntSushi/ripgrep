@@ -1482,6 +1482,44 @@ rgtest!(r2480, |dir: Dir, mut cmd: TestCommand| {
     cmd.assert_err();
 });
 
+// See: https://github.com/BurntSushi/ripgrep/issues/2677
+rgtest!(r2677, |dir: Dir, _cmd: TestCommand| {
+    // Pattern wrapping for (?x) with comments is only implemented for the
+    // default regex engine (PCRE2 is wontfix as it lacks an AST parser).
+    if dir.is_pcre2() {
+        return;
+    }
+
+    dir.create("file", "fig a#b 123\n");
+
+    // (?x) with # comment: wrapping in (?:...) must not let comment consume )
+    let mut cmd = dir.command();
+    cmd.args(&["--only-matching", r"(?x)\d+ #extract digits", "file"]);
+    eqnice!("123\n", cmd.stdout());
+
+    // multi-pattern with (?x) and comment
+    let mut cmd = dir.command();
+    cmd.args(&[
+        "--only-matching",
+        "-e",
+        r"(?x)\d+ #extract digits",
+        "-e",
+        "fig",
+        "file",
+    ]);
+    eqnice!("fig\n123\n", cmd.stdout());
+
+    // combined flags (?ix) with comment
+    let mut cmd = dir.command();
+    cmd.args(&["--only-matching", r"(?ix)[a-b]+ #letters", "file"]);
+    eqnice!("a\nb\n", cmd.stdout());
+
+    // flag negation (?-x) does not append newline or comment out rest
+    let mut cmd = dir.command();
+    cmd.args(&["--only-matching", r"(?x)a (?-x)#b", "file"]);
+    eqnice!("a#b\n", cmd.stdout());
+});
+
 // See: https://github.com/BurntSushi/ripgrep/issues/2574
 rgtest!(r2574, |dir: Dir, mut cmd: TestCommand| {
     dir.create("haystack", "some.domain.com\nsome.domain.com/x\n");
