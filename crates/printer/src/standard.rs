@@ -1082,37 +1082,70 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
             let mut line = Match::new(start, end);
             self.trim_line_terminator(bytes, &mut line);
             self.trim_ascii_prefix(bytes, &mut line);
-            while !line.is_empty() {
-                if matches[midx].end() <= line.start() {
-                    if midx + 1 < matches.len() {
-                        midx += 1;
-                        continue;
-                    } else {
-                        break;
-                    }
-                }
+
+            let mut cur_start = line.start();
+            while midx < matches.len() {
                 let m = matches[midx];
 
-                if line.start() < m.start() {
-                    let upto = cmp::min(line.end(), m.start());
-                    line = line.with_start(upto);
+                let past = if m.is_empty() {
+                    m.end() < cur_start
                 } else {
-                    let upto = cmp::min(line.end(), m.end());
+                    m.end() <= cur_start
+                };
+                if past {
+                    midx += 1;
+                    continue;
+                }
+
+                let future = if m.is_empty() {
+                    m.start() > line.end()
+                } else {
+                    m.start() >= line.end()
+                };
+                if future {
+                    break;
+                }
+
+                if cur_start < m.start() {
+                    cur_start = m.start();
+                }
+
+                let col = if m.start() >= line.start() {
+                    m.start() - line.start() + 1
+                } else {
+                    m.start() + 1
+                };
+
+                if m.is_empty() {
                     self.write_prelude(
                         self.sunk.absolute_byte_offset() + m.start() as u64,
                         self.sunk.line_number().map(|n| n + count),
-                        Some(m.start() as u64 + 1),
+                        Some(col as u64),
                     )?;
-
-                    let this_line = line.with_end(upto);
-                    line = line.with_start(upto);
-                    if self.exceeds_max_columns(&bytes[this_line]) {
+                    self.write_spec(spec, b"")?;
+                    self.write_line_term()?;
+                    midx += 1;
+                } else {
+                    let upto = cmp::min(line.end(), m.end());
+                    let this_match = Match::new(cur_start, upto);
+                    self.write_prelude(
+                        self.sunk.absolute_byte_offset() + m.start() as u64,
+                        self.sunk.line_number().map(|n| n + count),
+                        Some(col as u64),
+                    )?;
+                    if self.exceeds_max_columns(&bytes[this_match]) {
                         self.write_exceeded_line(
-                            bytes, this_line, matches, &mut midx,
+                            bytes, this_match, matches, &mut midx,
                         )?;
                     } else {
-                        self.write_spec(spec, &bytes[this_line])?;
+                        self.write_spec(spec, &bytes[this_match])?;
                         self.write_line_term()?;
+                    }
+                    cur_start = upto;
+                    if upto == m.end() {
+                        midx += 1;
+                    } else {
+                        break;
                     }
                 }
             }
@@ -3107,6 +3140,73 @@ line 3 x
 5:12:Watson has to have it taken out for him and dusted,
 6:12:and exhibited clearly
 ";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn only_matching_multi_line_zero_width_start() {
+        let matcher = RegexMatcher::new(r"(?m)^").unwrap();
+        let mut printer = StandardBuilder::new()
+            .only_matching(true)
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .multi_line(true)
+            .line_number(true)
+            .build()
+            .search_reader(
+                &matcher,
+                "ab\ncd\n".as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "1:\n2:\n";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn only_matching_multi_line_zero_width_end() {
+        let matcher = RegexMatcher::new(r"(?m)$").unwrap();
+        let mut printer = StandardBuilder::new()
+            .only_matching(true)
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .multi_line(true)
+            .line_number(true)
+            .build()
+            .search_reader(
+                &matcher,
+                "ab\ncd\n".as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "1:\n2:\n";
+        assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn only_matching_multi_line_zero_width_empty_lines() {
+        let matcher = RegexMatcher::new(r"(?m)^").unwrap();
+        let mut printer = StandardBuilder::new()
+            .only_matching(true)
+            .column(true)
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .multi_line(true)
+            .line_number(true)
+            .build()
+            .search_reader(
+                &matcher,
+                "ab\n\ncd\n".as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+
+        let got = printer_contents(&mut printer);
+        let expected = "1:1:\n2:1:\n3:1:\n";
         assert_eq_printed!(expected, got);
     }
 

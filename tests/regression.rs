@@ -1908,3 +1908,25 @@ rgtest!(r3593, |dir: Dir, mut cmd: TestCommand| {
             .stdout()
     );
 });
+
+// See: https://github.com/BurntSushi/ripgrep/issues/3631
+rgtest!(r3631, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("repro.txt", "ab\ncd\n");
+
+    eqnice!(
+        "1:\n2:\n",
+        cmd.arg("-n").arg("-U").arg("-o").arg("^").arg("repro.txt").stdout()
+    );
+
+    let mut cmd = dir.command();
+    eqnice!(
+        "1:\n2:\n",
+        cmd.arg("-n").arg("-U").arg("-o").arg("$").arg("repro.txt").stdout()
+    );
+
+    let mut cmd = dir.command();
+    eqnice!(
+        "\n\n",
+        cmd.arg("-U").arg("-o").arg("^").arg("repro.txt").stdout()
+    );
+});
