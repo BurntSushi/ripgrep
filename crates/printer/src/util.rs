@@ -168,6 +168,7 @@ impl<M: Matcher> Replacer<M> {
 #[derive(Debug)]
 pub(crate) struct Sunk<'a> {
     bytes: &'a [u8],
+    original_bytes: &'a [u8],
     absolute_byte_offset: u64,
     line_number: Option<u64>,
     context_kind: Option<&'a SinkContextKind>,
@@ -180,6 +181,7 @@ impl<'a> Sunk<'a> {
     pub(crate) fn empty() -> Sunk<'static> {
         Sunk {
             bytes: &[],
+            original_bytes: &[],
             absolute_byte_offset: 0,
             line_number: None,
             context_kind: None,
@@ -194,10 +196,12 @@ impl<'a> Sunk<'a> {
         original_matches: &'a [Match],
         replacement: Option<(&'a [u8], &'a [Match])>,
     ) -> Sunk<'a> {
+        let original_bytes = sunk.bytes();
         let (bytes, matches) =
-            replacement.unwrap_or_else(|| (sunk.bytes(), original_matches));
+            replacement.unwrap_or((original_bytes, original_matches));
         Sunk {
             bytes,
+            original_bytes,
             absolute_byte_offset: sunk.absolute_byte_offset(),
             line_number: sunk.line_number(),
             context_kind: None,
@@ -212,10 +216,12 @@ impl<'a> Sunk<'a> {
         original_matches: &'a [Match],
         replacement: Option<(&'a [u8], &'a [Match])>,
     ) -> Sunk<'a> {
+        let original_bytes = sunk.bytes();
         let (bytes, matches) =
-            replacement.unwrap_or_else(|| (sunk.bytes(), original_matches));
+            replacement.unwrap_or((original_bytes, original_matches));
         Sunk {
             bytes,
+            original_bytes,
             absolute_byte_offset: sunk.absolute_byte_offset(),
             line_number: sunk.line_number(),
             context_kind: Some(sunk.kind()),
@@ -232,6 +238,11 @@ impl<'a> Sunk<'a> {
     #[inline]
     pub(crate) fn bytes(&self) -> &'a [u8] {
         self.bytes
+    }
+
+    #[inline]
+    pub(crate) fn original_bytes(&self) -> &'a [u8] {
+        self.original_bytes
     }
 
     #[inline]
