@@ -109,6 +109,9 @@ fn parse_low() -> ParseResult<LowArgs> {
     }
     // Reset the message and logging levels, since they could have changed.
     set_log_levels(&low);
+    if let Some(special) = low.special.take() {
+        return ParseResult::Special(special);
+    }
     ParseResult::Ok(low)
 }
 

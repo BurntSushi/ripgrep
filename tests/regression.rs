@@ -1908,3 +1908,16 @@ rgtest!(r3593, |dir: Dir, mut cmd: TestCommand| {
             .stdout()
     );
 });
+
+rgtest!(special_flag_in_config, |dir: Dir, mut cmd: TestCommand| {
+    dir.create("config", "--help\n");
+    cmd.env("RIPGREP_CONFIG_PATH", dir.path().join("config"));
+    let out = cmd.stdout();
+    assert!(out.contains("USAGE:"), "{}", out);
+
+    dir.create("config-version", "--version\n");
+    let mut cmd = dir.command();
+    cmd.env("RIPGREP_CONFIG_PATH", dir.path().join("config-version"));
+    let out = cmd.stdout();
+    assert!(out.contains("ripgrep "), "{}", out);
+});
