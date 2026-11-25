@@ -1005,30 +1005,42 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         debug_assert!(!self.multi_line() || self.is_context());
 
         if self.config().only_matching {
-            for &m in self.sunk.matches() {
+            for (i, &m) in self.sunk.matches().iter().enumerate() {
+                let orig =
+                    self.sunk.original_matches().get(i).copied().unwrap_or(m);
                 self.write_prelude(
-                    self.sunk.absolute_byte_offset() + m.start() as u64,
+                    self.sunk.absolute_byte_offset() + orig.start() as u64,
                     self.sunk.line_number(),
-                    Some(m.start() as u64 + 1),
+                    Some(orig.start() as u64 + 1),
                 )?;
 
                 let buf = &self.sunk.bytes()[m];
                 self.write_colored_line(&[Match::new(0, buf.len())], buf)?;
             }
         } else if self.config().per_match {
-            for &m in self.sunk.matches() {
+            for (i, &m) in self.sunk.matches().iter().enumerate() {
+                let orig =
+                    self.sunk.original_matches().get(i).copied().unwrap_or(m);
                 self.write_prelude(
-                    self.sunk.absolute_byte_offset() + m.start() as u64,
+                    self.sunk.absolute_byte_offset() + orig.start() as u64,
                     self.sunk.line_number(),
-                    Some(m.start() as u64 + 1),
+                    Some(orig.start() as u64 + 1),
                 )?;
                 self.write_colored_line(&[m], self.sunk.bytes())?;
             }
         } else {
+            let first_col = self
+                .sunk
+                .original_matches()
+                .first()
+                .copied()
+                .unwrap_or(self.sunk.matches()[0])
+                .start() as u64
+                + 1;
             self.write_prelude(
                 self.sunk.absolute_byte_offset(),
                 self.sunk.line_number(),
-                Some(self.sunk.matches()[0].start() as u64 + 1),
+                Some(first_col),
             )?;
             self.write_colored_line(self.sunk.matches(), self.sunk.bytes())?;
         }
@@ -1047,16 +1059,28 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
 
         let line_term = self.searcher.line_terminator().as_byte();
         let bytes = self.sunk.bytes();
+        let orig_bytes = self.sunk.original_bytes();
         let matches = self.sunk.matches();
+        let first_col = self
+            .sunk
+            .original_matches()
+            .first()
+            .copied()
+            .unwrap_or(matches[0])
+            .start() as u64
+            + 1;
         let mut midx = 0;
         let mut count = 0;
         let mut stepper = LineStep::new(line_term, 0, bytes.len());
+        let mut orig_stepper = LineStep::new(line_term, 0, orig_bytes.len());
         while let Some((start, end)) = stepper.next(bytes) {
             let mut line = Match::new(start, end);
+            let orig_start =
+                orig_stepper.next(orig_bytes).map_or(start, |(s, _)| s);
             self.write_prelude(
-                self.sunk.absolute_byte_offset() + line.start() as u64,
+                self.sunk.absolute_byte_offset() + orig_start as u64,
                 self.sunk.line_number().map(|n| n + count),
-                Some(matches[0].start() as u64 + 1),
+                Some(first_col),
             )?;
             count += 1;
             self.trim_ascii_prefix(bytes, &mut line);
@@ -1075,6 +1099,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         let spec = self.config().colors.matched();
         let bytes = self.sunk.bytes();
         let matches = self.sunk.matches();
+        let orig_matches = self.sunk.original_matches();
         let mut midx = 0;
         let mut count = 0;
         let mut stepper = LineStep::new(line_term, 0, bytes.len());
@@ -1092,6 +1117,7 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                     }
                 }
                 let m = matches[midx];
+                let orig = orig_matches.get(midx).copied().unwrap_or(m);
 
                 if line.start() < m.start() {
                     let upto = cmp::min(line.end(), m.start());
@@ -1099,9 +1125,9 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                 } else {
                     let upto = cmp::min(line.end(), m.end());
                     self.write_prelude(
-                        self.sunk.absolute_byte_offset() + m.start() as u64,
+                        self.sunk.absolute_byte_offset() + orig.start() as u64,
                         self.sunk.line_number().map(|n| n + count),
-                        Some(m.start() as u64 + 1),
+                        Some(orig.start() as u64 + 1),
                     )?;
 
                     let this_line = line.with_end(upto);
@@ -1125,7 +1151,13 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
         let line_term = self.searcher.line_terminator().as_byte();
         let spec = self.config().colors.matched();
         let bytes = self.sunk.bytes();
-        for &m in self.sunk.matches() {
+        let orig_bytes = self.sunk.original_bytes();
+        let orig_matches = self.sunk.original_matches();
+        for (midx, &m) in self.sunk.matches().iter().enumerate() {
+            let orig = orig_matches.get(midx).copied().unwrap_or(m);
+            let mut orig_stepper =
+                LineStep::new(line_term, 0, orig_bytes.len());
+            let mut orig_count = 0u64;
             let mut count = 0;
             let mut stepper = LineStep::new(line_term, 0, bytes.len());
             while let Some((start, end)) = stepper.next(bytes) {
@@ -1136,10 +1168,31 @@ impl<'a, M: Matcher, W: WriteColor> StandardImpl<'a, M, W> {
                     count += 1;
                     continue;
                 }
+                let mut orig_line = None;
+                while let Some((os, oe)) = orig_stepper.next(orig_bytes) {
+                    if oe <= orig.start() {
+                        orig_count += 1;
+                        continue;
+                    }
+                    orig_line = Some(Match::new(os, oe));
+                    break;
+                }
+                let (byte_off, line_num, col) = if let Some(ol) = orig_line {
+                    let c = orig.start().saturating_sub(ol.start()) as u64 + 1;
+                    let ln = orig_count;
+                    orig_count += 1;
+                    (ol.start() as u64, ln, c)
+                } else {
+                    (
+                        start as u64,
+                        count,
+                        orig.start().saturating_sub(line.start()) as u64 + 1,
+                    )
+                };
                 self.write_prelude(
-                    self.sunk.absolute_byte_offset() + line.start() as u64,
-                    self.sunk.line_number().map(|n| n + count),
-                    Some(m.start().saturating_sub(line.start()) as u64 + 1),
+                    self.sunk.absolute_byte_offset() + byte_off,
+                    self.sunk.line_number().map(|n| n + line_num),
+                    Some(col),
                 )?;
                 count += 1;
                 self.trim_line_terminator(bytes, &mut line);
@@ -4012,5 +4065,123 @@ e
         let got = printer_contents(&mut printer);
         let expected = "hello\nworld\r\n";
         assert_eq_printed!(expected, got);
+    }
+
+    #[test]
+    fn regression_replacement_offsets_and_columns() {
+        let haystack = "a a\na\n";
+        let matcher = RegexMatcher::new(r"a").unwrap();
+
+        // -o -b -n -r 'XXXXXXXXXX'
+        let mut printer = StandardBuilder::new()
+            .only_matching(true)
+            .byte_offset(true)
+            .replacement(Some(b"XXXXXXXXXX".to_vec()))
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(true)
+            .build()
+            .search_reader(
+                &matcher,
+                haystack.as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+        assert_eq_printed!(
+            "1:0:XXXXXXXXXX\n1:2:XXXXXXXXXX\n2:4:XXXXXXXXXX\n",
+            printer_contents(&mut printer)
+        );
+
+        // --vimgrep (-n --column --per-match --per-match-one-line) -b -r
+        let mut printer = StandardBuilder::new()
+            .per_match(true)
+            .per_match_one_line(true)
+            .column(true)
+            .byte_offset(true)
+            .replacement(Some(b"XXXXXXXXXX".to_vec()))
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(true)
+            .build()
+            .search_reader(
+                &matcher,
+                haystack.as_bytes(),
+                printer.sink(&matcher),
+            )
+            .unwrap();
+        assert_eq_printed!(
+            "1:1:0:XXXXXXXXXX XXXXXXXXXX\n1:3:2:XXXXXXXXXX XXXXXXXXXX\n2:1:4:XXXXXXXXXX\n",
+            printer_contents(&mut printer)
+        );
+
+        let matcher_multi = RegexMatcher::new(r"a\nb|a").unwrap();
+        let multi_haystack = "a\nb a\na\n";
+
+        // Multi-line mode: -U -o -b --column -r and -U --vimgrep -b -r
+        let mut printer = StandardBuilder::new()
+            .only_matching(true)
+            .column(true)
+            .byte_offset(true)
+            .replacement(Some(b"XXXXXXXXXX".to_vec()))
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(true)
+            .multi_line(true)
+            .build()
+            .search_reader(
+                &matcher_multi,
+                multi_haystack.as_bytes(),
+                printer.sink(&matcher_multi),
+            )
+            .unwrap();
+        assert_eq_printed!(
+            "1:1:0:XXXXXXXXXX\n1:5:4:XXXXXXXXXX\n2:7:6:XXXXXXXXXX\n",
+            printer_contents(&mut printer)
+        );
+
+        let mut printer = StandardBuilder::new()
+            .per_match(true)
+            .per_match_one_line(true)
+            .column(true)
+            .byte_offset(true)
+            .replacement(Some(b"XXXXXXXXXX".to_vec()))
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(true)
+            .multi_line(true)
+            .build()
+            .search_reader(
+                &matcher_multi,
+                multi_haystack.as_bytes(),
+                printer.sink(&matcher_multi),
+            )
+            .unwrap();
+        assert_eq_printed!(
+            "1:1:0:XXXXXXXXXX XXXXXXXXXX\n2:3:2:XXXXXXXXXX XXXXXXXXXX\n3:1:6:XXXXXXXXXX\n",
+            printer_contents(&mut printer)
+        );
+
+        // Multi-byte shortening replacement preserves later match columns/offsets.
+        let short_haystack = "aaaa b aaaa\n";
+        let matcher_long = RegexMatcher::new(r"a+").unwrap();
+        let mut printer = StandardBuilder::new()
+            .per_match(true)
+            .column(true)
+            .byte_offset(true)
+            .replacement(Some(b"X".to_vec()))
+            .build(NoColor::new(vec![]));
+        SearcherBuilder::new()
+            .line_number(true)
+            .build()
+            .search_reader(
+                &matcher_long,
+                short_haystack.as_bytes(),
+                printer.sink(&matcher_long),
+            )
+            .unwrap();
+        assert_eq_printed!(
+            "1:1:0:X b X\n1:8:7:X b X\n",
+            printer_contents(&mut printer)
+        );
     }
 }
